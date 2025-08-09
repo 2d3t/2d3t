@@ -228,6 +228,205 @@
     header.style.background = `linear-gradient(${angle}deg, ${color1}, ${color2})`;
   });
 </script>
+<audio id="flame-sound" src="flame.mp3" loop autoplay muted></audio>
+
+
+</body>
+</html>
+    margin: 0 0 10px;
+    filter: drop-shadow(0 0 6px #e50914);
+    mix-blend-mode: screen;
+  }
+
+  header p {
+    font-size: 1.3rem;
+    color: #aaa;
+    opacity: 0.7;
+    max-width: 600px;
+    margin: 0 auto;
+    user-select: text;
+  }
+
+  section {
+    max-width: 900px;
+    margin: 50px auto 80px;
+    padding: 0 20px;
+  }
+
+  .step {
+    background: #111;
+    border-left: 6px solid #e50914;
+    padding: 25px 30px;
+    margin-bottom: 28px;
+    box-shadow:
+      inset 0 0 12px #e50914aa,
+      0 0 15px #e5091444;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s ease, transform 0.3s ease;
+  }
+  .step:hover {
+    background: #1c0f0f;
+    transform: translateX(8px) scale(1.03);
+    box-shadow:
+      inset 0 0 18px #ff3f58cc,
+      0 0 25px #ff3f58cc;
+  }
+
+  .icon {
+    position: absolute;
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2.8rem;
+    color: #e50914;
+    opacity: 0.15;
+    user-select: none;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .step:hover .icon {
+    opacity: 0.4;
+  }
+
+  .step h2 {
+    margin: 0 0 8px;
+    font-size: 1.6rem;
+    letter-spacing: 0.06em;
+    font-weight: 900;
+    color: #f5f5f5;
+  }
+
+  .step p {
+    font-size: 1.05rem;
+    color: #bbb;
+    max-width: 700px;
+    line-height: 1.4;
+  }
+
+  .cta {
+    background: #e50914;
+    padding: 40px 30px;
+    border-radius: 6px;
+    max-width: 480px;
+    margin: 0 auto;
+    box-shadow: 0 0 25px #e50914cc;
+    text-align: center;
+    user-select: none;
+    transition: box-shadow 0.3s ease;
+  }
+
+  .cta:hover {
+    box-shadow: 0 0 40px #ff3f58;
+  }
+
+  .cta h2 {
+    margin: 0 0 15px;
+    font-weight: 900;
+    font-size: 2rem;
+    color: #111;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .cta a {
+    display: inline-block;
+    padding: 14px 40px;
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: #111;
+    background: #fff;
+    border-radius: 50px;
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    box-shadow:
+      0 0 8px #fff,
+      0 0 20px #e50914;
+    transition: all 0.3s ease;
+    user-select: none;
+  }
+  .cta a:hover {
+    background: #111;
+    color: #e50914;
+    box-shadow:
+      0 0 12px #e50914,
+      0 0 25px #fff;
+    animation: pulse 1.6s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      text-shadow: 0 0 6px #e50914, 0 0 12px #ff3f58;
+    }
+    50% {
+      text-shadow: 0 0 20px #ff3f58, 0 0 30px #e50914;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header id="page-header">
+  <h1>BEHANCE MASTERY</h1>
+  <p>Мы — сила. Мы научим, как быть лучшим в этом мире. Вход для избранных.</p>
+</header>
+
+<section>
+  <div class="step">
+    <div class="icon">🔥</div>
+    <h2>Ощути мощь вдохновения</h2>
+    <p>Не просто смотри работы — проживи их. Подпишись только на тех, кто задает тон и ломает стереотипы.</p>
+  </div>
+
+  <div class="step">
+    <div class="icon">📌</div>
+    <h2>Формируй непоколебимый мудборд</h2>
+    <p>Собирай фрагменты идей, как артефакты, чтобы создавать свою легенду. Никогда не останавливайся.</p>
+  </div>
+
+  <div class="step">
+    <div class="icon">💼</div>
+    <h2>Создай портфолио как оружие</h2>
+    <p>Загрузи только шедевры, каждый проект — твой вызов миру. Не рассказывай — доказывай.</p>
+  </div>
+
+  <div class="step">
+    <div class="icon">🌍</div>
+    <h2>Распространи влияние</h2>
+    <p>Не просто делись — захватывай пространство. Коллаборации и конкурсы — твой фронт битвы.</p>
+  </div>
+
+  <div class="cta">
+    <h2>Готов стать легендой?</h2>
+    <a href="#">Начать путь</a>
+  </div>
+</section>
+
+<script>
+  // Градиент меняется при скролле — меняем угол и цвета
+  const header = document.getElementById('page-header');
+
+  window.addEventListener('scroll', () => {
+    let scrollY = window.scrollY;
+    // Чем дальше вниз, тем больше угол
+    let angle = 135 + (scrollY / 5);
+    if (angle > 360) angle = angle % 360;
+
+    // Цвета плавно меняются от красного к пурпурному и обратно
+    // Используем синус для плавности
+    let t = Math.min(scrollY / 500, 1);
+    let r = Math.floor(229 + (127 * Math.sin(t * Math.PI * 2)));
+    let g = Math.floor(9 + (120 * Math.sin(t * Math.PI * 2 + Math.PI / 2)));
+    let b = Math.floor(20 + (130 * Math.sin(t * Math.PI * 2 + Math.PI)));
+
+    // Собираем цвет в rgb
+    let color1 = `rgb(${r},${g},${b})`;
+    let color2 = `rgb(${Math.floor(r/2)},${Math.floor(g/2)},${Math.floor(b/2)})`;
+
+    header.style.background = `linear-gradient(${angle}deg, ${color1}, ${color2})`;
+  });
+</script>
 
 </body>
 </html>
