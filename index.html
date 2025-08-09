@@ -21,7 +21,6 @@
     padding: 80px 20px 60px;
     text-align: center;
     border-bottom: 2px solid #333;
-    /* начальный градиент */
     background: linear-gradient(135deg, #e50914, #7f0000);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -204,46 +203,43 @@
   </div>
 </section>
 
+<audio id="flame-sound" src="flame.mp3" loop autoplay muted></audio>
+
 <script>
-  // Градиент меняется при скролле — меняем угол и цвета
   const header = document.getElementById('page-header');
-
-  window.addEventListener('scroll', () => {
-    let scrollY = window.scrollY;
-    // Чем дальше вниз, тем больше угол
-    let angle = 135 + (scrollY / 5);
-    if (angle > 360) angle = angle % 360;
-
-    // Цвета плавно меняются от красного к пурпурному и обратно
-    // Используем синус для плавности
-    let t = Math.min(scrollY / 500, 1);
-    let r = Math.floor(229 + (127 * Math.sin(t * Math.PI * 2)));
-    let g = Math.floor(9 + (120 * Math.sin(t * Math.PI * 2 + Math.PI / 2)));
-    let b = Math.floor(20 + (130 * Math.sin(t * Math.PI * 2 + Math.PI)));
-
-    // Собираем цвет в rgb
-    let color1 = `rgb(${r},${g},${b})`;
-    let color2 = `rgb(${Math.floor(r/2)},${Math.floor(g/2)},${Math.floor(b/2)})`;
-
-    header.style.background = `linear-gradient(${angle}deg, ${color1}, ${color2})`;
-  });
-</script>
-
-<audio id="flame-sound" src="flame (mp3cut.net).mp3" loop autoplay muted></audio>
-
-<script>
   const flameSound = document.getElementById('flame-sound');
 
+  // Убираем muted и запускаем звук при первом клике (автозапуск разрешён только с muted)
   window.addEventListener('click', () => {
     if (flameSound.muted) {
       flameSound.muted = false;
       flameSound.play();
     }
   });
+
+  // Меняем фон градиента в шапке при скролле
+  window.addEventListener('scroll', () => {
+    let scrollY = window.scrollY;
+    let angle = 135 + (scrollY / 5);
+    if (angle > 360) angle = angle % 360;
+
+    let t = Math.min(scrollY / 500, 1);
+    let r = Math.floor(229 + (127 * Math.sin(t * Math.PI * 2)));
+    let g = Math.floor(9 + (120 * Math.sin(t * Math.PI * 2 + Math.PI / 2)));
+    let b = Math.floor(20 + (130 * Math.sin(t * Math.PI * 2 + Math.PI)));
+
+    let color1 = `rgb(${r},${g},${b})`;
+    let color2 = `rgb(${Math.floor(r/2)},${Math.floor(g/2)},${Math.floor(b/2)})`;
+
+    header.style.background = `linear-gradient(${angle}deg, ${color1}, ${color2})`;
+
+    // Меняем громкость звука в зависимости от прокрутки (эффект дыхания)
+    let cycleLength = 500;
+    let cyclePosition = (scrollY % cycleLength) / cycleLength;
+    let volume = (Math.sin(cyclePosition * 2 * Math.PI) + 1) / 2;
+    flameSound.volume = volume;
+  });
 </script>
 
-
-
 </body>
-      </html>
-      
+</html>
