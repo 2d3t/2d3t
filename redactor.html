@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Редактор кода</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f5f5f5;
+    }
+    .toolbar {
+      display: flex;
+      gap: 5px;
+      padding: 10px;
+      background: #333;
+      color: white;
+      flex-wrap: wrap;
+    }
+    .toolbar input {
+      width: 60px;
+      padding: 5px;
+    }
+    .toolbar button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 5px;
+      background: #555;
+      color: white;
+      cursor: pointer;
+    }
+    .toolbar button:hover {
+      background: #777;
+    }
+    .editor {
+      display: flex;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+    .line-numbers {
+      background: #eee;
+      color: #666;
+      padding: 5px 0;
+      text-align: right;
+      user-select: none;
+      overflow: hidden;
+      width: 50px;
+      box-sizing: border-box;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .line-numbers div {
+      padding: 0 10px;
+    }
+    textarea {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 5px;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      overflow: auto;
+    }
+    .active-line {
+      background: rgba(100, 150, 250, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <input type="number" id="lineNumber" min="1" placeholder="Строка">
+  <button onclick="goToLine()">Перейти</button>
+  <button onclick="selectAll()">Выделить всё</button>
+  <button onclick="copyText()">Скопировать</button>
+  <button onclick="clearAll()">Очистить</button>
+</div>
+
+<div class="editor">
+  <div class="line-numbers" id="lineNumbers"></div>
+  <textarea id="codeArea" oninput="updateLineNumbers()" onscroll="syncScroll()"></textarea>
+</div>
+
+<script>
+  const textarea = document.getElementById('codeArea');
+  const lineNumbers = document.getElementById('lineNumbers');
+
+  function updateLineNumbers() {
+    const lines = textarea.value.split('\n').length;
+    lineNumbers.innerHTML = '';
+    for (let i = 1; i <= lines; i++) {
+      const div = document.createElement("div");
+      div.textContent = i;
+      lineNumbers.appendChild(div);
+    }
+    highlightActiveLine();
+  }
+
+  function syncScroll() {
+    lineNumbers.scrollTop = textarea.scrollTop;
+  }
+
+  function goToLine() {
+    const line = parseInt(document.getElementById('lineNumber').value);
+    if (!isNaN(line)) {
+      const lines = textarea.value.split('\n');
+      if (line <= lines.length && line > 0) {
+        // вычисляем высоту строки
+        const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+
+        // позиция строки
+        const linePos = (line - 1) * lineHeight;
+
+        // делаем так, чтобы строка была примерно в центре окна
+        const visibleHeight = textarea.clientHeight;
+        const scrollPos = linePos - visibleHeight / 2 + lineHeight / 2;
+
+        textarea.scrollTop = Math.max(0, scrollPos);
+
+        // подсветка номера
+        highlightActiveLine(line);
+      }
+    }
+  }
+
+  function highlightActiveLine(line) {
+    const lineElements = Array.from(lineNumbers.children);
+    lineElements.forEach((el, index) => {
+      el.classList.remove('active-line');
+      if (line && index === (line - 1)) {
+        el.classList.add('active-line');
+      }
+    });
+  }
+
+  function selectAll() {
+    textarea.focus();
+    textarea.select();
+  }
+
+  function copyText() {
+    textarea.select();
+    document.execCommand('copy');
+    alert("Скопировано!");
+  }
+
+  function clearAll() {
+    textarea.value = '';
+    updateLineNumbers();
+  }
+
+  // Инициализация
+  updateLineNumbers();
+</script>
+
+
+
+</body>
+</html>
