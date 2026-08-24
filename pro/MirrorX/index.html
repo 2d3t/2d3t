@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🪞 Кривое Зеркало</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111; color: #fff;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex; flex-direction: column; align-items: center;
+      height: 100vh; overflow: hidden; touch-action: none;
+    }
+    #app {
+      width: 100%; max-width: 420px; height: 100%;
+      display: flex; flex-direction: column; position: relative;
+    }
+    #canvas-wrap {
+      flex: 1; position: relative; display: flex;
+      align-items: center; justify-content: center; background: #000;
+    }
+    canvas { width: 100%; height: 100%; object-fit: cover; }
+    #overlay {
+      position: absolute; inset: 0; pointer-events: none;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 16px;
+    }
+    #top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: auto;
+    }
+    .btn-icon {
+      background: rgba(255,255,255,0.15); border: none; color: #fff;
+      width: 44px; height: 44px; border-radius: 50%; font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; backdrop-filter: blur(8px); transition: background 0.2s;
+    }
+    .btn-icon:active { background: rgba(255,255,255,0.35); }
+    #mode-label {
+      background: rgba(0,0,0,0.6); padding: 6px 14px; border-radius: 20px;
+      font-size: 14px; font-weight: 600; letter-spacing: 0.5px;
+      backdrop-filter: blur(8px);
+    }
+    #bottom-bar {
+      display: flex; align-items: center; justify-content: center;
+      gap: 24px; pointer-events: auto; padding-bottom: 8px;
+    }
+    .btn-circle {
+      width: 64px; height: 64px; border-radius: 50%;
+      border: 4px solid #fff; background: transparent; cursor: pointer;
+      transition: transform 0.15s, background 0.2s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-circle:active { transform: scale(0.92); background: rgba(255,255,255,0.2); }
+    .btn-circle.inner { width: 52px; height: 52px; background: #fff; border: none; }
+    .btn-small {
+      width: 48px; height: 48px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.1);
+      color: #fff; font-size: 20px; display: flex; align-items: center;
+      justify-content: center; cursor: pointer;
+    }
+    .btn-small:active { background: rgba(255,255,255,0.3); }
+    #gallery-strip {
+      position: absolute; bottom: 100px; left: 0; right: 0;
+      display: flex; gap: 8px; padding: 8px 16px;
+      overflow-x: auto; pointer-events: auto; scrollbar-width: none;
+      opacity: 0; transform: translateY(20px);
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    #gallery-strip.visible { opacity: 1; transform: translateY(0); }
+    #gallery-strip::-webkit-scrollbar { display: none; }
+    .gallery-thumb {
+      width: 72px; height: 96px; border-radius: 8px; object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0;
+      cursor: pointer; background: #222;
+    }
+    #flash {
+      position: absolute; inset: 0; background: #fff; opacity: 0;
+      pointer-events: none; transition: opacity 0.1s; z-index: 10;
+    }
+    #flash.active { opacity: 1; }
+    #start-screen {
+      position: absolute; inset: 0; background: #000;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; z-index: 50; gap: 20px;
+    }
+    #start-screen h1 {
+      font-size: 28px; margin: 0;
+      background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    #start-screen p { color: #aaa; font-size: 14px; text-align: center; max-width: 280px; line-height: 1.5; }
+    .btn-start {
+      background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: #fff;
+      padding: 14px 40px; border-radius: 30px; font-size: 16px; font-weight: 600;
+      cursor: pointer; box-shadow: 0 4px 20px rgba(102,126,234,0.4);
+      transition: transform 0.2s;
+    }
+    .btn-start:active { transform: scale(0.96); }
+    #permission-denied { display: none; text-align: center; padding: 20px; }
+    #permission-denied h2 { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="start-screen">
+      <h1>🪞 Кривое Зеркало</h1>
+      <p>Делай селфи с забавными искажениями.<br>Нажми кнопку ниже, чтобы начать.</p>
+      <button class="btn-start" id="btn-start">📷 Включить камеру</button>
+      <div id="permission-denied">
+        <h2>❌ Нет доступа к камере</h2>
+        <p>Разрешите доступ к камере в настройках браузера и перезагрузите страницу.</p>
+      </div>
+    </div>
+    <div id="canvas-wrap">
+      <video id="video" autoplay playsinline muted style="display:none;"></video>
+      <canvas id="canvas"></canvas>
+      <div id="flash"></div>
+      <div id="overlay">
+        <div id="top-bar">
+          <button class="btn-icon" id="btn-switch" title="Переключить камеру">🔄</button>
+          <div id="mode-label">Волнистое</div>
+          <button class="btn-icon" id="btn-gallery-toggle" title="Галерея">🖼️</button>
+        </div>
+        <div id="gallery-strip"></div>
+        <div id="bottom-bar">
+          <button class="btn-small" id="btn-prev" title="Предыдущий эффект">⬅️</button>
+          <button class="btn-circle" id="btn-snap" title="Сделать фото">
+            <div class="btn-circle inner"></div>
+          </button>
+          <button class="btn-small" id="btn-random" title="Случайный эффект">🎲</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const startScreen = document.getElementById('start-screen');
+    const btnStart = document.getElementById('btn-start');
+    const permDenied = document.getElementById('permission-denied');
+    const modeLabel = document.getElementById('mode-label');
+    const galleryStrip = document.getElementById('gallery-strip');
+    const flash = document.getElementById('flash');
+
+    let stream = null, currentMode = 0, facingMode = 'user', gallery = [], animationId = null, time = 0;
+
+    function bilinearSample(srcData, srcW, srcH, x, y) {
+      const fx = Math.floor(x), fy = Math.floor(y);
+      const cx = Math.min(fx + 1, srcW - 1), cy = Math.min(fy + 1, srcH - 1);
+      const rx = x - fx, ry = y - fy;
+      const get = (px, py) => {
+        if (px < 0) px = 0; if (px >= srcW) px = srcW - 1;
+        if (py < 0) py = 0; if (py >= srcH) py = srcH - 1;
+        const i = (py * srcW + px) * 4;
+        return [srcData[i], srcData[i+1], srcData[i+2], srcData[i+3]];
+      };
+      const p00 = get(fx, fy), p10 = get(cx, fy), p01 = get(fx, cy), p11 = get(cx, cy);
+      return [
+        Math.round(p00[0]*(1-rx)*(1-ry) + p10[0]*rx*(1-ry) + p01[0]*(1-rx)*ry + p11[0]*rx*ry),
+        Math.round(p00[1]*(1-rx)*(1-ry) + p10[1]*rx*(1-ry) + p01[1]*(1-rx)*ry + p11[1]*rx*ry),
+        Math.round(p00[2]*(1-rx)*(1-ry) + p10[2]*rx*(1-ry) + p01[2]*(1-rx)*ry + p11[2]*rx*ry),
+        255
+      ];
+    }
+
+    const modes = [
+      { name: 'Волнистое', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, dist = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          const wave = Math.sin(dist*0.05+t*3)*15 + Math.sin(angle*3+t*2)*10;
+          const [r,g,b,a] = bilinearSample(src,w,h, x+wave*Math.cos(angle+t), y+wave*Math.sin(angle+t));
+          const i = (y*w+x)*4; dst[i]=r; dst[i+1]=g; dst[i+2]=b; dst[i+3]=a;
+        }
+      }},
+      { name: 'Рыбий глаз', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2, maxR = Math.min(cx,cy);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, r = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          const newR = r*r/maxR;
+          const [rr,gg,bb,aa] = bilinearSample(src,w,h, cx+newR*Math.cos(angle), cy+newR*Math.sin(angle));
+          const i = (y*w+x)*4; dst[i]=rr; dst[i+1]=gg; dst[i+2]=bb; dst[i+3]=aa;
+        }
+      }},
+      { name: 'Увеличение', fn: (src, dst, w, h, t) => {
+        const cx = w/2+Math.sin(t*2)*50, cy = h/2+Math.cos(t*1.5)*30, radius = 120, strength = 2.5;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, dist = Math.sqrt(dx*dx+dy*dy);
+          let sx=x, sy=y;
+          if (dist < radius) { const f = Math.pow(dist/radius, strength); sx = cx+dx*f; sy = cy+dy*f; }
+          const [r,g,b,a] = bilinearSample(src,w,h,sx,sy);
+          const i = (y*w+x)*4; dst[i]=r; dst[i+1]=g; dst[i+2]=b; dst[i+3]=a;
+        }
+      }},
+      { name: 'Вихрь', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2, maxR = Math.min(cx,cy)*0.8;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, r = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          let sx=x, sy=y;
+          if (r < maxR) { const twist = (1-r/maxR)*Math.PI*2+t*2; const na = angle+twist; sx=cx+r*Math.cos(na); sy=cy+r*Math.sin(na); }
+          const [rr,gg,bb,aa] = bilinearSample(src,w,h,sx,sy);
+          const i = (y*w+x)*4; dst[i]=rr; dst[i+1]=gg; dst[i+2]=bb; dst[i+3]=aa;
+        }
+      }},
+      { name: 'Пузырьки', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2, maxR = Math.min(cx,cy);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, r = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          let sx=x, sy=y;
+          if (r < maxR) { const bulge = Math.sin(r/maxR*Math.PI)*0.5+0.5; const newR = r*(1+bulge*0.6); sx=cx+newR*Math.cos(angle); sy=cy+newR*Math.sin(angle); }
+          const [rr,gg,bb,aa] = bilinearSample(src,w,h,sx,sy);
+          const i = (y*w+x)*4; dst[i]=rr; dst[i+1]=gg; dst[i+2]=bb; dst[i+3]=aa;
+        }
+      }},
+      { name: 'Пинч', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2, maxR = Math.min(cx,cy)*0.9;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, r = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          let sx=x, sy=y;
+          if (r < maxR) { const f = Math.pow(r/maxR,2); const newR = r*(1-f*0.5); sx=cx+newR*Math.cos(angle); sy=cy+newR*Math.sin(angle); }
+          const [rr,gg,bb,aa] = bilinearSample(src,w,h,sx,sy);
+          const i = (y*w+x)*4; dst[i]=rr; dst[i+1]=gg; dst[i+2]=bb; dst[i+3]=aa;
+        }
+      }},
+      { name: 'Зеркало', fn: (src, dst, w, h, t) => {
+        const splitX = w/2+Math.sin(t)*30;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          let sx = x > splitX ? splitX-(x-splitX) : x;
+          const [r,g,b,a] = bilinearSample(src,w,h,sx,y);
+          const i = (y*w+x)*4; dst[i]=r; dst[i+1]=g; dst[i+2]=b; dst[i+3]=a;
+        }
+      }},
+      { name: 'Калейдоскоп', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2, segs = 6;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, r = Math.sqrt(dx*dx+dy*dy);
+          let angle = Math.atan2(dy,dx);
+          const segIdx = Math.floor(((angle+Math.PI*2)%(Math.PI*2))/(Math.PI*2/segs));
+          angle = ((angle+Math.PI*2)%(Math.PI*2/segs));
+          if (segIdx % 2 === 1) angle = (Math.PI*2/segs)-angle;
+          const sx = cx+r*Math.cos(angle+t*0.5), sy = cy+r*Math.sin(angle+t*0.5);
+          const [rr,gg,bb,aa] = bilinearSample(src,w,h,sx,sy);
+          const i = (y*w+x)*4; dst[i]=rr; dst[i+1]=gg; dst[i+2]=bb; dst[i+3]=aa;
+        }
+      }},
+      { name: 'Рябь', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, dist = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          const off = Math.sin(dist*0.1-t*5)*8;
+          const [r,g,b,a] = bilinearSample(src,w,h, x+off*Math.cos(angle), y+off*Math.sin(angle));
+          const i = (y*w+x)*4; dst[i]=r; dst[i+1]=g; dst[i+2]=b; dst[i+3]=a;
+        }
+      }},
+      { name: 'Спираль', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, r = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          const sa = angle+r*0.02+t*3;
+          const [rr,gg,bb,aa] = bilinearSample(src,w,h, cx+r*Math.cos(sa), cy+r*Math.sin(sa));
+          const i = (y*w+x)*4; dst[i]=rr; dst[i+1]=gg; dst[i+2]=bb; dst[i+3]=aa;
+        }
+      }},
+      { name: 'Пиксели', fn: (src, dst, w, h, t) => {
+        const bs = 12+Math.sin(t*2)*6;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const bx = Math.floor(x/bs)*bs+bs/2, by = Math.floor(y/bs)*bs+bs/2;
+          const [r,g,b,a] = bilinearSample(src,w,h,bx,by);
+          const i = (y*w+x)*4; dst[i]=r; dst[i+1]=g; dst[i+2]=b; dst[i+3]=a;
+        }
+      }},
+      { name: 'Радиальное размытие', fn: (src, dst, w, h, t) => {
+        const cx = w/2, cy = h/2;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const dx = x-cx, dy = y-cy, dist = Math.sqrt(dx*dx+dy*dy), angle = Math.atan2(dy,dx);
+          const blur = Math.min(dist*0.02,5);
+          let r=0,g=0,b=0,c=0;
+          for (let s = -blur; s <= blur; s += 1) {
+            const [pr,pg,pb] = bilinearSample(src,w,h, x+s*Math.cos(angle), y+s*Math.sin(angle));
+            r+=pr; g+=pg; b+=pb; c++;
+          }
+          const i = (y*w+x)*4; dst[i]=Math.round(r/c); dst[i+1]=Math.round(g/c); dst[i+2]=Math.round(b/c); dst[i+3]=255;
+        }
+      }},
+    ];
+
+    async function startCamera() {
+      try {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+          audio: false
+        });
+        video.srcObject = stream; await video.play();
+        startScreen.style.display = 'none'; resizeCanvas(); requestAnimationFrame(renderLoop);
+      } catch (err) {
+        console.error(err); permDenied.style.display = 'block'; btnStart.style.display = 'none';
+      }
+    }
+
+    function resizeCanvas() {
+      const rect = document.getElementById('canvas-wrap').getBoundingClientRect();
+      canvas.width = rect.width; canvas.height = rect.height;
+    }
+
+    function renderLoop() {
+      if (video.readyState < 2) { animationId = requestAnimationFrame(renderLoop); return; }
+      time += 0.016;
+      const w = canvas.width, h = canvas.height;
+      ctx.drawImage(video, 0, 0, w, h);
+      const srcData = ctx.getImageData(0, 0, w, h);
+      const dstData = ctx.createImageData(w, h);
+      modes[currentMode].fn(srcData.data, dstData.data, w, h, time);
+      ctx.putImageData(dstData, 0, 0);
+      animationId = requestAnimationFrame(renderLoop);
+    }
+
+    function setMode(idx) {
+      currentMode = ((idx % modes.length) + modes.length) % modes.length;
+      modeLabel.textContent = modes[currentMode].name;
+    }
+
+    function randomMode() { let n; do { n = Math.floor(Math.random()*modes.length); } while(n===currentMode); setMode(n); }
+
+    function takePhoto() {
+      flash.classList.add('active'); setTimeout(() => flash.classList.remove('active'), 150);
+      const dataUrl = canvas.toDataURL('image/png');
+      gallery.unshift(dataUrl); if (gallery.length > 20) gallery.pop();
+      updateGallery();
+      const a = document.createElement('a'); a.href = dataUrl; a.download = `mirror_${Date.now()}.png`; a.click();
+    }
+
+    function updateGallery() {
+      galleryStrip.innerHTML = '';
+      gallery.forEach(url => {
+        const img = document.createElement('img'); img.src = url; img.className = 'gallery-thumb';
+        img.onclick = () => { const a = document.createElement('a'); a.href = url; a.download = `mirror_${Date.now()}.png`; a.click(); };
+        galleryStrip.appendChild(img);
+      });
+      if (gallery.length > 0) galleryStrip.classList.add('visible');
+    }
+
+    async function switchCamera() { facingMode = facingMode === 'user' ? 'environment' : 'user'; await startCamera(); }
+
+    btnStart.addEventListener('click', startCamera);
+    document.getElementById('btn-snap').addEventListener('click', takePhoto);
+    document.getElementById('btn-prev').addEventListener('click', () => setMode(currentMode-1));
+    document.getElementById('btn-random').addEventListener('click', randomMode);
+    document.getElementById('btn-switch').addEventListener('click', switchCamera);
+    document.getElementById('btn-gallery-toggle').addEventListener('click', () => galleryStrip.classList.toggle('visible'));
+
+    let touchStartX = 0;
+    canvas.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    canvas.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 50) dx > 0 ? setMode(currentMode+1) : setMode(currentMode-1);
+    }, { passive: true });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') setMode(currentMode+1);
+      if (e.key === 'ArrowLeft') setMode(currentMode-1);
+      if (e.key === ' ' || e.key === 'Enter') takePhoto();
+      if (e.key === 'r' || e.key === 'R') randomMode();
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+  </script>
+</body>
+</html>
