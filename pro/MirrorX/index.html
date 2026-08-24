@@ -453,5 +453,29 @@
             .catch(err => console.log('[SW] ❌ Ошибка:', err));
     }
   </script>
+<script>
+// Блокировка сна экрана (чтобы приложение не тухло)
+async function keepScreenAwake() {
+    try {
+        const wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Экран не уснёт');
+        
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                navigator.wakeLock.request('screen').catch(() => {});
+            }
+        });
+    } catch (e) {
+        console.log('[WakeLock] Не поддерживается:', e);
+    }
+}
+
+// Запускаем
+if (document.readyState === 'complete') {
+    keepScreenAwake();
+} else {
+    document.addEventListener('DOMContentLoaded', keepScreenAwake);
+}
+</script>
 </body>
 </html>
