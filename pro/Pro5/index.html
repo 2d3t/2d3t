@@ -221,7 +221,7 @@ body.theme-graphite .clear-url-btn:hover{background:#555}
 accept=".html,.htm,.txt,.py,.js,.css,.json,.xml,.md,.csv,.log,.ini,.cfg,.conf,.sh,.bat,.ps1,.rb,.php,.java,.c,.cpp,.h,.cs,.go,.rs,.swift,.kt,.sql,.yaml,.yml,.toml,.pl,.pm,.r,.lua,.vim,.ts,.jsx,.tsx,.vue,.scss,.less,.sass,.styl"
 onchange="handleFileWithFullscreenRestore(event)">
 <button onclick="shareFile()" title="Поделиться файлом">📤 Поделиться</button>
-<button onclick="toggleCustomUrlBar()" title="Показать/скрыть адресную строку">🌐 URL</button>
+
 
 
 </div>
@@ -1027,81 +1027,6 @@ if (!document.querySelector('style[data-share-style]')) {
 </script>
 
 
-<!-- ============ АДРЕСНАЯ СТРОКА ============ -->
-<div id="customUrlBar" style="display:none; padding:6px 10px; gap:5px; flex-wrap:wrap; align-items:center; border-bottom:1px solid #2a3340; background:inherit;">
-    <span style="color:#94a3b8; font-size:13px; font-weight:600;">🌐</span>
-    <input type="text" id="customUrlInput" class="url-input" placeholder="Введите адрес" value="" style="flex:1; min-width:120px; padding:6px 12px; border-radius:5px; border:1px solid #666; background:#444; color:white; font-size:14px;">
-    <button onclick="clearCustomUrlInput()" style="padding:6px 10px; border:none; border-radius:5px; background:#e74c3c; color:white; font-size:14px; font-weight:600; cursor:pointer; margin:0; width:auto;">🗑️</button>
-    <button onclick="goToCustomUrl()" style="padding:6px 14px; border:none; border-radius:5px; background:#3b4de0; color:white; font-size:14px; font-weight:600; cursor:pointer; margin:0; width:auto;">▶ Перейти</button>
-    <button onclick="toggleCustomUrlBar()" style="padding:6px 10px; border:none; border-radius:5px; background:transparent; color:#94a3b8; font-size:16px; cursor:pointer; margin:0; width:auto;">✕</button>
-</div>
-
-<script>
-// ============ УПРАВЛЕНИЕ АДРЕСНОЙ СТРОКОЙ ============
-
-function toggleCustomUrlBar() {
-    const bar = document.getElementById('customUrlBar');
-    const input = document.getElementById('customUrlInput');
-    
-    if (bar.style.display === 'flex') {
-        bar.style.display = 'none';
-        input.value = ''; // ✅ ОЧИЩАЕМ ПРИ ЗАКРЫТИИ
-    } else {
-        bar.style.display = 'flex';
-        const currentUrl = window.location.href;
-        input.value = currentUrl.startsWith('blob:') ? '' : currentUrl;
-        setTimeout(() => {
-            input.select();
-            input.focus();
-        }, 100);
-    }
-}
-
-function goToCustomUrl() {
-    const input = document.getElementById('customUrlInput');
-    let url = input.value.trim();
-    if (!url) {
-        alert('⚠️ Введите адрес!');
-        return;
-    }
-    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-    try {
-        new URL(url);
-        window.location.href = url;
-    } catch (e) {
-        alert('⚠️ Неверный адрес: ' + url);
-    }
-}
-
-function clearCustomUrlInput() {
-    const input = document.getElementById('customUrlInput');
-    input.value = '';
-    input.focus();
-}
-
-// Enter — перейти
-document.getElementById('customUrlInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        goToCustomUrl();
-    }
-});
-
-// Escape — закрыть и очистить
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const bar = document.getElementById('customUrlBar');
-        const input = document.getElementById('customUrlInput');
-        if (bar.style.display === 'flex') {
-            bar.style.display = 'none';
-            input.value = ''; // ✅ ОЧИЩАЕМ ПРИ ESCAPE
-        }
-    }
-});
-</script>
-
-
-<script>
 
 function openWithAddressBar() {
     window.open('https://2d3t.github.io/index.html/', '_blank');
