@@ -2336,25 +2336,34 @@ playSuccessBeep();
         }
 
         function showImage(bytes) {
-            const container = document.getElementById('imagePreviewContainer');
-            const img = document.getElementById('imagePreview');
-            const info = document.getElementById('imageInfo');
+    const container = document.getElementById('imagePreviewContainer');
+    const img = document.getElementById('imagePreview');
+    const info = document.getElementById('imageInfo');
 
-            const url = bytesToImageUrl(bytes);
-            if (url) {
-                img.src = url;
-                const imgType = getImageType(bytes);
-                const size = bytes.length;
-                info.textContent = '📐 ' + imgType + ' | ' + formatFileSize(size) + ' (' + size + ' байт)';
-                container.classList.remove('hidden');
-                document.getElementById('textPreviewContainer').classList.add('hidden');
-                document.getElementById('audioPreviewContainer').classList.add('hidden');
+    const url = bytesToImageUrl(bytes);
+    if (url) {
+        img.src = url;
+        const imgType = getImageType(bytes);
+        const size = bytes.length;
+        info.textContent = '📐 ' + imgType + ' | ' + formatFileSize(size) + ' (' + size + ' байт)';
+        container.classList.remove('hidden');
+        document.getElementById('textPreviewContainer').classList.add('hidden');
+        document.getElementById('audioPreviewContainer').classList.add('hidden');
 
-                if (currentViewMode === 'auto') {
-                    setScanStatus('🖼️ Изображение восстановлено!', 'ok');
-                    playSuccessBeep();
-                }
-            }
+        if (currentViewMode === 'auto') {
+            setScanStatus('🖼️ Изображение восстановлено!', 'ok');
+            playSuccessBeep();
+        }
+
+        // ✅ ПРОКРУТКА К КАРТИНКЕ (вставляем сюда)
+        setTimeout(() => {
+            container.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }, 350);
+    }   // ← закрывает if (url)
+}       // ← закрывает функцию
         }
 
         function isBase64Image(base64) {
@@ -3061,7 +3070,7 @@ function showBlockSelector() {
             Всего блоков: <b style="color: #e2e8f0;">${total}</b>
         </p>
         <p style="color: #94a3b8; font-size: 13px; margin: 0 0 8px 0;">
-            Введите номера блоков через запятую (например: <b style="color: #e2e8f0;">1,3,5-7,9</b>)
+            Введите номера блоков через запятую или через пробел(например: <b style="color: #e2e8f0;">1,3,5-7,9 или 1 3 5-7 9</b>)
         </p>
         <input type="text" id="blockInput" 
                placeholder="1,3,5-7,9" 
