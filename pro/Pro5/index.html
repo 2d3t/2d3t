@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>KlikEdit 🎀</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style id="themeStyles">
+body{margin:0;font-family:sans-serif;background:#f5f5f5;transition:background .2s ease,color .2s ease}
+.toolbar{display:flex;gap:5px;padding:10px;background:#333;color:white;flex-wrap:wrap;align-items:center;transition:background .2s,color .2s}
+.toolbar input,.toolbar button,.toolbar label{transition:background .2s,border-color .2s,color .2s}
+.url-input{background:#444;border:1px solid #666;color:white;border-radius:5px}
+.line-numbers{background:#eee;color:#666;transition:background .2s,color .2s}
+textarea{background:#fff;color:#000;border:none;transition:background .2s,color .2s}
+.preview,.fullscreen-overlay{background:white}
+
+body.theme-dark .toolbar{background:#1e1e2f}
+body.theme-dark .url-input{background:#2a2a3a;border-color:#444;color:#e0e0e0}
+body.theme-dark .toolbar button,body.theme-dark .toolbar label[for="fileUpload"]{background:#2d2d3f;color:#eee}
+body.theme-dark .toolbar button:hover,body.theme-dark .toolbar label:hover{background:#3e3e5e}
+body.theme-dark .line-numbers{background:#1e1e2a;color:#aaa}
+body.theme-dark textarea{background:#0f0f17;color:#e6e6fa;border-left:1px solid #2a2a3a}
+body.theme-dark .editor{background:#0f0f17}
+body.theme-dark .fullscreen-overlay{background:#0f0f17}
+body.theme-dark .fullscreen-exit-btn{background:rgba(20,20,40,.9);color:white}
+body.theme-dark{background:#12121a}
+
+body.theme-light .toolbar{background:#f0f0f4;color:#222;border-bottom:1px solid #ddd}
+body.theme-light .url-input{background:white;border-color:#bbb;color:#111}
+body.theme-light .toolbar button,body.theme-light .toolbar label[for="fileUpload"]{background:#e2e2e8;color:#111}
+body.theme-light .toolbar button:hover,body.theme-light .toolbar label:hover{background:#d0d0d8}
+body.theme-light .line-numbers{background:#f9f9fc;color:#6c6c7a;border-right:1px solid #e2e2e8}
+body.theme-light textarea{background:#fff;color:#1e1e2a;border-left:1px solid #eee}
+body.theme-light .fullscreen-overlay{background:#fff}
+body.theme-light .fullscreen-exit-btn{background:rgba(0,0,0,.7);color:white}
+body.theme-light{background:#eef2f5}
+
+body.theme-green .toolbar{background:#1f3b2c;color:#d4ecd0}
+body.theme-green .url-input{background:#2a4a36;border-color:#3e6b4e;color:#e2f0dc}
+body.theme-green .toolbar button,body.theme-green .toolbar label[for="fileUpload"]{background:#2b5e3b;color:#eaf9e6}
+body.theme-green .toolbar button:hover,body.theme-green .toolbar label:hover{background:#3e7e50}
+body.theme-green .line-numbers{background:#1e3527;color:#a8d5a5}
+body.theme-green textarea{background:#17261e;color:#cfeec7;border-left:1px solid #2c553a}
+body.theme-green .fullscreen-overlay{background:#1a2e23}
+body.theme-green .fullscreen-exit-btn{background:#2d5a3b;color:#e0ffd0}
+body.theme-green{background:#1a2a20}
+
+body.theme-ocean .toolbar{background:#0a192f;color:#b8e1fc}
+body.theme-ocean .url-input{background:#112240;border-color:#2a4c7a;color:#cfe9ff}
+body.theme-ocean .toolbar button,body.theme-ocean .toolbar label[for="fileUpload"]{background:#1e3a5f;color:#deedfc}
+body.theme-ocean .toolbar button:hover,body.theme-ocean .toolbar label:hover{background:#2c5282}
+body.theme-ocean .line-numbers{background:#07152a;color:#6b93c0}
+body.theme-ocean textarea{background:#05101f;color:#d9efff;border-left:1px solid #1e3a5f}
+body.theme-ocean .fullscreen-overlay{background:#07152a}
+body.theme-ocean .fullscreen-exit-btn{background:#1f4e79;color:white}
+body.theme-ocean{background:#0a192f}
+
+body.theme-graphite .toolbar{background:#2c2c2e;color:#f5f5f7}
+body.theme-graphite .url-input{background:#3a3a3c;border-color:#555;color:#f0f0f0}
+body.theme-graphite .toolbar button,body.theme-graphite .toolbar label{background:#444446;color:#f5f5f7}
+body.theme-graphite .line-numbers{background:#222224;color:#aaa}
+body.theme-graphite textarea{background:#1c1c1e;color:#e2e2e6;border-left:1px solid #3a3a3c}
+body.theme-graphite{background:#1c1c1e}
+
+.toolbar button,.toolbar label[for="fileUpload"]{padding:6px 10px;border:none;border-radius:5px;cursor:pointer;font-size:14px;font-family:inherit;line-height:normal;height:auto;text-align:center;box-sizing:border-box;margin:0;display:inline-block;text-decoration:none}
+.toolbar button.copied{background:#4CAF50}
+.editor{display:flex;height:calc(100vh - 60px);overflow:hidden}
+.line-numbers{padding:5px 0;text-align:right;user-select:none;overflow:hidden;width:50px;min-width:50px;box-sizing:border-box;font-family:monospace;font-size:14px;line-height:1.4}
+.line-numbers div{padding:0 10px;box-sizing:border-box}
+textarea{flex:1;outline:none;resize:none;padding:5px;font-family:monospace;font-size:14px;line-height:1.4;overflow:auto;box-sizing:border-box}
+.active-line{background:rgba(100,150,250,.3)}
+.preview{width:100%;height:calc(100vh - 60px);border:none;margin:0;padding:0;opacity:0;visibility:hidden;transition:opacity .5s ease;position:absolute;top:60px;left:0;background:white;display:none}
+.preview.active{opacity:1;visibility:visible;display:block;position:relative;top:0}
+.file-input{display:none}
+.fullscreen-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10000;display:none}
+.fullscreen-overlay.active{display:block}
+
+.fullscreen-exit-btn {
+    position: fixed;
+    top: 30px;
+    right: 20px;
+    z-index: 10001;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,.3);
+    display: flex;
+    align-items: center;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.2s, transform 0.2s;
+    overflow: hidden;
+    user-select: none;
+}
+.fullscreen-exit-btn:hover {
+    background: rgba(0,0,0,0.6);
+    transform: scale(1.03);
+}
+.fullscreen-exit-btn .exit-label {
+    padding: 12px 18px 12px 16px;
+    color: white;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+.fullscreen-exit-btn .drag-handle {
+    width: 18px;
+    height: 100%;
+    min-height: 44px;
+    background: rgba(255,255,255,0.15);
+    border-left: 1px solid rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: background 0.2s;
+    padding: 0 4px;
+}
+.fullscreen-exit-btn .drag-handle:hover {
+    background: rgba(255,255,255,0.25);
+}
+.fullscreen-exit-btn .drag-handle:active {
+    cursor: grabbing;
+}
+.drag-handle-dots {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.drag-handle-dots span {
+    display: block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+}
+body.theme-dark .fullscreen-exit-btn {
+    background: rgba(30,30,50,0.5);
+}
+body.theme-dark .fullscreen-exit-btn:hover {
+    background: rgba(30,30,50,0.8);
+}
+body.theme-dark .fullscreen-exit-btn .drag-handle {
+    background: rgba(255,255,255,0.08);
+}
+body.theme-dark .fullscreen-exit-btn .drag-handle:hover {
+    background: rgba(255,255,255,0.18);
+}
+
+.fetch-loading{background:#f0ad4e!important;cursor:wait!important}
+.editor.hidden{display:none}
+.theme-select{background:#555;border:none;border-radius:5px;color:white;padding:6px 8px;font-size:14px;cursor:pointer;font-family:inherit;margin-left:4px;transition:all .2s}
+body.theme-light .theme-select{background:#cbcbd3;color:#111}
+body.theme-green .theme-select{background:#2b5e3b;color:#eaf9e6}
+body.theme-ocean .theme-select{background:#1e3a5f;color:#deedfc}
+body.theme-graphite .theme-select{background:#444446;color:#f5f5f7}
+.theme-select:hover{filter:brightness(1.05)}
+.clear-url-btn{background:#e74c3c;color:white;font-size:14px;padding:6px 10px;border:none;border-radius:5px;cursor:pointer;transition:all .2s}
+.clear-url-btn:hover{background:#c0392b;transform:scale(1.05)}
+body.theme-green .clear-url-btn{background:#27ae60}
+body.theme-green .clear-url-btn:hover{background:#229954}
+body.theme-ocean .clear-url-btn{background:#2980b9}
+body.theme-ocean .clear-url-btn:hover{background:#2471a3}
+body.theme-graphite .clear-url-btn{background:#666}
+body.theme-graphite .clear-url-btn:hover{background:#555}
+</style>
+</head>
+
+<body class="theme-dark">
+
+<div class="toolbar">
+<input type="text" id="urlInput" class="url-input" placeholder="HTML (https://example.com)" value="">
+<button id="fetchButton" onclick="fetchWebsiteCode()">👁️‍🗨️</button>
+<button id="clearUrlButton" class="clear-url-btn" onclick="clearUrlInput()" title="Очистить поле ввода">🗑️</button>
+
+<input type="number" id="lineNumber" min="1" placeholder="Строка">
+<button onclick="goToLine()">Перейти 🔀</button>
+<button onclick="clearLineNumber()" title="Очистить номер строки">🗑️</button>
+
+<input type="text" id="searchInput" placeholder="Поиск 🔎" style="width:120px;">
+<button onclick="findNext()">Найти ▶️</button>
+<button onclick="findPrev()">Назад ◀️</button>
+<button onclick="clearSearch()" title="Очистить поиск">🗑️</button>
+<span id="searchCounter" style="font-size:14px;min-width:40px;display:inline-block;text-align:center;font-weight:bold;color:inherit;"></span>
+
+<button onclick="sendToQR()" title="Отправить код в QR-приложение">📤 QR</button>
+
+
+<button onclick="openQRScanner()" title="Открыть сканер QR-кодов в Pro6">📷 QR</button>
+
+<button id="copyButton" onclick="copyText()">Скопировать 📃</button>
+<button onclick="clearAll()">Очистить ❌</button>
+<button onclick="window.location.href='https://2d3t.github.io/index.html/'">Выход 🚸</button>
+<button onclick="undo()">Отменить ↩️</button>
+<button onclick="redo()">Повторить ↪️</button>
+<button onclick="shareCode()">Скачать ⬇️</button>
+<button onclick="showEditor()">Редактор 🛠️</button>
+<button onclick="runCode()">Просмотр 🖥️</button>
+<button id="fullscreenButton" onclick="toggleFullscreen()">Полный экран ⛶</button>
+
+<select id="themeSwitcher" class="theme-select" title="Выбрать тему оформления">
+<option value="dark">🌙 Тёмная</option>
+<option value="light">☀️ Светлая</option>
+<option value="green">🌿 Зелёная</option>
+<option value="ocean">🌊 Океан</option>
+<option value="graphite">⚙️ Графит</option>
+</select>
+
+<label for="fileUpload" title="Открыть файл">Файлы 📂</label>
+<input type="file" id="fileUpload" class="file-input"
+accept=".html,.htm,.txt,.py,.js,.css,.json,.xml,.md,.csv,.log,.ini,.cfg,.conf,.sh,.bat,.ps1,.rb,.php,.java,.c,.cpp,.h,.cs,.go,.rs,.swift,.kt,.sql,.yaml,.yml,.toml,.pl,.pm,.r,.lua,.vim,.ts,.jsx,.tsx,.vue,.scss,.less,.sass,.styl"
+onchange="handleFileWithFullscreenRestore(event)">
+</div>
+
+<div class="editor" id="editorContainer">
+<div class="line-numbers" id="lineNumbers"></div>
+<textarea id="codeArea" oninput="updateLineNumbers()" onscroll="syncScroll()"></textarea>
+</div>
+
+<iframe class="preview" id="previewFrame"></iframe>
+
+<div class="fullscreen-overlay" id="fullscreenOverlay">
+  <button class="fullscreen-exit-btn" id="forceExitFullscreenBtn">
+    <span class="exit-label">✕ Выйти из полного экрана</span>
+    <span class="drag-handle" id="dragHandle">
+      <span class="drag-handle-dots">
+        <span></span><span></span><span></span>
+      </span>
+    </span>
+  </button>
+  <iframe id="fullscreenFrame" style="width:100%;height:100%;border:none"></iframe>
+</div>
+
+<script>
+const textarea=document.getElementById('codeArea'),
+lineNumbersDiv=document.getElementById('lineNumbers'),
+previewFrame=document.getElementById('previewFrame'),
+copyButton=document.getElementById('copyButton'),
+searchInput=document.getElementById('searchInput'),
+fileUpload=document.getElementById('fileUpload'),
+fullscreenButton=document.getElementById('fullscreenButton'),
+fullscreenOverlay=document.getElementById('fullscreenOverlay'),
+fullscreenFrame=document.getElementById('fullscreenFrame'),
+urlInput=document.getElementById('urlInput'),
+fetchButton=document.getElementById('fetchButton'),
+editorContainer=document.getElementById('editorContainer'),
+forceExitFullscreenBtn=document.getElementById('forceExitFullscreenBtn'),
+themeSwitcher=document.getElementById('themeSwitcher'),
+clearUrlButton=document.getElementById('clearUrlButton'),
+body=document.body,
+searchCounter=document.getElementById('searchCounter');
+
+let history=[],redoStack=[],isFullscreen=false,wasInPreviewBeforeFile=false,fullscreenWasActive=false,lastPreviewUrl=null;
+let searchResults=[],currentResult=-1,lastSearch="";
+let activeLineNumber = null; // Храним активную строку, null = ничего не подсвечено
+
+// --- Перетаскивание кнопки выхода ---
+(function setupDrag() {
+  const btn = forceExitFullscreenBtn;
+  const handle = document.getElementById('dragHandle');
+  let isDragging = false, startX, startY, startRight, startTop;
+
+  function onStart(e) {
+    const ev = e.touches ? e.touches[0] : e;
+    isDragging = true;
+    const rect = btn.getBoundingClientRect();
+    startX = ev.clientX;
+    startY = ev.clientY;
+    startRight = window.innerWidth - rect.right;
+    startTop = rect.top;
+    btn.style.transition = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onEnd);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd, { passive: false });
+    e.preventDefault && e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    const ev = e.touches ? e.touches[0] : e;
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    let newRight = startRight - dx;
+    let newTop = startTop + dy;
+    newRight = Math.max(10, Math.min(window.innerWidth - btn.offsetWidth - 10, newRight));
+    newTop = Math.max(10, Math.min(window.innerHeight - btn.offsetHeight - 10, newTop));
+    btn.style.right = newRight + 'px';
+    btn.style.top = newTop + 'px';
+    btn.style.left = 'auto';
+    btn.style.bottom = 'auto';
+    e.preventDefault && e.preventDefault();
+  }
+
+  function onEnd(e) {
+    if (isDragging) {
+      isDragging = false;
+      btn.style.transition = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    }
+  }
+
+  handle.addEventListener('mousedown', onStart);
+  handle.addEventListener('touchstart', onStart, { passive: false });
+})();
+
+function applyTheme(themeName){
+['theme-dark','theme-light','theme-green','theme-ocean','theme-graphite'].forEach(t=>body.classList.remove(t));
+body.classList.add('theme-'+(['dark','light','green','ocean','graphite'].includes(themeName)?themeName:'dark'));
+localStorage.setItem('klikedit_theme',themeName);
+themeSwitcher.value=themeName;
+// Не подсвечиваем строку при смене темы
+}
+
+function initTheme(){
+const t=localStorage.getItem('klikedit_theme');
+applyTheme(['dark','light','green','ocean','graphite'].includes(t)?t:'dark');
+}
+
+themeSwitcher.addEventListener('change',e=>applyTheme(e.target.value));
+
+function clearUrlInput(){
+urlInput.value='';
+urlInput.focus();
+}
+
+function clearLineNumber(){
+const x=document.getElementById('lineNumber');
+x.value='';
+x.focus();
+}
+
+function clearSearch(){
+searchInput.value='';
+lastSearch='';
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+searchInput.focus();
+}
+
+function updateSearchCounter() {
+    if (searchResults.length === 0) {
+        searchCounter.textContent = '';
+    } else {
+        const idx = currentResult === -1 ? 0 : currentResult;
+        searchCounter.textContent = (idx + 1) + '/' + searchResults.length;
+    }
+}
+
+async function sendCodeQR(){
+const code=textarea.value;
+try{
+await navigator.clipboard.writeText(code);
+}catch(e){
+textarea.select();
+document.execCommand('copy');
+}
+window.location.href='https://2d3t.github.io/2d3t/pro/Pro6/index.html';
+}
+
+async function fetchWebsiteCode(){
+let url=urlInput.value.trim();
+if(!url)return;
+if(!/^https?:\/\//i.test(url))url='https://'+url;
+const old=fetchButton.textContent;
+fetchButton.textContent='Загрузка... ⏳';
+fetchButton.classList.add('fetch-loading');
+fetchButton.disabled=true;
+try{
+const r=await fetch(url);
+if(!r.ok)throw new Error('HTTP '+r.status);
+const html=await r.text();
+if(!html)throw new Error('Пустой ответ');
+saveState();
+textarea.value=html;
+updateLineNumbers();
+activeLineNumber = null; // Сбрасываем подсветку
+highlightActiveLine(); // Вызываем без аргумента
+lastSearch='';
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+}catch(e){console.error('Ошибка загрузки:',e)}
+finally{
+fetchButton.textContent=old;
+fetchButton.classList.remove('fetch-loading');
+fetchButton.disabled=false;
+}
+}
+
+function extractHtmlContent(raw){
+if(!raw||!raw.trim())return'';
+let s=raw.toLowerCase().indexOf('<!doctype html');
+if(s<0)s=raw.toLowerCase().indexOf('<html');
+if(s<0)return raw;
+let e=raw.toLowerCase().lastIndexOf('</html>');
+return e<0?raw.substring(s):raw.substring(s,e+7);
+}
+
+function updateLineNumbers(){
+const lines=textarea.value.split('\n').length;
+const total=lines+Math.ceil(lines*.5);
+lineNumbersDiv.innerHTML='';
+for(let i=1;i<=total;i++){
+const d=document.createElement('div');
+d.textContent=i;
+lineNumbersDiv.appendChild(d);
+}
+syncScroll();
+// Не вызываем highlightActiveLine() здесь, чтобы не сбрасывать подсветку при вводе
+}
+
+function syncScroll(){
+lineNumbersDiv.scrollTop=textarea.scrollTop;
+}
+
+function goToLine(){
+const line=parseInt(document.getElementById('lineNumber').value);
+const lines=textarea.value.split('\n');
+const total=lines.length+Math.ceil(lines.length*.5);
+if(!isNaN(line)&&line>0&&line<=total){
+const h=parseFloat(getComputedStyle(textarea).lineHeight);
+textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2+h/2);
+activeLineNumber = line;
+highlightActiveLine(line);
+}
+}
+
+function highlightActiveLine(line){
+// Если line не передан, просто убираем всю подсветку
+if (line === undefined) {
+    line = null;
+}
+activeLineNumber = line;
+Array.from(lineNumbersDiv.children).forEach((el, i) => {
+    const shouldHighlight = (line !== null && i === line - 1);
+    el.classList.toggle('active-line', shouldHighlight);
+});
+}
+
+function copyText(){
+textarea.select();
+document.execCommand('copy');
+copyButton.classList.add('copied');
+copyButton.textContent='Скопировано';
+setTimeout(()=>{
+copyButton.classList.remove('copied');
+copyButton.textContent='Скопировать 📃';
+},1000);
+}
+
+function clearAll(){
+saveState();
+textarea.value='';
+activeLineNumber = null;
+updateLineNumbers();
+highlightActiveLine(); // Убираем подсветку
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+}
+
+function runCode(){
+const code=extractHtmlContent(textarea.value)||textarea.value;
+const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+lastPreviewUrl=url;
+previewFrame.src=url;
+fullscreenFrame.src=url;
+previewFrame.style.display='block';
+previewFrame.style.visibility='visible';
+previewFrame.style.opacity='1';
+previewFrame.classList.add('active');
+editorContainer.classList.add('hidden');
+editorContainer.style.display='none';
+window.scrollTo(0,0);
+}
+
+function showEditor(){
+if(isFullscreen)forceExitFullscreen();
+previewFrame.classList.remove('active');
+previewFrame.style.display='none';
+previewFrame.style.visibility='hidden';
+previewFrame.style.opacity='0';
+previewFrame.src='about:blank';
+editorContainer.classList.remove('hidden');
+editorContainer.style.display='flex';
+updateLineNumbers();
+// Не подсвечиваем при возврате в редактор
+window.scrollTo(0,0);
+}
+
+function shareCode(){
+const a=document.createElement('a');
+a.href=URL.createObjectURL(new Blob([textarea.value],{type:'text/plain'}));
+a.download='code.html';
+a.click();
+setTimeout(()=>URL.revokeObjectURL(a.href),100);
+}
+
+function saveState(){
+history.push(textarea.value);
+redoStack=[];
+if(history.length>100)history.shift();
+}
+
+function undo(){
+if(history.length){
+redoStack.push(textarea.value);
+textarea.value=history.pop();
+activeLineNumber = null;
+updateLineNumbers();
+highlightActiveLine(); // Убираем подсветку
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+}
+}
+
+function redo(){
+if(redoStack.length){
+history.push(textarea.value);
+textarea.value=redoStack.pop();
+activeLineNumber = null;
+updateLineNumbers();
+highlightActiveLine(); // Убираем подсветку
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+}
+}
+
+function handleFileWithFullscreenRestore(event){
+const file=event.target.files[0];
+if(!file)return;
+const ext=file.name.split('.').pop().toLowerCase();
+const supported=['html','htm','txt','py','js','css','json','xml','md','csv','log','ini','cfg','conf','sh','bat','ps1','rb','php','java','c','cpp','h','cs','go','rs','swift','kt','sql','yaml','yml','toml','pl','pm','r','lua','vim','ts','jsx','tsx','vue','scss','less','sass','styl'];
+if(!supported.includes(ext)){
+event.target.value='';
+return;
+}
+wasInPreviewBeforeFile=previewFrame.classList.contains('active');
+fullscreenWasActive=isFullscreen;
+const reader=new FileReader();
+reader.onload=e=>{
+const content=e.target.result;
+saveState();
+textarea.value=content;
+activeLineNumber = null; // Сбрасываем подсветку
+updateLineNumbers();
+highlightActiveLine(); // Убираем подсветку
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+if(wasInPreviewBeforeFile){
+const code=extractHtmlContent(content)||content;
+const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+lastPreviewUrl=url;
+previewFrame.src=url;
+fullscreenFrame.src=url;
+previewFrame.style.display='block';
+previewFrame.style.visibility='visible';
+previewFrame.style.opacity='1';
+if(fullscreenWasActive&&!isFullscreen)setTimeout(()=>{
+if(previewFrame.classList.contains('active')&&!isFullscreen)enterFullscreenInternal();
+},150);
+}
+event.target.value='';
+};
+reader.onerror=()=>event.target.value='';
+reader.readAsText(file,'UTF-8');
+}
+
+function toggleFullscreen(){
+if(!previewFrame.classList.contains('active'))return;
+isFullscreen?forceExitFullscreen():enterFullscreenInternal();
+}
+
+function enterFullscreenInternal(){
+if(!previewFrame.classList.contains('active'))return;
+const code=extractHtmlContent(textarea.value)||textarea.value;
+const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+lastPreviewUrl=url;
+fullscreenFrame.src=url;
+previewFrame.src=url;
+fullscreenOverlay.classList.add('active');
+isFullscreen=true;
+fullscreenButton.textContent='Обычный экран ⛶';
+fullscreenButton.style.background='#4CAF50';
+previewFrame.classList.remove('active');
+previewFrame.style.display='none';
+previewFrame.style.visibility='hidden';
+previewFrame.style.opacity='0';
+document.querySelector('.toolbar').style.display='none';
+editorContainer.style.display='none';
+if(fullscreenOverlay.requestFullscreen)fullscreenOverlay.requestFullscreen().catch(()=>{});
+document.addEventListener('keydown',handleEscapeKey);
+document.addEventListener('fullscreenchange',handleFullscreenChange);
+}
+
+function forceExitFullscreen(){
+if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+fullscreenOverlay.classList.remove('active');
+isFullscreen=false;
+fullscreenButton.textContent='Полный экран ⛶';
+fullscreenButton.style.background='';
+document.querySelector('.toolbar').style.display='flex';
+editorContainer.style.display='flex';
+editorContainer.classList.remove('hidden');
+previewFrame.classList.remove('active');
+previewFrame.style.display='none';
+previewFrame.style.visibility='hidden';
+previewFrame.style.opacity='0';
+if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+lastPreviewUrl=null;
+previewFrame.src='about:blank';
+fullscreenFrame.src='about:blank';
+document.removeEventListener('keydown',handleEscapeKey);
+document.removeEventListener('fullscreenchange',handleFullscreenChange);
+window.scrollTo(0,0);
+// Не подсвечиваем при выходе из полноэкранного режима
+updateLineNumbers();
+}
+
+function handleEscapeKey(e){
+if(e.key==='Escape'&&isFullscreen)forceExitFullscreen();
+}
+
+function handleFullscreenChange(){
+if(!document.fullscreenElement&&isFullscreen&&fullscreenOverlay.classList.contains('active')){
+setTimeout(()=>{
+if(isFullscreen&&!document.fullscreenElement)fullscreenOverlay.requestFullscreen().catch(()=>{});
+},200);
+}
+}
+
+function findAll(term){
+searchResults=[];
+currentResult=-1;
+if(!term)return;
+let i=textarea.value.indexOf(term);
+while(i!==-1){
+searchResults.push(i);
+i=textarea.value.indexOf(term,i+term.length);
+}
+updateSearchCounter();
+}
+
+function highlightMatch(){
+if(!searchResults.length)return;
+const pos=searchResults[currentResult],term=searchInput.value;
+textarea.focus();
+textarea.setSelectionRange(pos,pos+term.length);
+const h=parseFloat(getComputedStyle(textarea).lineHeight);
+const line=textarea.value.substring(0,pos).split('\n').length;
+textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2);
+updateSearchCounter();
+}
+
+function findNext(){
+const term=searchInput.value;
+if(!term)return;
+if(term!==lastSearch){
+findAll(term);
+lastSearch=term;
+}
+if(!searchResults.length)return;
+currentResult=(currentResult+1)%searchResults.length;
+highlightMatch();
+}
+
+function findPrev(){
+const term=searchInput.value;
+if(!term)return;
+if(term!==lastSearch){
+findAll(term);
+lastSearch=term;
+}
+if(!searchResults.length)return;
+currentResult=(currentResult-1+searchResults.length)%searchResults.length;
+highlightMatch();
+}
+
+textarea.addEventListener('input',saveState);
+
+searchInput.addEventListener('input',()=>{
+lastSearch='';
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+});
+
+urlInput.addEventListener('keypress',e=>{
+if(e.key==='Enter'){
+e.preventDefault();
+fetchWebsiteCode();
+}
+});
+
+document.getElementById('lineNumber').addEventListener('keydown',e=>{
+if(e.key==='Enter'){
+e.preventDefault();
+goToLine();
+}
+});
+
+forceExitFullscreenBtn.addEventListener('click', (e) => {
+  if (!e.target.closest('.drag-handle')) {
+    forceExitFullscreen();
+  }
+});
+
+window.addEventListener('pageshow',()=>{
+updateLineNumbers();
+syncScroll();
+// Не подсвечиваем при загрузке страницы
+activeLineNumber = null;
+highlightActiveLine();
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+});
+
+// Инициализация - без подсветки
+updateLineNumbers();
+textarea.value='';
+activeLineNumber = null;
+highlightActiveLine(); // Убираем подсветку
+updateLineNumbers();
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+
+previewFrame.style.display='none';
+previewFrame.style.visibility='hidden';
+previewFrame.style.opacity='0';
+
+initTheme();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('[SW] ✅ Зарегистрирован'))
+        .catch(err => console.log('[SW] ❌ Ошибка:', err));
+}
+</script>
+
+
+
+    <!-- ... весь ваш основной код ... -->
+
+    <!-- ============ ОТПРАВКА КОДА В QR (Pro6) ============ -->
+    
+
+
+<script>
+    function sendToQR() {
+        const code = document.getElementById('codeArea').value;
+        if (!code.trim()) {
+            alert('Код пуст!');
+            return;
+        }
+
+        // 1. Копируем код в буфер обмена
+        try {
+            navigator.clipboard.writeText(code);
+        } catch (e) {
+            const textarea = document.getElementById('codeArea');
+            textarea.select();
+            document.execCommand('copy');
+            textarea.setSelectionRange(0, 0);
+        }
+
+        // 2. Сохраняем код в localStorage для Pro6
+        localStorage.setItem('sharedCode', JSON.stringify({
+            code: code,
+            timestamp: Date.now(),
+            from: 'Pro5'
+        }));
+
+        // 3. Меняем вид кнопки (только на время)
+        const btn = document.querySelector('[onclick="sendToQR()"]');
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Отправлено!';
+        btn.style.background = '#00b894';
+        btn.style.color = 'white';
+        btn.disabled = true;
+
+        // 4. Возвращаем кнопку в исходное состояние через 2 секунды
+        setTimeout(() => {
+            btn.textContent = '📤 QR';
+            btn.style.background = '';
+            btn.style.color = '';
+            btn.disabled = false;
+        }, 2000);
+
+        // 5. Открываем Pro6 в новой вкладке
+        window.open('/2d3t/pro/Pro6/', '_blank');
+    }
+</script>
+
+
+
+
+    <!-- =================================================== -->
+<script>
+// ============ ОТКРЫТЬ СКАНЕР В PRO6 ============
+function openQRScanner() {
+    // Сохраняем команду для Pro6
+    localStorage.setItem('qrCommand', JSON.stringify({
+        action: 'openScanner',
+        from: 'Pro5',
+        timestamp: Date.now()
+    }));
+    
+    // Открываем Pro6
+    window.open('/2d3t/pro/Pro6/', '_blank');
+}
+</script>
+
+
+<script>
+
+async function keepScreenAwake() {
+    try {
+        // Запрашиваем блокировку сна
+        const wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Экран не уснёт');
+        
+        // Если вкладка становится неактивной — снова запрашиваем
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                navigator.wakeLock.request('screen').then(wl => {
+                    console.log('[WakeLock] Возобновлён');
+                }).catch(() => {});
+            }
+        });
+    } catch (e) {
+        console.log('[WakeLock] Не поддерживается:', e);
+    }
+}
+
+// Запускаем при загрузке
+document.addEventListener('DOMContentLoaded', keepScreenAwake);
+</script>
+
+
+</body>
+</html>
