@@ -3123,11 +3123,14 @@ function applyBlockSelection() {
         return;
     }
 
-    // Парсим ввод: "1,3,5-7,9" → [1,3,5,6,7,9]
+    // === РАЗДЕЛЯЕМ ПО ЗАПЯТЫМ И ПРОБЕЛАМ ===
+    // Заменяем запятые на пробелы, потом разбиваем по пробелам
+    const parts = raw.replace(/,/g, ' ').split(/\s+/).filter(s => s.length > 0);
+
     const selected = [];
-    const parts = raw.split(',').map(s => s.trim());
 
     for (const part of parts) {
+        // Проверяем, есть ли диапазон (через дефис)
         if (part.includes('-')) {
             const range = part.split('-').map(Number);
             if (range.length === 2 && !isNaN(range[0]) && !isNaN(range[1]) && range[0] <= range[1]) {
@@ -3154,15 +3157,14 @@ function applyBlockSelection() {
         return;
     }
 
-    // Сохраняем выбранные блоки в глобальную переменную
+    // Сохраняем выбранные блоки
     window.selectedBlocks = unique;
 
-    // Обновляем предпросмотр
     preview.style.color = '#6ee7b7';
     preview.innerHTML = '✅ Выбрано блоков: <b>' + unique.length + '</b> из ' + transferQRs.length + '<br>' +
                         'Номера: ' + unique.join(', ');
 
-    // Если выбран только один блок — сразу переключаемся на него
+    // Если выбран один блок — сразу переключаемся
     if (unique.length === 1) {
         transferIndex = unique[0] - 1;
         updateTransferUI();
@@ -3171,7 +3173,6 @@ function applyBlockSelection() {
         }
         modal.remove();
     } else {
-        // Показываем сообщение о применении
         const applyBtn = modal.querySelector('button[onclick="applyBlockSelection()"]');
         const originalText = applyBtn.textContent;
         applyBtn.textContent = '✅ ' + unique.length + ' блоков';
