@@ -1026,20 +1026,12 @@ if (!document.querySelector('style[data-share-style]')) {
 }
 </script>
 
-<!-- ============ АДРЕСНАЯ СТРОКА (без новых стилей) ============ -->
-<div id="customUrlBar" style="display:none; padding:6px 10px; gap:5px; flex-wrap:wrap; align-items:center; border-bottom:1px solid #2a3340; background:inherit;">
-    <span style="color:#94a3b8; font-size:13px; font-weight:600;">🌐</span>
-    <input type="text" id="customUrlInput" class="url-input" placeholder="https://example.com" value="" style="flex:1; min-width:120px; padding:6px 12px; border-radius:5px; border:1px solid #666; background:#444; color:white; font-size:14px;">
-    <button onclick="goToCustomUrl()" style="padding:6px 14px; border:none; border-radius:5px; background:#3b4de0; color:white; font-size:14px; font-weight:600; cursor:pointer; margin:0; width:auto;">▶ Перейти</button>
-    <button onclick="toggleCustomUrlBar()" style="padding:6px 10px; border:none; border-radius:5px; background:transparent; color:#94a3b8; font-size:16px; cursor:pointer; margin:0; width:auto;">✕</button>
-</div>
-
-
 
 <!-- ============ АДРЕСНАЯ СТРОКА (без новых стилей) ============ -->
 <div id="customUrlBar" style="display:none; padding:6px 10px; gap:5px; flex-wrap:wrap; align-items:center; border-bottom:1px solid #2a3340; background:inherit;">
     <span style="color:#94a3b8; font-size:13px; font-weight:600;">🌐</span>
     <input type="text" id="customUrlInput" class="url-input" placeholder="https://example.com" value="" style="flex:1; min-width:120px; padding:6px 12px; border-radius:5px; border:1px solid #666; background:#444; color:white; font-size:14px;">
+    <button onclick="clearCustomUrlInput()" style="padding:6px 10px; border:none; border-radius:5px; background:#e74c3c; color:white; font-size:14px; font-weight:600; cursor:pointer; margin:0; width:auto;">🗑️</button>
     <button onclick="goToCustomUrl()" style="padding:6px 14px; border:none; border-radius:5px; background:#3b4de0; color:white; font-size:14px; font-weight:600; cursor:pointer; margin:0; width:auto;">▶ Перейти</button>
     <button onclick="toggleCustomUrlBar()" style="padding:6px 10px; border:none; border-radius:5px; background:transparent; color:#94a3b8; font-size:16px; cursor:pointer; margin:0; width:auto;">✕</button>
 </div>
@@ -1071,6 +1063,13 @@ function goToCustomUrl() {
     } catch (e) {
         alert('⚠️ Неверный адрес: ' + url);
     }
+}
+
+// === НОВАЯ ФУНКЦИЯ ОЧИСТКИ ===
+function clearCustomUrlInput() {
+    const input = document.getElementById('customUrlInput');
+    input.value = '';
+    input.focus();
 }
 
 // Обработка Enter
@@ -1105,6 +1104,8 @@ document.addEventListener('keydown', function(e) {
     observer.takeRecords();
 })();
 </script>
+
+
 <script>
 
 function openWithAddressBar() {
