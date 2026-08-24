@@ -1,11 +1,9 @@
-const CACHE_NAME = 'pro6-v2';
+const CACHE_NAME = 'pro6-v1';
 const FILES_TO_CACHE = [
-    '/',                    // ← ОБЯЗАТЕЛЬНО СЛЕШ В НАЧАЛЕ
-    '/index.html',
-    '/manifest.json',
-    '/qrcode.js',
-    '/html5-qrcode.js',
-    '/offline.html'        // добавим офлайн-страницу
+    '/2d3t/pro/Pro6/index.html',
+    '/2d3t/pro/Pro6/manifest.json',
+    '/2d3t/pro/Pro6/qrcode.js',
+    '/2d3t/pro/Pro6/html5-qrcode.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -43,7 +41,6 @@ self.addEventListener('fetch', (event) => {
                 }
                 return fetch(event.request)
                     .then((response) => {
-                        // Кэшируем успешные ответы
                         if (response && response.status === 200) {
                             const responseClone = response.clone();
                             caches.open(CACHE_NAME).then((cache) => {
@@ -53,8 +50,7 @@ self.addEventListener('fetch', (event) => {
                         return response;
                     })
                     .catch(() => {
-                        // Если нет интернета и нет кэша — отдаём главную страницу
-                        return caches.match('/index.html');
+                        return caches.match('/2d3t/pro/Pro6/index.html');
                     });
             })
     );
