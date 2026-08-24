@@ -865,7 +865,11 @@ function toggleQR() {
         <h1>📦 QR File Transfer</h1>
 
         <div class="top-actions">
-            <button class="secondary" onclick="downloadApp()">💾 Скачать HTML</button>
+            
+
+<button class="secondary" onclick="showAppQR()">📱 Поделиться приложением</button>
+
+
             <button class="secondary" onclick="showAbout()">ℹ️ О программе</button>
         </div>
 
@@ -2886,5 +2890,114 @@ async function keepScreenAwake() {
 // Запускаем при загрузке
 document.addEventListener('DOMContentLoaded', keepScreenAwake);
 </script>
+
+<!-- ============ КНОПКА "ПОДЕЛИТЬСЯ" ============ -->
+<script>
+// Функция для показа QR-кода приложения
+function showAppQR() {
+    // Удаляем старый модальный блок, если он есть
+    const oldModal = document.querySelector('.app-share-modal');
+    if (oldModal) oldModal.remove();
+
+    // Создаём модальное окно
+    const modal = document.createElement('div');
+    modal.className = 'app-share-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.85);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        animation: fadeIn 0.3s ease;
+        padding: 20px;
+    `;
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+        background: #141a24;
+        border-radius: 24px;
+        padding: 24px;
+        max-width: 400px;
+        width: 100%;
+        border: 1px solid #2a3340;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    `;
+
+    card.innerHTML = `
+        <h2 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 20px;">📱 QR-код приложения</h2>
+        <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
+            Отсканируйте, чтобы открыть QR Transfer
+        </p>
+        <img src="https://2d3t.github.io/2d3t/pro/Pro6/qrgen.png" 
+             alt="QR-код приложения"
+             style="width: 100%; max-width: 280px; height: auto; border-radius: 12px; background: white; padding: 8px; margin: 0 auto 16px auto; display: block; image-rendering: pixelated;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+            <button onclick="this.closest('.app-share-modal').remove()" 
+                    style="background: #3b4de0; color: white; border: 0; border-radius: 40px; padding: 10px 28px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; min-width: 120px;">
+                ✕ Закрыть
+            </button>
+            <button onclick="shareAppLink()" 
+                    style="background: #1e2630; color: #e2e8f0; border: 1px solid #2a3340; border-radius: 40px; padding: 10px 28px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; min-width: 120px;">
+                📤 Поделиться
+            </button>
+        </div>
+        <div style="margin-top: 12px; font-size: 12px; color: #475569; word-break: break-all;">
+            https://2d3t.github.io/2d3t/pro/Pro6/index.html
+        </div>
+    `;
+
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    // Закрытие по клику вне карточки
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+    });
+}
+
+// Функция для расшаривания ссылки
+function shareAppLink() {
+    const url = 'https://2d3t.github.io/2d3t/pro/Pro6/index.html';
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'QR File Transfer',
+            text: '📦 Передача файлов через QR-коды',
+            url: url
+        }).catch(() => {});
+    } else {
+        // Если Web Share API не поддерживается — копируем ссылку
+        navigator.clipboard.writeText(url).then(() => {
+            const btn = document.querySelector('.app-share-modal button:nth-child(2)');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Скопировано!';
+                setTimeout(() => { btn.textContent = originalText; }, 2000);
+            }
+        }).catch(() => {
+            alert('Ссылка: ' + url);
+        });
+    }
+}
+
+// Добавляем анимацию появления
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+
 </body>
 </html>
