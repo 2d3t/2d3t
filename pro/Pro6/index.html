@@ -2354,8 +2354,14 @@ playSuccessBeep();
                     setScanStatus('🖼️ Изображение восстановлено!', 'ok');
                     playSuccessBeep();
                 }
-            }
-        }
+
+            // 👇👇👇 ЭТИ 3 СТРОЧКИ ДОБАВЬ СЮДА 👇👇👇
+        setTimeout(() => {
+            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 350);
+        // 👆👆👆 ВСЁ 👆👆👆
+    }
+}
 
         function isBase64Image(base64) {
             if (!base64) return false;
