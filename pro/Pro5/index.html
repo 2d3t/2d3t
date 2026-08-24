@@ -195,12 +195,7 @@ body.theme-graphite .clear-url-btn:hover{background:#555}
 
 <button id="copyButton" onclick="copyText()">Скопировать 📃</button>
 <button onclick="clearAll()">Очистить ❌</button>
-
-
-<button onclick="openWithAddressBar()">Выход 🚸</button>
-
-
-
+<button onclick="window.location.href='https://2d3t.github.io/index.html/'">Выход 🚸</button>
 <button onclick="undo()">Отменить ↩️</button>
 <button onclick="redo()">Повторить ↪️</button>
 <button onclick="shareCode()">Скачать ⬇️</button>
@@ -221,9 +216,6 @@ body.theme-graphite .clear-url-btn:hover{background:#555}
 accept=".html,.htm,.txt,.py,.js,.css,.json,.xml,.md,.csv,.log,.ini,.cfg,.conf,.sh,.bat,.ps1,.rb,.php,.java,.c,.cpp,.h,.cs,.go,.rs,.swift,.kt,.sql,.yaml,.yml,.toml,.pl,.pm,.r,.lua,.vim,.ts,.jsx,.tsx,.vue,.scss,.less,.sass,.styl"
 onchange="handleFileWithFullscreenRestore(event)">
 <button onclick="shareFile()" title="Поделиться файлом">📤 Поделиться</button>
-
-
-
 </div>
 
 <div class="editor" id="editorContainer">
@@ -1025,13 +1017,5 @@ if (!document.querySelector('style[data-share-style]')) {
     document.head.appendChild(style);
 }
 </script>
-
-
-
-function openWithAddressBar() {
-    window.open('https://2d3t.github.io/index.html/', '_blank');
-}
-</script>
-
 </body>
 </html>
