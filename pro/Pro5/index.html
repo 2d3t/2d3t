@@ -1027,6 +1027,7 @@ if (!document.querySelector('style[data-share-style]')) {
 </script>
 
 
+
 <!-- ============ АДРЕСНАЯ СТРОКА (без новых стилей) ============ -->
 <div id="customUrlBar" style="display:none; padding:6px 10px; gap:5px; flex-wrap:wrap; align-items:center; border-bottom:1px solid #2a3340; background:inherit;">
     <span style="color:#94a3b8; font-size:13px; font-weight:600;">🌐</span>
@@ -1041,11 +1042,16 @@ if (!document.querySelector('style[data-share-style]')) {
 
 function toggleCustomUrlBar() {
     const bar = document.getElementById('customUrlBar');
+    const input = document.getElementById('customUrlInput');
     const isActive = bar.style.display === 'flex';
-    bar.style.display = isActive ? 'none' : 'flex';
     
-    if (!isActive) {
-        const input = document.getElementById('customUrlInput');
+    if (isActive) {
+        // ЗАКРЫВАЕМ — очищаем поле
+        bar.style.display = 'none';
+        input.value = ''; // ← Очищаем при закрытии
+    } else {
+        // ОТКРЫВАЕМ — вставляем текущий URL (если не blob)
+        bar.style.display = 'flex';
         const currentUrl = window.location.href;
         input.value = currentUrl.startsWith('blob:') ? '' : currentUrl;
         setTimeout(() => input.focus(), 100);
@@ -1065,7 +1071,7 @@ function goToCustomUrl() {
     }
 }
 
-// === НОВАЯ ФУНКЦИЯ ОЧИСТКИ ===
+// === ОЧИСТКА (без закрытия) ===
 function clearCustomUrlInput() {
     const input = document.getElementById('customUrlInput');
     input.value = '';
@@ -1084,13 +1090,16 @@ document.getElementById('customUrlInput').addEventListener('keydown', function(e
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         const bar = document.getElementById('customUrlBar');
-        if (bar.style.display === 'flex') bar.style.display = 'none';
+        const input = document.getElementById('customUrlInput');
+        if (bar.style.display === 'flex') {
+            bar.style.display = 'none';
+            input.value = ''; // ← Очищаем при Escape
+        }
     }
 });
 
 // Подстраиваем цвет фона под тему
 (function syncTheme() {
-    const bar = document.getElementById('customUrlBar');
     const input = document.getElementById('customUrlInput');
     
     const observer = new MutationObserver(() => {
@@ -1104,6 +1113,7 @@ document.addEventListener('keydown', function(e) {
     observer.takeRecords();
 })();
 </script>
+
 
 
 <script>
