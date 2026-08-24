@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hello-pwa-v1';
+const CACHE_NAME = 'prox-pwa-v1';
 const FILES_TO_CACHE = [
     '/2d3t/Prox/index.html',
     '/2d3t/Prox/manifest.json'
@@ -8,7 +8,7 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Кэшируем файлы');
+                console.log('[SW] Кэшируем ProX...');
                 return cache.addAll(FILES_TO_CACHE);
             })
             .then(() => self.skipWaiting())
@@ -33,17 +33,36 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    return response;
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    // Фоновое обновление кэша
+                    fetch(event.request)
+                        .then(response => {
+                            if (response && response.status === 200) {
+                                const clone = response.clone();
+                                caches.open(CACHE_NAME).then(cache => {
+                                    cache.put(event.request, clone);
+                                });
+                            }
+                        })
+                        .catch(() => {});
+                    return cachedResponse;
                 }
-                return fetch(event.request).catch(() => {
-                    return new Response('Нет интернета', {
-                        status: 503,
-                        statusText: 'Service Unavailable'
+                
+                return fetch(event.request)
+                    .then(response => {
+                        if (response && response.status === 200) {
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME).then(cache => {
+                                cache.put(event.request, clone);
+                            });
+                        }
+                        return response;
+                    })
+                    .catch(() => {
+                        // Fallback на главную страницу при офлайне
+                        return caches.match('/2d3t/Prox/index.html');
                     });
-                });
             })
     );
 });
-
