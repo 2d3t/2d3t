@@ -373,5 +373,48 @@
 
     window.addEventListener('resize', resizeCanvas);
   </script>
+
+
+
+
+<script>
+// ============ НЕ ДАЁМ ПРИЛОЖЕНИЮ ЗАСНУТЬ ============
+async function keepScreenAwake() {
+    try {
+        const wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Экран не уснёт');
+        
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                navigator.wakeLock.request('screen').catch(() => {});
+            }
+        });
+    } catch (e) {
+        console.log('[WakeLock] Не поддерживается:', e);
+    }
+}
+
+function ping() {
+    localStorage.setItem('_keepalive', Date.now().toString());
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    keepScreenAwake();
+    ping();
+    setInterval(ping, 120000); // каждые 2 минуты
+});
+
+// ============ ВОССТАНОВЛЕНИЕ ПОСЛЕ СНА ============
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        const video = document.getElementById('video');
+        if (video && video.readyState < 2) {
+            console.log('[App] Перезагрузка после сна...');
+            location.reload();
+        }
+    }
+});
+</script>
+
 </body>
 </html>
