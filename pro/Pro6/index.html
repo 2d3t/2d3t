@@ -2335,36 +2335,8 @@ playSuccessBeep();
             }
         }
 
-        function showImage(bytes) {
-    const container = document.getElementById('imagePreviewContainer');
-    const img = document.getElementById('imagePreview');
-    const info = document.getElementById('imageInfo');
-
-    const url = bytesToImageUrl(bytes);
-    if (url) {
-        img.src = url;
-        const imgType = getImageType(bytes);
-        const size = bytes.length;
-        info.textContent = '📐 ' + imgType + ' | ' + formatFileSize(size) + ' (' + size + ' байт)';
-        container.classList.remove('hidden');
-        document.getElementById('textPreviewContainer').classList.add('hidden');
-        document.getElementById('audioPreviewContainer').classList.add('hidden');
-
-        if (currentViewMode === 'auto') {
-            setScanStatus('🖼️ Изображение восстановлено!', 'ok');
-            playSuccessBeep();
-        }
-
-        // ✅ ПРОКРУТКА К КАРТИНКЕ (вставляем сюда)
-        setTimeout(() => {
-            container.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }, 350);
-    }   // ← закрывает if (url)
-}       // ← закрывает функцию
-        }
+        
+        
 
         function isBase64Image(base64) {
             if (!base64) return false;
