@@ -7,8 +7,8 @@ const FILES_TO_CACHE = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[SW] Кэшируем MirrorX...');
+            .then(cache => {
+                console.log('[SW] Кэшируем файлы MirrorX');
                 return cache.addAll(FILES_TO_CACHE);
             })
             .then(() => self.skipWaiting())
@@ -17,9 +17,9 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
+        caches.keys().then(cacheNames => {
             return Promise.all(
-                cacheNames.map((name) => {
+                cacheNames.map(name => {
                     if (name !== CACHE_NAME) {
                         console.log('[SW] Удаляем старый кэш:', name);
                         return caches.delete(name);
@@ -31,25 +31,22 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Пропускаем запросы к камере и API
+    if (event.request.url.includes('/api/') || 
+        event.request.url.includes('mediadevices')) {
+        return fetch(event.request);
+    }
+
     event.respondWith(
         caches.match(event.request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
+            .then(response => {
+                if (response) {
+                    return response;
                 }
-                return fetch(event.request)
-                    .then((response) => {
-                        if (response && response.status === 200) {
-                            const responseClone = response.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(event.request, responseClone);
-                            });
-                        }
-                        return response;
-                    })
-                    .catch(() => {
-                        return caches.match('/2d3t/pro/MirrorX/index.html');
-                    });
+                return fetch(event.request).catch(() => {
+                    // Возвращаем кэшированную страницу как fallback
+                    return caches.match('/2d3t/pro/MirrorX/index.html');
+                });
             })
     );
 });
