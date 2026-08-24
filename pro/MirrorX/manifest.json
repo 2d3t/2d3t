@@ -1,11 +1,11 @@
 {
-    "name": "MirrorX",
-    "short_name": "MirrorX",
+    "name": "Кривое Зеркало",
+    "short_name": "Зеркало",
     "start_url": "/2d3t/pro/MirrorX/index.html",
-    "scope": "/2d3t/pro/MirroX/",
+    "scope": "/2d3t/pro/MirrorX/",
     "display": "standalone",
-    "background_color": "#12121a",
-    "theme_color": "#1e1e2f",
+    "background_color": "#111111",
+    "theme_color": "#111111",
     "icons": [
         {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
         {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}
