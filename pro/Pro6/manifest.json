@@ -1,23 +1,21 @@
 {
-  "name": "QR File Transfer",
-  "short_name": "QR Transfer",
-  "description": "Передача файлов через QR-коды",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#0a0a12",
-  "theme_color": "#050508",
-  "icons": [
-    {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a12'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3E⚡%3C/text%3E%3C/svg%3E",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a12'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3E⚡%3C/text%3E%3C/svg%3E",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+    "name": "QR File Transfer",
+    "short_name": "QR Transfer",
+    "start_url": "/2d3t/pro/Pro6/index.html",
+    "scope": "/2d3t/pro/Pro6/",
+    "display": "standalone",
+    "background_color": "#0a0e14",
+    "theme_color": "#0a0e14",
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
 }
