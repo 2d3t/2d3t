@@ -4,10 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>🪞 Кривое Зеркало</title>
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/2d3t/pro/MirrorX/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
+    /* Ваш существующий стиль */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background: #111; color: #fff;
@@ -104,6 +105,15 @@
     .btn-start:active { transform: scale(0.96); }
     #permission-denied { display: none; text-align: center; padding: 20px; }
     #permission-denied h2 { color: #ff6b6b; }
+    .status {
+      position: fixed; bottom: 10px; right: 10px;
+      padding: 4px 12px; border-radius: 12px;
+      background: rgba(0,0,0,0.7); font-size: 11px;
+      backdrop-filter: blur(4px); z-index: 999;
+      pointer-events: none;
+    }
+    .status.online { color: #4ade80; }
+    .status.offline { color: #f87171; }
   </style>
 </head>
 <body>
@@ -139,7 +149,29 @@
     </div>
   </div>
 
+  <div class="status online" id="status">🟢 Онлайн</div>
+
   <script>
+    // ============================================================
+    //  СТАТУС ОФЛАЙН
+    // ============================================================
+    function updateStatus() {
+      const status = document.getElementById('status');
+      if (navigator.onLine) {
+        status.textContent = '🟢 Онлайн';
+        status.className = 'status online';
+      } else {
+        status.textContent = '🔴 Офлайн (работает из кэша)';
+        status.className = 'status offline';
+      }
+    }
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    updateStatus();
+
+    // ============================================================
+    //  ОСНОВНОЙ КОД
+    // ============================================================
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -405,13 +437,21 @@
     // ============================================================
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-            // Проверяем, жива ли камера
             if (!stream || stream.getTracks().some(t => !t.readyState)) {
                 console.log('[App] Восстанавливаем камеру после сна...');
                 startCamera();
             }
         }
     });
+
+    // ============================================================
+    //  РЕГИСТРАЦИЯ SERVICE WORKER
+    // ============================================================
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/2d3t/pro/MirrorX/sw.js')
+            .then(() => console.log('[SW] ✅ Зарегистрирован для MirrorX'))
+            .catch(err => console.log('[SW] ❌ Ошибка:', err));
+    }
   </script>
 </body>
 </html>
