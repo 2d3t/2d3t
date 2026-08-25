@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mirrorx-v1';
+const CACHE_NAME = 'prox-pwa-v2';
 const FILES_TO_CACHE = [
     '/2d3t/pro/MirrorX/index.html',
     '/2d3t/pro/MirrorX/manifest.json'
@@ -8,7 +8,7 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Кэшируем файлы MirrorX');
+                console.log('[SW] Кэшируем ProX...');
                 return cache.addAll(FILES_TO_CACHE);
             })
             .then(() => self.skipWaiting())
@@ -31,22 +31,38 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Пропускаем запросы к камере и API
-    if (event.request.url.includes('/api/') || 
-        event.request.url.includes('mediadevices')) {
-        return fetch(event.request);
-    }
-
     event.respondWith(
         caches.match(event.request)
-            .then(response => {
-                if (response) {
-                    return response;
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    // Фоновое обновление кэша
+                    fetch(event.request)
+                        .then(response => {
+                            if (response && response.status === 200) {
+                                const clone = response.clone();
+                                caches.open(CACHE_NAME).then(cache => {
+                                    cache.put(event.request, clone);
+                                });
+                            }
+                        })
+                        .catch(() => {});
+                    return cachedResponse;
                 }
-                return fetch(event.request).catch(() => {
-                    // Возвращаем кэшированную страницу как fallback
-                    return caches.match('/2d3t/pro/MirrorX/index.html');
-                });
+                
+                return fetch(event.request)
+                    .then(response => {
+                        if (response && response.status === 200) {
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME).then(cache => {
+                                cache.put(event.request, clone);
+                            });
+                        }
+                        return response;
+                    })
+                    .catch(() => {
+                        // Fallback на главную страницу при офлайне
+                        return caches.match('/2d3t/pro/MirrorX/index.html');
+                    });
             })
     );
 });
