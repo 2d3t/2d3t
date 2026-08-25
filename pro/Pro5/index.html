@@ -858,7 +858,7 @@ document.addEventListener('DOMContentLoaded', keepScreenAwake);
 
 <!-- ============ КНОПКА "ПОДЕЛИТЬСЯ ФАЙЛОМ" ============ -->
 <script>
-// ============ КНОПКА "ПОДЕЛИТЬСЯ ФАЙЛОМ" (ИСПРАВЛЕННАЯ) ============
+// ============ КНОПКА "ПОДЕЛИТЬСЯ ФАЙЛОМ" (FIX ДЛЯ PWA) ============
 function shareFile() {
     const code = document.getElementById('codeArea').value;
     if (!code.trim()) {
@@ -881,6 +881,8 @@ function shareFile() {
         z-index: 9999;
         animation: fadeIn 0.25s ease;
         padding: 20px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
     `;
 
     const card = document.createElement('div');
@@ -895,10 +897,20 @@ function shareFile() {
         box-shadow: 0 20px 60px rgba(0,0,0,0.8);
     `;
 
+    // Определяем расширение по содержимому
+    let defaultExt = 'txt';
+    const trimmed = code.trim();
+    if (trimmed.toLowerCase().startsWith('<!doctype') || 
+        trimmed.toLowerCase().startsWith('<html') ||
+        trimmed.includes('<body') ||
+        trimmed.includes('<div')) {
+        defaultExt = 'html';
+    }
+
     card.innerHTML = `
         <h3 style="color: #e2e8f0; margin: 0 0 8px 0;">📤 Поделиться файлом</h3>
         <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
-            Введите имя файла и выберите формат
+            Введите имя файла
         </p>
         <div style="margin-bottom: 16px;">
             <input type="text" id="fileNameInput" value="code" 
@@ -911,16 +923,22 @@ function shareFile() {
         </div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
             <button onclick="doShare('txt')" 
-                    style="flex:1; min-width:100px; background:#3b4de0; color:white; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer;">
+                    style="flex:1; min-width:100px; background:#3b4de0; color:white; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; transition: transform 0.1s;"
+                    onmouseover="this.style.transform='scale(1.02)'"
+                    onmouseout="this.style.transform='scale(1)'">
                 📄 TXT
             </button>
             <button onclick="doShare('html')" 
-                    style="flex:1; min-width:100px; background:#7c5a00; color:#fcd34d; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer;">
+                    style="flex:1; min-width:100px; background:#7c5a00; color:#fcd34d; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; transition: transform 0.1s;"
+                    onmouseover="this.style.transform='scale(1.02)'"
+                    onmouseout="this.style.transform='scale(1)'">
                 🌐 HTML
             </button>
         </div>
         <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
-                style="margin-top:14px; background:#1e2630; color:#94a3b8; border:1px solid #2a3340; border-radius:40px; padding:8px 24px; font-size:14px; cursor:pointer; width:auto;">
+                style="margin-top:14px; background:#1e2630; color:#94a3b8; border:1px solid #2a3340; border-radius:40px; padding:8px 24px; font-size:14px; cursor:pointer; width:auto; transition: background 0.2s;"
+                onmouseover="this.style.background='#2a3340'"
+                onmouseout="this.style.background='#1e2630'">
             ✕ Отмена
         </button>
     `;
@@ -943,8 +961,11 @@ function shareFile() {
     });
 
     // Закрытие по Escape
-    modal.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') modal.remove();
+    document.addEventListener('keydown', function escapeHandler(e) {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', escapeHandler);
+        }
     });
 }
 
@@ -997,26 +1018,43 @@ ${code}
         mimeType = 'text/html';
     }
 
-    // Проверяем, поддерживается ли Web Share API (на мобильных)
-    if (navigator.share && navigator.canShare) {
-        // Создаём File из Blob
-        const file = new File([blob], fullFilename, { type: mimeType });
+    // === ОСНОВНОЕ ИСПРАВЛЕНИЕ ДЛЯ PWA ===
+    // Создаём File объект
+    const file = new File([blob], fullFilename, { 
+        type: mimeType,
+        lastModified: Date.now()
+    });
+
+    // Проверяем, поддерживается ли Web Share API
+    if (navigator.share) {
+        // Формируем данные для отправки ТОЛЬКО с файлом
         const shareData = {
-            title: fileName,
             files: [file]
         };
 
-        // Для Android добавляем текст
-        if (navigator.userAgent.toLowerCase().includes('android')) {
-            shareData.text = code.substring(0, 500) + (code.length > 500 ? '...' : '');
-        }
-
-        if (navigator.canShare(shareData)) {
-            navigator.share(shareData).catch((err) => {
-                if (err.name !== 'AbortError') {
-                    fallbackDownload(blob, fullFilename);
-                }
-            });
+        // Проверяем, можно ли поделиться файлом
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            navigator.share(shareData)
+                .then(() => {
+                    console.log('✅ Файл успешно отправлен');
+                })
+                .catch((err) => {
+                    if (err.name !== 'AbortError') {
+                        console.error('Ошибка отправки:', err);
+                        // Если не получилось отправить файл, пробуем скачать
+                        fallbackDownload(blob, fullFilename);
+                    }
+                });
+            return;
+        } else {
+            // Если canShare не поддерживается или вернул false
+            // Пробуем отправить без проверки
+            navigator.share(shareData)
+                .catch((err) => {
+                    if (err.name !== 'AbortError') {
+                        fallbackDownload(blob, fullFilename);
+                    }
+                });
             return;
         }
     }
