@@ -1,0 +1,1311 @@
+
+<!DOCTYPE html>
+<html lang="ru-RU">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Voice Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #1a2a3a, #0b1219);
+            font-family: 'Segoe UI', 'Poppins', 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* 3D-сцена */
+        .scene {
+            width: 340px;
+            height: 480px;
+            perspective: 1400px;
+            perspective-origin: 50% 50%;
+            cursor: grab;
+        }
+
+        .scene:active {
+            cursor: grabbing;
+        }
+
+        /* Основной объект калькулятора - полный закрытый шестигранник (только основные панели) */
+        .calculator-3d {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.03s linear;
+            will-change: transform;
+        }
+
+        /* Общий стиль граней */
+        .face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 28px;
+            backface-visibility: visible;
+            box-sizing: border-box;
+        }
+
+        /* Передняя панель (интерфейс калькулятора) */
+        .front-face {
+            background: linear-gradient(145deg, #f0f3fa 0%, #e6eefc 100%);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.7);
+            transform: translateZ(22px);
+            display: flex;
+            flex-direction: column;
+            padding: 18px 16px 22px 16px;
+        }
+
+        /* Задняя панель - элегантный дизайн с часами (текст читается правильно) */
+        .back-face {
+            background: radial-gradient(circle at 30% 40%, #1e2b32, #0f1920);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6), 0 10px 20px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            transform: translateZ(-22px) rotateY(180deg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(2px);
+            font-family: 'Segoe UI', 'Poppins', monospace;
+            padding: 20px;
+        }
+
+        /* Стильные часы на задней крышке */
+        .back-clock {
+            text-align: center;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(8px);
+            border-radius: 48px;
+            padding: 20px 12px;
+            border: 1px solid rgba(255, 215, 120, 0.5);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+        }
+
+        .time-digits {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #ffe6b3;
+            text-shadow: 0 0 8px rgba(255, 200, 100, 0.6), 0 2px 4px black;
+            font-family: 'Courier New', 'Segoe UI', monospace;
+            background: linear-gradient(135deg, #ffefcf, #ffd58c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: #ffdd99;
+            text-shadow: 0 0 5px #ffb347;
+        }
+
+        .date-text {
+            font-size: 18px;
+            font-weight: 500;
+            margin-top: 12px;
+            color: #ccddee;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: rgba(0,0,0,0.5);
+            display: inline-block;
+            padding: 4px 16px;
+            border-radius: 40px;
+            backdrop-filter: blur(4px);
+            font-family: 'Segoe UI', monospace;
+        }
+
+        .weekday {
+            font-size: 16px;
+            margin-top: 10px;
+            color: #aaccff;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        .back-brand {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.4);
+            border-radius: 60px;
+            padding: 6px 18px;
+            backdrop-filter: blur(4px);
+        }
+
+        .back-brand span {
+            color: #ffdfa5;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+
+        .voice-icon-back {
+            font-size: 22px;
+            filter: drop-shadow(0 0 3px #ffc285);
+        }
+
+        /* Дисплей */
+        .display-section {
+            background: #1e2a32;
+            border-radius: 20px;
+            padding: 12px 18px;
+            margin-bottom: 24px;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .expression {
+            font-size: 16px;
+            color: #8aaec0;
+            text-align: right;
+            min-height: 24px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            word-break: break-all;
+        }
+
+        .display {
+            font-size: 42px;
+            font-weight: 600;
+            color: #f0f9ff;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            word-wrap: break-word;
+            word-break: break-all;
+            line-height: 1.2;
+            text-shadow: 0 2px 3px rgba(0,0,0,0.2);
+        }
+
+        /* Сетка кнопок */
+        .buttons-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px 10px;
+            flex: 1;
+        }
+
+        .btn {
+            background: #ffffffdd;
+            backdrop-filter: blur(4px);
+            border: none;
+            border-radius: 18px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2e3a;
+            padding: 12px 0;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #b0bed0;
+            transition: all 0.08s linear;
+            font-family: inherit;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #b0bed0;
+        }
+
+        .operator-btn {
+            background: linear-gradient(135deg, #ff9a44, #ff6a2e);
+            color: white;
+            box-shadow: 0 6px 0 #b1470e;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+        }
+
+        .operator-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #b1470e;
+        }
+
+        .equal-btn {
+            background: linear-gradient(135deg, #3baa8a, #1f6e58);
+            box-shadow: 0 6px 0 #0e4d3b;
+            color: white;
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #f0737e, #c93a47);
+            box-shadow: 0 6px 0 #8a2a33;
+            color: white;
+        }
+
+        @media (max-width: 500px) {
+            .scene {
+                width: 300px;
+                height: 460px;
+            }
+            .btn {
+                font-size: 20px;
+                padding: 10px 0;
+                border-radius: 16px;
+            }
+            .display {
+                font-size: 34px;
+            }
+            .time-digits {
+                font-size: 34px;
+            }
+            .date-text {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="scene" id="scene3d">
+    <div class="calculator-3d" id="calculator3d">
+        <!-- Передняя грань (интерфейс) -->
+        <div class="face front-face">
+            <div class="display-section">
+                <div class="expression" id="expression">&nbsp;</div>
+                <div class="display" id="display">0</div>
+            </div>
+            <div class="buttons-grid" id="buttonsContainer"></div>
+        </div>
+        
+        <!-- Задняя грань - ЭЛЕГАНТНЫЕ ЧАСЫ С ДАТОЙ (текст читается правильно) -->
+        <div class="face back-face">
+            <div class="back-clock">
+                <div class="time-digits" id="backTime">--:--:--</div>
+                <div class="date-text" id="backDate">-- ---- ----</div>
+                <div class="weekday" id="backWeekday">--------</div>
+            </div>
+            <div class="back-brand">
+                <span class="voice-icon-back">🔊</span>
+                <span>VOICE • 3D SMART</span>
+                <span>⚡</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ---------- 1. Улучшенный голосовой синтез с поддержкой длинных чисел ----------
+    let speechSynthesisSupported = 'speechSynthesis' in window;
+    let currentUtterance = null;
+    
+    // Функция для преобразования числа в читаемую строку (разбивает длинные числа)
+    function formatNumberForSpeech(num) {
+        if (num === undefined || num === null) return '';
+        let numStr = num.toString();
+        
+        // Обработка научного формата (например 1.23e+10)
+        if (numStr.includes('e')) {
+            let floatNum = parseFloat(num);
+            if (!isNaN(floatNum)) {
+                // Для очень больших чисел произносим как "один точка два три умножить на десять в степени"
+                let parts = numStr.split('e');
+                let base = parseFloat(parts[0]);
+                let exponent = parseInt(parts[1]);
+                if (!isNaN(base) && !isNaN(exponent)) {
+                    return `${formatSimpleNumber(base)} умножить на десять в степени ${Math.abs(exponent)}`;
+                }
+            }
+            return numStr;
+        }
+        
+        return formatSimpleNumber(parseFloat(numStr));
+    }
+    
+    function formatSimpleNumber(num) {
+        if (isNaN(num)) return 'ошибка';
+        if (num === 0) return 'ноль';
+        
+        // Для целых чисел и чисел с плавающей точкой
+        let result = '';
+        
+        // Проверка на отрицательное число
+        let isNegative = num < 0;
+        let absNum = Math.abs(num);
+        
+        // Разделяем целую и дробную части
+        let integerPart = Math.floor(absNum);
+        let fractionalPart = absNum - integerPart;
+        
+        // Озвучиваем целую часть
+        if (integerPart > 0) {
+            result += numberToWords(integerPart);
+        } else if (integerPart === 0 && fractionalPart > 0) {
+            result += 'ноль';
+        }
+        
+        // Озвучиваем дробную часть, если она есть
+        if (fractionalPart > 0.0000001) {
+            // Получаем дробную часть как строку цифр
+            let fractionalStr = absNum.toString().split('.')[1];
+            if (fractionalStr && fractionalStr.length > 0) {
+                result += ' точка ';
+                for (let i = 0; i < fractionalStr.length && i < 8; i++) {
+                    let digit = fractionalStr[i];
+                    result += digitToWord(digit) + ' ';
+                }
+            }
+        }
+        
+        if (isNegative) {
+            result = 'минус ' + result;
+        }
+        
+        return result.trim();
+    }
+    
+    function numberToWords(num) {
+        const units = ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'];
+        const teens = ['десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать'];
+        const tens = ['', '', 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто'];
+        const hundreds = ['', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот'];
+        
+        if (num === 0) return 'ноль';
+        if (num < 0) return 'минус ' + numberToWords(Math.abs(num));
+        
+        let result = '';
+        
+        // Миллиарды
+        if (num >= 1000000000) {
+            let billions = Math.floor(num / 1000000000);
+            result += numberToWords(billions) + ' миллиард ';
+            if (billions % 10 === 1 && billions % 100 !== 11) result += '';
+            else if ([2,3,4].includes(billions % 10) && (billions % 100 < 10 || billions % 100 > 20)) result = result.replace('миллиард', 'миллиарда');
+            else result = result.replace('миллиард', 'миллиардов');
+            num %= 1000000000;
+        }
+        
+        // Миллионы
+        if (num >= 1000000) {
+            let millions = Math.floor(num / 1000000);
+            result += numberToWords(millions) + ' миллион ';
+            if (millions % 10 === 1 && millions % 100 !== 11) result += '';
+            else if ([2,3,4].includes(millions % 10) && (millions % 100 < 10 || millions % 100 > 20)) result = result.replace('миллион', 'миллиона');
+            else result = result.replace('миллион', 'миллионов');
+            num %= 1000000;
+        }
+        
+        // Тысячи
+        if (num >= 1000) {
+            let thousands = Math.floor(num / 1000);
+            result += numberToWords(thousands) + ' тысяч ';
+            if (thousands % 10 === 1 && thousands % 100 !== 11) result = result.replace('тысяч', 'тысяча');
+            else if ([2,3,4].includes(thousands % 10) && (thousands % 100 < 10 || thousands % 100 > 20)) result = result.replace('тысяч', 'тысячи');
+            num %= 1000;
+        }
+        
+        // Сотни
+        if (num >= 100) {
+            let h = Math.floor(num / 100);
+            result += hundreds[h] + ' ';
+            num %= 100;
+        }
+        
+        // Десятки и единицы
+        if (num >= 20) {
+            let t = Math.floor(num / 10);
+            result += tens[t] + ' ';
+            num %= 10;
+        }
+        
+        if (num >= 10 && num < 20) {
+            result += teens[num - 10] + ' ';
+            num = 0;
+        }
+        
+        if (num > 0 && num < 10) {
+            result += units[num] + ' ';
+        }
+        
+        return result.trim();
+    }
+    
+    function digitToWord(digit) {
+        const digits = ['ноль', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'];
+        return digits[parseInt(digit)] || digit;
+    }
+    
+    // Основная функция озвучки
+    function speakText(text, isResult = false) {
+        if (!speechSynthesisSupported) return;
+        if (!text || text.trim() === '') return;
+        
+        // Останавливаем текущую речь
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+            window.speechSynthesis.cancel();
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ru-RU';
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 1;
+        
+        utterance.onerror = (event) => {
+            console.error('Speech error:', event);
+        };
+        
+        setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+        }, 10);
+    }
+    
+    // Озвучивание результата с преобразованием числа в слова
+    function speakResult(resultValue) {
+        if (resultValue === 'Ошибка') {
+            speakText('Ошибка вычисления');
+            return;
+        }
+        
+        let resultNum = parseFloat(resultValue);
+        if (isNaN(resultNum)) {
+            speakText(resultValue);
+            return;
+        }
+        
+        // Преобразуем число в слова для красивого произношения
+        let spokenNumber = formatNumberForSpeech(resultNum);
+        speakText(`равно ${spokenNumber}`, true);
+    }
+    
+    // Озвучивание действий кнопок
+    function getVoiceTextForButton(btnLabel, actionType, customValue) {
+        if (actionType === 'num') {
+            if (customValue === '.') return 'точка';
+            const digitMap = {
+                '0': 'ноль', '1': 'один', '2': 'два', '3': 'три', '4': 'четыре',
+                '5': 'пять', '6': 'шесть', '7': 'семь', '8': 'восемь', '9': 'девять'
+            };
+            return digitMap[customValue] || customValue;
+        }
+        if (actionType === 'op') {
+            const op = customValue;
+            if (op === '+') return 'плюс';
+            if (op === '-') return 'минус';
+            if (op === '×') return 'умножить на';
+            if (op === '÷') return 'разделить на';
+            return op;
+        }
+        if (actionType === 'equal') return 'равно';
+        if (actionType === 'clear') return 'очистить все';
+        if (actionType === 'back') return 'удалить';
+        if (actionType === 'percent') return 'процент';
+        if (actionType === 'sign') return 'сменить знак';
+        return btnLabel;
+    }
+    
+    // ---------- 2. Логика калькулятора (умные проценты) ----------
+    let currentInput = '0';
+    let previousInput = '';
+    let operation = null;
+    let resetScreen = false;
+    
+    const displayElement = document.getElementById('display');
+    const expressionElement = document.getElementById('expression');
+    
+    function updateDisplay() {
+        let displayValue = currentInput;
+        if (displayValue.length > 20) {
+            let num = parseFloat(displayValue);
+            if (!isNaN(num)) {
+                displayValue = num.toExponential(8);
+            } else {
+                displayValue = currentInput.substring(0, 18);
+            }
+        }
+        displayElement.textContent = displayValue;
+        
+        // Обновление строки выражения
+        if (operation && previousInput !== '') {
+            let opSymbol = '';
+            if (operation === '*') opSymbol = '×';
+            else if (operation === '/') opSymbol = '÷';
+            else opSymbol = operation;
+            expressionElement.textContent = `${previousInput} ${opSymbol}`;
+        } else if (previousInput !== '' && !operation && !resetScreen) {
+            expressionElement.textContent = `${previousInput}`;
+        } else {
+            expressionElement.textContent = '';
+        }
+    }
+    
+    // Умный процент
+    function handlePercent() {
+        if (resetScreen) return;
+        let currentVal = parseFloat(currentInput);
+        if (isNaN(currentVal)) return;
+        
+        if (operation !== null && previousInput !== '') {
+            let prevVal = parseFloat(previousInput);
+            if (!isNaN(prevVal)) {
+                let percentValue = prevVal * (currentVal / 100);
+                currentInput = percentValue.toString();
+                if (currentInput.includes('.') && currentInput.split('.')[1]?.length > 10) {
+                    currentInput = parseFloat(currentInput).toString();
+                }
+                updateDisplay();
+                return;
+            }
+        }
+        let newVal = currentVal / 100;
+        currentInput = newVal.toString();
+        updateDisplay();
+    }
+    
+    function handleNumber(num) {
+        if (resetScreen) {
+            currentInput = num;
+            resetScreen = false;
+        } else {
+            if (num === '.') {
+                if (currentInput.includes('.')) return;
+                currentInput += '.';
+            } else {
+                if (currentInput === '0' && num !== '.') {
+                    currentInput = num;
+                } else {
+                    currentInput += num;
+                }
+            }
+        }
+        // Очистка лишних нулей
+        if (currentInput !== '.' && !isNaN(parseFloat(currentInput))) {
+            if (currentInput.includes('.') && currentInput.startsWith('0') && currentInput.length > 2 && currentInput[1] !== '.') {
+                let parsed = parseFloat(currentInput);
+                if (!isNaN(parsed)) currentInput = parsed.toString();
+            } else if (!currentInput.includes('.') && currentInput.length > 1 && currentInput.startsWith('0')) {
+                let parsed = parseFloat(currentInput);
+                if (!isNaN(parsed)) currentInput = parsed.toString();
+            }
+        }
+        updateDisplay();
+    }
+    
+    function handleOperator(opSymbol) {
+        let internalOp = opSymbol;
+        if (opSymbol === '×') internalOp = '*';
+        if (opSymbol === '÷') internalOp = '/';
+        
+        if (operation !== null && !resetScreen) {
+            calculate();
+        }
+        if (currentInput === '' || currentInput === '.') return;
+        
+        previousInput = currentInput;
+        operation = internalOp;
+        resetScreen = true;
+        updateDisplay();
+    }
+    
+    function calculate() {
+        if (operation === null || previousInput === '' || resetScreen) return;
+        
+        let result;
+        const prev = parseFloat(previousInput);
+        const current = parseFloat(currentInput);
+        
+        if (isNaN(prev) || isNaN(current)) return;
+        
+        switch (operation) {
+            case '+': result = prev + current; break;
+            case '-': result = prev - current; break;
+            case '*': result = prev * current; break;
+            case '/': 
+                if (current === 0) {
+                    result = 'Ошибка';
+                } else {
+                    result = prev / current;
+                }
+                break;
+            default: return;
+        }
+        
+        if (result === 'Ошибка') {
+            currentInput = 'Ошибка';
+            operation = null;
+            previousInput = '';
+            resetScreen = true;
+            updateDisplay();
+            speakText('Ошибка! Деление на ноль невозможно');
+            setTimeout(() => {
+                if (currentInput === 'Ошибка') {
+                    currentInput = '0';
+                    operation = null;
+                    previousInput = '';
+                    resetScreen = false;
+                    updateDisplay();
+                }
+            }, 1500);
+            return;
+        }
+        
+        if (typeof result === 'number') {
+            result = parseFloat(result.toFixed(10));
+            if (result === -0) result = 0;
+            currentInput = result.toString();
+        } else {
+            currentInput = result.toString();
+        }
+        
+        operation = null;
+        previousInput = '';
+        resetScreen = true;
+        updateDisplay();
+        
+        // Озвучиваем результат с полным преобразованием в слова
+        speakResult(currentInput);
+    }
+    
+    function clearAll() {
+        currentInput = '0';
+        previousInput = '';
+        operation = null;
+        resetScreen = false;
+        updateDisplay();
+        speakText('очищено');
+    }
+    
+    function percent() {
+        handlePercent();
+        speakText('процент');
+    }
+    
+    function toggleSign() {
+        let val = parseFloat(currentInput);
+        if (!isNaN(val)) {
+            currentInput = (-val).toString();
+            updateDisplay();
+            speakText('сменить знак');
+        }
+    }
+    
+    function backspace() {
+        if (resetScreen) return;
+        if (currentInput.length === 1 || (currentInput.length === 2 && currentInput.startsWith('-'))) {
+            currentInput = '0';
+        } else {
+            currentInput = currentInput.slice(0, -1);
+            if (currentInput === '' || currentInput === '-') currentInput = '0';
+        }
+        updateDisplay();
+        speakText('удалить');
+    }
+    
+    function handleEqual() {
+        if (operation !== null && !resetScreen) {
+            calculate();
+        } else if (!resetScreen && previousInput === '' && operation === null) {
+            speakResult(currentInput);
+        } else if (operation !== null && resetScreen) {
+            // Ничего не делаем, ждем ввода второго числа
+        } else {
+            calculate();
+        }
+    }
+    
+    // ---------- 3. Построение кнопок ----------
+    const buttonLayout = [
+        { label: 'C', type: 'clear', action: 'clear' },
+        { label: '⌫', type: 'back', action: 'back' },
+        { label: '%', type: 'function', action: 'percent' },
+        { label: '÷', type: 'operator', action: 'op', value: '÷' },
+        { label: '7', type: 'number', action: 'num', value: '7' },
+        { label: '8', type: 'number', action: 'num', value: '8' },
+        { label: '9', type: 'number', action: 'num', value: '9' },
+        { label: '×', type: 'operator', action: 'op', value: '×' },
+        { label: '4', type: 'number', action: 'num', value: '4' },
+        { label: '5', type: 'number', action: 'num', value: '5' },
+        { label: '6', type: 'number', action: 'num', value: '6' },
+        { label: '-', type: 'operator', action: 'op', value: '-' },
+        { label: '1', type: 'number', action: 'num', value: '1' },
+        { label: '2', type: 'number', action: 'num', value: '2' },
+        { label: '3', type: 'number', action: 'num', value: '3' },
+        { label: '+', type: 'operator', action: 'op', value: '+' },
+        { label: '±', type: 'function', action: 'sign' },
+        { label: '0', type: 'number', action: 'num', value: '0' },
+        { label: '.', type: 'number', action: 'num', value: '.' },
+        { label: '=', type: 'equal', action: 'equal' }
+    ];
+    
+    const buttonsContainer = document.getElementById('buttonsContainer');
+    function buildButtons() {
+        buttonsContainer.innerHTML = '';
+        buttonLayout.forEach(btn => {
+            const button = document.createElement('button');
+            button.textContent = btn.label;
+            button.classList.add('btn');
+            if (btn.type === 'operator') {
+                button.classList.add('operator-btn');
+            } else if (btn.type === 'equal') {
+                button.classList.add('equal-btn');
+            } else if (btn.type === 'clear' || btn.label === 'C') {
+                button.classList.add('clear-btn');
+            } else if (btn.type === 'back') {
+                button.classList.add('clear-btn');
+                button.style.background = "linear-gradient(135deg, #e07a5f, #bc4e2c)";
+                button.style.boxShadow = "0 6px 0 #82381c";
+            }
+            
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                let voiceText = '';
+                
+                if (btn.action === 'num') {
+                    handleNumber(btn.value);
+                    voiceText = getVoiceTextForButton(btn.label, 'num', btn.value);
+                    speakText(voiceText);
+                } else if (btn.action === 'op') {
+                    handleOperator(btn.value);
+                    voiceText = getVoiceTextForButton(btn.label, 'op', btn.value);
+                    speakText(voiceText);
+                } else if (btn.action === 'clear') {
+                    clearAll();
+                } else if (btn.action === 'equal') {
+                    handleEqual();
+                } else if (btn.action === 'percent') {
+                    percent();
+                } else if (btn.action === 'sign') {
+                    toggleSign();
+                } else if (btn.action === 'back') {
+                    backspace();
+                }
+            });
+            buttonsContainer.appendChild(button);
+        });
+    }
+    
+    buildButtons();
+    updateDisplay();
+    
+    // ---------- 4. СТИЛЬНЫЕ ЧАСЫ НА ЗАДНЕЙ СТЕНКЕ (обновление в реальном времени) ----------
+    function updateBackClock() {
+        const now = new Date();
+        let hours = now.getHours();
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        const hours24 = hours.toString().padStart(2, '0');
+        
+        const timeStr = `${hours24}:${minutes}:${seconds}`;
+        const timeElement = document.getElementById('backTime');
+        if (timeElement) timeElement.textContent = timeStr;
+        
+        // Форматирование даты: день месяц год
+        const day = now.getDate();
+        const monthNames = ['Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня', 'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'];
+        const month = monthNames[now.getMonth()];
+        const year = now.getFullYear();
+        const dateStr = `${day} ${month} ${year}`;
+        const dateElement = document.getElementById('backDate');
+        if (dateElement) dateElement.textContent = dateStr;
+        
+        const weekdays = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+        const weekdayStr = weekdays[now.getDay()];
+        const weekdayElement = document.getElementById('backWeekday');
+        if (weekdayElement) weekdayElement.textContent = weekdayStr;
+    }
+    
+    // Обновляем часы каждую секунду
+    updateBackClock();
+    setInterval(updateBackClock, 1000);
+    
+    // Приветствие при запуске (краткое)
+    setTimeout(() => {
+        speakText('3D голосовой калькулятор');
+    }, 500);
+    
+    // ---------- 3D Вращение ----------
+    const scene = document.getElementById('scene3d');
+    const calculatorElement = document.getElementById('calculator3d');
+    
+    let isDragging3D = false;
+    let lastX = 0, lastY = 0;
+    let rotateX3d = 18;
+    let rotateY3d = -22;
+    
+    calculatorElement.style.transform = `rotateX(${rotateX3d}deg) rotateY(${rotateY3d}deg)`;
+    
+    function handleDragStart(clientX, clientY) {
+        isDragging3D = true;
+        lastX = clientX;
+        lastY = clientY;
+        scene.style.cursor = 'grabbing';
+        calculatorElement.style.transition = 'none';
+    }
+    
+    function handleDragMove(clientX, clientY) {
+        if (!isDragging3D) return;
+        const deltaX = clientX - lastX;
+        const deltaY = clientY - lastY;
+        if (deltaX === 0 && deltaY === 0) return;
+        rotateY3d += deltaX * 0.65;
+        rotateX3d -= deltaY * 0.55;
+        calculatorElement.style.transform = `rotateX(${rotateX3d}deg) rotateY(${rotateY3d}deg)`;
+        lastX = clientX;
+        lastY = clientY;
+    }
+    
+    function handleDragEnd() {
+        isDragging3D = false;
+        scene.style.cursor = 'grab';
+        calculatorElement.style.transition = '';
+    }
+    
+    scene.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.btn')) return;
+        e.preventDefault();
+        handleDragStart(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (isDragging3D) {
+            e.preventDefault();
+            handleDragMove(e.clientX, e.clientY);
+        }
+    });
+    window.addEventListener('mouseup', () => {
+        if (isDragging3D) handleDragEnd();
+    });
+    
+    scene.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.btn')) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        if (touch) handleDragStart(touch.clientX, touch.clientY);
+    });
+    window.addEventListener('touchmove', (e) => {
+        if (isDragging3D) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            if (touch) handleDragMove(touch.clientX, touch.clientY);
+        }
+    });
+    window.addEventListener('touchend', () => {
+        if (isDragging3D) handleDragEnd();
+    });
+    
+    scene.addEventListener('dragstart', (e) => e.preventDefault());
+    
+    function bindStopPropagationOnButtons() {
+        const btns = document.querySelectorAll('.btn');
+        btns.forEach(btn => {
+            btn.addEventListener('mousedown', (e) => e.stopPropagation());
+            btn.addEventListener('touchstart', (e) => e.stopPropagation());
+            btn.addEventListener('click', (e) => e.stopPropagation());
+        });
+    }
+    bindStopPropagationOnButtons();
+    const observer = new MutationObserver(() => bindStopPropagationOnButtons());
+    observer.observe(buttonsContainer, { childList: true, subtree: true });
+})();
+</script>
+
+<script>
+// ============================================================
+// УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ
+// Вставьте этот код в любую страницу — работает сразу
+// ============================================================
+
+(function(global) {
+    'use strict';
+
+    // ---------- 1. ХРАНИЛИЩЕ В LOCALSTORAGE ----------
+    const Storage = {
+        save(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка сохранения:', e);
+                return false;
+            }
+        },
+
+        load(key, defaultData = null) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw === null) {
+                    if (defaultData !== null) {
+                        this.save(key, defaultData);
+                    }
+                    return defaultData;
+                }
+                return JSON.parse(raw);
+            } catch (e) {
+                console.error('[Storage] Ошибка загрузки:', e);
+                return defaultData;
+            }
+        },
+
+        remove(key) {
+            try {
+                localStorage.removeItem(key);
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка удаления:', e);
+                return false;
+            }
+        },
+
+        has(key) {
+            return localStorage.getItem(key) !== null;
+        },
+
+        clear() {
+            try {
+                localStorage.clear();
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка очистки:', e);
+                return false;
+            }
+        }
+    };
+
+    // ---------- 2. РАБОТА С МАССИВАМИ ----------
+    const ArrayHelper = {
+        add(key, item, defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) data = [];
+            data.push(item);
+            return Storage.save(key, data);
+        },
+
+        remove(key, identifier, idField = 'id', defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) return false;
+
+            let index = -1;
+            if (typeof identifier === 'function') {
+                index = data.findIndex(identifier);
+            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
+                index = identifier;
+            } else if (identifier !== undefined && identifier !== null) {
+                index = data.findIndex(item => item && item[idField] === identifier);
+            }
+
+            if (index === -1) return false;
+            data.splice(index, 1);
+            return Storage.save(key, data);
+        },
+
+        update(key, identifier, newData, idField = 'id', defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) return false;
+
+            let index = -1;
+            if (typeof identifier === 'function') {
+                index = data.findIndex(identifier);
+            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
+                index = identifier;
+            } else if (identifier !== undefined && identifier !== null) {
+                index = data.findIndex(item => item && item[idField] === identifier);
+            }
+
+            if (index === -1) return false;
+            data[index] = { ...data[index], ...newData };
+            return Storage.save(key, data);
+        },
+
+        get(key, defaultData = []) {
+            const data = Storage.load(key, defaultData);
+            return Array.isArray(data) ? data : [];
+        },
+
+        find(key, predicate, defaultData = []) {
+            const data = this.get(key, defaultData);
+            return data.find(predicate) || null;
+        },
+
+        filter(key, predicate, defaultData = []) {
+            const data = this.get(key, defaultData);
+            return data.filter(predicate);
+        },
+
+        clear(key) {
+            return Storage.save(key, []);
+        }
+    };
+
+    // ---------- 3. СТАТУС СЕТИ ----------
+    const Network = {
+        getStatus() {
+            return navigator.onLine ? 'online' : 'offline';
+        },
+
+        isOnline() {
+            return navigator.onLine;
+        },
+
+        isOffline() {
+            return !navigator.onLine;
+        },
+
+        onChange(callback) {
+            const onlineHandler = () => callback('online', true);
+            const offlineHandler = () => callback('offline', false);
+            
+            window.addEventListener('online', onlineHandler);
+            window.addEventListener('offline', offlineHandler);
+            
+            return () => {
+                window.removeEventListener('online', onlineHandler);
+                window.removeEventListener('offline', offlineHandler);
+            };
+        },
+
+        // Обновить элемент с статусом
+        updateStatusElement(elementId, onlineText = '🟢 Онлайн', offlineText = '🔴 Офлайн') {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            const update = () => {
+                el.textContent = this.isOnline() ? onlineText : offlineText;
+                el.className = this.isOnline() ? 'status-online' : 'status-offline';
+            };
+            
+            update();
+            return this.onChange(update);
+        }
+    };
+
+    // ---------- 4. SERVICE WORKER (ОФЛАЙН-ПОДДЕРЖКА) ----------
+    const SW = {
+        /**
+         * Зарегистрировать Service Worker
+         * @param {string} swPath - Путь к sw.js (по умолчанию 'sw.js')
+         * @param {Object} options - Опции регистрации
+         * @returns {Promise}
+         */
+        register(swPath = 'sw.js', options = {}) {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] Service Worker не поддерживается');
+                return Promise.reject(new Error('SW не поддерживается'));
+            }
+
+            return navigator.serviceWorker.register(swPath, options)
+                .then(registration => {
+                    console.log('[SW] ✅ Зарегистрирован');
+                    return registration;
+                })
+                .catch(error => {
+                    console.error('[SW] ❌ Ошибка:', error);
+                    throw error;
+                });
+        },
+
+        /**
+         * Проверить активен ли SW
+         * @returns {Promise<boolean>}
+         */
+        async isActive() {
+            if (!('serviceWorker' in navigator)) return false;
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                return registration !== undefined && registration.active !== null;
+            } catch {
+                return false;
+            }
+        },
+
+        /**
+         * Создать и зарегистрировать SW из строки (встроенный SW)
+         * @param {string} swCode - Код Service Worker
+         * @param {string} scope - Scope для SW
+         * @returns {Promise}
+         */
+        registerInline(swCode, scope = '/') {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] Service Worker не поддерживается');
+                return Promise.reject(new Error('SW не поддерживается'));
+            }
+
+            try {
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                return navigator.serviceWorker.register(swUrl, { scope });
+            } catch (error) {
+                console.error('[SW] Ошибка создания inline SW:', error);
+                return Promise.reject(error);
+            }
+        },
+
+        /**
+         * Сгенерировать код SW для кеширования текущей страницы
+         * @param {string} cacheName - Имя кеша
+         * @param {Array} urls - URL для кеширования (по умолчанию текущая страница)
+         * @returns {string} - Код SW
+         */
+        generateCacheSW(cacheName = 'app-v1', urls = null) {
+            if (!urls) {
+                urls = [window.location.pathname || '/'];
+                // Добавляем текущий URL с параметрами
+                if (window.location.search) {
+                    urls.push(window.location.pathname + window.location.search);
+                }
+            }
+
+            return `
+const CACHE_NAME = '${cacheName}';
+const urlsToCache = ${JSON.stringify(urls)};
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('[SW] Кеширование:', urlsToCache);
+                return cache.addAll(urlsToCache);
+            })
+            .then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(name => {
+                    if (name !== CACHE_NAME) {
+                        console.log('[SW] Удаление старого кеша:', name);
+                        return caches.delete(name);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
+});
+
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => response || fetch(event.request))
+            .catch(() => caches.match('/'))
+    );
+});
+`;
+        },
+
+        /**
+         * Автоматическая настройка SW (создаёт и регистрирует)
+         * @param {string} cacheName - Имя кеша
+         * @returns {Promise}
+         */
+        async setupOffline(cacheName = 'app-v1') {
+            const swCode = this.generateCacheSW(cacheName);
+            return this.registerInline(swCode);
+        }
+    };
+
+    // ---------- 5. ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ ----------
+    const Utils = {
+        /**
+         * Глубокое копирование
+         */
+        deepClone(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        },
+
+        /**
+         * Генерация уникального ID
+         */
+        generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        },
+
+        /**
+         * Форматирование даты
+         */
+        formatDate(date, format = 'DD.MM.YYYY HH:mm') {
+            const d = new Date(date);
+            const pad = n => String(n).padStart(2, '0');
+            const replacements = {
+                'YYYY': d.getFullYear(),
+                'MM': pad(d.getMonth() + 1),
+                'DD': pad(d.getDate()),
+                'HH': pad(d.getHours()),
+                'mm': pad(d.getMinutes()),
+                'ss': pad(d.getSeconds())
+            };
+            return format.replace(/YYYY|MM|DD|HH|mm|ss/g, match => replacements[match]);
+        },
+
+        /**
+         * Показать toast-уведомление
+         */
+        showToast(message, duration = 2000) {
+            // Создаём элемент если его нет
+            let toast = document.getElementById('_toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = '_toast';
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 30px;
+                    left: 50%;
+                    transform: translateX(-50%) translateY(100px);
+                    background: #1e293b;
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 60px;
+                    font-size: 0.9rem;
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+                    opacity: 0;
+                    transition: all 0.3s ease;
+                    z-index: 9999;
+                    pointer-events: none;
+                    font-family: system-ui, sans-serif;
+                `;
+                document.body.appendChild(toast);
+            }
+
+            toast.textContent = message;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(100px)';
+            }, duration);
+        }
+    };
+
+    // ---------- 6. ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ----------
+    const OfflineKit = {
+        Storage,
+        ArrayHelper,
+        Network,
+        SW,
+        Utils,
+        version: '1.0.0'
+    };
+
+    // Добавляем в глобальный объект
+    global.OfflineKit = OfflineKit;
+
+    // Для удобства добавляем сокращения
+    global.Store = Storage;
+    global.ArrayStore = ArrayHelper;
+    global.NetworkStatus = Network;
+    global.SWHelper = SW;
+    global.Utils = Utils;
+
+    console.log('[OfflineKit] ✅ Загружен v1.0.0');
+
+})(window);
+</script>
+
+</body>
+</html>
