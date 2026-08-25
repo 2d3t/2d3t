@@ -3,44 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Заметки · локальный список</title>
-    <!-- Манифест (inline) -->
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItCX0LDQvNC10YLQutC4INC70LjRgdGC0L7QuiIsCiAgInNob3J0X25hbWUiOiAi0JfQsNC80LXRgtC60LgiLAogICJkZXNjcmlwdGlvbiI6ICLQodC/0LjRgdC+0Log0LfQsNC80LXRgtC+0Log0LIgbG9jYWxTdG9yYWdlIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmNWY3ZmEiLAogICJ0aGVtZV9jb2xvciI6ICIjMjQ2NjVkIgp9">
+    <title>Заметки PWA</title>
+    <link rel="manifest" href="manifest.json">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px 16px 30px;
-            background: #f5f7fa;
-            color: #1e293b;
+            background: #0a0e14;
+            color: #e2e8f0;
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: #1a1f26;
+            padding: 24px 20px 30px;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid #2d3744;
         }
         h1 {
-            font-size: 1.8rem;
+            font-size: 2rem;
             font-weight: 600;
             letter-spacing: -0.02em;
-            color: #0f2b3a;
+            color: #f1f5f9;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
             margin-bottom: 20px;
-            border-bottom: 2px solid #dce3ed;
-            padding-bottom: 12px;
+            border-bottom: 1px solid #2d3744;
+            padding-bottom: 14px;
         }
         h1 small {
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 400;
-            color: #4b5b6e;
-            margin-left: auto;
+            color: #94a3b8;
+            background: #2d3744;
+            padding: 4px 14px;
+            border-radius: 30px;
         }
+        .status-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 18px;
+        }
+        .status {
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: #1e293b;
+            transition: 0.2s;
+        }
+        .online { color: #4ade80; }
+        .offline { color: #f87171; }
         .add-section {
             display: flex;
             gap: 10px;
@@ -48,51 +68,51 @@
         }
         .add-section input {
             flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #cbd5e1;
+            padding: 12px 18px;
+            border: 1px solid #334155;
             border-radius: 40px;
             font-size: 1rem;
-            background: white;
-            transition: 0.15s;
+            background: #0f141a;
+            color: #f1f5f9;
             outline: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: 0.15s;
         }
         .add-section input:focus {
-            border-color: #24665d;
-            box-shadow: 0 0 0 3px rgba(36,102,93,0.15);
+            border-color: #4ade80;
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+        }
+        .add-section input::placeholder {
+            color: #64748b;
         }
         .add-section button {
-            background: #24665d;
-            color: white;
+            background: #4ade80;
+            color: #0a0e14;
             border: none;
             border-radius: 40px;
             padding: 0 24px;
-            font-weight: 500;
+            font-weight: 600;
             font-size: 1rem;
             cursor: pointer;
             transition: 0.15s;
             white-space: nowrap;
-            box-shadow: 0 2px 6px rgba(36,102,93,0.25);
         }
         .add-section button:hover {
-            background: #1d554d;
+            background: #5eea92;
             transform: scale(0.97);
         }
         .add-section button:active {
             transform: scale(0.94);
         }
         .list-container {
-            flex: 1;
-            background: white;
+            background: #12181f;
             border-radius: 24px;
-            padding: 8px 6px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.04);
-            border: 1px solid #e9edf2;
+            padding: 6px 4px;
             min-height: 200px;
+            border: 1px solid #2d3744;
         }
         .empty-message {
             text-align: center;
-            color: #94a3b8;
+            color: #64748b;
             padding: 40px 10px;
             font-style: italic;
             font-size: 0.95rem;
@@ -102,20 +122,20 @@
             align-items: center;
             gap: 10px;
             padding: 12px 14px;
-            border-bottom: 1px solid #ecf1f7;
-            transition: 0.1s;
+            border-bottom: 1px solid #26303d;
             border-radius: 12px;
             margin: 2px 0;
+            transition: 0.1s;
         }
         .note-item:hover {
-            background: #f8fafd;
+            background: #1e293b;
         }
         .note-text {
             flex: 1;
             word-break: break-word;
             font-size: 1rem;
             line-height: 1.4;
-            padding: 2px 0;
+            color: #e2e8f0;
         }
         .note-actions {
             display: flex;
@@ -131,26 +151,26 @@
             font-size: 1.1rem;
             cursor: pointer;
             transition: 0.1s;
+            color: #94a3b8;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #3d4f62;
         }
         .note-actions button:hover {
-            background: #e6edf6;
+            background: #2d3744;
         }
         .note-actions .copy-btn:hover {
-            background: #d6e8e4;
-            color: #0f4c44;
+            background: #1e3a2f;
+            color: #4ade80;
         }
         .note-actions .delete-btn:hover {
-            background: #fee9e7;
-            color: #b91c1c;
+            background: #3f1e1e;
+            color: #f87171;
         }
         .footer-info {
             margin-top: 18px;
             font-size: 0.75rem;
-            color: #7b8ba0;
+            color: #64748b;
             text-align: center;
             letter-spacing: 0.3px;
         }
@@ -164,11 +184,12 @@
             padding: 10px 24px;
             border-radius: 60px;
             font-size: 0.9rem;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
             opacity: 0;
             transition: 0.25s ease;
             pointer-events: none;
             z-index: 999;
+            border: 1px solid #334155;
         }
         .toast.show {
             opacity: 1;
@@ -176,41 +197,61 @@
     </style>
 </head>
 <body>
+    <div class="container">
+        <h1>
+            📋 Заметки
+            <small id="counter">0</small>
+        </h1>
 
-    <h1>
-        📋 Заметки
-        <small id="counter">0</small>
-    </h1>
+        <div class="status-bar">
+            <div class="status online" id="status">🟢 Онлайн</div>
+        </div>
 
-    <div class="add-section">
-        <input type="text" id="noteInput" placeholder="Новая заметка..." autofocus>
-        <button id="addBtn">➕ Добавить</button>
+        <div class="add-section">
+            <input type="text" id="noteInput" placeholder="Новая заметка..." autofocus>
+            <button id="addBtn">➕ Добавить</button>
+        </div>
+
+        <div class="list-container" id="listContainer">
+            <div class="empty-message" id="emptyMessage">Список пуст · создайте заметку</div>
+            <div id="noteList"></div>
+        </div>
+
+        <div class="footer-info">
+            ✦ сохраняется в localStorage ✦ работает офлайн ✦ копировать, удалять
+        </div>
     </div>
 
-    <div class="list-container" id="listContainer">
-        <div class="empty-message" id="emptyMessage">Список пуст · создайте заметку</div>
-        <div id="noteList"></div>
-    </div>
-
-    <div class="footer-info">
-        ✦ сохраняются в localStorage ✦ можно копировать, удалять
-    </div>
-
-    <div id="toast" class="toast">Скопировано</div>
+    <div id="toast" class="toast">Готово</div>
 
     <script>
         (function() {
             // ----- состояние -----
             let notes = [];
-            const STORAGE_KEY = 'my_notes_list';
+            const STORAGE_KEY = 'my_notes_list_pwa';
 
-            // DOM узлы
+            // DOM
             const noteListEl = document.getElementById('noteList');
             const emptyMessageEl = document.getElementById('emptyMessage');
             const counterEl = document.getElementById('counter');
             const noteInput = document.getElementById('noteInput');
             const addBtn = document.getElementById('addBtn');
             const toastEl = document.getElementById('toast');
+            const statusEl = document.getElementById('status');
+
+            // ----- статус сети (как в примере) -----
+            function updateStatus() {
+                if (navigator.onLine) {
+                    statusEl.textContent = '🟢 Онлайн';
+                    statusEl.className = 'status online';
+                } else {
+                    statusEl.textContent = '🔴 Офлайн (кэш)';
+                    statusEl.className = 'status offline';
+                }
+            }
+            window.addEventListener('online', updateStatus);
+            window.addEventListener('offline', updateStatus);
+            updateStatus();
 
             // ----- загрузка / сохранение -----
             function loadNotes() {
@@ -233,7 +274,6 @@
 
             // ----- рендер -----
             function render() {
-                // очищаем список, но оставляем emptyMessage
                 noteListEl.innerHTML = '';
                 const count = notes.length;
                 counterEl.textContent = count;
@@ -244,7 +284,6 @@
                 }
                 emptyMessageEl.style.display = 'none';
 
-                // строим элементы
                 notes.forEach((text, index) => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'note-item';
@@ -257,7 +296,6 @@
                     const actionsDiv = document.createElement('div');
                     actionsDiv.className = 'note-actions';
 
-                    // кнопка копировать
                     const copyBtn = document.createElement('button');
                     copyBtn.className = 'copy-btn';
                     copyBtn.textContent = '📋';
@@ -267,7 +305,6 @@
                         handleCopy(index);
                     });
 
-                    // кнопка удалить
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-btn';
                     deleteBtn.textContent = '✕';
@@ -298,14 +335,11 @@
                 const text = notes[index];
                 if (!text) return;
 
-                // копирование в буфер обмена
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(text).then(() => {
                         showToast('📋 Скопировано!');
-                        // после копирования — закрываем страницу (если возможно)
                         attemptCloseWindow();
                     }).catch(() => {
-                        // fallback
                         fallbackCopy(text);
                     });
                 } else {
@@ -313,7 +347,6 @@
                 }
             }
 
-            // fallback копирования через textarea
             function fallbackCopy(text) {
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
@@ -332,25 +365,13 @@
                 document.body.removeChild(textarea);
             }
 
-            // попытка закрыть окно / вкладку
             function attemptCloseWindow() {
-                // 1) window.close() работает только для окон, открытых скриптом
-                // 2) если не сработает — ничего страшного, просто остаёмся
                 try {
                     window.close();
-                } catch (_) {
-                    // игнорируем — браузер блокирует
-                }
-                // дополнительно: если не закрылось, показываем сообщение
-                setTimeout(() => {
-                    // если окно всё ещё открыто (проверяем через небольшой таймаут)
-                    if (!window.closed) {
-                        // ничего не делаем, просто остаёмся
-                    }
-                }, 100);
+                } catch (_) {}
+                // ничего не делаем, если не закрылось
             }
 
-            // добавить заметку
             function addNote() {
                 const raw = noteInput.value.trim();
                 if (raw === '') {
@@ -380,7 +401,6 @@
             loadNotes();
             render();
 
-            // обработчики
             addBtn.addEventListener('click', addNote);
             noteInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
@@ -389,52 +409,15 @@
                 }
             });
 
-            // дополнительно: если пользователь кликнет вне, чтобы снять фокус
-            // но это не обязательно
-
-            // ----- Service Worker (регистрация, если поддерживается) -----
+            // ----- Service Worker (как в примере) -----
             if ('serviceWorker' in navigator) {
-                // создаём inline worker через blob URL (чтобы не было внешнего файла)
-                // но для корректной регистрации нужно, чтобы sw был на том же origin
-                // и работал как отдельный скрипт. Используем простой sw для кеша.
-                try {
-                    const swCode = `
-                        self.addEventListener('install', e => {
-                            e.waitUntil(
-                                caches.open('notes-v1').then(cache => {
-                                    return cache.addAll([
-                                        '/',
-                                        '/index.html'
-                                    ]);
-                                })
-                            );
-                            self.skipWaiting();
-                        });
-                        self.addEventListener('activate', e => {
-                            e.waitUntil(clients.claim());
-                        });
-                        self.addEventListener('fetch', e => {
-                            e.respondWith(
-                                caches.match(e.request).then(res => res || fetch(e.request))
-                            );
-                        });
-                    `;
-                    const blob = new Blob([swCode], { type: 'application/javascript' });
-                    const swUrl = URL.createObjectURL(blob);
-                    // регистрируем blob URL — но это не всегда работает в некоторых браузерах
-                    // для надёжности просто зарегистрируем фиктивный, но оставим рабочий
-                    // В реальном проекте лучше использовать внешний sw.js
-                    // Пытаемся зарегистрировать через blob
-                    navigator.serviceWorker.register(swUrl, { scope: '/' })
-                        .then(() => console.log('SW blob registered'))
-                        .catch(() => console.log('SW blob registration skipped (normal)'));
-                } catch (_) {
-                    // если не вышло — ничего страшного
-                }
+                navigator.serviceWorker.register('sw.js')
+                    .then(() => console.log('[SW] ✅ Зарегистрирован'))
+                    .catch(err => console.log('[SW] ❌ Ошибка:', err));
             }
 
-            // также манифест встроен через link (data uri)
-
+            // дополнительно: при обновлении страницы данные подтянутся из localStorage
+            // и всё будет работать офлайн благодаря SW (если sw.js закеширует страницу)
         })();
     </script>
 </body>
