@@ -94,7 +94,6 @@
             margin-top: 4px;
         }
 
-        /* Стили для загрузки иконок */
         .icon-upload-area {
             border: 2px dashed #2a3040;
             border-radius: 12px;
@@ -123,7 +122,7 @@
 
         .icon-preview-container {
             display: flex;
-            gap: 20px;
+            gap: 12px;
             justify-content: center;
             flex-wrap: wrap;
             margin-top: 15px;
@@ -133,38 +132,25 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
             background: #0d1117;
-            padding: 12px;
+            padding: 8px;
             border-radius: 8px;
             border: 1px solid #2a3040;
         }
 
         .icon-preview-item img {
-            border-radius: 8px;
+            border-radius: 4px;
             background: white;
-            padding: 4px;
+            padding: 2px;
             object-fit: contain;
+            width: 48px;
+            height: 48px;
         }
 
         .icon-preview-item .size-label {
-            font-size: 0.7rem;
+            font-size: 0.6rem;
             color: #64748b;
-        }
-
-        .icon-remove {
-            background: #f87171;
-            border: none;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: all 0.2s;
-        }
-
-        .icon-remove:hover {
-            background: #ef4444;
         }
 
         .upload-placeholder {
@@ -221,7 +207,7 @@
         .file-list {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
             margin-bottom: 24px;
         }
 
@@ -252,21 +238,30 @@
             font-size: 0.8rem;
         }
 
-        .file-preview {
+        .file-content {
             color: #94a3b8;
             font-size: 0.8rem;
             font-family: 'Courier New', monospace;
             background: #0a0e14;
             padding: 12px;
             border-radius: 4px;
-            max-height: 100px;
+            max-height: 120px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
+            margin-bottom: 12px;
+        }
+
+        .file-content img {
+            display: block;
+            margin: 0 auto;
+            background: white;
+            border-radius: 4px;
+            padding: 4px;
         }
 
         .download-btn {
-            padding: 8px 20px;
+            padding: 6px 16px;
             background: #2a3040;
             border: none;
             border-radius: 6px;
@@ -330,17 +325,6 @@
             border-color: #f87171 !important;
         }
 
-        .error-message {
-            color: #f87171;
-            font-size: 0.8rem;
-            margin-top: 4px;
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
         .progress-bar {
             width: 100%;
             height: 4px;
@@ -381,7 +365,7 @@
             }
 
             .icon-preview-container {
-                gap: 10px;
+                gap: 8px;
             }
         }
     </style>
@@ -410,11 +394,10 @@
                 <div class="help-text">Отображается на рабочем столе (до 12 символов)</div>
             </div>
 
-            <!-- НОВЫЙ БЛОК: Загрузка иконок -->
             <div class="form-group">
                 <label>Иконки приложения</label>
                 <div class="icon-upload-area" id="iconUploadArea">
-                    <input type="file" id="iconInput" accept="image/*" multiple>
+                    <input type="file" id="iconInput" accept="image/*">
                     <div class="upload-placeholder" id="uploadPlaceholder">
                         <span class="icon-big">🖼️</span>
                         <div>Нажмите или перетащите изображение</div>
@@ -424,7 +407,7 @@
                     </div>
                     <div class="icon-preview-container" id="iconPreview"></div>
                 </div>
-                <div class="help-text">Загрузите изображение для генерации иконок всех размеров (PNG, JPG, SVG, WebP)</div>
+                <div class="help-text">Загрузите изображение для генерации иконок всех размеров</div>
             </div>
 
             <div class="form-group">
@@ -481,12 +464,6 @@
         window.addEventListener('online', updateStatus);
         window.addEventListener('offline', updateStatus);
         updateStatus();
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('[SW] ✅ Зарегистрирован'))
-                .catch(err => console.log('[SW] ❌ Ошибка:', err));
-        }
     &lt;/script&gt;
 &lt;/body&gt;
 &lt;/html&gt;</textarea>
@@ -514,13 +491,13 @@
     <script>
         // ==================== УПРАВЛЕНИЕ ИКОНКАМИ ====================
         let iconFiles = [];
+        let generatedFiles = {};
 
         const uploadArea = document.getElementById('iconUploadArea');
         const iconInput = document.getElementById('iconInput');
         const iconPreview = document.getElementById('iconPreview');
         const uploadPlaceholder = document.getElementById('uploadPlaceholder');
 
-        // Размеры иконок для PWA
         const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
 
         uploadArea.addEventListener('click', () => iconInput.click());
@@ -555,10 +532,8 @@
                 return;
             }
 
-            // Берем первый файл (или объединяем несколько)
             const mainFile = validFiles[0];
             
-            // Проверяем размер
             if (mainFile.size > 5 * 1024 * 1024) {
                 showToast('❌ Изображение слишком большое (макс. 5MB)', 'error');
                 return;
@@ -572,8 +547,7 @@
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    // Генерируем все размеры иконок
-                    generateIcons(img, file.name);
+                    generateIcons(img);
                 };
                 img.onerror = function() {
                     showToast('❌ Не удалось загрузить изображение', 'error');
@@ -583,20 +557,18 @@
             reader.readAsDataURL(file);
         }
 
-        function generateIcons(img, originalName) {
+        function generateIcons(img) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
             iconFiles = [];
-            const previewContainer = document.getElementById('iconPreview');
-            previewContainer.innerHTML = '';
+            iconPreview.innerHTML = '';
             uploadPlaceholder.style.display = 'none';
 
-            ICON_SIZES.forEach((size, index) => {
+            ICON_SIZES.forEach((size) => {
                 canvas.width = size;
                 canvas.height = size;
                 
-                // Рисуем иконку с сохранением пропорций
                 ctx.clearRect(0, 0, size, size);
                 
                 const aspectRatio = img.width / img.height;
@@ -614,34 +586,20 @@
                 
                 ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
                 
-                // Конвертируем в PNG с высоким качеством
                 const dataUrl = canvas.toDataURL('image/png', 1.0);
                 
-                // Создаем объект файла для иконки
-                const byteString = atob(dataUrl.split(',')[1]);
-                const arrayBuffer = new ArrayBuffer(byteString.length);
-                const uintArray = new Uint8Array(arrayBuffer);
-                for (let i = 0; i < byteString.length; i++) {
-                    uintArray[i] = byteString.charCodeAt(i);
-                }
-                const blob = new Blob([arrayBuffer], { type: 'image/png' });
-                const fileObj = new File([blob], `icon-${size}x${size}.png`, { type: 'image/png' });
-                
-                // Добавляем в общий список
                 iconFiles.push({
                     size: size,
-                    file: fileObj,
                     dataUrl: dataUrl
                 });
 
-                // Показываем превью
                 const previewItem = document.createElement('div');
                 previewItem.className = 'icon-preview-item';
                 previewItem.innerHTML = `
-                    <img src="${dataUrl}" width="64" height="64" alt="${size}x${size}">
+                    <img src="${dataUrl}" alt="${size}x${size}">
                     <span class="size-label">${size}x${size}</span>
                 `;
-                previewContainer.appendChild(previewItem);
+                iconPreview.appendChild(previewItem);
             });
 
             showToast(`✅ Сгенерировано ${ICON_SIZES.length} иконок`, 'success');
@@ -694,21 +652,18 @@
                 return;
             }
 
-            // Показываем прогресс
             const progressBar = document.getElementById('progressBar');
             const progressFill = document.getElementById('progressFill');
             progressBar.classList.add('active');
             progressFill.style.width = '0%';
 
-            // Очищаем путь
             const cleanPath = githubPath.startsWith('/') ? githubPath : '/' + githubPath;
             const cleanPathEnd = cleanPath.endsWith('/') ? cleanPath.slice(0, -1) : cleanPath;
 
-            // Создаем файлы
-            const files = {};
+            generatedFiles = {};
             let progress = 0;
 
-            // 1. Index.html
+            // 1. index.html
             const scriptToInject = `
         <script>
             if ('serviceWorker' in navigator) {
@@ -729,36 +684,38 @@
                 htmlCode = htmlCode.replace('<head>', '<head>\n    <link rel="manifest" href="manifest.json">');
             }
 
-            files['index.html'] = htmlCode;
-            progress += 10;
+            generatedFiles['index.html'] = htmlCode;
+            progress += 20;
             progressFill.style.width = progress + '%';
 
-            // 2. Иконки и manifest.json
+            // 2. Иконки
             const icons = [];
             
             if (iconFiles.length > 0) {
-                // Добавляем иконки в файлы
-                iconFiles.forEach((icon, index) => {
+                iconFiles.forEach((icon) => {
                     const fileName = `icon-${icon.size}x${icon.size}.png`;
-                    files[fileName] = icon.dataUrl.split(',')[1]; // Только base64 данные
+                    // Сохраняем dataUrl напрямую
+                    generatedFiles[fileName] = icon.dataUrl;
                     icons.push({
                         src: cleanPathEnd + '/' + fileName,
                         sizes: `${icon.size}x${icon.size}`,
                         type: 'image/png'
                     });
-                    
-                    progress += 5;
-                    progressFill.style.width = Math.min(progress + 10, 70) + '%';
                 });
+                progress += 30;
+                progressFill.style.width = '50%';
             } else {
-                // Если иконок нет, добавляем дефолтную
+                // Дефолтная иконка
                 icons.push({
                     src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📦</text></svg>',
                     sizes: '192x192',
                     type: 'image/svg+xml'
                 });
+                progress += 20;
+                progressFill.style.width = '40%';
             }
 
+            // 3. manifest.json
             const manifest = {
                 name: longName,
                 short_name: shortName,
@@ -769,93 +726,88 @@
                 icons: icons
             };
 
-            files['manifest.json'] = JSON.stringify(manifest, null, 2);
-            progress += 10;
-            progressFill.style.width = '80%';
+            generatedFiles['manifest.json'] = JSON.stringify(manifest, null, 2);
+            progress += 20;
+            progressFill.style.width = '70%';
 
-            // 3. sw.js
-            const swCode = `const CACHE_NAME = 'pwa-cache-v1';
-        const FILES_TO_CACHE = [
-            '${cleanPathEnd}/index.html',
-            '${cleanPathEnd}/manifest.json'`;
-
-            // Добавляем иконки в кэш
+            // 4. sw.js
+            let swCode = `const CACHE_NAME = 'pwa-cache-v1';\n`;
+            swCode += `const FILES_TO_CACHE = [\n`;
+            swCode += `    '${cleanPathEnd}/index.html',\n`;
+            swCode += `    '${cleanPathEnd}/manifest.json'`;
+            
             if (iconFiles.length > 0) {
                 iconFiles.forEach(icon => {
-                    swCode += `,\n            '${cleanPathEnd}/icon-${icon.size}x${icon.size}.png'`;
+                    swCode += `,\n    '${cleanPathEnd}/icon-${icon.size}x${icon.size}.png'`;
                 });
             }
+            
+            swCode += `\n];\n\n`;
+            swCode += `self.addEventListener('install', (event) => {\n`;
+            swCode += `    event.waitUntil(\n`;
+            swCode += `        caches.open(CACHE_NAME)\n`;
+            swCode += `            .then(cache => {\n`;
+            swCode += `                console.log('[SW] Кэшируем файлы...');\n`;
+            swCode += `                return cache.addAll(FILES_TO_CACHE);\n`;
+            swCode += `            })\n`;
+            swCode += `            .then(() => self.skipWaiting())\n`;
+            swCode += `    );\n`;
+            swCode += `});\n\n`;
+            swCode += `self.addEventListener('activate', (event) => {\n`;
+            swCode += `    event.waitUntil(\n`;
+            swCode += `        caches.keys().then(cacheNames => {\n`;
+            swCode += `            return Promise.all(\n`;
+            swCode += `                cacheNames.map(name => {\n`;
+            swCode += `                    if (name !== CACHE_NAME) {\n`;
+            swCode += `                        console.log('[SW] Удаляем старый кэш:', name);\n`;
+            swCode += `                        return caches.delete(name);\n`;
+            swCode += `                    }\n`;
+            swCode += `                })\n`;
+            swCode += `            );\n`;
+            swCode += `        }).then(() => self.clients.claim())\n`;
+            swCode += `    );\n`;
+            swCode += `});\n\n`;
+            swCode += `self.addEventListener('fetch', (event) => {\n`;
+            swCode += `    event.respondWith(\n`;
+            swCode += `        caches.match(event.request)\n`;
+            swCode += `            .then(cachedResponse => {\n`;
+            swCode += `                if (cachedResponse) {\n`;
+            swCode += `                    fetch(event.request)\n`;
+            swCode += `                        .then(response => {\n`;
+            swCode += `                            if (response && response.status === 200) {\n`;
+            swCode += `                                const clone = response.clone();\n`;
+            swCode += `                                caches.open(CACHE_NAME).then(cache => {\n`;
+            swCode += `                                    cache.put(event.request, clone);\n`;
+            swCode += `                                });\n`;
+            swCode += `                            }\n`;
+            swCode += `                        })\n`;
+            swCode += `                        .catch(() => {});\n`;
+            swCode += `                    return cachedResponse;\n`;
+            swCode += `                }\n`;
+            swCode += `                \n`;
+            swCode += `                return fetch(event.request)\n`;
+            swCode += `                    .then(response => {\n`;
+            swCode += `                        if (response && response.status === 200) {\n`;
+            swCode += `                            const clone = response.clone();\n`;
+            swCode += `                            caches.open(CACHE_NAME).then(cache => {\n`;
+            swCode += `                                cache.put(event.request, clone);\n`;
+            swCode += `                            });\n`;
+            swCode += `                        }\n`;
+            swCode += `                        return response;\n`;
+            swCode += `                    })\n`;
+            swCode += `                    .catch(() => {\n`;
+            swCode += `                        return caches.match('${cleanPathEnd}/index.html');\n`;
+            swCode += `                    });\n`;
+            swCode += `            })\n`;
+            swCode += `    );\n`;
+            swCode += `});`;
 
-            const swCodeEnd = `
-        ];
-
-        self.addEventListener('install', (event) => {
-            event.waitUntil(
-                caches.open(CACHE_NAME)
-                    .then(cache => {
-                        console.log('[SW] Кэшируем файлы...');
-                        return cache.addAll(FILES_TO_CACHE);
-                    })
-                    .then(() => self.skipWaiting())
-            );
-        });
-
-        self.addEventListener('activate', (event) => {
-            event.waitUntil(
-                caches.keys().then(cacheNames => {
-                    return Promise.all(
-                        cacheNames.map(name => {
-                            if (name !== CACHE_NAME) {
-                                console.log('[SW] Удаляем старый кэш:', name);
-                                return caches.delete(name);
-                            }
-                        })
-                    );
-                }).then(() => self.clients.claim())
-            );
-        });
-
-        self.addEventListener('fetch', (event) => {
-            event.respondWith(
-                caches.match(event.request)
-                    .then(cachedResponse => {
-                        if (cachedResponse) {
-                            fetch(event.request)
-                                .then(response => {
-                                    if (response && response.status === 200) {
-                                        const clone = response.clone();
-                                        caches.open(CACHE_NAME).then(cache => {
-                                            cache.put(event.request, clone);
-                                        });
-                                    }
-                                })
-                                .catch(() => {});
-                            return cachedResponse;
-                        }
-                        
-                        return fetch(event.request)
-                            .then(response => {
-                                if (response && response.status === 200) {
-                                    const clone = response.clone();
-                                    caches.open(CACHE_NAME).then(cache => {
-                                        cache.put(event.request, clone);
-                                    });
-                                }
-                                return response;
-                            })
-                            .catch(() => {
-                                return caches.match('${cleanPathEnd}/index.html');
-                            });
-                    })
-            );
-        });`;
-
-            files['sw.js'] = swCode;
+            generatedFiles['sw.js'] = swCode;
             progressFill.style.width = '100%';
 
             setTimeout(() => {
                 progressBar.classList.remove('active');
-                displayFiles(files);
+                displayFiles(generatedFiles);
                 showToast('✅ Файлы успешно созданы!', 'success');
             }, 500);
         }
@@ -867,85 +819,109 @@
             fileList.innerHTML = '';
 
             Object.entries(files).forEach(([name, content]) => {
-                // Для иконок показываем изображение
-                let previewHtml;
-                if (name.startsWith('icon-') && name.endsWith('.png')) {
-                    const dataUrl = 'data:image/png;base64,' + content;
-                    previewHtml = `<img src="${dataUrl}" width="48" height="48" style="border-radius: 4px; background: white; padding: 2px;">`;
-                } else {
-                    const size = new Blob([content]).size;
-                    const sizeStr = size < 1024 ? size + ' B' : (size / 1024).toFixed(1) + ' KB';
-                    const previewContent = typeof content === 'string' ? content.substring(0, 300) : '[BINARY DATA]';
-                    previewHtml = `
-                        <div style="color: #94a3b8; font-size: 0.8rem; font-family: 'Courier New', monospace; max-height: 100px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">${escapeHtml(previewContent)}${content.length > 300 ? '...' : ''}</div>
-                    `;
-                }
-
-                const size = new Blob([typeof content === 'string' ? content : atob(content)]).size;
-                const sizeStr = size < 1024 ? size + ' B' : (size / 1024).toFixed(1) + ' KB';
-
                 const div = document.createElement('div');
                 div.className = 'file-item';
+
+                let contentHtml = '';
+                let size = 0;
+
+                // Проверяем, является ли файл иконкой (dataUrl)
+                if (name.startsWith('icon-') && name.endsWith('.png') && content.startsWith('data:image')) {
+                    // Это dataUrl иконки
+                    const base64Data = content.split(',')[1];
+                    size = Math.round((base64Data.length * 3) / 4);
+                    contentHtml = `<img src="${content}" width="64" height="64" style="display:block;margin:0 auto;background:white;border-radius:4px;padding:4px;">`;
+                    
+                    // Сохраняем для скачивания
+                    div.dataset.isIcon = 'true';
+                    div.dataset.dataUrl = content;
+                } else {
+                    // Текстовый файл
+                    const textContent = typeof content === 'string' ? content : '';
+                    size = new Blob([textContent]).size;
+                    const previewText = textContent.substring(0, 300);
+                    contentHtml = `<div class="file-content">${escapeHtml(previewText)}${textContent.length > 300 ? '...' : ''}</div>`;
+                }
+
+                const sizeStr = size < 1024 ? size + ' B' : (size / 1024).toFixed(1) + ' KB';
+
                 div.innerHTML = `
                     <div class="file-header">
                         <span class="file-name">📄 ${name}</span>
                         <span class="file-size">${sizeStr}</span>
                     </div>
-                    ${previewHtml}
-                    <button class="download-btn" style="margin-top: 12px;" onclick="downloadFile('${name}', '${typeof content === 'string' ? escapeHtml(content) : ''}')">⬇️ Скачать</button>
+                    ${contentHtml}
+                    <button class="download-btn" data-filename="${name}">⬇️ Скачать</button>
                 `;
+
                 fileList.appendChild(div);
             });
 
+            // Добавляем обработчики для кнопок скачивания
+            document.querySelectorAll('.download-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const filename = this.dataset.filename;
+                    const fileItem = this.closest('.file-item');
+                    const isIcon = fileItem.dataset.isIcon === 'true';
+                    
+                    if (isIcon) {
+                        const dataUrl = fileItem.dataset.dataUrl;
+                        downloadFile(filename, dataUrl, true);
+                    } else {
+                        const content = files[filename];
+                        downloadFile(filename, content, false);
+                    }
+                });
+            });
+
             output.classList.add('show');
-            window._generatedFiles = files;
         }
 
-        function escapeHtml(str) {
-            return str.replace(/`/g, '\\`').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
+        function downloadFile(filename, content, isImage = false) {
+            let blob;
+            let url;
 
-        window.downloadFile = function(name, content) {
-            if (name.startsWith('icon-') && name.endsWith('.png')) {
-                // Скачиваем иконку как изображение
-                const base64Data = content;
-                const link = document.createElement('a');
-                link.href = 'data:image/png;base64,' + base64Data;
-                link.download = name;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                showToast(`📥 Скачана иконка ${name}`, 'success');
+            if (isImage) {
+                // Скачиваем иконку из dataUrl
+                const response = fetch(content);
+                response.then(res => res.blob()).then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showToast(`📥 Скачана иконка ${filename}`, 'success');
+                });
                 return;
             }
 
-            // Декодируем HTML entities для текстовых файлов
-            content = content.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\\`/g, '`');
-
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
+            // Текстовый файл
+            blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = name;
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
-            showToast(`📥 Скачан ${name}`, 'success');
-        };
+            showToast(`📥 Скачан ${filename}`, 'success');
+        }
 
         document.getElementById('downloadAll').addEventListener('click', function() {
-            const files = window._generatedFiles;
-            if (!files) {
+            if (Object.keys(generatedFiles).length === 0) {
                 showToast('❌ Нет файлов для скачивания', 'error');
                 return;
             }
 
-            const entries = Object.entries(files);
+            const entries = Object.entries(generatedFiles);
             entries.forEach(([name, content], index) => {
                 setTimeout(() => {
-                    downloadFile(name, content);
+                    const isImage = name.startsWith('icon-') && name.endsWith('.png') && content.startsWith('data:image');
+                    downloadFile(name, content, isImage);
                 }, index * 300);
             });
 
@@ -953,16 +929,15 @@
         });
 
         document.getElementById('copyFiles').addEventListener('click', function() {
-            const files = window._generatedFiles;
-            if (!files) {
+            if (Object.keys(generatedFiles).length === 0) {
                 showToast('❌ Нет файлов для копирования', 'error');
                 return;
             }
 
             let text = '';
-            Object.entries(files).forEach(([name, content]) => {
-                if (name.startsWith('icon-') && name.endsWith('.png')) {
-                    text += `=== ${name} ===\n[IMAGE DATA - ${content.length} characters]\n\n`;
+            Object.entries(generatedFiles).forEach(([name, content]) => {
+                if (name.startsWith('icon-') && name.endsWith('.png') && content.startsWith('data:image')) {
+                    text += `=== ${name} ===\n[IMAGE DATA - base64 encoded]\n\n`;
                 } else {
                     text += `=== ${name} ===\n${content}\n\n`;
                 }
@@ -980,6 +955,10 @@
                 showToast('📋 Все файлы скопированы в буфер обмена', 'success');
             });
         });
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
