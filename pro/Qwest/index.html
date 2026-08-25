@@ -1517,7 +1517,13 @@ self.addEventListener('fetch', event => {
 })(window);
 </script>
 
-
+<script>
+// Просто добавьте это после скрипта
+OfflineKit.Fullscreen.setup({
+    onLoad: true,          // Включить при загрузке
+    orientation: 'portrait' // Или 'landscape'
+});
+</script>
 
 
 
