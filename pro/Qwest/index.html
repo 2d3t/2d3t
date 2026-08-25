@@ -914,53 +914,14 @@
 
 
 
-
-
-
 <script>
 // ============================================================
-// УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ОФЛАЙН-ПОДДЕРЖКИ (РАБОТАЕТ ВЕЧНО)
-// ВСЁ В ОДНОМ ФАЙЛЕ — НИКАКИХ ВНЕШНИХ ЗАВИСИМОСТЕЙ
+// УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ + PWA (БЕЗ АДРЕСНОЙ СТРОКИ)
+// Вставьте этот код в любую страницу — работает сразу
 // ============================================================
 
 (function(global) {
     'use strict';
-
-    // ---------- 0. ВСТРОЕННЫЙ МАНИФЕСТ ----------
-    (function injectManifest() {
-        try {
-            if (document.querySelector('link[rel="manifest"]')) return;
-
-            const manifest = {
-                name: document.title || "Моё приложение",
-                short_name: document.title || "Приложение",
-                start_url: window.location.href.split('?')[0],
-                display: "standalone",
-                background_color: "#0a0e14",
-                theme_color: "#0a0e14",
-                icons: [
-                    {
-                        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2324665d'/%3E%3Ctext x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-family='Arial'%3E📱%3C/text%3E%3C/svg%3E",
-                        sizes: "192x192",
-                        type: "image/svg+xml"
-                    },
-                    {
-                        src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2324665d'/%3E%3Ctext x='50' y='68' font-size='60' text-anchor='middle' fill='white' font-family='Arial'%3E📱%3C/text%3E%3C/svg%3E",
-                        sizes: "512x512",
-                        type: "image/svg+xml"
-                    }
-                ]
-            };
-
-            const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-            const link = document.createElement('link');
-            link.rel = 'manifest';
-            link.href = URL.createObjectURL(blob);
-            document.head.appendChild(link);
-        } catch (e) {
-            console.warn('[Manifest] Не удалось добавить манифест:', e);
-        }
-    })();
 
     // ---------- 1. ХРАНИЛИЩЕ В LOCALSTORAGE ----------
     const Storage = {
@@ -978,7 +939,9 @@
             try {
                 const raw = localStorage.getItem(key);
                 if (raw === null) {
-                    if (defaultData !== null) this.save(key, defaultData);
+                    if (defaultData !== null) {
+                        this.save(key, defaultData);
+                    }
                     return defaultData;
                 }
                 return JSON.parse(raw);
@@ -1105,7 +1068,7 @@
             };
         },
 
-        updateStatusElement(elementId, onlineText = '🟢 Онлайн', offlineText = '🔴 Офлайн (кеш)') {
+        updateStatusElement(elementId, onlineText = '🟢 Онлайн', offlineText = '🔴 Офлайн') {
             const el = document.getElementById(elementId);
             if (!el) return;
             
@@ -1119,89 +1082,71 @@
         }
     };
 
-    // ---------- 4. SERVICE WORKER (РАБОТАЕТ ВЕЧНО) ----------
+    // ---------- 4. SERVICE WORKER И ПРЕВРАЩЕНИЕ В PWA ----------
     const SW = {
-        /**
-         * Зарегистрировать Service Worker из строки
-         * Работает через data URI, чтобы всё было в одном файле
-         */
-        registerInline(swCode) {
+        register(swPath = 'sw.js', options = {}) {
             if (!('serviceWorker' in navigator)) {
                 console.warn('[SW] Service Worker не поддерживается');
                 return Promise.reject(new Error('SW не поддерживается'));
             }
 
-            // Используем data URI вместо blob (работает дольше)
-            const encoded = encodeURIComponent(swCode);
-            const swUrl = `data:application/javascript;charset=utf-8,${encoded}`;
-            
-            return navigator.serviceWorker.register(swUrl, { scope: '/' })
+            return navigator.serviceWorker.register(swPath, options)
                 .then(registration => {
-                    console.log('[SW] ✅ Зарегистрирован (data URI)');
+                    console.log('[SW] ✅ Зарегистрирован');
                     return registration;
                 })
                 .catch(error => {
-                    console.error('[SW] ❌ Ошибка регистрации:', error);
-                    // Пробуем через blob как fallback
-                    try {
-                        const blob = new Blob([swCode], { type: 'application/javascript' });
-                        const blobUrl = URL.createObjectURL(blob);
-                        return navigator.serviceWorker.register(blobUrl, { scope: '/' });
-                    } catch (e) {
-                        console.error('[SW] ❌ Fallback тоже не работает:', e);
-                        throw e;
-                    }
+                    console.error('[SW] ❌ Ошибка:', error);
+                    throw error;
                 });
         },
 
-        /**
-         * Сгенерировать код SW с кешированием всех ресурсов
-         */
-        generateCacheSW(cacheName = 'app-v1') {
-            // Получаем текущий URL страницы
-            const pageUrl = window.location.href;
-            const baseUrl = pageUrl.substring(0, pageUrl.lastIndexOf('/') + 1);
-            
-            // Список ресурсов для кеширования
-            const urlsToCache = [
-                pageUrl,
-                // Добавляем все CSS и JS на странице
-                ...Array.from(document.querySelectorAll('link[rel="stylesheet"], script[src]'))
-                    .map(el => el.href || el.src)
-                    .filter(url => url && url.startsWith(window.location.origin))
-            ];
-            
-            // Убираем дубликаты
-            const uniqueUrls = [...new Set(urlsToCache)];
+        async isActive() {
+            if (!('serviceWorker' in navigator)) return false;
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                return registration !== undefined && registration.active !== null;
+            } catch {
+                return false;
+            }
+        },
+
+        registerInline(swCode, scope = '/') {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] Service Worker не поддерживается');
+                return Promise.reject(new Error('SW не поддерживается'));
+            }
+
+            try {
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                return navigator.serviceWorker.register(swUrl, { scope });
+            } catch (error) {
+                console.error('[SW] Ошибка создания inline SW:', error);
+                return Promise.reject(error);
+            }
+        },
+
+        generateCacheSW(cacheName = 'app-v1', urls = null) {
+            if (!urls) {
+                urls = [window.location.pathname || '/'];
+                if (window.location.search) {
+                    urls.push(window.location.pathname + window.location.search);
+                }
+            }
 
             return `
-// ============================================================
-// SERVICE WORKER (ГЕНЕРИРОВАН АВТОМАТИЧЕСКИ)
-// ============================================================
 const CACHE_NAME = '${cacheName}';
-const BASE_URL = '${baseUrl}';
-const URLS_TO_CACHE = ${JSON.stringify(uniqueUrls)};
-
-// Добавляем главную страницу
-const FILES_TO_CACHE = [
-    ...URLS_TO_CACHE,
-    BASE_URL
-];
+const urlsToCache = ${JSON.stringify(urls)};
 
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Кеширование ресурсов...');
-                return cache.addAll(FILES_TO_CACHE);
+                console.log('[SW] Кеширование:', urlsToCache);
+                return cache.addAll(urlsToCache);
             })
-            .then(() => {
-                console.log('[SW] ✅ Кеширование завершено');
-                return self.skipWaiting();
-            })
-            .catch(error => {
-                console.error('[SW] ❌ Ошибка кеширования:', error);
-            })
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -1211,194 +1156,134 @@ self.addEventListener('activate', event => {
             return Promise.all(
                 cacheNames.map(name => {
                     if (name !== CACHE_NAME) {
-                        console.log('[SW] 🗑️ Удаление старого кеша:', name);
+                        console.log('[SW] Удаление старого кеша:', name);
                         return caches.delete(name);
                     }
                 })
             );
-        }).then(() => {
-            console.log('[SW] ✅ Активирован');
-            return self.clients.claim();
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
-            .then(cachedResponse => {
-                if (cachedResponse) {
-                    // Фоновое обновление кеша
-                    fetch(event.request)
-                        .then(response => {
-                            if (response && response.status === 200) {
-                                caches.open(CACHE_NAME).then(cache => {
-                                    cache.put(event.request, response.clone());
-                                });
-                            }
-                        })
-                        .catch(() => {});
-                    return cachedResponse;
-                }
-                
-                return fetch(event.request)
-                    .then(response => {
-                        if (response && response.status === 200) {
-                            const clone = response.clone();
-                            caches.open(CACHE_NAME).then(cache => {
-                                cache.put(event.request, clone);
-                            });
-                        }
-                        return response;
-                    })
-                    .catch(() => {
-                        // Возвращаем главную страницу как fallback
-                        return caches.match(BASE_URL);
-                    });
-            })
+            .then(response => response || fetch(event.request))
+            .catch(() => caches.match('/'))
     );
 });
-
-console.log('[SW] ✅ Service Worker загружен');
 `;
         },
 
         /**
-         * Автоматическая настройка офлайн-режима
+         * Модификация: Генерация манифеста для скрытия адресной строки
          */
-        async setupOffline(cacheName = 'app-v1') {
-            const swCode = this.generateCacheSW(cacheName);
-            return this.registerInline(swCode);
-        },
-
-        /**
-         * Проверить активен ли SW
-         */
-        async isActive() {
-            if (!('serviceWorker' in navigator)) return false;
-            try {
-                const registration = await navigator.serviceWorker.getRegistration();
-                return registration !== undefined && registration.active !== null;
-            } catch {
-                return false;
-            }
-        }
-    };
-
-    // ---------- 5. ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ ----------
-    const Utils = {
-        deepClone(obj) {
-            return JSON.parse(JSON.stringify(obj));
-        },
-
-        generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        },
-
-        formatDate(date, format = 'DD.MM.YYYY HH:mm') {
-            const d = new Date(date);
-            const pad = n => String(n).padStart(2, '0');
-            const replacements = {
-                'YYYY': d.getFullYear(),
-                'MM': pad(d.getMonth() + 1),
-                'DD': pad(d.getDate()),
-                'HH': pad(d.getHours()),
-                'mm': pad(d.getMinutes()),
-                'ss': pad(d.getSeconds())
+        injectManifest(options = {}) {
+            const defaultManifest = {
+                name: document.title || 'My Web App',
+                short_name: document.title || 'App',
+                start_url: window.location.pathname + window.location.search,
+                display: 'standalone', // ХАРДКОД: Это свойство убирает адресную строку
+                background_color: '#ffffff',
+                theme_color: '#1e293b',
+                icons: [
+                    {
+                        src: 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="%231e293b"/><text x="50%" y="55%" font-size="40" fill="white" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle">APP</text></svg>',
+                        sizes: '192x192 512x512',
+                        type: 'image/svg+xml'
+                    }
+                ]
             };
-            return format.replace(/YYYY|MM|DD|HH|mm|ss/g, match => replacements[match]);
-        },
 
-        showToast(message, duration = 2000) {
-            let toast = document.getElementById('_toast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = '_toast';
-                toast.style.cssText = `
-                    position: fixed;
-                    bottom: 30px;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(100px);
-                    background: #1e293b;
-                    color: white;
-                    padding: 12px 24px;
-                    border-radius: 60px;
-                    font-size: 0.9rem;
-                    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-                    opacity: 0;
-                    transition: all 0.3s ease;
-                    z-index: 9999;
-                    pointer-events: none;
-                    font-family: system-ui, sans-serif;
-                    max-width: 90%;
-                    border: 1px solid #334155;
-                `;
-                document.body.appendChild(toast);
-            }
+            const finalManifest = { ...defaultManifest, ...options };
+            const stringManifest = JSON.stringify(finalManifest);
+            const blob = new Blob([stringManifest], { type: 'application/json' });
 
-            toast.textContent = message;
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(0)';
-
-            clearTimeout(toast._timeout);
-            toast._timeout = setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(-50%) translateY(100px)';
-            }, duration);
-        },
-
-        hideAddressBar() {
-            if (window.innerHeight < window.outerHeight) {
-                window.scrollTo(0, 1);
-            }
-            window.addEventListener('resize', () => {
-                if (window.innerHeight < window.outerHeight) {
-                    window.scrollTo(0, 1);
-                }
-            });
-        }
-    };
-
-    // ---------- 6. ЭКСПОРТ ----------
-    const OfflineKit = {
-        Storage,
-        ArrayHelper,
-        Network,
-        SW,
-        Utils,
-        version: '1.1.0'
-    };
-
-    global.OfflineKit = OfflineKit;
-    global.Store = Storage;
-    global.ArrayStore = ArrayHelper;
-    global.NetworkStatus = Network;
-    global.SWHelper = SW;
-    global.Utils = Utils;
-
-    // ---------- 7. АВТОМАТИЧЕСКАЯ НАСТРОЙКА ----------
-    // Скрываем адресную строку
-    setTimeout(() => Utils.hideAddressBar(), 100);
-
-    // Автоматически настраиваем офлайн-режим через 1 секунду после загрузки
-    // (даём время загрузиться всем ресурсам)
-    setTimeout(() => {
-        if ('serviceWorker' in navigator) {
-            SW.setupOffline('app-v1')
-                .then(() => {
-                    console.log('[OfflineKit] ✅ Офлайн-режим настроен');
-                })
-                .catch(err => {
-                    console.warn('[OfflineKit] ⚠️ Офлайн-режим не настроен:', err);
-                });
-        }
-    }, 1000);
-
-    console.log('[OfflineKit] ✅ Загружен v1.1.0');
-    console.log('[OfflineKit] 📱 Добавьте на экран для полноэкранного режима');
-
+const manifestUrl = URL.createObjectURL(blob);
+let manifestLink = document.querySelector('link[rel="manifest"]');
+if (!manifestLink) {
+manifestLink = document.createElement('link');
+manifestLink.rel = 'manifest';
+document.head.appendChild(manifestLink);
+}
+manifestLink.href = manifestUrl;
+console.log('[PWA] ✅ Инжектирован manifest.json (display: standalone)');
+},
+/**
+* Кнопка установки (Инсталляция на рабочий стол)
+*/
+setupInstallPrompt(buttonId) {
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+e.preventDefault();
+deferredPrompt = e;
+const btn = document.getElementById(buttonId);
+if (btn) {
+btn.style.display = 'block';
+btn.onclick = () => {
+btn.style.display = 'none';
+deferredPrompt.prompt();
+deferredPrompt.userChoice.then(() => {
+deferredPrompt = null;
+});
+};
+}
+});
+},
+async setupOffline(cacheName = 'app-v1', manifestOptions = {}) {
+this.injectManifest(manifestOptions);
+const swCode = this.generateCacheSW(cacheName);
+return this.registerInline(swCode);
+}
+};
+// ---------- 5. ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ ----------
+const Utils = {
+deepClone(obj) { return JSON.parse(JSON.stringify(obj)); },
+generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); },
+formatDate(date, format = 'DD.MM.YYYY HH:mm') {
+const d = new Date(date);
+const pad = n => String(n).padStart(2, '0');
+const replacements = {
+'YYYY': d.getFullYear(), 'MM': pad(d.getMonth() + 1), 'DD': pad(d.getDate()),
+'HH': pad(d.getHours()), 'mm': pad(d.getMinutes()), 'ss': pad(d.getSeconds())
+};
+return format.replace(/YYYY|MM|DD|HH|mm|ss/g, match => replacements[match]);
+},
+showToast(message, duration = 2000) {
+let toast = document.getElementById('_toast');
+if (!toast) {
+toast = document.createElement('div');
+toast.id = '_toast';
+toast.style.cssText = position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: white; padding: 12px 24px; border-radius: 60px; font-size: 0.9rem; box-shadow: 0 8px 20px rgba(0,0,0,0.3); opacity: 0; transition: all 0.3s ease; z-index: 9999; pointer-events: none; font-family: system-ui, sans-serif;;
+document.body.appendChild(toast);
+}
+toast.textContent = message;
+toast.style.opacity = '1';
+toast.style.transform = 'translateX(-50%) translateY(0)';
+clearTimeout(toast._timeout);
+toast._timeout = setTimeout(() => {
+toast.style.opacity = '0';
+toast.style.transform = 'translateX(-50%) translateY(100px)';
+}, duration);
+}
+};
+// ---------- 6. ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ----------
+const OfflineKit = { Storage, ArrayHelper, Network, SW, Utils, version: '1.1.0-pwa' };
+global.OfflineKit = OfflineKit;
+global.Store = Storage;
+global.ArrayStore = ArrayHelper;
+global.NetworkStatus = Network;
+global.SWHelper = SW;
+global.Utils = Utils;
+console.log('[OfflineKit] ✅ Загружен v1.1.0-pwa с поддержкой скрытия адресной строки');
+// Автоматический запуск при подключении скрипта
+window.addEventListener('DOMContentLoaded', () => {
+SW.setupOffline('app-cache-v1');
+});
 })(window);
 </script>
+
+
 
 
 
