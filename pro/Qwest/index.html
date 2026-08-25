@@ -1314,16 +1314,59 @@ self.addEventListener('fetch', event => {
 
 })(window);
 </script>
+
+
 <script>
-// Добавляем манифест программно
+// Добавляем манифест программно с иконкой из эмодзи
 (function() {
+    // Создаём иконку из эмодзи
+    function createEmojiIcon(emoji, size = 192) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        
+        // Заливаем фон
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+        
+        // Рисуем эмодзи
+        ctx.font = `${size * 0.7}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(emoji, size / 2, size / 2 + size * 0.05);
+        
+        return canvas.toDataURL('image/png');
+    }
+    
+    // Создаём иконки разных размеров
+    const iconData = {
+        '192x192': createEmojiIcon('🚀', 192),
+        '512x512': createEmojiIcon('🚀', 512)
+    };
+    
+    // Манифест
     const manifest = {
         name: "Моё приложение",
         short_name: "Приложение",
         display: "standalone",
         start_url: window.location.href,
         background_color: "#ffffff",
-        theme_color: "#000000"
+        theme_color: "#000000",
+        icons: [
+            {
+                src: iconData['192x192'],
+                sizes: "192x192",
+                type: "image/png",
+                purpose: "any"
+            },
+            {
+                src: iconData['512x512'],
+                sizes: "512x512",
+                type: "image/png",
+                purpose: "any"
+            }
+        ]
     };
     
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
@@ -1331,11 +1374,14 @@ self.addEventListener('fetch', event => {
     link.rel = 'manifest';
     link.href = URL.createObjectURL(blob);
     document.head.appendChild(link);
+    
+    // Можно также добавить иконки для Apple
+    const appleIcon = document.createElement('link');
+    appleIcon.rel = 'apple-touch-icon';
+    appleIcon.href = createEmojiIcon('🚀', 180);
+    document.head.appendChild(appleIcon);
 })();
 </script>
-
-
-
 
 
 
