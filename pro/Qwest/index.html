@@ -1317,35 +1317,11 @@ self.addEventListener('fetch', event => {
 
 
 <script>
-// Добавляем манифест программно с иконкой из эмодзи
+// Добавляем манифест программно
 (function() {
-    // Создаём иконку из эмодзи
-    function createEmojiIcon(emoji, size = 192) {
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        
-        // Заливаем фон
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
-        
-        // Рисуем эмодзи
-        ctx.font = `${size * 0.7}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(emoji, size / 2, size / 2 + size * 0.05);
-        
-        return canvas.toDataURL('image/png');
-    }
+    // Определяем базовый путь (где находится текущий файл)
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
     
-    // Создаём иконки разных размеров
-    const iconData = {
-        '192x192': createEmojiIcon('🚀', 192),
-        '512x512': createEmojiIcon('🚀', 512)
-    };
-    
-    // Манифест
     const manifest = {
         name: "Моё приложение",
         short_name: "Приложение",
@@ -1355,16 +1331,22 @@ self.addEventListener('fetch', event => {
         theme_color: "#000000",
         icons: [
             {
-                src: iconData['192x192'],
+                src: basePath + "icon-192.png",  // PNG файл рядом с приложением
                 sizes: "192x192",
                 type: "image/png",
                 purpose: "any"
             },
             {
-                src: iconData['512x512'],
+                src: basePath + "icon-512.png",  // PNG файл рядом с приложением
                 sizes: "512x512",
                 type: "image/png",
                 purpose: "any"
+            },
+            {
+                src: basePath + "icon-192.png",
+                sizes: "192x192",
+                type: "image/png",
+                purpose: "maskable"
             }
         ]
     };
@@ -1374,12 +1356,6 @@ self.addEventListener('fetch', event => {
     link.rel = 'manifest';
     link.href = URL.createObjectURL(blob);
     document.head.appendChild(link);
-    
-    // Можно также добавить иконки для Apple
-    const appleIcon = document.createElement('link');
-    appleIcon.rel = 'apple-touch-icon';
-    appleIcon.href = createEmojiIcon('🚀', 180);
-    document.head.appendChild(appleIcon);
 })();
 </script>
 
