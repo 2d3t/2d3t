@@ -858,6 +858,7 @@ document.addEventListener('DOMContentLoaded', keepScreenAwake);
 
 <!-- ============ КНОПКА "ПОДЕЛИТЬСЯ ФАЙЛОМ" ============ -->
 <script>
+// ============ КНОПКА "ПОДЕЛИТЬСЯ ФАЙЛОМ" (ИСПРАВЛЕННАЯ) ============
 function shareFile() {
     const code = document.getElementById('codeArea').value;
     if (!code.trim()) {
@@ -865,7 +866,7 @@ function shareFile() {
         return;
     }
 
-    // Создаём модальное окно выбора формата
+    // Создаём модальное окно выбора формата и имени
     const modal = document.createElement('div');
     modal.style.cssText = `
         position: fixed;
@@ -887,7 +888,7 @@ function shareFile() {
         background: #141a24;
         border-radius: 24px;
         padding: 24px;
-        max-width: 360px;
+        max-width: 400px;
         width: 100%;
         border: 1px solid #2a3340;
         text-align: center;
@@ -897,8 +898,17 @@ function shareFile() {
     card.innerHTML = `
         <h3 style="color: #e2e8f0; margin: 0 0 8px 0;">📤 Поделиться файлом</h3>
         <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
-            Выберите формат файла
+            Введите имя файла и выберите формат
         </p>
+        <div style="margin-bottom: 16px;">
+            <input type="text" id="fileNameInput" value="code" 
+                   style="width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid #2a3340; 
+                          background: #0d1117; color: #e2e8f0; font-size: 16px; box-sizing: border-box;
+                          outline: none; transition: border-color 0.2s;"
+                   placeholder="Имя файла" 
+                   onfocus="this.style.borderColor='#3b4de0'"
+                   onblur="this.style.borderColor='#2a3340'">
+        </div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
             <button onclick="doShare('txt')" 
                     style="flex:1; min-width:100px; background:#3b4de0; color:white; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer;">
@@ -909,7 +919,7 @@ function shareFile() {
                 🌐 HTML
             </button>
         </div>
-        <button onclick="this.closest('div[style]').remove()" 
+        <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
                 style="margin-top:14px; background:#1e2630; color:#94a3b8; border:1px solid #2a3340; border-radius:40px; padding:8px 24px; font-size:14px; cursor:pointer; width:auto;">
             ✕ Отмена
         </button>
@@ -918,9 +928,23 @@ function shareFile() {
     modal.appendChild(card);
     document.body.appendChild(modal);
 
+    // Автофокус на поле ввода имени
+    setTimeout(() => {
+        const input = document.getElementById('fileNameInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+
     // Закрытие по клику вне карточки
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.remove();
+    });
+
+    // Закрытие по Escape
+    modal.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') modal.remove();
     });
 }
 
@@ -932,15 +956,20 @@ function doShare(format) {
         return;
     }
 
+    // Получаем имя файла
+    const fileNameInput = document.getElementById('fileNameInput');
+    let fileName = fileNameInput ? fileNameInput.value.trim() : 'code';
+    if (!fileName) fileName = 'code';
+
     // Закрываем модальное окно
     const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
     if (modal) modal.remove();
 
-    let blob, filename, mimeType;
+    let blob, fullFilename, mimeType;
 
     if (format === 'txt') {
         blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-        filename = 'code.txt';
+        fullFilename = fileName + '.txt';
         mimeType = 'text/plain';
     } else { // HTML
         // Проверяем, есть ли уже <html> или <!DOCTYPE>
@@ -953,7 +982,7 @@ function doShare(format) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Document</title>
+<title>${fileName}</title>
 <style>
     body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
 </style>
@@ -964,24 +993,28 @@ ${code}
 </html>`;
         }
         blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        filename = 'code.html';
+        fullFilename = fileName + '.html';
         mimeType = 'text/html';
     }
 
     // Проверяем, поддерживается ли Web Share API (на мобильных)
     if (navigator.share && navigator.canShare) {
         // Создаём File из Blob
-        const file = new File([blob], filename, { type: mimeType });
+        const file = new File([blob], fullFilename, { type: mimeType });
         const shareData = {
-            title: 'KlikEdit',
-            text: 'Код из редактора',
+            title: fileName,
             files: [file]
         };
+
+        // Для Android добавляем текст
+        if (navigator.userAgent.toLowerCase().includes('android')) {
+            shareData.text = code.substring(0, 500) + (code.length > 500 ? '...' : '');
+        }
 
         if (navigator.canShare(shareData)) {
             navigator.share(shareData).catch((err) => {
                 if (err.name !== 'AbortError') {
-                    fallbackDownload(blob, filename);
+                    fallbackDownload(blob, fullFilename);
                 }
             });
             return;
@@ -989,7 +1022,7 @@ ${code}
     }
 
     // Fallback: скачивание файла
-    fallbackDownload(blob, filename);
+    fallbackDownload(blob, fullFilename);
 }
 
 // Функция для скачивания (если поделиться нельзя)
