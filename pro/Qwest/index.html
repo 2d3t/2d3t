@@ -1314,7 +1314,25 @@ self.addEventListener('fetch', event => {
 
 })(window);
 </script>
-
+<script>
+// Добавляем манифест программно
+(function() {
+    const manifest = {
+        name: "Моё приложение",
+        short_name: "Приложение",
+        display: "standalone",
+        start_url: window.location.href,
+        background_color: "#ffffff",
+        theme_color: "#000000"
+    };
+    
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+})();
+</script>
 
 
 
