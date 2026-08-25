@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Заметки · локальный список</title>
+    <!-- Манифест (inline) -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogItCX0LDQvNC10YLQutC4INC70LjRgdGC0L7QuiIsCiAgInNob3J0X25hbWUiOiAi0JfQsNC80LXRgtC60LgiLAogICJkZXNjcmlwdGlvbiI6ICLQodC/0LjRgdC+0Log0LfQsNC80LXRgtC+0Log0LIgbG9jYWxTdG9yYWdlIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmNWY3ZmEiLAogICJ0aGVtZV9jb2xvciI6ICIjMjQ2NjVkIgp9">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px 16px 30px;
+            background: #f5f7fa;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: #0f2b3a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dce3ed;
+            padding-bottom: 12px;
+        }
+        h1 small {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #4b5b6e;
+            margin-left: auto;
+        }
+        .add-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        .add-section input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            font-size: 1rem;
+            background: white;
+            transition: 0.15s;
+            outline: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .add-section input:focus {
+            border-color: #24665d;
+            box-shadow: 0 0 0 3px rgba(36,102,93,0.15);
+        }
+        .add-section button {
+            background: #24665d;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 0 24px;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.15s;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(36,102,93,0.25);
+        }
+        .add-section button:hover {
+            background: #1d554d;
+            transform: scale(0.97);
+        }
+        .add-section button:active {
+            transform: scale(0.94);
+        }
+        .list-container {
+            flex: 1;
+            background: white;
+            border-radius: 24px;
+            padding: 8px 6px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+            border: 1px solid #e9edf2;
+            min-height: 200px;
+        }
+        .empty-message {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px 10px;
+            font-style: italic;
+            font-size: 0.95rem;
+        }
+        .note-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border-bottom: 1px solid #ecf1f7;
+            transition: 0.1s;
+            border-radius: 12px;
+            margin: 2px 0;
+        }
+        .note-item:hover {
+            background: #f8fafd;
+        }
+        .note-text {
+            flex: 1;
+            word-break: break-word;
+            font-size: 1rem;
+            line-height: 1.4;
+            padding: 2px 0;
+        }
+        .note-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .note-actions button {
+            background: transparent;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #3d4f62;
+        }
+        .note-actions button:hover {
+            background: #e6edf6;
+        }
+        .note-actions .copy-btn:hover {
+            background: #d6e8e4;
+            color: #0f4c44;
+        }
+        .note-actions .delete-btn:hover {
+            background: #fee9e7;
+            color: #b91c1c;
+        }
+        .footer-info {
+            margin-top: 18px;
+            font-size: 0.75rem;
+            color: #7b8ba0;
+            text-align: center;
+            letter-spacing: 0.3px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: 0.25s ease;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>
+        📋 Заметки
+        <small id="counter">0</small>
+    </h1>
+
+    <div class="add-section">
+        <input type="text" id="noteInput" placeholder="Новая заметка..." autofocus>
+        <button id="addBtn">➕ Добавить</button>
+    </div>
+
+    <div class="list-container" id="listContainer">
+        <div class="empty-message" id="emptyMessage">Список пуст · создайте заметку</div>
+        <div id="noteList"></div>
+    </div>
+
+    <div class="footer-info">
+        ✦ сохраняются в localStorage ✦ можно копировать, удалять
+    </div>
+
+    <div id="toast" class="toast">Скопировано</div>
+
+    <script>
+        (function() {
+            // ----- состояние -----
+            let notes = [];
+            const STORAGE_KEY = 'my_notes_list';
+
+            // DOM узлы
+            const noteListEl = document.getElementById('noteList');
+            const emptyMessageEl = document.getElementById('emptyMessage');
+            const counterEl = document.getElementById('counter');
+            const noteInput = document.getElementById('noteInput');
+            const addBtn = document.getElementById('addBtn');
+            const toastEl = document.getElementById('toast');
+
+            // ----- загрузка / сохранение -----
+            function loadNotes() {
+                try {
+                    const stored = localStorage.getItem(STORAGE_KEY);
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        if (Array.isArray(parsed)) {
+                            notes = parsed.filter(item => typeof item === 'string' && item.trim() !== '');
+                            return;
+                        }
+                    }
+                } catch (_) {}
+                notes = [];
+            }
+
+            function saveNotes() {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+            }
+
+            // ----- рендер -----
+            function render() {
+                // очищаем список, но оставляем emptyMessage
+                noteListEl.innerHTML = '';
+                const count = notes.length;
+                counterEl.textContent = count;
+
+                if (count === 0) {
+                    emptyMessageEl.style.display = 'block';
+                    return;
+                }
+                emptyMessageEl.style.display = 'none';
+
+                // строим элементы
+                notes.forEach((text, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'note-item';
+
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'note-text';
+                    textSpan.textContent = text;
+                    itemDiv.appendChild(textSpan);
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'note-actions';
+
+                    // кнопка копировать
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-btn';
+                    copyBtn.textContent = '📋';
+                    copyBtn.setAttribute('aria-label', 'Копировать и закрыть');
+                    copyBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleCopy(index);
+                    });
+
+                    // кнопка удалить
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = '✕';
+                    deleteBtn.setAttribute('aria-label', 'Удалить заметку');
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        handleDelete(index);
+                    });
+
+                    actionsDiv.appendChild(copyBtn);
+                    actionsDiv.appendChild(deleteBtn);
+                    itemDiv.appendChild(actionsDiv);
+                    noteListEl.appendChild(itemDiv);
+                });
+            }
+
+            // ----- действия -----
+            function handleDelete(index) {
+                if (index < 0 || index >= notes.length) return;
+                notes.splice(index, 1);
+                saveNotes();
+                render();
+                showToast('🗑️ Удалено');
+            }
+
+            function handleCopy(index) {
+                if (index < 0 || index >= notes.length) return;
+                const text = notes[index];
+                if (!text) return;
+
+                // копирование в буфер обмена
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        showToast('📋 Скопировано!');
+                        // после копирования — закрываем страницу (если возможно)
+                        attemptCloseWindow();
+                    }).catch(() => {
+                        // fallback
+                        fallbackCopy(text);
+                    });
+                } else {
+                    fallbackCopy(text);
+                }
+            }
+
+            // fallback копирования через textarea
+            function fallbackCopy(text) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                textarea.style.top = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('📋 Скопировано!');
+                    attemptCloseWindow();
+                } catch (_) {
+                    showToast('❌ Не удалось скопировать');
+                }
+                document.body.removeChild(textarea);
+            }
+
+            // попытка закрыть окно / вкладку
+            function attemptCloseWindow() {
+                // 1) window.close() работает только для окон, открытых скриптом
+                // 2) если не сработает — ничего страшного, просто остаёмся
+                try {
+                    window.close();
+                } catch (_) {
+                    // игнорируем — браузер блокирует
+                }
+                // дополнительно: если не закрылось, показываем сообщение
+                setTimeout(() => {
+                    // если окно всё ещё открыто (проверяем через небольшой таймаут)
+                    if (!window.closed) {
+                        // ничего не делаем, просто остаёмся
+                    }
+                }, 100);
+            }
+
+            // добавить заметку
+            function addNote() {
+                const raw = noteInput.value.trim();
+                if (raw === '') {
+                    showToast('✏️ Введите текст');
+                    return;
+                }
+                notes.push(raw);
+                saveNotes();
+                render();
+                noteInput.value = '';
+                noteInput.focus();
+                showToast('✅ Добавлено');
+            }
+
+            // ----- тост -----
+            let toastTimeout = null;
+            function showToast(message) {
+                toastEl.textContent = message;
+                toastEl.classList.add('show');
+                if (toastTimeout) clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => {
+                    toastEl.classList.remove('show');
+                }, 2000);
+            }
+
+            // ----- инициализация -----
+            loadNotes();
+            render();
+
+            // обработчики
+            addBtn.addEventListener('click', addNote);
+            noteInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addNote();
+                }
+            });
+
+            // дополнительно: если пользователь кликнет вне, чтобы снять фокус
+            // но это не обязательно
+
+            // ----- Service Worker (регистрация, если поддерживается) -----
+            if ('serviceWorker' in navigator) {
+                // создаём inline worker через blob URL (чтобы не было внешнего файла)
+                // но для корректной регистрации нужно, чтобы sw был на том же origin
+                // и работал как отдельный скрипт. Используем простой sw для кеша.
+                try {
+                    const swCode = `
+                        self.addEventListener('install', e => {
+                            e.waitUntil(
+                                caches.open('notes-v1').then(cache => {
+                                    return cache.addAll([
+                                        '/',
+                                        '/index.html'
+                                    ]);
+                                })
+                            );
+                            self.skipWaiting();
+                        });
+                        self.addEventListener('activate', e => {
+                            e.waitUntil(clients.claim());
+                        });
+                        self.addEventListener('fetch', e => {
+                            e.respondWith(
+                                caches.match(e.request).then(res => res || fetch(e.request))
+                            );
+                        });
+                    `;
+                    const blob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(blob);
+                    // регистрируем blob URL — но это не всегда работает в некоторых браузерах
+                    // для надёжности просто зарегистрируем фиктивный, но оставим рабочий
+                    // В реальном проекте лучше использовать внешний sw.js
+                    // Пытаемся зарегистрировать через blob
+                    navigator.serviceWorker.register(swUrl, { scope: '/' })
+                        .then(() => console.log('SW blob registered'))
+                        .catch(() => console.log('SW blob registration skipped (normal)'));
+                } catch (_) {
+                    // если не вышло — ничего страшного
+                }
+            }
+
+            // также манифест встроен через link (data uri)
+
+        })();
+    </script>
+</body>
+</html>
