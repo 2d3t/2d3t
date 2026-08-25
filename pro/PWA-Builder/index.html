@@ -1,418 +1,451 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA Builder</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PWA Studio PRO</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #0a0e14;
+            background: #0f1117;
             color: #e2e8f0;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding: 2rem 1rem;
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
-            padding: 20px;
+            align-items: flex-start;
         }
-
-        .container {
-            max-width: 900px;
+        .card {
+            max-width: 960px;
             width: 100%;
-            background: #1a1f2e;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            border: 1px solid #2a3040;
+            background: #1a1e26;
+            padding: 2rem 1.8rem;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
+            border: 1px solid #2a2f3a;
         }
-
         h1 {
-            font-size: 2rem;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 1.9rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-
-        .subtitle {
-            color: #94a3b8;
-            margin-bottom: 32px;
+        .sub {
+            color: #8892a8;
+            margin-bottom: 2rem;
             font-size: 0.95rem;
+            border-left: 3px solid #3b82f6;
+            padding-left: 14px;
         }
-
-        .form-group {
-            margin-bottom: 24px;
-        }
-
         label {
             display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #c8d0dc;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 500;
+            margin: 1.4rem 0 0.4rem 0;
+            font-size: 0.9rem;
+            color: #cbd5e1;
         }
-
+        .input-with-clear {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .input-with-clear input {
+            flex: 1;
+        }
+        .input-with-clear .btn-clear {
+            background: #2d3545;
+            border: none;
+            color: #d1d9e6;
+            padding: 0.5rem 1rem;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            white-space: nowrap;
+            height: 47px;
+            display: flex;
+            align-items: center;
+        }
+        .input-with-clear .btn-clear:hover {
+            background: #3d475b;
+            color: white;
+        }
         input,
         textarea {
             width: 100%;
-            padding: 12px 16px;
-            background: #0d1117;
-            border: 1px solid #2a3040;
-            border-radius: 8px;
-            color: #e2e8f0;
+            padding: 0.7rem 1rem;
+            background: #0b0e14;
+            border: 1px solid #2d3340;
+            border-radius: 14px;
+            color: #f1f5f9;
             font-size: 0.95rem;
-            transition: all 0.2s;
+            transition: 0.2s;
             font-family: inherit;
         }
-
         input:focus,
         textarea:focus {
             outline: none;
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
         }
-
         textarea {
-            min-height: 200px;
+            min-height: 160px;
             resize: vertical;
-            font-family: 'Courier New', monospace;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
             font-size: 0.85rem;
-            line-height: 1.6;
+            line-height: 1.5;
+            tab-size: 2;
         }
-
-        .help-text {
-            color: #64748b;
-            font-size: 0.8rem;
-            margin-top: 4px;
-        }
-
-        .icon-upload-area {
-            border: 2px dashed #2a3040;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #0d1117;
-            position: relative;
-        }
-
-        .icon-upload-area:hover {
-            border-color: #60a5fa;
-            background: #141a24;
-        }
-
-        .icon-upload-area.dragover {
-            border-color: #60a5fa;
-            background: #1a2a40;
-            transform: scale(1.02);
-        }
-
-        .icon-upload-area input[type="file"] {
-            display: none;
-        }
-
-        .icon-preview-container {
+        .row {
             display: flex;
-            gap: 12px;
-            justify-content: center;
+            gap: 1.2rem;
             flex-wrap: wrap;
-            margin-top: 15px;
         }
-
-        .icon-preview-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            background: #0d1117;
-            padding: 8px;
-            border-radius: 8px;
-            border: 1px solid #2a3040;
+        .row>div {
+            flex: 1 1 180px;
         }
-
-        .icon-preview-item img {
-            border-radius: 4px;
-            background: white;
-            padding: 2px;
-            object-fit: contain;
-            width: 48px;
-            height: 48px;
-        }
-
-        .icon-preview-item .size-label {
-            font-size: 0.6rem;
-            color: #64748b;
-        }
-
-        .upload-placeholder {
-            color: #64748b;
-            font-size: 0.95rem;
-        }
-
-        .upload-placeholder .icon-big {
-            font-size: 3rem;
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 8px;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(96, 165, 250, 0.3);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .output {
-            margin-top: 32px;
-            padding-top: 32px;
-            border-top: 1px solid #2a3040;
-            display: none;
-        }
-
-        .output.show {
-            display: block;
-        }
-
-        .file-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-
-        .file-item {
-            background: #0d1117;
-            border-radius: 8px;
-            padding: 16px;
-            border: 1px solid #2a3040;
-        }
-
-        .file-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .file-name {
-            font-weight: 600;
-            color: #60a5fa;
-            font-size: 0.9rem;
-        }
-
-        .file-size {
-            color: #64748b;
-            font-size: 0.8rem;
-        }
-
-        .file-content {
-            color: #94a3b8;
-            font-size: 0.8rem;
-            font-family: 'Courier New', monospace;
-            background: #0a0e14;
-            padding: 12px;
-            border-radius: 4px;
-            max-height: 120px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            margin-bottom: 12px;
-        }
-
-        .file-content img {
-            display: block;
-            margin: 0 auto;
-            background: white;
-            border-radius: 4px;
-            padding: 4px;
-        }
-
-        .download-btn {
-            padding: 6px 16px;
-            background: #2a3040;
-            border: none;
-            border-radius: 6px;
-            color: #e2e8f0;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .download-btn:hover {
-            background: #3a4050;
-        }
-
-        .download-all {
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #34d399, #60a5fa);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-right: 12px;
-        }
-
-        .download-all:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(52, 211, 153, 0.3);
-        }
-
         .actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 1rem;
+            margin: 2rem 0 1.2rem 0;
+            align-items: center;
         }
-
+        .btn {
+            background: #3b82f6;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            padding: 0.8rem 2rem;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #2563eb;
+            flex: 0 0 auto;
+        }
+        .btn:hover {
+            background: #2563eb;
+            transform: scale(1.01);
+            box-shadow: 0 8px 20px -8px #1e4ab0;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #3b4a5e;
+            color: #d1d9e6;
+        }
+        .btn-outline:hover {
+            background: #252c3a;
+            border-color: #5f7390;
+            box-shadow: none;
+        }
+        .btn-green {
+            background: #22a67e;
+            border-color: #1a8a68;
+        }
+        .btn-green:hover {
+            background: #1a8a68;
+        }
+        .btn-purple {
+            background: #7c3aed;
+            border-color: #6d28d9;
+        }
+        .btn-purple:hover {
+            background: #6d28d9;
+        }
+        .btn-orange {
+            background: #f59e0b;
+            border-color: #d97706;
+            color: #1a1a1a;
+        }
+        .btn-orange:hover {
+            background: #d97706;
+        }
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin: 1.8rem 0 0.8rem 0;
+        }
+        .file-card {
+            background: #13181f;
+            border-radius: 20px;
+            padding: 1.2rem 1rem;
+            border: 1px solid #2a313e;
+            transition: 0.2s;
+        }
+        .file-card h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.2rem;
+            color: #b9c8e0;
+        }
+        .file-card small {
+            color: #6f7d96;
+            font-size: 0.75rem;
+            word-break: break-all;
+        }
+        .file-card .btn-small {
+            background: #2d3545;
+            border: none;
+            color: #d1d9e6;
+            padding: 0.3rem 1rem;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .file-card .btn-small:hover {
+            background: #3d475b;
+            color: white;
+        }
+        .copy-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+            align-items: center;
+        }
         .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: #1a1f2e;
-            color: #e2e8f0;
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: 1px solid #2a3040;
+            background: #1e293b;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
             font-size: 0.9rem;
-            opacity: 0;
-            transition: all 0.3s ease;
-            pointer-events: none;
-            z-index: 1000;
+            border-left: 3px solid #3b82f6;
+            display: inline-block;
+            margin: 0.8rem 0 0 0;
+            color: #b9cbe5;
+        }
+        .hint {
+            color: #6f7e9a;
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+        .sep {
+            margin: 1.5rem 0 0.5rem 0;
+            border-top: 1px solid #26303d;
+        }
+        .code-block {
+            background: #0b0e14;
+            border-radius: 14px;
+            padding: 0.6rem 0.8rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid #252d3b;
+            margin-top: 0.4rem;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
+        /* Icon converter */
+        .icon-section {
+            background: #11171f;
+            border-radius: 20px;
+            padding: 1.4rem 1.5rem;
+            margin: 1.5rem 0 1rem 0;
+            border: 1px solid #28303e;
         }
-
-        .error {
-            border-color: #f87171 !important;
+        .icon-section h2 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-bottom: 0.8rem;
+            color: #b9cbe5;
         }
-
-        .progress-bar {
-            width: 100%;
-            height: 4px;
-            background: #2a3040;
-            border-radius: 2px;
-            margin-top: 16px;
-            overflow: hidden;
-            display: none;
+        .icon-upload-area {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
         }
-
-        .progress-bar.active {
+        .icon-upload-area input[type="file"] {
+            width: auto;
+            padding: 0.5rem 1rem;
+            background: #1e2733;
+            border: 1px dashed #3b5a7a;
+            border-radius: 30px;
+            color: #b9cbe5;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .icon-upload-area input[type="file"]:hover {
+            background: #26323f;
+        }
+        .icon-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 0.8rem 0 0.6rem 0;
+            align-items: center;
+        }
+        .icon-preview img {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            border: 2px solid #2d3a4a;
+            background: #0b0e14;
+            object-fit: contain;
+        }
+        .icon-badge {
+            background: #1a2330;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            color: #8fa0b8;
+        }
+        .icon-sizes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+        }
+        .icon-sizes .btn-small {
+            background: #1e2a3a;
+            border: 1px solid #31415a;
+            padding: 0.25rem 0.9rem;
+            border-radius: 30px;
+            color: #c8d6e8;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .icon-sizes .btn-small:hover {
+            background: #2d3f55;
+            border-color: #4a6a8a;
+        }
+        .icon-sizes .btn-small.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #fff;
+        }
+        .icon-generated {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #0b0e14;
+            border-radius: 16px;
+            border: 1px solid #1e2a3a;
+        }
+        .icon-item {
+            text-align: center;
+            background: #13181f;
+            padding: 0.8rem;
+            border-radius: 12px;
+            border: 1px solid #1e2a3a;
+        }
+        .icon-item img {
+            border-radius: 8px;
+            border: 1px solid #2d3a4a;
+            background: #0b0e14;
             display: block;
+            margin-bottom: 6px;
+        }
+        .icon-item .size-label {
+            display: block;
+            font-size: 0.7rem;
+            color: #6f7e9a;
+            margin: 4px 0;
+        }
+        .icon-item .btn-small {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.7rem;
+            margin: 2px;
+        }
+        .icon-item .btn-download {
+            background: #22a67e;
+            color: white;
+        }
+        .icon-item .btn-download:hover {
+            background: #1a8a68;
         }
 
-        .progress-bar .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #60a5fa, #a78bfa);
-            width: 0%;
-            transition: width 0.3s;
-            border-radius: 2px;
+        .status-ok {
+            color: #4ade80;
+        }
+        .status-warn {
+            color: #fbbf24;
+        }
+        .icon-added-badge {
+            background: #22a67e;
+            color: white;
+            padding: 0.15rem 0.6rem;
+            border-radius: 30px;
+            font-size: 0.65rem;
+            display: inline-block;
         }
 
         @media (max-width: 600px) {
-            .container {
-                padding: 20px;
+            .card {
+                padding: 1.5rem 1rem;
             }
-
-            h1 {
-                font-size: 1.5rem;
+            .actions .btn {
+                width: 100%;
+                justify-content: center;
             }
-
-            .actions {
+            .icon-upload-area {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .input-with-clear {
                 flex-direction: column;
             }
-
-            .download-all {
-                margin-right: 0;
-            }
-
-            .icon-preview-container {
-                gap: 8px;
+            .input-with-clear .btn-clear {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📦 PWA Builder</h1>
-        <p class="subtitle">Создай Progressive Web App за секунды</p>
 
-        <form id="pwaForm">
-            <div class="form-group">
-                <label for="githubPath">Путь на GitHub</label>
-                <input type="text" id="githubPath" placeholder="/username/repo/path/to/app" value="/2d3t/Prox">
-                <div class="help-text">Путь к директории, где будет располагаться index.html</div>
+    <div class="card">
+        <h1>🚀 PWA Studio PRO</h1>
+        <div class="sub">Генератор PWA-файлов + конвертер иконок с созданием PNG</div>
+
+        <!-- Поля ввода -->
+        <label>🌐 Путь на GitHub (директория, где будет index.html)</label>
+        <div class="input-with-clear">
+            <input type="text" id="githubPath" placeholder="например: /2d3t/Prox/" value="/2d3t/Prox/" />
+            <button class="btn-clear" id="clearPathBtn">✕ Очистить</button>
+        </div>
+        <div class="hint">Укажите путь к папке, где лежит index.html (начинается с / )</div>
+
+        <div class="row">
+            <div>
+                <label>📛 Длинное имя (name)</label>
+                <input type="text" id="longName" placeholder="Hello World PWA" value="Hello World PWA" />
             </div>
-
-            <div class="form-group">
-                <label for="longName">Длинное название</label>
-                <input type="text" id="longName" placeholder="Hello World PWA" value="Hello World PWA">
-                <div class="help-text">Отображается при установке и в заголовке</div>
+            <div>
+                <label>📌 Короткое имя (short_name)</label>
+                <input type="text" id="shortName" placeholder="Hello PWA" value="Hello PWA" />
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="shortName">Короткое название</label>
-                <input type="text" id="shortName" placeholder="Hello PWA" value="Hello PWA">
-                <div class="help-text">Отображается на рабочем столе (до 12 символов)</div>
-            </div>
-
-            <div class="form-group">
-                <label>Иконки приложения</label>
-                <div class="icon-upload-area" id="iconUploadArea">
-                    <input type="file" id="iconInput" accept="image/*">
-                    <div class="upload-placeholder" id="uploadPlaceholder">
-                        <span class="icon-big">🖼️</span>
-                        <div>Нажмите или перетащите изображение</div>
-                        <div style="font-size: 0.8rem; margin-top: 8px; color: #64748b;">
-                            Поддерживаются: PNG, JPG, SVG, WebP
-                        </div>
-                    </div>
-                    <div class="icon-preview-container" id="iconPreview"></div>
-                </div>
-                <div class="help-text">Загрузите изображение для генерации иконок всех размеров</div>
-            </div>
-
-            <div class="form-group">
-                <label for="htmlCode">HTML код приложения</label>
-                <textarea id="htmlCode" placeholder="Вставьте ваш HTML код...">&lt;!DOCTYPE html&gt;
+        <label>📄 HTML-код вашего приложения (вставьте сюда)</label>
+        <textarea id="htmlCode" spellcheck="false">
+&lt;!DOCTYPE html&gt;
 &lt;html lang="ru"&gt;
 &lt;head&gt;
     &lt;meta charset="UTF-8"&gt;
@@ -460,928 +493,592 @@
                 status.className = 'status offline';
             }
         }
-
         window.addEventListener('online', updateStatus);
         window.addEventListener('offline', updateStatus);
         updateStatus();
     &lt;/script&gt;
 &lt;/body&gt;
-&lt;/html&gt;</textarea>
-                <div class="help-text">Ваш HTML код, который станет PWA-приложением</div>
+&lt;/html&gt;
+        </textarea>
+
+        <!-- === БЛОК КОНВЕРТЕРА ИКОНОК === -->
+        <div class="icon-section">
+            <h2>🖼️ Конвертер иконок</h2>
+            <div class="icon-upload-area">
+                <input type="file" id="iconUpload" accept="image/*" />
+                <span class="icon-badge" id="iconStatus">Файл не выбран</span>
+            </div>
+            <div class="icon-preview" id="iconPreview" style="display:none;">
+                <img id="iconPreviewImg" src="" alt="preview" />
+                <span id="iconSizeInfo" style="color:#8899b0; font-size:0.85rem;"></span>
+            </div>
+            <div class="icon-sizes" id="iconSizes">
+                <button class="btn-small" data-size="64">64x64</button>
+                <button class="btn-small" data-size="128">128x128</button>
+                <button class="btn-small active" data-size="192">192x192</button>
+                <button class="btn-small" data-size="256">256x256</button>
+                <button class="btn-small" data-size="512">512x512</button>
+                <button class="btn-small" data-size="1024">1024x1024</button>
+            </div>
+            
+            <!-- Кнопки управления иконками -->
+            <div style="margin-top: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;">
+                <button class="btn btn-green" id="generateIconsBtn">⚡ Сгенерировать иконки</button>
+                <button class="btn btn-orange" id="addIconsToManifestBtn">📝 Добавить иконки в manifest</button>
+                <span style="color:#6f7e9a; font-size:0.8rem;">Сначала сгенерируйте, потом добавьте</span>
             </div>
 
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
+            <!-- Сгенерированные иконки -->
+            <div id="generatedIcons" style="display:none;">
+                <div class="sep" style="margin: 1rem 0;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                    <span style="color:#b9cbe5; font-weight:500;">✅ Сгенерированные иконки:</span>
+                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <span id="iconsAddedStatus" style="display:none;" class="icon-added-badge">✓ Добавлены в manifest</span>
+                        <button class="btn-small" id="copyAllIconsBtn" style="background:#3b82f6; color:white;">📋 Копировать все (base64)</button>
+                    </div>
+                </div>
+                <div class="icon-generated" id="iconGrid"></div>
             </div>
+        </div>
 
-            <button type="submit" class="btn" id="createBtn">🚀 Создать файлы</button>
-        </form>
+        <!-- Кнопки -->
+        <div class="actions">
+            <button class="btn" id="generateBtn">⚡ Создать файлы</button>
+            <button class="btn btn-outline" id="copyAllBtn">📋 Копировать все</button>
+        </div>
 
-        <div class="output" id="output">
-            <div class="file-list" id="fileList"></div>
-            <div class="actions">
-                <button class="download-all" id="downloadAll">📥 Скачать все файлы</button>
-                <button class="download-btn" id="copyFiles">📋 Копировать всё</button>
+        <!-- Блок с результатами -->
+        <div id="resultArea">
+            <div class="file-grid" id="fileGrid">
+                <!-- Карточки будут добавлены скриптом -->
             </div>
+            <div id="toastMessage" class="toast" style="display:none;">✅ Файлы готовы</div>
+        </div>
+
+        <div class="sep"></div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+            <span style="color:#6f7e9a; font-size:0.9rem;">📋 Нажмите «Копировать» чтобы скопировать содержимое файла</span>
+            <span style="color:#4b5a72; font-size:0.8rem;">v3.2</span>
         </div>
     </div>
 
-    <div class="toast" id="toast"></div>
+    <canvas id="iconCanvas" style="display:none;"></canvas>
 
     <script>
-        // ==================== УПРАВЛЕНИЕ ИКОНКАМИ ====================
-        let iconFiles = [];
-        let generatedFiles = {};
+        (function() {
+            // DOM refs
+            const githubPathInput = document.getElementById('githubPath');
+            const longNameInput = document.getElementById('longName');
+            const shortNameInput = document.getElementById('shortName');
+            const htmlCodeArea = document.getElementById('htmlCode');
+            const fileGrid = document.getElementById('fileGrid');
+            const toast = document.getElementById('toastMessage');
+            const clearPathBtn = document.getElementById('clearPathBtn');
 
-        const uploadArea = document.getElementById('iconUploadArea');
-        const iconInput = document.getElementById('iconInput');
-        const iconPreview = document.getElementById('iconPreview');
-        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+            // Icon refs
+            const iconUpload = document.getElementById('iconUpload');
+            const iconPreview = document.getElementById('iconPreview');
+            const iconPreviewImg = document.getElementById('iconPreviewImg');
+            const iconSizeInfo = document.getElementById('iconSizeInfo');
+            const iconStatus = document.getElementById('iconStatus');
+            const generateIconsBtn = document.getElementById('generateIconsBtn');
+            const addIconsToManifestBtn = document.getElementById('addIconsToManifestBtn');
+            const generatedIconsDiv = document.getElementById('generatedIcons');
+            const iconGrid = document.getElementById('iconGrid');
+            const copyAllIconsBtn = document.getElementById('copyAllIconsBtn');
+            const iconsAddedStatus = document.getElementById('iconsAddedStatus');
 
-        const ICON_SIZES = [72, 96, 128, 144, 152, 192, 384, 512];
-
-        uploadArea.addEventListener('click', () => iconInput.click());
-
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            if (e.dataTransfer.files.length) {
-                handleFiles(e.dataTransfer.files);
-            }
-        });
-
-        iconInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                handleFiles(e.target.files);
-            }
-        });
-
-        function handleFiles(files) {
-            const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-            if (validFiles.length === 0) {
-                showToast('❌ Пожалуйста, выберите изображение', 'error');
-                return;
-            }
-
-            const mainFile = validFiles[0];
-            
-            if (mainFile.size > 5 * 1024 * 1024) {
-                showToast('❌ Изображение слишком большое (макс. 5MB)', 'error');
-                return;
-            }
-
-            processIcon(mainFile);
-        }
-
-        function processIcon(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    generateIcons(img);
-                };
-                img.onerror = function() {
-                    showToast('❌ Не удалось загрузить изображение', 'error');
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function generateIcons(img) {
-            const canvas = document.createElement('canvas');
+            const canvas = document.getElementById('iconCanvas');
             const ctx = canvas.getContext('2d');
-            
-            iconFiles = [];
-            iconPreview.innerHTML = '';
-            uploadPlaceholder.style.display = 'none';
 
-            ICON_SIZES.forEach((size) => {
-                canvas.width = size;
-                canvas.height = size;
-                
-                ctx.clearRect(0, 0, size, size);
-                
-                const aspectRatio = img.width / img.height;
-                let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
-                
-                if (aspectRatio > 1) {
-                    drawWidth = size;
-                    drawHeight = size / aspectRatio;
-                    offsetY = (size - drawHeight) / 2;
-                } else {
-                    drawHeight = size;
-                    drawWidth = size * aspectRatio;
-                    offsetX = (size - drawWidth) / 2;
-                }
-                
-                ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-                
-                const dataUrl = canvas.toDataURL('image/png', 1.0);
-                
-                iconFiles.push({
-                    size: size,
-                    dataUrl: dataUrl
-                });
+            let uploadedImage = null;
+            let selectedIconSizes = [192];
+            let generatedIconData = {}; // { size: dataURL }
+            let iconsAddedToManifest = false;
 
-                const previewItem = document.createElement('div');
-                previewItem.className = 'icon-preview-item';
-                previewItem.innerHTML = `
-                    <img src="${dataUrl}" alt="${size}x${size}">
-                    <span class="size-label">${size}x${size}</span>
-                `;
-                iconPreview.appendChild(previewItem);
+            // ---- helpers ----
+            function showToast(msg, duration = 3000) {
+                toast.textContent = msg;
+                toast.style.display = 'inline-block';
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => { toast.style.display = 'none'; }, duration);
+            }
+
+            function sanitizePath(p) {
+                let s = p.trim();
+                if (!s.startsWith('/')) s = '/' + s;
+                while (s.endsWith('/') && s.length > 1) s = s.slice(0, -1);
+                return s;
+            }
+
+            // ---- очистка поля пути ----
+            clearPathBtn.addEventListener('click', function() {
+                githubPathInput.value = '';
+                githubPathInput.focus();
+                showToast('🧹 Поле пути очищено', 1500);
             });
 
-            showToast(`✅ Сгенерировано ${ICON_SIZES.length} иконок`, 'success');
-        }
+            // ---- работа с иконками ----
+            document.querySelectorAll('#iconSizes .btn-small').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const size = parseInt(this.dataset.size);
+                    if (this.classList.contains('active')) {
+                        this.classList.remove('active');
+                        selectedIconSizes = selectedIconSizes.filter(s => s !== size);
+                    } else {
+                        this.classList.add('active');
+                        if (!selectedIconSizes.includes(size)) {
+                            selectedIconSizes.push(size);
+                        }
+                    }
+                    selectedIconSizes.sort((a, b) => a - b);
+                    if (uploadedImage) {
+                        updateIconInfo();
+                    }
+                    // Если иконки уже были сгенерированы, сбрасываем статус
+                    if (Object.keys(generatedIconData).length > 0) {
+                        generatedIconData = {};
+                        generatedIconsDiv.style.display = 'none';
+                        iconsAddedToManifest = false;
+                        iconsAddedStatus.style.display = 'none';
+                    }
+                });
+            });
 
-        // ==================== ГЕНЕРАЦИЯ ФАЙЛОВ ====================
-        document.getElementById('pwaForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            generateFiles();
-        });
-
-        function generateFiles() {
-            const githubPath = document.getElementById('githubPath').value.trim();
-            const longName = document.getElementById('longName').value.trim();
-            const shortName = document.getElementById('shortName').value.trim();
-            let htmlCode = document.getElementById('htmlCode').value;
-
-            // Валидация
-            let isValid = true;
-            if (!githubPath) {
-                document.getElementById('githubPath').classList.add('error');
-                isValid = false;
-            } else {
-                document.getElementById('githubPath').classList.remove('error');
+            function updateIconInfo() {
+                if (uploadedImage) {
+                    const sizes = selectedIconSizes.length ? selectedIconSizes.join(', ') : 'не выбраны';
+                    iconSizeInfo.textContent = `Размеры: ${sizes}`;
+                    iconStatus.textContent = `Изображение загружено (${uploadedImage.width}×${uploadedImage.height})`;
+                }
             }
 
-            if (!longName) {
-                document.getElementById('longName').classList.add('error');
-                isValid = false;
-            } else {
-                document.getElementById('longName').classList.remove('error');
+            iconUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        uploadedImage = img;
+                        iconPreview.style.display = 'flex';
+                        iconPreviewImg.src = event.target.result;
+                        iconStatus.textContent = `Изображение загружено (${img.width}×${img.height})`;
+                        updateIconInfo();
+                        if (selectedIconSizes.length === 0) {
+                            document.querySelector('#iconSizes .btn-small[data-size="192"]').classList.add('active');
+                            selectedIconSizes.push(192);
+                            updateIconInfo();
+                        }
+                        // Сбрасываем старые данные
+                        generatedIconData = {};
+                        generatedIconsDiv.style.display = 'none';
+                        iconsAddedToManifest = false;
+                        iconsAddedStatus.style.display = 'none';
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // ---- Генерация иконок ----
+            function generateIcons() {
+                if (!uploadedImage) {
+                    showToast('⚠️ Сначала загрузите изображение!', 2500);
+                    return null;
+                }
+                if (selectedIconSizes.length === 0) {
+                    showToast('⚠️ Выберите хотя бы один размер!', 2500);
+                    return null;
+                }
+
+                const icons = {};
+                selectedIconSizes.forEach(size => {
+                    canvas.width = size;
+                    canvas.height = size;
+                    ctx.clearRect(0, 0, size, size);
+                    ctx.drawImage(uploadedImage, 0, 0, size, size);
+                    icons[size] = canvas.toDataURL('image/png');
+                });
+
+                generatedIconData = icons;
+                iconsAddedToManifest = false;
+                iconsAddedStatus.style.display = 'none';
+                return icons;
             }
 
-            if (!shortName) {
-                document.getElementById('shortName').classList.add('error');
-                isValid = false;
-            } else {
-                document.getElementById('shortName').classList.remove('error');
-            }
+            function displayGeneratedIcons(icons) {
+                if (!icons || Object.keys(icons).length === 0) {
+                    generatedIconsDiv.style.display = 'none';
+                    return;
+                }
 
-            if (!htmlCode.trim()) {
-                document.getElementById('htmlCode').classList.add('error');
-                isValid = false;
-            } else {
-                document.getElementById('htmlCode').classList.remove('error');
-            }
+                generatedIconsDiv.style.display = 'block';
+                iconGrid.innerHTML = '';
 
-            if (!isValid) {
-                showToast('❌ Заполните все поля', 'error');
-                return;
-            }
+                Object.keys(icons).sort((a, b) => parseInt(a) - parseInt(b)).forEach(size => {
+                    const dataURL = icons[size];
+                    const div = document.createElement('div');
+                    div.className = 'icon-item';
+                    div.innerHTML = `
+                        <img src="${dataURL}" width="${Math.min(parseInt(size), 100)}" height="${Math.min(parseInt(size), 100)}" alt="icon ${size}" />
+                        <span class="size-label">${size}×${size}</span>
+                        <div style="display:flex; gap:4px; justify-content:center; flex-wrap:wrap;">
+                            <button class="btn-small btn-download download-icon-btn" data-size="${size}" data-base64="${dataURL}">⬇ Скачать PNG</button>
+                            <button class="btn-small copy-icon-btn" data-base64="${dataURL}">📋 Копировать</button>
+                        </div>
+                    `;
+                    iconGrid.appendChild(div);
+                });
 
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
-            progressBar.classList.add('active');
-            progressFill.style.width = '0%';
-
-            const cleanPath = githubPath.startsWith('/') ? githubPath : '/' + githubPath;
-            const cleanPathEnd = cleanPath.endsWith('/') ? cleanPath.slice(0, -1) : cleanPath;
-
-            generatedFiles = {};
-            let progress = 0;
-
-            // 1. index.html
-            const scriptToInject = `
-        <script>
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
-                    .then(() => console.log('[SW] ✅ Зарегистрирован'))
-                    .catch(err => console.log('[SW] ❌ Ошибка:', err));
-            }
-        <\/script>`;
-
-            const bodyCloseIndex = htmlCode.lastIndexOf('</body>');
-            if (bodyCloseIndex !== -1) {
-                htmlCode = htmlCode.slice(0, bodyCloseIndex) + scriptToInject + htmlCode.slice(bodyCloseIndex);
-            } else {
-                htmlCode += scriptToInject;
-            }
-
-            if (!htmlCode.includes('manifest.json')) {
-                htmlCode = htmlCode.replace('<head>', '<head>\n    <link rel="manifest" href="manifest.json">');
-            }
-
-            generatedFiles['index.html'] = htmlCode;
-            progress += 20;
-            progressFill.style.width = progress + '%';
-
-            // 2. Иконки
-            const icons = [];
-            
-            if (iconFiles.length > 0) {
-                iconFiles.forEach((icon) => {
-                    const fileName = `icon-${icon.size}x${icon.size}.png`;
-                    // Сохраняем dataUrl напрямую
-                    generatedFiles[fileName] = icon.dataUrl;
-                    icons.push({
-                        src: cleanPathEnd + '/' + fileName,
-                        sizes: `${icon.size}x${icon.size}`,
-                        type: 'image/png'
+                // Кнопки скачивания для каждой иконки
+                document.querySelectorAll('.download-icon-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const size = this.dataset.size;
+                        const dataURL = this.dataset.base64;
+                        downloadImage(dataURL, `icon-${size}x${size}.png`);
+                        showToast(`⬇ Скачана иконка ${size}×${size}`, 2000);
                     });
                 });
-                progress += 30;
-                progressFill.style.width = '50%';
-            } else {
-                // Дефолтная иконка
-                icons.push({
-                    src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">📦</text></svg>',
-                    sizes: '192x192',
-                    type: 'image/svg+xml'
+
+                // кнопки копирования для каждой иконки
+                document.querySelectorAll('.copy-icon-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const dataURL = this.dataset.base64;
+                        navigator.clipboard.writeText(dataURL).then(() => {
+                            showToast('📋 Иконка скопирована (base64)');
+                        }).catch(() => {
+                            const ta = document.createElement('textarea');
+                            ta.value = dataURL;
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand('copy');
+                            ta.remove();
+                            showToast('📋 Иконка скопирована (base64)');
+                        });
+                    });
                 });
-                progress += 20;
-                progressFill.style.width = '40%';
+
+                showToast(`✅ Сгенерировано ${Object.keys(icons).length} иконок! Теперь нажмите "Добавить в manifest"`, 3000);
             }
 
-            // 3. manifest.json
-            const manifest = {
-                name: longName,
-                short_name: shortName,
-                start_url: cleanPathEnd + '/index.html',
-                display: 'standalone',
-                background_color: '#0a0e14',
-                theme_color: '#0a0e14',
-                icons: icons
-            };
-
-            generatedFiles['manifest.json'] = JSON.stringify(manifest, null, 2);
-            progress += 20;
-            progressFill.style.width = '70%';
-
-            // 4. sw.js
-            let swCode = `const CACHE_NAME = 'pwa-cache-v1';\n`;
-            swCode += `const FILES_TO_CACHE = [\n`;
-            swCode += `    '${cleanPathEnd}/index.html',\n`;
-            swCode += `    '${cleanPathEnd}/manifest.json'`;
-            
-            if (iconFiles.length > 0) {
-                iconFiles.forEach(icon => {
-                    swCode += `,\n    '${cleanPathEnd}/icon-${icon.size}x${icon.size}.png'`;
-                });
+            // ---- Скачивание изображения ----
+            function downloadImage(dataURL, filename) {
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = dataURL;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
-            
-            swCode += `\n];\n\n`;
-            swCode += `self.addEventListener('install', (event) => {\n`;
-            swCode += `    event.waitUntil(\n`;
-            swCode += `        caches.open(CACHE_NAME)\n`;
-            swCode += `            .then(cache => {\n`;
-            swCode += `                console.log('[SW] Кэшируем файлы...');\n`;
-            swCode += `                return cache.addAll(FILES_TO_CACHE);\n`;
-            swCode += `            })\n`;
-            swCode += `            .then(() => self.skipWaiting())\n`;
-            swCode += `    );\n`;
-            swCode += `});\n\n`;
-            swCode += `self.addEventListener('activate', (event) => {\n`;
-            swCode += `    event.waitUntil(\n`;
-            swCode += `        caches.keys().then(cacheNames => {\n`;
-            swCode += `            return Promise.all(\n`;
-            swCode += `                cacheNames.map(name => {\n`;
-            swCode += `                    if (name !== CACHE_NAME) {\n`;
-            swCode += `                        console.log('[SW] Удаляем старый кэш:', name);\n`;
-            swCode += `                        return caches.delete(name);\n`;
-            swCode += `                    }\n`;
-            swCode += `                })\n`;
-            swCode += `            );\n`;
-            swCode += `        }).then(() => self.clients.claim())\n`;
-            swCode += `    );\n`;
-            swCode += `});\n\n`;
-            swCode += `self.addEventListener('fetch', (event) => {\n`;
-            swCode += `    event.respondWith(\n`;
-            swCode += `        caches.match(event.request)\n`;
-            swCode += `            .then(cachedResponse => {\n`;
-            swCode += `                if (cachedResponse) {\n`;
-            swCode += `                    fetch(event.request)\n`;
-            swCode += `                        .then(response => {\n`;
-            swCode += `                            if (response && response.status === 200) {\n`;
-            swCode += `                                const clone = response.clone();\n`;
-            swCode += `                                caches.open(CACHE_NAME).then(cache => {\n`;
-            swCode += `                                    cache.put(event.request, clone);\n`;
-            swCode += `                                });\n`;
-            swCode += `                            }\n`;
-            swCode += `                        })\n`;
-            swCode += `                        .catch(() => {});\n`;
-            swCode += `                    return cachedResponse;\n`;
-            swCode += `                }\n`;
-            swCode += `                \n`;
-            swCode += `                return fetch(event.request)\n`;
-            swCode += `                    .then(response => {\n`;
-            swCode += `                        if (response && response.status === 200) {\n`;
-            swCode += `                            const clone = response.clone();\n`;
-            swCode += `                            caches.open(CACHE_NAME).then(cache => {\n`;
-            swCode += `                                cache.put(event.request, clone);\n`;
-            swCode += `                            });\n`;
-            swCode += `                        }\n`;
-            swCode += `                        return response;\n`;
-            swCode += `                    })\n`;
-            swCode += `                    .catch(() => {\n`;
-            swCode += `                        return caches.match('${cleanPathEnd}/index.html');\n`;
-            swCode += `                    });\n`;
-            swCode += `            })\n`;
-            swCode += `    );\n`;
-            swCode += `});`;
 
-            generatedFiles['sw.js'] = swCode;
-            progressFill.style.width = '100%';
+            // ---- Добавление иконок в manifest ----
+            function addIconsToManifest() {
+                if (Object.keys(generatedIconData).length === 0) {
+                    showToast('⚠️ Сначала сгенерируйте иконки!', 2500);
+                    return false;
+                }
+                iconsAddedToManifest = true;
+                iconsAddedStatus.style.display = 'inline-block';
+                showToast(`✅ ${Object.keys(generatedIconData).length} иконок добавлены в manifest! Теперь нажмите "Создать файлы"`, 3000);
+                return true;
+            }
 
-            setTimeout(() => {
-                progressBar.classList.remove('active');
-                displayFiles(generatedFiles);
-                showToast('✅ Файлы успешно созданы!', 'success');
-            }, 500);
+            // ---- Генерация файлов ----
+            function generateFiles() {
+                const basePath = sanitizePath(githubPathInput.value);
+                const longName = longNameInput.value.trim() || 'PWA App';
+                const shortName = shortNameInput.value.trim() || 'PWA';
+                let htmlRaw = htmlCodeArea.value;
+
+                // вставляем регистрацию SW если нет
+                const swScript = `
+        // Регистрация Service Worker (добавлено PWA Builder)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('[SW] ✅ Зарегистрирован'))
+                .catch(err => console.log('[SW] ❌ Ошибка:', err));
         }
+        `;
+                if (!htmlRaw.includes('serviceWorker.register')) {
+                    htmlRaw = htmlRaw.replace(/<\/body>/i, `<script>${swScript}<\/script>\n</body>`);
+                }
+                if (!htmlRaw.includes('rel="manifest"')) {
+                    htmlRaw = htmlRaw.replace(/<head>/i, `<head>\n    <link rel="manifest" href="manifest.json">`);
+                }
 
-        function displayFiles(files) {
-            const output = document.getElementById('output');
-            const fileList = document.getElementById('fileList');
-
-            fileList.innerHTML = '';
-
-            Object.entries(files).forEach(([name, content]) => {
-                const div = document.createElement('div');
-                div.className = 'file-item';
-
-                let contentHtml = '';
-                let size = 0;
-
-                // Проверяем, является ли файл иконкой (dataUrl)
-                if (name.startsWith('icon-') && name.endsWith('.png') && content.startsWith('data:image')) {
-                    // Это dataUrl иконки
-                    const base64Data = content.split(',')[1];
-                    size = Math.round((base64Data.length * 3) / 4);
-                    contentHtml = `<img src="${content}" width="64" height="64" style="display:block;margin:0 auto;background:white;border-radius:4px;padding:4px;">`;
-                    
-                    // Сохраняем для скачивания
-                    div.dataset.isIcon = 'true';
-                    div.dataset.dataUrl = content;
+                // ---- собираем иконки для manifest ----
+                let icons = [];
+                // Если иконки добавлены в manifest - используем их
+                if (iconsAddedToManifest && Object.keys(generatedIconData).length > 0) {
+                    Object.keys(generatedIconData).forEach(size => {
+                        icons.push({
+                            src: `icon-${size}.png`,
+                            sizes: `${size}x${size}`,
+                            type: 'image/png'
+                        });
+                    });
+                } else if (Object.keys(generatedIconData).length > 0) {
+                    // Иконки сгенерированы, но не добавлены в manifest - используем их всё равно
+                    Object.keys(generatedIconData).forEach(size => {
+                        icons.push({
+                            src: `icon-${size}.png`,
+                            sizes: `${size}x${size}`,
+                            type: 'image/png'
+                        });
+                    });
+                } else if (uploadedImage && selectedIconSizes.length > 0) {
+                    // Если иконки не сгенерированы, но есть загруженное изображение
+                    selectedIconSizes.forEach(size => {
+                        icons.push({
+                            src: `icon-${size}.png`,
+                            sizes: `${size}x${size}`,
+                            type: 'image/png'
+                        });
+                    });
                 } else {
-                    // Текстовый файл
-                    const textContent = typeof content === 'string' ? content : '';
-                    size = new Blob([textContent]).size;
-                    const previewText = textContent.substring(0, 300);
-                    contentHtml = `<div class="file-content">${escapeHtml(previewText)}${textContent.length > 300 ? '...' : ''}</div>`;
+                    // иконки по умолчанию
+                    icons = [
+                        { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+                        { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
+                    ];
                 }
 
-                const sizeStr = size < 1024 ? size + ' B' : (size / 1024).toFixed(1) + ' KB';
+                const manifest = {
+                    name: longName,
+                    short_name: shortName,
+                    start_url: basePath + '/index.html',
+                    display: 'standalone',
+                    background_color: '#0a0e14',
+                    theme_color: '#0a0e14',
+                    icons: icons
+                };
+                const manifestJSON = JSON.stringify(manifest, null, 2);
 
-                div.innerHTML = `
-                    <div class="file-header">
-                        <span class="file-name">📄 ${name}</span>
-                        <span class="file-size">${sizeStr}</span>
-                    </div>
-                    ${contentHtml}
-                    <button class="download-btn" data-filename="${name}">⬇️ Скачать</button>
-                `;
-
-                fileList.appendChild(div);
-            });
-
-            // Добавляем обработчики для кнопок скачивания
-            document.querySelectorAll('.download-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const filename = this.dataset.filename;
-                    const fileItem = this.closest('.file-item');
-                    const isIcon = fileItem.dataset.isIcon === 'true';
-                    
-                    if (isIcon) {
-                        const dataUrl = fileItem.dataset.dataUrl;
-                        downloadFile(filename, dataUrl, true);
-                    } else {
-                        const content = files[filename];
-                        downloadFile(filename, content, false);
-                    }
-                });
-            });
-
-            output.classList.add('show');
-        }
-
-        function downloadFile(filename, content, isImage = false) {
-            let blob;
-            let url;
-
-            if (isImage) {
-                // Скачиваем иконку из dataUrl
-                const response = fetch(content);
-                response.then(res => res.blob()).then(blob => {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    showToast(`📥 Скачана иконка ${filename}`, 'success');
-                });
-                return;
-            }
-
-            // Текстовый файл
-            blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`📥 Скачан ${filename}`, 'success');
-        }
-
-        document.getElementById('downloadAll').addEventListener('click', function() {
-            if (Object.keys(generatedFiles).length === 0) {
-                showToast('❌ Нет файлов для скачивания', 'error');
-                return;
-            }
-
-            const entries = Object.entries(generatedFiles);
-            entries.forEach(([name, content], index) => {
-                setTimeout(() => {
-                    const isImage = name.startsWith('icon-') && name.endsWith('.png') && content.startsWith('data:image');
-                    downloadFile(name, content, isImage);
-                }, index * 300);
-            });
-
-            showToast(`📥 Скачивание ${entries.length} файлов...`, 'success');
-        });
-
-        document.getElementById('copyFiles').addEventListener('click', function() {
-            if (Object.keys(generatedFiles).length === 0) {
-                showToast('❌ Нет файлов для копирования', 'error');
-                return;
-            }
-
-            let text = '';
-            Object.entries(generatedFiles).forEach(([name, content]) => {
-                if (name.startsWith('icon-') && name.endsWith('.png') && content.startsWith('data:image')) {
-                    text += `=== ${name} ===\n[IMAGE DATA - base64 encoded]\n\n`;
+                // ---- формируем sw.js с иконками в кэше ----
+                let cacheFiles = [
+                    `'${basePath}/index.html'`,
+                    `'${basePath}/manifest.json'`
+                ];
+                
+                // добавляем иконки в кэш
+                if (Object.keys(generatedIconData).length > 0) {
+                    Object.keys(generatedIconData).forEach(size => {
+                        cacheFiles.push(`'${basePath}/icon-${size}.png'`);
+                    });
+                } else if (uploadedImage && selectedIconSizes.length > 0) {
+                    selectedIconSizes.forEach(size => {
+                        cacheFiles.push(`'${basePath}/icon-${size}.png'`);
+                    });
                 } else {
-                    text += `=== ${name} ===\n${content}\n\n`;
+                    cacheFiles.push(`'${basePath}/icon-192.png'`);
+                    cacheFiles.push(`'${basePath}/icon-512.png'`);
                 }
-            });
 
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('📋 Все файлы скопированы в буфер обмена', 'success');
-            }).catch(() => {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                showToast('📋 Все файлы скопированы в буфер обмена', 'success');
-            });
-        });
+                const swCode = `
+        const CACHE_NAME = 'pwa-cache-v1';
+        const FILES_TO_CACHE = [
+            ${cacheFiles.join(',\n            ')}
+        ];
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.className = 'toast show';
-
-            if (type === 'error') {
-                toast.style.borderColor = '#f87171';
-            } else {
-                toast.style.borderColor = '#4ade80';
-            }
-
-            clearTimeout(toast._timeout);
-            toast._timeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
-
-        document.querySelectorAll('input, textarea').forEach(el => {
-            el.addEventListener('input', function() {
-                this.classList.remove('error');
-            });
-        });
-    </script>
-
-
-
-
-
-<script>
-// ============================================================
-// УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ
-// Вставьте этот код в любую страницу — работает сразу
-// ============================================================
-
-(function(global) {
-    'use strict';
-
-    // ---------- 1. ХРАНИЛИЩЕ В LOCALSTORAGE ----------
-    const Storage = {
-        save(key, data) {
-            try {
-                localStorage.setItem(key, JSON.stringify(data));
-                return true;
-            } catch (e) {
-                console.error('[Storage] Ошибка сохранения:', e);
-                return false;
-            }
-        },
-
-        load(key, defaultData = null) {
-            try {
-                const raw = localStorage.getItem(key);
-                if (raw === null) {
-                    if (defaultData !== null) {
-                        this.save(key, defaultData);
-                    }
-                    return defaultData;
-                }
-                return JSON.parse(raw);
-            } catch (e) {
-                console.error('[Storage] Ошибка загрузки:', e);
-                return defaultData;
-            }
-        },
-
-        remove(key) {
-            try {
-                localStorage.removeItem(key);
-                return true;
-            } catch (e) {
-                console.error('[Storage] Ошибка удаления:', e);
-                return false;
-            }
-        },
-
-        has(key) {
-            return localStorage.getItem(key) !== null;
-        },
-
-        clear() {
-            try {
-                localStorage.clear();
-                return true;
-            } catch (e) {
-                console.error('[Storage] Ошибка очистки:', e);
-                return false;
-            }
-        }
-    };
-
-    // ---------- 2. РАБОТА С МАССИВАМИ ----------
-    const ArrayHelper = {
-        add(key, item, defaultData = []) {
-            let data = Storage.load(key, defaultData);
-            if (!Array.isArray(data)) data = [];
-            data.push(item);
-            return Storage.save(key, data);
-        },
-
-        remove(key, identifier, idField = 'id', defaultData = []) {
-            let data = Storage.load(key, defaultData);
-            if (!Array.isArray(data)) return false;
-
-            let index = -1;
-            if (typeof identifier === 'function') {
-                index = data.findIndex(identifier);
-            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
-                index = identifier;
-            } else if (identifier !== undefined && identifier !== null) {
-                index = data.findIndex(item => item && item[idField] === identifier);
-            }
-
-            if (index === -1) return false;
-            data.splice(index, 1);
-            return Storage.save(key, data);
-        },
-
-        update(key, identifier, newData, idField = 'id', defaultData = []) {
-            let data = Storage.load(key, defaultData);
-            if (!Array.isArray(data)) return false;
-
-            let index = -1;
-            if (typeof identifier === 'function') {
-                index = data.findIndex(identifier);
-            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
-                index = identifier;
-            } else if (identifier !== undefined && identifier !== null) {
-                index = data.findIndex(item => item && item[idField] === identifier);
-            }
-
-            if (index === -1) return false;
-            data[index] = { ...data[index], ...newData };
-            return Storage.save(key, data);
-        },
-
-        get(key, defaultData = []) {
-            const data = Storage.load(key, defaultData);
-            return Array.isArray(data) ? data : [];
-        },
-
-        find(key, predicate, defaultData = []) {
-            const data = this.get(key, defaultData);
-            return data.find(predicate) || null;
-        },
-
-        filter(key, predicate, defaultData = []) {
-            const data = this.get(key, defaultData);
-            return data.filter(predicate);
-        },
-
-        clear(key) {
-            return Storage.save(key, []);
-        }
-    };
-
-    // ---------- 3. СТАТУС СЕТИ ----------
-    const Network = {
-        getStatus() {
-            return navigator.onLine ? 'online' : 'offline';
-        },
-
-        isOnline() {
-            return navigator.onLine;
-        },
-
-        isOffline() {
-            return !navigator.onLine;
-        },
-
-        onChange(callback) {
-            const onlineHandler = () => callback('online', true);
-            const offlineHandler = () => callback('offline', false);
-            
-            window.addEventListener('online', onlineHandler);
-            window.addEventListener('offline', offlineHandler);
-            
-            return () => {
-                window.removeEventListener('online', onlineHandler);
-                window.removeEventListener('offline', offlineHandler);
-            };
-        },
-
-        // Обновить элемент с статусом
-        updateStatusElement(elementId, onlineText = '🟢 Онлайн', offlineText = '🔴 Офлайн') {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            
-            const update = () => {
-                el.textContent = this.isOnline() ? onlineText : offlineText;
-                el.className = this.isOnline() ? 'status-online' : 'status-offline';
-            };
-            
-            update();
-            return this.onChange(update);
-        }
-    };
-
-    // ---------- 4. SERVICE WORKER (ОФЛАЙН-ПОДДЕРЖКА) ----------
-    const SW = {
-        /**
-         * Зарегистрировать Service Worker
-         * @param {string} swPath - Путь к sw.js (по умолчанию 'sw.js')
-         * @param {Object} options - Опции регистрации
-         * @returns {Promise}
-         */
-        register(swPath = 'sw.js', options = {}) {
-            if (!('serviceWorker' in navigator)) {
-                console.warn('[SW] Service Worker не поддерживается');
-                return Promise.reject(new Error('SW не поддерживается'));
-            }
-
-            return navigator.serviceWorker.register(swPath, options)
-                .then(registration => {
-                    console.log('[SW] ✅ Зарегистрирован');
-                    return registration;
-                })
-                .catch(error => {
-                    console.error('[SW] ❌ Ошибка:', error);
-                    throw error;
-                });
-        },
-
-        /**
-         * Проверить активен ли SW
-         * @returns {Promise<boolean>}
-         */
-        async isActive() {
-            if (!('serviceWorker' in navigator)) return false;
-            try {
-                const registration = await navigator.serviceWorker.getRegistration();
-                return registration !== undefined && registration.active !== null;
-            } catch {
-                return false;
-            }
-        },
-
-        /**
-         * Создать и зарегистрировать SW из строки (встроенный SW)
-         * @param {string} swCode - Код Service Worker
-         * @param {string} scope - Scope для SW
-         * @returns {Promise}
-         */
-        registerInline(swCode, scope = '/') {
-            if (!('serviceWorker' in navigator)) {
-                console.warn('[SW] Service Worker не поддерживается');
-                return Promise.reject(new Error('SW не поддерживается'));
-            }
-
-            try {
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(blob);
-                return navigator.serviceWorker.register(swUrl, { scope });
-            } catch (error) {
-                console.error('[SW] Ошибка создания inline SW:', error);
-                return Promise.reject(error);
-            }
-        },
-
-        /**
-         * Сгенерировать код SW для кеширования текущей страницы
-         * @param {string} cacheName - Имя кеша
-         * @param {Array} urls - URL для кеширования (по умолчанию текущая страница)
-         * @returns {string} - Код SW
-         */
-        generateCacheSW(cacheName = 'app-v1', urls = null) {
-            if (!urls) {
-                urls = [window.location.pathname || '/'];
-                // Добавляем текущий URL с параметрами
-                if (window.location.search) {
-                    urls.push(window.location.pathname + window.location.search);
-                }
-            }
-
-            return `
-const CACHE_NAME = '${cacheName}';
-const urlsToCache = ${JSON.stringify(urls)};
-
-self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('[SW] Кеширование:', urlsToCache);
-                return cache.addAll(urlsToCache);
-            })
-            .then(() => self.skipWaiting())
-    );
-});
-
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(name => {
-                    if (name !== CACHE_NAME) {
-                        console.log('[SW] Удаление старого кеша:', name);
-                        return caches.delete(name);
-                    }
-                })
+        self.addEventListener('install', (event) => {
+            event.waitUntil(
+                caches.open(CACHE_NAME)
+                    .then(cache => {
+                        console.log('[SW] Кэшируем файлы...');
+                        return cache.addAll(FILES_TO_CACHE);
+                    })
+                    .then(() => self.skipWaiting())
             );
-        }).then(() => self.clients.claim())
-    );
-});
+        });
 
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => response || fetch(event.request))
-            .catch(() => caches.match('/'))
-    );
-});
-`;
-        },
+        self.addEventListener('activate', (event) => {
+            event.waitUntil(
+                caches.keys().then(cacheNames => {
+                    return Promise.all(
+                        cacheNames.map(name => {
+                            if (name !== CACHE_NAME) {
+                                console.log('[SW] Удаляем старый кэш:', name);
+                                return caches.delete(name);
+                            }
+                        })
+                    );
+                }).then(() => self.clients.claim())
+            );
+        });
 
-        /**
-         * Автоматическая настройка SW (создаёт и регистрирует)
-         * @param {string} cacheName - Имя кеша
-         * @returns {Promise}
-         */
-        async setupOffline(cacheName = 'app-v1') {
-            const swCode = this.generateCacheSW(cacheName);
-            return this.registerInline(swCode);
-        }
-    };
+        self.addEventListener('fetch', (event) => {
+            event.respondWith(
+                caches.match(event.request)
+                    .then(cachedResponse => {
+                        if (cachedResponse) {
+                            fetch(event.request)
+                                .then(response => {
+                                    if (response && response.status === 200) {
+                                        const clone = response.clone();
+                                        caches.open(CACHE_NAME).then(cache => {
+                                            cache.put(event.request, clone);
+                                        });
+                                    }
+                                })
+                                .catch(() => {});
+                            return cachedResponse;
+                        }
+                        return fetch(event.request)
+                            .then(response => {
+                                if (response && response.status === 200) {
+                                    const clone = response.clone();
+                                    caches.open(CACHE_NAME).then(cache => {
+                                        cache.put(event.request, clone);
+                                    });
+                                }
+                                return response;
+                            })
+                            .catch(() => {
+                                return caches.match('${basePath}/index.html');
+                            });
+                    })
+            );
+        });
+        `;
 
-    // ---------- 5. ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ ----------
-    const Utils = {
-        /**
-         * Глубокое копирование
-         */
-        deepClone(obj) {
-            return JSON.parse(JSON.stringify(obj));
-        },
-
-        /**
-         * Генерация уникального ID
-         */
-        generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        },
-
-        /**
-         * Форматирование даты
-         */
-        formatDate(date, format = 'DD.MM.YYYY HH:mm') {
-            const d = new Date(date);
-            const pad = n => String(n).padStart(2, '0');
-            const replacements = {
-                'YYYY': d.getFullYear(),
-                'MM': pad(d.getMonth() + 1),
-                'DD': pad(d.getDate()),
-                'HH': pad(d.getHours()),
-                'mm': pad(d.getMinutes()),
-                'ss': pad(d.getSeconds())
-            };
-            return format.replace(/YYYY|MM|DD|HH|mm|ss/g, match => replacements[match]);
-        },
-
-        /**
-         * Показать toast-уведомление
-         */
-        showToast(message, duration = 2000) {
-            // Создаём элемент если его нет
-            let toast = document.getElementById('_toast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = '_toast';
-                toast.style.cssText = `
-                    position: fixed;
-                    bottom: 30px;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(100px);
-                    background: #1e293b;
-                    color: white;
-                    padding: 12px 24px;
-                    border-radius: 60px;
-                    font-size: 0.9rem;
-                    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-                    opacity: 0;
-                    transition: all 0.3s ease;
-                    z-index: 9999;
-                    pointer-events: none;
-                    font-family: system-ui, sans-serif;
-                `;
-                document.body.appendChild(toast);
+                return { index: htmlRaw, manifest: manifestJSON, sw: swCode, basePath };
             }
 
-            toast.textContent = message;
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(0)';
+            // ---- отрисовка карточек ----
+            function renderFiles(files) {
+                const { index, manifest, sw, basePath } = files;
+                fileGrid.innerHTML = '';
 
-            clearTimeout(toast._timeout);
-            toast._timeout = setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(-50%) translateY(100px)';
-            }, duration);
-        }
-    };
+                const fileList = [
+                    { name: 'index.html', content: index },
+                    { name: 'manifest.json', content: manifest },
+                    { name: 'sw.js', content: sw }
+                ];
 
-    // ---------- 6. ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ----------
-    const OfflineKit = {
-        Storage,
-        ArrayHelper,
-        Network,
-        SW,
-        Utils,
-        version: '1.0.0'
-    };
+                fileList.forEach(f => {
+                    const card = document.createElement('div');
+                    card.className = 'file-card';
+                    card.innerHTML = `
+                        <div class="flex-between">
+                            <h3>📄 ${f.name}</h3>
+                            <span style="color:#5a6e8a; font-size:0.7rem;">${(f.content.length/1024).toFixed(1)} KB</span>
+                        </div>
+                        <div class="code-block">${escapeHtml(f.content.slice(0, 200))}${f.content.length > 200 ? ' …' : ''}</div>
+                        <div class="copy-row">
+                            <button class="btn-small copy-btn" data-content="${encodeURIComponent(f.content)}">📋 Копировать</button>
+                            <span style="color:#4a5a6e; font-size:0.7rem;">${f.name}</span>
+                        </div>
+                    `;
+                    fileGrid.appendChild(card);
+                });
 
-    // Добавляем в глобальный объект
-    global.OfflineKit = OfflineKit;
+                // кнопки копирования для каждого файла
+                document.querySelectorAll('.copy-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const content = decodeURIComponent(this.dataset.content);
+                        navigator.clipboard.writeText(content).then(() => {
+                            showToast('📋 Скопировано!');
+                        }).catch(() => {
+                            const ta = document.createElement('textarea');
+                            ta.value = content;
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand('copy');
+                            ta.remove();
+                            showToast('📋 Скопировано!');
+                        });
+                    });
+                });
 
-    // Для удобства добавляем сокращения
-    global.Store = Storage;
-    global.ArrayStore = ArrayHelper;
-    global.NetworkStatus = Network;
-    global.SWHelper = SW;
-    global.Utils = Utils;
+                // общая кнопка "Копировать все"
+                document.getElementById('copyAllBtn').addEventListener('click', function() {
+                    const allText =
+                        `=== index.html ===\n${index}\n\n=== manifest.json ===\n${manifest}\n\n=== sw.js ===\n${sw}`;
+                    navigator.clipboard.writeText(allText).then(() => {
+                        showToast('📋 Скопировано всё содержимое');
+                    }).catch(() => {
+                        const ta = document.createElement('textarea');
+                        ta.value = allText;
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        ta.remove();
+                        showToast('📋 Скопировано всё содержимое');
+                    });
+                });
+            }
 
-    console.log('[OfflineKit] ✅ Загружен v1.0.0');
+            function escapeHtml(str) {
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
 
-})(window);
-</script>
+            // ---- Обработчики ----
+            // Генерация иконок
+            generateIconsBtn.addEventListener('click', function() {
+                const icons = generateIcons();
+                if (icons) {
+                    displayGeneratedIcons(icons);
+                }
+            });
+
+            // Добавить иконки в manifest
+            addIconsToManifestBtn.addEventListener('click', function() {
+                addIconsToManifest();
+            });
+
+            // Копировать все иконки (base64)
+            copyAllIconsBtn.addEventListener('click', function() {
+                if (Object.keys(generatedIconData).length === 0) {
+                    showToast('⚠️ Сначала сгенерируйте иконки!', 2500);
+                    return;
+                }
+                let text = '';
+                Object.keys(generatedIconData).sort((a, b) => parseInt(a) - parseInt(b)).forEach(size => {
+                    text += `=== icon-${size}.png (base64) ===\n${generatedIconData[size]}\n\n`;
+                });
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast('📋 Скопированы все иконки (base64)');
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showToast('📋 Скопированы все иконки (base64)');
+                });
+            });
+
+            // ---- главная кнопка генерации ----
+            document.getElementById('generateBtn').addEventListener('click', () => {
+                try {
+                    const files = generateFiles();
+                    renderFiles(files);
+                    const iconCount = Object.keys(generatedIconData).length;
+                    const added = iconsAddedToManifest ? ' (добавлены в manifest)' : '';
+                    const msg = iconCount > 0 ?
+                        `✅ Файлы созданы! ${iconCount} иконок${added} добавлены в manifest и sw.js` :
+                        '✅ Файлы созданы! (иконки не сгенерированы)';
+                    showToast(msg, 3000);
+                } catch (e) {
+                    alert('Ошибка: ' + e.message);
+                }
+            });
+
+            // ---- при загрузке показать пример ----
+            window.addEventListener('DOMContentLoaded', () => {
+                const files = generateFiles();
+                renderFiles(files);
+                showToast('✨ Готово! Загрузите изображение, сгенерируйте иконки и добавьте их в manifest', 3000);
+                // активируем 192 по умолчанию
+                document.querySelector('#iconSizes .btn-small[data-size="192"]')?.classList.add('active');
+                selectedIconSizes = [192];
+            });
+
+        })();
+    </script>
 
 </body>
 </html>
