@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -410,32 +411,52 @@
             const cache = cacheName.value.trim() || 'prox-pwa-v2';
 
             // ---- 1. HTML скрипт (вставка) ----
-            const htmlScript = `<div class="status" id="status">🟢 Онлайн</div>
+            const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        
+        <!-- ПОДКЛЮЧЕНИЕ MANIFEST -->
+        <link rel="manifest" href="${baseDir}manifest.json">
+        
+        <!-- ПОДКЛЮЧЕНИЕ ИКОНОК (ВАЖНО ДЛЯ УСТАНОВКИ) -->
+        <link rel="icon" type="image/png" sizes="192x192" href="${icon192src}">
+        <link rel="icon" type="image/png" sizes="512x512" href="${icon512src}">
+        
+        <!-- APPLE TOUCH ICON (для iOS) -->
+        <link rel="apple-touch-icon" href="${icon192src}">
+        
+        <title>${name}</title>
+    </head>
+    <body>
+        <!-- Ваш контент -->
+        <div class="status" id="status">🟢 Онлайн</div>
 
-    <script>
-        // Проверка статуса сети
-        function updateStatus() {
-            const status = document.getElementById('status');
-            if (navigator.onLine) {
-                status.textContent = '🟢 Онлайн';
-                status.className = 'status online';
-            } else {
-                status.textContent = '🔴 Офлайн (работает из кэша)';
-                status.className = 'status offline';
+        <script>
+            // Проверка статуса сети
+            function updateStatus() {
+                const status = document.getElementById('status');
+                if (navigator.onLine) {
+                    status.textContent = '🟢 Онлайн';
+                    status.className = 'status online';
+                } else {
+                    status.textContent = '🔴 Офлайн (работает из кэша)';
+                    status.className = 'status offline';
+                }
             }
-        }
 
-        window.addEventListener('online', updateStatus);
-        window.addEventListener('offline', updateStatus);
-        updateStatus();
+            window.addEventListener('online', updateStatus);
+            window.addEventListener('offline', updateStatus);
+            updateStatus();
 
-        // Регистрация Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('[SW] ✅ Зарегистрирован'))
-                .catch(err => console.log('[SW] ❌ Ошибка:', err));
-        }
-    <\/script>`;
+            // Регистрация Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('${baseDir}sw.js')
+                    .then(() => console.log('[SW] ✅ Зарегистрирован'))
+                    .catch(err => console.log('[SW] ❌ Ошибка:', err));
+            }
+        <\/script>
+    </body>`;
 
             htmlCode.textContent = htmlScript;
 
