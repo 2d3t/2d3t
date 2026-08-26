@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
     
     <!-- Ваши иконки -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -246,6 +246,12 @@
             color: #9eb0d9;
             border: 1px solid #2c3347;
         }
+        .color-preset {
+            transition: transform 0.15s;
+        }
+        .color-preset:hover {
+            transform: scale(1.2);
+        }
         @media (max-width: 540px) {
             .row-2 {
                 grid-template-columns: 1fr;
@@ -279,38 +285,66 @@
         <div class="row-2">
             <div>
                 <label>Название (name)</label>
-                <input type="text" id="appName" value="" placeholder="Название PWA">
+                <input type="text" id="appName" value="🦋 Butterfly" placeholder="Название PWA">
                 <label>Короткое имя (short_name)</label>
-                <input type="text" id="shortName" value="" placeholder="Сокращённое название">
+                <input type="text" id="shortName" value="Butterfly" placeholder="Сокращённое название">
             </div>
             <div>
                 <label>Описание</label>
-                <input type="text" id="appDesc" value="" placeholder="Краткое описание">
-                <label>Цвет фона / темы</label>
-                <div style="display:flex; gap: 0.6rem;">
-                    <input type="text" id="bgColor" value="#111111" placeholder="#111111" style="flex:2;">
-                    <input type="text" id="themeColor" value="#111111" placeholder="#111111" style="flex:2;">
+                <input type="text" id="appDesc" value="Делай PWA приложения легко!" placeholder="Краткое описание">
+            </div>
+        </div>
+        
+        <!-- НОВЫЙ БЛОК С ВЫБОРОМ ЦВЕТА -->
+        <div class="row-2">
+            <div>
+                <label>Цвет фона (background_color)</label>
+                <div style="display:flex; gap: 0.6rem; align-items: center;">
+                    <input type="color" id="bgColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
+                    <input type="text" id="bgColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
+                </div>
+                <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                    <button class="color-preset" data-target="bgColor" style="background: #0e0e12; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px #2a2d36;"></button>
+                    <button class="color-preset" data-target="bgColor" style="background: #1a1c23; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="bgColor" style="background: #f5f0eb; border: 1px solid #ccc; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="bgColor" style="background: #ffffff; border: 1px solid #aaa; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ быстрые</span>
+                </div>
+            </div>
+            <div>
+                <label>Цвет темы (theme_color)</label>
+                <div style="display:flex; gap: 0.6rem; align-items: center;">
+                    <input type="color" id="themeColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
+                    <input type="text" id="themeColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
+                </div>
+                <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                    <button class="color-preset" data-target="themeColor" style="background: #111111; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="themeColor" style="background: #4b6aff; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="themeColor" style="background: #e67e22; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="themeColor" style="background: #2d8f5e; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ пресеты</span>
                 </div>
             </div>
         </div>
+
         <div>
             <label>Путь к index.html (start_url + базовый путь)</label>
-            <input type="text" id="basePath" value="/2d3t/" placeholder="/ваш/путь/index.html">
+            <input type="text" id="basePath" value="/2d3t/pro/MirrorX/index.html" placeholder="/ваш/путь/index.html">
             <div class="helper">Путь используется для start_url, кэша и fallback. Измените под свой сервер.</div>
         </div>
         <div class="row-2">
             <div>
                 <label>Иконка 192x192 (src)</label>
-                <input type="text" id="icon192" value="/2d3t/" placeholder="/путь/icon-192.png">
+                <input type="text" id="icon192" value="/2d3t/pro/MirrorX/icon-192.png" placeholder="/путь/icon-192.png">
             </div>
             <div>
                 <label>Иконка 512x512 (src)</label>
-                <input type="text" id="icon512" value="/2d3t/" placeholder="/путь/icon-512.png">
+                <input type="text" id="icon512" value="/2d3t/pro/MirrorX/icon-512.png" placeholder="/путь/icon-512.png">
             </div>
         </div>
         <div style="margin-top: 0.6rem;">
             <label>Cache Name (версия кэша)</label>
-            <input type="text" id="cacheName" value="" placeholder="cache-name-v1">
+            <input type="text" id="cacheName" value="prox-pwa-v2" placeholder="cache-name-v1">
         </div>
         <div class="btn-group">
             <button class="btn btn-primary" id="generateBtn">🔄 Обновить код</button>
@@ -712,6 +746,71 @@ self.addEventListener('fetch', (event) => {
             inp.addEventListener('change', generateAll);
         });
 
+        // ===== НОВАЯ ЛОГИКА ДЛЯ ВЫБОРА ЦВЕТА =====
+
+        // 1. Связываем пикеры с текстовыми полями
+        const bgPicker = document.getElementById('bgColorPicker');
+        const themePicker = document.getElementById('themeColorPicker');
+
+        // Функция синхронизации пикера и текстового поля
+        function syncColor(picker, textField) {
+            if (picker && textField) {
+                picker.addEventListener('input', function() {
+                    textField.value = this.value;
+                    // Триггерим событие, чтобы генератор обновил код
+                    textField.dispatchEvent(new Event('input'));
+                });
+                
+                // Обратная синхронизация (если пользователь ввел HEX вручную)
+                textField.addEventListener('input', function() {
+                    const val = this.value.trim();
+                    if (/^#[0-9a-f]{6}$/i.test(val)) {
+                        picker.value = val;
+                    }
+                });
+                
+                // При загрузке — установить значение пикера из текстового поля
+                if (textField.value) {
+                    picker.value = textField.value;
+                }
+            }
+        }
+
+        syncColor(bgPicker, bgColor);
+        syncColor(themePicker, themeColor);
+
+        // 2. Логика для кнопок-пресетов
+        document.querySelectorAll('.color-preset').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.dataset.target; // 'bgColor' или 'themeColor'
+                const targetInput = document.getElementById(targetId);
+                // Цвет берем из фона кнопки (убираем возможные градиенты)
+                const color = window.getComputedStyle(this).backgroundColor;
+                
+                // Конвертируем rgb в hex (если нужно)
+                function rgbToHex(rgb) {
+                    const match = rgb.match(/\d+/g);
+                    if (!match) return '#111111';
+                    const r = parseInt(match[0]);
+                    const g = parseInt(match[1]);
+                    const b = parseInt(match[2]);
+                    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+                }
+                
+                const hex = rgbToHex(color);
+                if (targetInput) {
+                    targetInput.value = hex;
+                    // Триггерим обновление
+                    targetInput.dispatchEvent(new Event('input'));
+                    
+                    // Обновляем пикер, если он есть
+                    const pickerId = targetId === 'bgColor' ? 'bgColorPicker' : 'themeColorPicker';
+                    const picker = document.getElementById(pickerId);
+                    if (picker) picker.value = hex;
+                }
+            });
+        });
+
         // Сброс к значениям по умолчанию
         document.getElementById('resetDefaults').addEventListener('click', function() {
             appName.value = '🪞 Кривое Зеркало';
@@ -723,6 +822,11 @@ self.addEventListener('fetch', (event) => {
             icon192.value = '/2d3t/pro/MirrorX/icon-192.png';
             icon512.value = '/2d3t/pro/MirrorX/icon-512.png';
             cacheName.value = 'prox-pwa-v2';
+            
+            // Обновляем пикеры
+            if (bgPicker) bgPicker.value = '#111111';
+            if (themePicker) themePicker.value = '#111111';
+            
             generateAll();
         });
 
@@ -737,10 +841,10 @@ self.addEventListener('fetch', (event) => {
         if (statusInd) {
             statusInd.textContent = '✅ готово';
         }
-
-        // Вспомогательный переход на генератор иконок (уже есть в ссылке)
     })();
 </script>
+
+<!-- Универсальный офлайн-блок -->
 <script>
 (function() {
     "use strict";
@@ -826,7 +930,6 @@ self.addEventListener('fetch', (event) => {
 
 })();
 </script>
-
 
 </body>
 </html>
