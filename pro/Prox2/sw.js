@@ -3,8 +3,8 @@ const FILES_TO_CACHE = [
     '/2d3t/pro/ProX/index.html',
     '/2d3t/pro/ProX/manifest.json',
     // Добавляем все иконки в кэш
-    '/2d3t/Prox/icon-192.png',
-    '/2d3t/Prox/icon-512.png'
+    '/2d3t/pro/Prox/icon-192.png',
+    '/2d3t/pro/Prox/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
