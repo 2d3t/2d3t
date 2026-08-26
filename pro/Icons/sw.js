@@ -1,7 +1,7 @@
 const CACHE_NAME = 'icons-pwa-v1';
 const FILES_TO_CACHE = [
-    '/2d3t/pro/Icons/index.html',
-    '/2d3t/pro/Icons/manifest.json'
+    '/2d3t/pro/MirrorX/index.html',
+    '/2d3t/pro/MirrorX/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -61,7 +61,7 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(() => {
                         // Fallback на главную страницу при офлайне
-                        return caches.match('/2d3t/pro/Icons/index.html');
+                        return caches.match('/2d3t/pro/MirrorX/index.html');
                     });
             })
     );
