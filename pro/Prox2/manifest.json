@@ -2,7 +2,7 @@
     "name": "Hello World PWA",
     "short_name": "Hello PWA",
     "description": "Простое PWA приложение",
-    "start_url": "/2d3t/pro/ProX2/index.html",
+    "start_url": "/2d3t/pro/Prox2/index.html",
     "display": "standalone",
     "background_color": "#0a0e14",
     "theme_color": "#0a0e14",
