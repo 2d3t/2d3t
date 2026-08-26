@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Создание иконок</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #2c3e50, #4ca1af);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: "Segoe UI", sans-serif;
+      color: #fff;
+    }
+
+    .container {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    input[type="file"] {
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #444;
+      color: #ddd;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    input[type="file"]:hover {
+      background: #555;
+    }
+
+    button {
+      padding: 10px 18px;
+      background: #4ca1af;
+      color: white;
+      border: none;
+      margin: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #5cb8c9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    #buttons {
+      margin-top: 20px;
+    }
+
+    .exit-btn {
+      margin-top: 20px;
+      background: #e74c3c;
+    }
+
+    .exit-btn:hover {
+      background: #ff6b5a;
+    }
+  </style>
+</head>
+<body>
+
+
+
+  <div class="container">
+<div class="status" id="status">🟢 Онлайн</div>
+    <h1>Загрузите изображение для создания иконок</h1>
+    <input type="file" id="upload" accept="image/*">
+
+    <div id="buttons" style="display:none;">
+      <h2>Скачивание иконок</h2>
+      <button onclick="downloadIcon(64)">64x64</button>
+      <button onclick="downloadIcon(128)">128x128</button>
+      <button onclick="downloadIcon(192)">192x192</button>
+      <button onclick="downloadIcon(256)">256x256</button>
+      <button onclick="downloadIcon(512)">512x512</button>
+      <button onclick="downloadIcon(1024)">1024x1024</button>
+    </div>
+
+    <button class="exit-btn" onclick="window.location.href='https://2d3t.github.io/index.html/'">Выход</button>
+  </div>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    let img = new Image();
+
+    document.getElementById('upload').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        img.onload = function() {
+          document.getElementById('buttons').style.display = 'block';
+        }
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function downloadIcon(size) {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = size;
+      canvas.height = size;
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+
+      const link = document.createElement('a');
+      link.download = `icon_${size}x${size}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+
+
+
+    <script>
+        // Проверка статуса сети
+        function updateStatus() {
+            const status = document.getElementById('status');
+            if (navigator.onLine) {
+                status.textContent = '🟢 Онлайн';
+                status.className = 'status online';
+            } else {
+                status.textContent = '🔴 Офлайн (работает из кэша)';
+                status.className = 'status offline';
+            }
+        }
+
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        updateStatus();
+
+        // Регистрация Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('[SW] ✅ Зарегистрирован'))
+                .catch(err => console.log('[SW] ❌ Ошибка:', err));
+        }
+    </script>
+
+
+
+</body>
+</html>
