@@ -1,67 +1,113 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World PWA</title>
+    <!-- Ваш manifest.json -->
     <link rel="manifest" href="manifest.json">
-    <!-- Добавляем иконки для браузера -->
-    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Ваши иконки -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: #0a0e14;
-            color: #e2e8f0;
-            flex-direction: column;
-            gap: 20px;
-        }
-        h1 { font-size: 4rem; }
-        p { font-size: 1.2rem; color: #94a3b8; }
-        .status {
-            padding: 8px 16px;
-            border-radius: 20px;
-            background: #1e293b;
-            font-size: 0.9rem;
-        }
-        .online { color: #4ade80; }
-        .offline { color: #f87171; }
-    </style>
+    
+    <title>Моё PWA</title>
 </head>
 <body>
-    <h1>👋 Hello World!</h1>
-    <p>Это PWA-приложение работает офлайн</p>
-    <div class="status" id="status">🟢 Онлайн</div>
-
+    <!-- ВАШ КОНТЕНТ -->
+    <h1>Моё приложение</h1>
+    
+    <!-- Ваш существующий код -->
     <script>
-        // Проверка статуса сети
-        function updateStatus() {
-            const status = document.getElementById('status');
-            if (navigator.onLine) {
-                status.textContent = '🟢 Онлайн';
-                status.className = 'status online';
-            } else {
-                status.textContent = '🔴 Офлайн (работает из кэша)';
-                status.className = 'status offline';
+        // Ваш код...
+    </script>
+    
+    <!-- ДОБАВЛЯЕМ НАШ УНИВЕРСАЛЬНЫЙ БЛОК -->
+
+
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНЫЙ ОФЛАЙН-БЛОК
+    // - Работает с любым существующим manifest.json
+    // - Работает с любым существующим sw.js
+    // - Не создаёт конфликтов
+    // - Просто дублирует регистрацию SW (безопасно)
+    // ============================================================
+
+    // ---------- 1. Регистрация Service Worker (если ещё не зарегистрирован) ----------
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        // Проверяем, не зарегистрирован ли уже SW
+        navigator.serviceWorker.getRegistration()
+            .then((registration) => {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+
+                // Если не зарегистрирован — регистрируем
+                navigator.serviceWorker.register('sw.js')
+                    .then((reg) => {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch((err) => {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch((err) => {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    // ---------- 2. Проверка сети (без индикаторов) ----------
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log(`📡 ${status}`);
+    }
+
+    // ---------- 3. Обработка событий сети ----------
+    function setupNetworkListeners() {
+        window.addEventListener('online', () => {
+            console.log('📡 Сеть восстановлена');
+            
+            // Обновляем SW при появлении сети
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then((registration) => {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(() => {});
             }
-        }
+        });
 
-        window.addEventListener('online', updateStatus);
-        window.addEventListener('offline', updateStatus);
-        updateStatus();
+        window.addEventListener('offline', () => {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
 
-        // Регистрация Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('[SW] ✅ Зарегистрирован'))
-                .catch(err => console.log('[SW] ❌ Ошибка:', err));
-        }
+    // ---------- 4. Инициализация ----------
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    // Запускаем
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+    <script>
+        // Вставьте сюда скрипт выше
     </script>
 </body>
 </html>
