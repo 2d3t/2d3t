@@ -267,7 +267,7 @@
 </head>
 <body>
 <div class="container">
-    <h1>🪞 PWA-сборщик «Кривое Зеркало»</h1>
+    <h1>🪞 PWA-Maker Butterfly🦋»</h1>
     <div class="subhead">Заполните параметры — получите готовые файлы для офлайн-приложения</div>
 
     <!-- Параметры -->
@@ -279,13 +279,13 @@
         <div class="row-2">
             <div>
                 <label>Название (name)</label>
-                <input type="text" id="appName" value="🪞 Кривое Зеркало" placeholder="Название PWA">
+                <input type="text" id="appName" value="" placeholder="Название PWA">
                 <label>Короткое имя (short_name)</label>
-                <input type="text" id="shortName" value="Зеркало" placeholder="Коротко">
+                <input type="text" id="shortName" value="" placeholder="Сокращённое название">
             </div>
             <div>
                 <label>Описание</label>
-                <input type="text" id="appDesc" value="Делай селфи с забавными искажениями" placeholder="Краткое описание">
+                <input type="text" id="appDesc" value="" placeholder="Краткое описание">
                 <label>Цвет фона / темы</label>
                 <div style="display:flex; gap: 0.6rem;">
                     <input type="text" id="bgColor" value="#111111" placeholder="#111111" style="flex:2;">
@@ -295,22 +295,22 @@
         </div>
         <div>
             <label>Путь к index.html (start_url + базовый путь)</label>
-            <input type="text" id="basePath" value="/2d3t/pro/MirrorX/index.html" placeholder="/ваш/путь/index.html">
+            <input type="text" id="basePath" value="/2d3t/" placeholder="/ваш/путь/index.html">
             <div class="helper">Путь используется для start_url, кэша и fallback. Измените под свой сервер.</div>
         </div>
         <div class="row-2">
             <div>
                 <label>Иконка 192x192 (src)</label>
-                <input type="text" id="icon192" value="/2d3t/pro/MirrorX/icon-192.png" placeholder="/путь/icon-192.png">
+                <input type="text" id="icon192" value="/2d3t/" placeholder="/путь/icon-192.png">
             </div>
             <div>
                 <label>Иконка 512x512 (src)</label>
-                <input type="text" id="icon512" value="/2d3t/pro/MirrorX/icon-512.png" placeholder="/путь/icon-512.png">
+                <input type="text" id="icon512" value="/2d3t/" placeholder="/путь/icon-512.png">
             </div>
         </div>
         <div style="margin-top: 0.6rem;">
             <label>Cache Name (версия кэша)</label>
-            <input type="text" id="cacheName" value="prox-pwa-v2" placeholder="cache-name-v1">
+            <input type="text" id="cacheName" value="" placeholder="cache-name-v1">
         </div>
         <div class="btn-group">
             <button class="btn btn-primary" id="generateBtn">🔄 Обновить код</button>
@@ -502,15 +502,15 @@
         // Генерация всех трёх файлов
         function generateAll() {
             const name = appName.value.trim() || '🪞 Кривое Зеркало';
-            const short = shortName.value.trim() || 'Зеркало';
-            const desc = appDesc.value.trim() || 'Делай селфи с забавными искажениями';
+            const short = shortName.value.trim() || '';
+            const desc = appDesc.value.trim() || '';
             const bg = bgColor.value.trim() || '#111111';
             const theme = themeColor.value.trim() || '#111111';
-            const startPath = basePath.value.trim() || '/2d3t/pro/MirrorX/index.html';
+            const startPath = basePath.value.trim() || '/2d3t/';
             const baseDir = getBaseDir(startPath);
             const icon192src = icon192.value.trim() || (baseDir + 'icon-192.png');
             const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
-            const cache = cacheName.value.trim() || 'prox-pwa-v2';
+            const cache = cacheName.value.trim() || '';
 
             // ---- 1. HTML скрипт (вставка) ----
             const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
