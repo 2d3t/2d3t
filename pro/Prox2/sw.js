@@ -1,15 +1,9 @@
-const CACHE_NAME = 'prox-pwa-v2';
+const CACHE_NAME = 'prox-pwa-v3';
 const FILES_TO_CACHE = [
-    '/2d3t/Prox/index.html',
-    '/2d3t/Prox/manifest.json',
+    '/2d3t/pro/ProX/index.html',
+    '/2d3t/pro/ProX/manifest.json',
     // Добавляем все иконки в кэш
-    '/2d3t/Prox/icon-72.png',
-    '/2d3t/Prox/icon-96.png',
-    '/2d3t/Prox/icon-128.png',
-    '/2d3t/Prox/icon-144.png',
-    '/2d3t/Prox/icon-152.png',
     '/2d3t/Prox/icon-192.png',
-    '/2d3t/Prox/icon-384.png',
     '/2d3t/Prox/icon-512.png'
 ];
 
