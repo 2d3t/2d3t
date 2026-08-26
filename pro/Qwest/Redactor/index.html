@@ -1,1298 +1,389 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>KlikEdit 🎀</title>
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<style id="themeStyles">
-body{margin:0;font-family:sans-serif;background:#f5f5f5;transition:background .2s ease,color .2s ease}
-.toolbar{display:flex;gap:5px;padding:10px;background:#333;color:white;flex-wrap:wrap;align-items:center;transition:background .2s,color .2s}
-.toolbar input,.toolbar button,.toolbar label{transition:background .2s,border-color .2s,color .2s}
-.url-input{background:#444;border:1px solid #666;color:white;border-radius:5px}
-.line-numbers{background:#eee;color:#666;transition:background .2s,color .2s}
-textarea{background:#fff;color:#000;border:none;transition:background .2s,color .2s}
-.preview,.fullscreen-overlay{background:white}
-
-body.theme-dark .toolbar{background:#1e1e2f}
-body.theme-dark .url-input{background:#2a2a3a;border-color:#444;color:#e0e0e0}
-body.theme-dark .toolbar button,body.theme-dark .toolbar label[for="fileUpload"]{background:#2d2d3f;color:#eee}
-body.theme-dark .toolbar button:hover,body.theme-dark .toolbar label:hover{background:#3e3e5e}
-body.theme-dark .line-numbers{background:#1e1e2a;color:#aaa}
-body.theme-dark textarea{background:#0f0f17;color:#e6e6fa;border-left:1px solid #2a2a3a}
-body.theme-dark .editor{background:#0f0f17}
-body.theme-dark .fullscreen-overlay{background:#0f0f17}
-body.theme-dark .fullscreen-exit-btn{background:rgba(20,20,40,.9);color:white}
-body.theme-dark{background:#12121a}
-
-body.theme-light .toolbar{background:#f0f0f4;color:#222;border-bottom:1px solid #ddd}
-body.theme-light .url-input{background:white;border-color:#bbb;color:#111}
-body.theme-light .toolbar button,body.theme-light .toolbar label[for="fileUpload"]{background:#e2e2e8;color:#111}
-body.theme-light .toolbar button:hover,body.theme-light .toolbar label:hover{background:#d0d0d8}
-body.theme-light .line-numbers{background:#f9f9fc;color:#6c6c7a;border-right:1px solid #e2e2e8}
-body.theme-light textarea{background:#fff;color:#1e1e2a;border-left:1px solid #eee}
-body.theme-light .fullscreen-overlay{background:#fff}
-body.theme-light .fullscreen-exit-btn{background:rgba(0,0,0,.7);color:white}
-body.theme-light{background:#eef2f5}
-
-body.theme-green .toolbar{background:#1f3b2c;color:#d4ecd0}
-body.theme-green .url-input{background:#2a4a36;border-color:#3e6b4e;color:#e2f0dc}
-body.theme-green .toolbar button,body.theme-green .toolbar label[for="fileUpload"]{background:#2b5e3b;color:#eaf9e6}
-body.theme-green .toolbar button:hover,body.theme-green .toolbar label:hover{background:#3e7e50}
-body.theme-green .line-numbers{background:#1e3527;color:#a8d5a5}
-body.theme-green textarea{background:#17261e;color:#cfeec7;border-left:1px solid #2c553a}
-body.theme-green .fullscreen-overlay{background:#1a2e23}
-body.theme-green .fullscreen-exit-btn{background:#2d5a3b;color:#e0ffd0}
-body.theme-green{background:#1a2a20}
-
-body.theme-ocean .toolbar{background:#0a192f;color:#b8e1fc}
-body.theme-ocean .url-input{background:#112240;border-color:#2a4c7a;color:#cfe9ff}
-body.theme-ocean .toolbar button,body.theme-ocean .toolbar label[for="fileUpload"]{background:#1e3a5f;color:#deedfc}
-body.theme-ocean .toolbar button:hover,body.theme-ocean .toolbar label:hover{background:#2c5282}
-body.theme-ocean .line-numbers{background:#07152a;color:#6b93c0}
-body.theme-ocean textarea{background:#05101f;color:#d9efff;border-left:1px solid #1e3a5f}
-body.theme-ocean .fullscreen-overlay{background:#07152a}
-body.theme-ocean .fullscreen-exit-btn{background:#1f4e79;color:white}
-body.theme-ocean{background:#0a192f}
-
-body.theme-graphite .toolbar{background:#2c2c2e;color:#f5f5f7}
-body.theme-graphite .url-input{background:#3a3a3c;border-color:#555;color:#f0f0f0}
-body.theme-graphite .toolbar button,body.theme-graphite .toolbar label{background:#444446;color:#f5f5f7}
-body.theme-graphite .line-numbers{background:#222224;color:#aaa}
-body.theme-graphite textarea{background:#1c1c1e;color:#e2e2e6;border-left:1px solid #3a3a3c}
-body.theme-graphite{background:#1c1c1e}
-
-.toolbar button,.toolbar label[for="fileUpload"]{padding:6px 10px;border:none;border-radius:5px;cursor:pointer;font-size:14px;font-family:inherit;line-height:normal;height:auto;text-align:center;box-sizing:border-box;margin:0;display:inline-block;text-decoration:none}
-.toolbar button.copied{background:#4CAF50}
-.editor{display:flex;height:calc(100vh - 60px);overflow:hidden}
-.line-numbers{padding:5px 0;text-align:right;user-select:none;overflow:hidden;width:50px;min-width:50px;box-sizing:border-box;font-family:monospace;font-size:14px;line-height:1.4}
-.line-numbers div{padding:0 10px;box-sizing:border-box}
-textarea{flex:1;outline:none;resize:none;padding:5px;font-family:monospace;font-size:14px;line-height:1.4;overflow:auto;box-sizing:border-box}
-.active-line{background:rgba(100,150,250,.3)}
-.preview{width:100%;height:calc(100vh - 60px);border:none;margin:0;padding:0;opacity:0;visibility:hidden;transition:opacity .5s ease;position:absolute;top:60px;left:0;background:white;display:none}
-.preview.active{opacity:1;visibility:visible;display:block;position:relative;top:0}
-.file-input{display:none}
-.fullscreen-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10000;display:none}
-.fullscreen-overlay.active{display:block}
-
-.fullscreen-exit-btn {
-    position: fixed;
-    top: 30px;
-    right: 20px;
-    z-index: 10001;
-    padding: 0;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    box-shadow: 0 4px 8px rgba(0,0,0,.3);
-    display: flex;
-    align-items: center;
-    background: rgba(0,0,0,0.35);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    transition: background 0.2s, transform 0.2s;
-    overflow: hidden;
-    user-select: none;
-}
-.fullscreen-exit-btn:hover {
-    background: rgba(0,0,0,0.6);
-    transform: scale(1.03);
-}
-.fullscreen-exit-btn .exit-label {
-    padding: 12px 18px 12px 16px;
-    color: white;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    white-space: nowrap;
-}
-.fullscreen-exit-btn .drag-handle {
-    width: 18px;
-    height: 100%;
-    min-height: 44px;
-    background: rgba(255,255,255,0.15);
-    border-left: 1px solid rgba(255,255,255,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-    transition: background 0.2s;
-    padding: 0 4px;
-}
-.fullscreen-exit-btn .drag-handle:hover {
-    background: rgba(255,255,255,0.25);
-}
-.fullscreen-exit-btn .drag-handle:active {
-    cursor: grabbing;
-}
-.drag-handle-dots {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.drag-handle-dots span {
-    display: block;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.7);
-}
-body.theme-dark .fullscreen-exit-btn {
-    background: rgba(30,30,50,0.5);
-}
-body.theme-dark .fullscreen-exit-btn:hover {
-    background: rgba(30,30,50,0.8);
-}
-body.theme-dark .fullscreen-exit-btn .drag-handle {
-    background: rgba(255,255,255,0.08);
-}
-body.theme-dark .fullscreen-exit-btn .drag-handle:hover {
-    background: rgba(255,255,255,0.18);
-}
-
-.fetch-loading{background:#f0ad4e!important;cursor:wait!important}
-.editor.hidden{display:none}
-.theme-select{background:#555;border:none;border-radius:5px;color:white;padding:6px 8px;font-size:14px;cursor:pointer;font-family:inherit;margin-left:4px;transition:all .2s}
-body.theme-light .theme-select{background:#cbcbd3;color:#111}
-body.theme-green .theme-select{background:#2b5e3b;color:#eaf9e6}
-body.theme-ocean .theme-select{background:#1e3a5f;color:#deedfc}
-body.theme-graphite .theme-select{background:#444446;color:#f5f5f7}
-.theme-select:hover{filter:brightness(1.05)}
-.clear-url-btn{background:#e74c3c;color:white;font-size:14px;padding:6px 10px;border:none;border-radius:5px;cursor:pointer;transition:all .2s}
-.clear-url-btn:hover{background:#c0392b;transform:scale(1.05)}
-body.theme-green .clear-url-btn{background:#27ae60}
-body.theme-green .clear-url-btn:hover{background:#229954}
-body.theme-ocean .clear-url-btn{background:#2980b9}
-body.theme-ocean .clear-url-btn:hover{background:#2471a3}
-body.theme-graphite .clear-url-btn{background:#666}
-body.theme-graphite .clear-url-btn:hover{background:#555}
-
-/* Стили для библиотеки */
-.library-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-.library-overlay.active{display:flex}
-.library-modal{background:#1e1e2f;border-radius:16px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);border:1px solid #2a3340;color:#e2e8f0}
-body.theme-light .library-modal{background:#f0f0f4;color:#222;border-color:#ddd}
-body.theme-green .library-modal{background:#1f3b2c;color:#d4ecd0;border-color:#2c553a}
-body.theme-ocean .library-modal{background:#0a192f;color:#b8e1fc;border-color:#1e3a5f}
-body.theme-graphite .library-modal{background:#2c2c2e;color:#f5f5f7;border-color:#3a3a3c}
-.library-modal h2{margin-top:0;display:flex;justify-content:space-between;align-items:center}
-.library-modal .close-btn{background:transparent;border:none;color:inherit;font-size:24px;cursor:pointer;opacity:0.7;transition:opacity 0.2s}
-.library-modal .close-btn:hover{opacity:1}
-.library-file-list{list-style:none;padding:0;margin:0}
-.library-file-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:6px;margin-bottom:4px;transition:background 0.2s}
-.library-file-list li:hover{background:rgba(255,255,255,0.06)}
-body.theme-light .library-file-list li:hover{background:rgba(0,0,0,0.05)}
-.library-file-list .file-name{font-family:monospace;font-size:14px;word-break:break-all;flex:1}
-.library-file-list .copy-btn{background:#3b4de0;border:none;border-radius:4px;color:white;padding:4px 12px;font-size:12px;cursor:pointer;transition:background 0.2s,transform 0.1s;white-space:nowrap;margin-left:12px}
-.library-file-list .copy-btn:hover{background:#4f5ff0;transform:scale(1.02)}
-.library-file-list .copy-btn.copied{background:#00b894}
-.library-file-list .copy-btn:disabled{opacity:0.6;cursor:not-allowed}
-.library-file-list .copy-btn.error{background:#e74c3c !important;color:white !important}
-.library-loading{text-align:center;padding:20px;color:#94a3b8}
-.library-empty{text-align:center;padding:20px;color:#94a3b8}
-.library-empty button{background:#3b4de0;border:none;border-radius:4px;color:white;padding:8px 16px;cursor:pointer;margin-top:10px;transition:background 0.2s}
-.library-empty button:hover{background:#4f5ff0}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Blocks Game</title>
+    <style>
+        body {
+            background: url('https://2d3t.github.io/index.html/images/sky.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #FFD700; /* Yellow text for contrast */
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        canvas {
+            background: rgba(0, 31, 63, 0.8); /* Semi-transparent dark blue */
+            display: block;
+            margin: 20px auto;
+            border: 2px solid #333;
+        }
+        button, #nameInput, #difficultySelect {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #0095DD; /* Button color */
+            color: white; /* Button text color */
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #007bb5; /* Darker shade on hover */
+        }
+        #nameInput, #difficultySelect {
+            width: 200px;
+            text-align: center;
+        }
+        #logo {
+            margin: 20px auto;
+            font-size: 36px; /* Adjust font size for the title */
+            font-weight: bold;
+        }
+        #instructions {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 15px;
+            background-color: rgba(0, 31, 63, 0.8);
+            border-radius: 10px;
+            display: none;
+        }
+        #difficultyContainer {
+            display: none;
+        }
+    </style>
 </head>
+<body>
 
-<body class="theme-dark">
-
-<div class="toolbar">
-<input type="text" id="urlInput" class="url-input" placeholder="HTML (https://example.com)" value="">
-<button id="fetchButton" onclick="fetchWebsiteCode()">👁️‍🗨️</button>
-<button id="clearUrlButton" class="clear-url-btn" onclick="clearUrlInput()" title="Очистить поле ввода">🗑️</button>
-
-<input type="number" id="lineNumber" min="1" placeholder="Строка">
-<button onclick="goToLine()">Перейти 🔀</button>
-<button onclick="clearLineNumber()" title="Очистить номер строки">🗑️</button>
-
-<input type="text" id="searchInput" placeholder="Поиск 🔎" style="width:120px;">
-<button onclick="findNext()">Найти ▶️</button>
-<button onclick="findPrev()">Назад ◀️</button>
-<button onclick="clearSearch()" title="Очистить поиск">🗑️</button>
-<span id="searchCounter" style="font-size:14px;min-width:40px;display:inline-block;text-align:center;font-weight:bold;color:inherit;"></span>
-
-<button onclick="sendToQR()" title="Отправить код в QR-приложение">📤 QR</button>
-<button onclick="openQRScanner()" title="Открыть сканер QR-кодов в Pro6">📷 QR</button>
-<button id="copyButton" onclick="copyText()">Скопировать 📃</button>
-<button onclick="clearAll()">Очистить ❌</button>
-<button onclick="window.location.href='https://2d3t.github.io/index.html/'">Выход 🚸</button>
-<button onclick="undo()">Отменить ↩️</button>
-<button onclick="redo()">Повторить ↪️</button>
-<button onclick="shareCode()">Скачать ⬇️</button>
-<button onclick="showEditor()">Редактор 🛠️</button>
-<button onclick="runCode()">Просмотр 🖥️</button>
-<button id="fullscreenButton" onclick="toggleFullscreen()">Полный экран ⛶</button>
-
-<select id="themeSwitcher" class="theme-select" title="Выбрать тему оформления">
-<option value="dark">🌙 Тёмная</option>
-<option value="light">☀️ Светлая</option>
-<option value="green">🌿 Зелёная</option>
-<option value="ocean">🌊 Океан</option>
-<option value="graphite">⚙️ Графит</option>
-</select>
-
-<label for="fileUpload" title="Открыть файл">Файлы 📂</label>
-<input type="file" id="fileUpload" class="file-input"
-accept=".html,.htm,.txt,.py,.js,.css,.json,.xml,.md,.csv,.log,.ini,.cfg,.conf,.sh,.bat,.ps1,.rb,.php,.java,.c,.cpp,.h,.cs,.go,.rs,.swift,.kt,.sql,.yaml,.yml,.toml,.pl,.pm,.r,.lua,.vim,.ts,.jsx,.tsx,.vue,.scss,.less,.sass,.styl"
-onchange="handleFileWithFullscreenRestore(event)">
-<button onclick="shareFile()" title="Поделиться файлом">📤 Поделиться</button>
-<button onclick="openLibrary()" title="Открыть библиотеку скриптов">📚 Библиотека</button>
+<div id="logo">Anty Batty</div>
+<button id="startButton">Начать игру</button>
+<button id="instructionsButton">Инструкция</button>
+<div id="difficultyContainer">
+    <select id="difficultySelect">
+        <option value="1">Уровень 1 (Легкий)</option>
+        <option value="2">Уровень 2</option>
+        <option value="3">Уровень 3 (Средний)</option>
+        <option value="4">Уровень 4</option>
+        <option value="5">Уровень 5 (Сложный)</option>
+    </select>
+    <button id="confirmDifficulty">Подтвердить уровень</button>
 </div>
+<input type="text" id="nameInput" placeholder="Введите имя" style="display: none;">
+<button id="saveButton" style="display: none;">Сохранить результат</button>
+<button id="restartButton" style="display: none;">Начать заново</button>
+<button id="pauseButton" style="display: none;">Пауза</button>
+<button id="exitButton" style="display: none;">Выход</button>
+<canvas id="gameCanvas" width="320" height="480"></canvas>
 
-<div class="editor" id="editorContainer">
-<div class="line-numbers" id="lineNumbers"></div>
-<textarea id="codeArea" oninput="updateLineNumbers()" onscroll="syncScroll()"></textarea>
-</div>
-
-<iframe class="preview" id="previewFrame"></iframe>
-
-<div class="fullscreen-overlay" id="fullscreenOverlay">
-  <button class="fullscreen-exit-btn" id="forceExitFullscreenBtn">
-    <span class="exit-label">✕ Выйти из полного экрана</span>
-    <span class="drag-handle" id="dragHandle">
-      <span class="drag-handle-dots">
-        <span></span><span></span><span></span>
-      </span>
-    </span>
-  </button>
-  <iframe id="fullscreenFrame" style="width:100%;height:100%;border:none"></iframe>
-</div>
-
-<!-- Оверлей библиотеки -->
-<div class="library-overlay" id="libraryOverlay">
-  <div class="library-modal">
-    <h2>
-      📚 Библиотека скриптов
-      <button class="close-btn" onclick="closeLibrary()">✕</button>
-    </h2>
-    <div id="libraryContent">
-      <div class="library-loading">⏳ Загрузка файлов...</div>
-    </div>
-  </div>
+<div id="instructions">
+    <h3>Как играть в Anty Batty</h3>
+    <p>Ваша цель - ловить падающие блоки платформой внизу экрана.</p>
+    <p><strong>Управление:</strong></p>
+    <ul style="text-align: left;">
+        <li>Используйте клавиши ← и → для перемещения платформы</li>
+        <li>На мобильных устройствах: касайтесь левой или правой части экрана</li>
+        <li>Каждый пойманный блок приносит 1 очко</li>
+        <li>Если блок упадет мимо платформы - игра окончена</li>
+    </ul>
+    <p>Выберите уровень сложности перед началом игры. Чем выше уровень, тем быстрее падают блоки!</p>
+    <button id="closeInstructions">Закрыть</button>
 </div>
 
 <script>
-const textarea=document.getElementById('codeArea'),
-lineNumbersDiv=document.getElementById('lineNumbers'),
-previewFrame=document.getElementById('previewFrame'),
-copyButton=document.getElementById('copyButton'),
-searchInput=document.getElementById('searchInput'),
-fileUpload=document.getElementById('fileUpload'),
-fullscreenButton=document.getElementById('fullscreenButton'),
-fullscreenOverlay=document.getElementById('fullscreenOverlay'),
-fullscreenFrame=document.getElementById('fullscreenFrame'),
-urlInput=document.getElementById('urlInput'),
-fetchButton=document.getElementById('fetchButton'),
-editorContainer=document.getElementById('editorContainer'),
-forceExitFullscreenBtn=document.getElementById('forceExitFullscreenBtn'),
-themeSwitcher=document.getElementById('themeSwitcher'),
-clearUrlButton=document.getElementById('clearUrlButton'),
-body=document.body,
-searchCounter=document.getElementById('searchCounter');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const startButton = document.getElementById("startButton");
+const saveButton = document.getElementById("saveButton");
+const restartButton = document.getElementById("restartButton");
+const pauseButton = document.getElementById("pauseButton");
+const exitButton = document.getElementById("exitButton");
+const nameInput = document.getElementById("nameInput");
+const difficultySelect = document.getElementById("difficultySelect");
+const difficultyContainer = document.getElementById("difficultyContainer");
+const confirmDifficulty = document.getElementById("confirmDifficulty");
+const instructionsButton = document.getElementById("instructionsButton");
+const instructions = document.getElementById("instructions");
+const closeInstructions = document.getElementById("closeInstructions");
 
-let history=[],redoStack=[],isFullscreen=false,wasInPreviewBeforeFile=false,fullscreenWasActive=false,lastPreviewUrl=null;
-let searchResults=[],currentResult=-1,lastSearch="";
-let activeLineNumber = null;
+let platformWidth = 80, platformHeight = 10, platformX = (canvas.width - platformWidth) / 2;
+let blockWidth = 20, blockHeight = 20;
+let blocks = [];
+let baseSpeed = 2;
+let speed = baseSpeed;
+let rightPressed = false, leftPressed = false;
+let gameStarted = false;
+let gameOver = false;
+let gamePaused = false;
+let score = 0;
+let blockInterval;
+let animationId;
 
-// --- Перетаскивание кнопки выхода ---
-(function setupDrag() {
-  const btn = forceExitFullscreenBtn;
-  const handle = document.getElementById('dragHandle');
-  let isDragging = false, startX, startY, startRight, startTop;
-
-  function onStart(e) {
-    const ev = e.touches ? e.touches[0] : e;
-    isDragging = true;
-    const rect = btn.getBoundingClientRect();
-    startX = ev.clientX;
-    startY = ev.clientY;
-    startRight = window.innerWidth - rect.right;
-    startTop = rect.top;
-    btn.style.transition = 'none';
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd, { passive: false });
-    e.preventDefault && e.preventDefault();
-  }
-
-  function onMove(e) {
-    if (!isDragging) return;
-    const ev = e.touches ? e.touches[0] : e;
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-    let newRight = startRight - dx;
-    let newTop = startTop + dy;
-    newRight = Math.max(10, Math.min(window.innerWidth - btn.offsetWidth - 10, newRight));
-    newTop = Math.max(10, Math.min(window.innerHeight - btn.offsetHeight - 10, newTop));
-    btn.style.right = newRight + 'px';
-    btn.style.top = newTop + 'px';
-    btn.style.left = 'auto';
-    btn.style.bottom = 'auto';
-    e.preventDefault && e.preventDefault();
-  }
-
-  function onEnd(e) {
-    if (isDragging) {
-      isDragging = false;
-      btn.style.transition = '';
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-    }
-  }
-
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
-})();
-
-function applyTheme(themeName){
-['theme-dark','theme-light','theme-green','theme-ocean','theme-graphite'].forEach(t=>body.classList.remove(t));
-body.classList.add('theme-'+(['dark','light','green','ocean','graphite'].includes(themeName)?themeName:'dark'));
-localStorage.setItem('klikedit_theme',themeName);
-themeSwitcher.value=themeName;
+// Обновление платформы
+function drawPlatform() {
+    ctx.beginPath();
+    ctx.rect(platformX, canvas.height - platformHeight - 10, platformWidth, platformHeight);
+    ctx.fillStyle = "#0095DD";
+    ctx.fill();
+    ctx.closePath();
 }
 
-function initTheme(){
-const t=localStorage.getItem('klikedit_theme');
-applyTheme(['dark','light','green','ocean','graphite'].includes(t)?t:'dark');
-}
-
-themeSwitcher.addEventListener('change',e=>applyTheme(e.target.value));
-
-function clearUrlInput(){
-urlInput.value='';
-urlInput.focus();
-}
-
-function clearLineNumber(){
-const x=document.getElementById('lineNumber');
-x.value='';
-x.focus();
-}
-
-function clearSearch(){
-searchInput.value='';
-lastSearch='';
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-searchInput.focus();
-}
-
-function updateSearchCounter() {
-    if (searchResults.length === 0) {
-        searchCounter.textContent = '';
-    } else {
-        const idx = currentResult === -1 ? 0 : currentResult;
-        searchCounter.textContent = (idx + 1) + '/' + searchResults.length;
-    }
-}
-
-async function sendCodeQR(){
-const code=textarea.value;
-try{
-await navigator.clipboard.writeText(code);
-}catch(e){
-textarea.select();
-document.execCommand('copy');
-}
-window.location.href='https://2d3t.github.io/2d3t/pro/Pro6/index.html';
-}
-
-async function fetchWebsiteCode(){
-let url=urlInput.value.trim();
-if(!url)return;
-if(!/^https?:\/\//i.test(url))url='https://'+url;
-const old=fetchButton.textContent;
-fetchButton.textContent='Загрузка... ⏳';
-fetchButton.classList.add('fetch-loading');
-fetchButton.disabled=true;
-try{
-const r=await fetch(url);
-if(!r.ok)throw new Error('HTTP '+r.status);
-const html=await r.text();
-if(!html)throw new Error('Пустой ответ');
-saveState();
-textarea.value=html;
-updateLineNumbers();
-activeLineNumber = null;
-highlightActiveLine();
-lastSearch='';
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-}catch(e){console.error('Ошибка загрузки:',e)}
-finally{
-fetchButton.textContent=old;
-fetchButton.classList.remove('fetch-loading');
-fetchButton.disabled=false;
-}
-}
-
-function extractHtmlContent(raw){
-if(!raw||!raw.trim())return'';
-let s=raw.toLowerCase().indexOf('<!doctype html');
-if(s<0)s=raw.toLowerCase().indexOf('<html');
-if(s<0)return raw;
-let e=raw.toLowerCase().lastIndexOf('</html>');
-return e<0?raw.substring(s):raw.substring(s,e+7);
-}
-
-function updateLineNumbers(){
-const lines=textarea.value.split('\n').length;
-const total=lines+Math.ceil(lines*.5);
-lineNumbersDiv.innerHTML='';
-for(let i=1;i<=total;i++){
-const d=document.createElement('div');
-d.textContent=i;
-lineNumbersDiv.appendChild(d);
-}
-syncScroll();
-}
-
-function syncScroll(){
-lineNumbersDiv.scrollTop=textarea.scrollTop;
-}
-
-function goToLine(){
-const line=parseInt(document.getElementById('lineNumber').value);
-const lines=textarea.value.split('\n');
-const total=lines.length+Math.ceil(lines.length*.5);
-if(!isNaN(line)&&line>0&&line<=total){
-const h=parseFloat(getComputedStyle(textarea).lineHeight);
-textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2+h/2);
-activeLineNumber = line;
-highlightActiveLine(line);
-}
-}
-
-function highlightActiveLine(line){
-if (line === undefined) {
-    line = null;
-}
-activeLineNumber = line;
-Array.from(lineNumbersDiv.children).forEach((el, i) => {
-    const shouldHighlight = (line !== null && i === line - 1);
-    el.classList.toggle('active-line', shouldHighlight);
-});
-}
-
-function copyText(){
-textarea.select();
-document.execCommand('copy');
-copyButton.classList.add('copied');
-copyButton.textContent='Скопировано';
-setTimeout(()=>{
-copyButton.classList.remove('copied');
-copyButton.textContent='Скопировать 📃';
-},1000);
-}
-
-function clearAll(){
-saveState();
-textarea.value='';
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-}
-
-function runCode(){
-const code=extractHtmlContent(textarea.value)||textarea.value;
-const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=url;
-previewFrame.src=url;
-fullscreenFrame.src=url;
-previewFrame.style.display='block';
-previewFrame.style.visibility='visible';
-previewFrame.style.opacity='1';
-previewFrame.classList.add('active');
-editorContainer.classList.add('hidden');
-editorContainer.style.display='none';
-window.scrollTo(0,0);
-}
-
-function showEditor(){
-if(isFullscreen)forceExitFullscreen();
-previewFrame.classList.remove('active');
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-previewFrame.src='about:blank';
-editorContainer.classList.remove('hidden');
-editorContainer.style.display='flex';
-updateLineNumbers();
-window.scrollTo(0,0);
-}
-
-function shareCode(){
-const a=document.createElement('a');
-a.href=URL.createObjectURL(new Blob([textarea.value],{type:'text/plain'}));
-a.download='code.html';
-a.click();
-setTimeout(()=>URL.revokeObjectURL(a.href),100);
-}
-
-function saveState(){
-history.push(textarea.value);
-redoStack=[];
-if(history.length>100)history.shift();
-}
-
-function undo(){
-if(history.length){
-redoStack.push(textarea.value);
-textarea.value=history.pop();
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-}
-}
-
-function redo(){
-if(redoStack.length){
-history.push(textarea.value);
-textarea.value=redoStack.pop();
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-}
-}
-
-function handleFileWithFullscreenRestore(event){
-const file=event.target.files[0];
-if(!file)return;
-const ext=file.name.split('.').pop().toLowerCase();
-const supported=['html','htm','txt','py','js','css','json','xml','md','csv','log','ini','cfg','conf','sh','bat','ps1','rb','php','java','c','cpp','h','cs','go','rs','swift','kt','sql','yaml','yml','toml','pl','pm','r','lua','vim','ts','jsx','tsx','vue','scss','less','sass','styl'];
-if(!supported.includes(ext)){
-event.target.value='';
-return;
-}
-wasInPreviewBeforeFile=previewFrame.classList.contains('active');
-fullscreenWasActive=isFullscreen;
-const reader=new FileReader();
-reader.onload=e=>{
-const content=e.target.result;
-saveState();
-textarea.value=content;
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-if(wasInPreviewBeforeFile){
-const code=extractHtmlContent(content)||content;
-const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=url;
-previewFrame.src=url;
-fullscreenFrame.src=url;
-previewFrame.style.display='block';
-previewFrame.style.visibility='visible';
-previewFrame.style.opacity='1';
-if(fullscreenWasActive&&!isFullscreen)setTimeout(()=>{
-if(previewFrame.classList.contains('active')&&!isFullscreen)enterFullscreenInternal();
-},150);
-}
-event.target.value='';
-};
-reader.onerror=()=>event.target.value='';
-reader.readAsText(file,'UTF-8');
-}
-
-function toggleFullscreen(){
-if(!previewFrame.classList.contains('active'))return;
-isFullscreen?forceExitFullscreen():enterFullscreenInternal();
-}
-
-function enterFullscreenInternal(){
-if(!previewFrame.classList.contains('active'))return;
-const code=extractHtmlContent(textarea.value)||textarea.value;
-const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=url;
-fullscreenFrame.src=url;
-previewFrame.src=url;
-fullscreenOverlay.classList.add('active');
-isFullscreen=true;
-fullscreenButton.textContent='Обычный экран ⛶';
-fullscreenButton.style.background='#4CAF50';
-previewFrame.classList.remove('active');
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-document.querySelector('.toolbar').style.display='none';
-editorContainer.style.display='none';
-if(fullscreenOverlay.requestFullscreen)fullscreenOverlay.requestFullscreen().catch(()=>{});
-document.addEventListener('keydown',handleEscapeKey);
-document.addEventListener('fullscreenchange',handleFullscreenChange);
-}
-
-function forceExitFullscreen(){
-if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
-fullscreenOverlay.classList.remove('active');
-isFullscreen=false;
-fullscreenButton.textContent='Полный экран ⛶';
-fullscreenButton.style.background='';
-document.querySelector('.toolbar').style.display='flex';
-editorContainer.style.display='flex';
-editorContainer.classList.remove('hidden');
-previewFrame.classList.remove('active');
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=null;
-previewFrame.src='about:blank';
-fullscreenFrame.src='about:blank';
-document.removeEventListener('keydown',handleEscapeKey);
-document.removeEventListener('fullscreenchange',handleFullscreenChange);
-window.scrollTo(0,0);
-updateLineNumbers();
-}
-
-function handleEscapeKey(e){
-if(e.key==='Escape'&&isFullscreen)forceExitFullscreen();
-}
-
-function handleFullscreenChange(){
-if(!document.fullscreenElement&&isFullscreen&&fullscreenOverlay.classList.contains('active')){
-setTimeout(()=>{
-if(isFullscreen&&!document.fullscreenElement)fullscreenOverlay.requestFullscreen().catch(()=>{});
-},200);
-}
-}
-
-function findAll(term){
-searchResults=[];
-currentResult=-1;
-if(!term)return;
-let i=textarea.value.indexOf(term);
-while(i!==-1){
-searchResults.push(i);
-i=textarea.value.indexOf(term,i+term.length);
-}
-updateSearchCounter();
-}
-
-function highlightMatch(){
-if(!searchResults.length)return;
-const pos=searchResults[currentResult],term=searchInput.value;
-textarea.focus();
-textarea.setSelectionRange(pos,pos+term.length);
-const h=parseFloat(getComputedStyle(textarea).lineHeight);
-const line=textarea.value.substring(0,pos).split('\n').length;
-textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2);
-updateSearchCounter();
-}
-
-function findNext(){
-const term=searchInput.value;
-if(!term)return;
-if(term!==lastSearch){
-findAll(term);
-lastSearch=term;
-}
-if(!searchResults.length)return;
-currentResult=(currentResult+1)%searchResults.length;
-highlightMatch();
-}
-
-function findPrev(){
-const term=searchInput.value;
-if(!term)return;
-if(term!==lastSearch){
-findAll(term);
-lastSearch=term;
-}
-if(!searchResults.length)return;
-currentResult=(currentResult-1+searchResults.length)%searchResults.length;
-highlightMatch();
-}
-
-textarea.addEventListener('input',saveState);
-
-searchInput.addEventListener('input',()=>{
-lastSearch='';
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-});
-
-urlInput.addEventListener('keypress',e=>{
-if(e.key==='Enter'){
-e.preventDefault();
-fetchWebsiteCode();
-}
-});
-
-document.getElementById('lineNumber').addEventListener('keydown',e=>{
-if(e.key==='Enter'){
-e.preventDefault();
-goToLine();
-}
-});
-
-forceExitFullscreenBtn.addEventListener('click', (e) => {
-  if (!e.target.closest('.drag-handle')) {
-    forceExitFullscreen();
-  }
-});
-
-window.addEventListener('pageshow',()=>{
-updateLineNumbers();
-syncScroll();
-activeLineNumber = null;
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-});
-
-// Инициализация
-updateLineNumbers();
-textarea.value='';
-activeLineNumber = null;
-highlightActiveLine();
-updateLineNumbers();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-
-initTheme();
-
-// Service Worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('[SW] ✅ Зарегистрирован'))
-        .catch(err => console.log('[SW] ❌ Ошибка:', err));
-}
-
-// ============ ОТПРАВКА КОДА В QR (Pro6) ============
-function sendToQR() {
-    const code = document.getElementById('codeArea').value;
-    if (!code.trim()) {
-        alert('Код пуст!');
-        return;
-    }
-
-    try {
-        navigator.clipboard.writeText(code);
-    } catch (e) {
-        const textarea = document.getElementById('codeArea');
-        textarea.select();
-        document.execCommand('copy');
-        textarea.setSelectionRange(0, 0);
-    }
-
-    localStorage.setItem('sharedCode', JSON.stringify({
-        code: code,
-        timestamp: Date.now(),
-        from: 'Pro5'
-    }));
-
-    const btn = document.querySelector('[onclick="sendToQR()"]');
-    const originalText = btn.textContent;
-    btn.textContent = '✅ Отправлено!';
-    btn.style.background = '#00b894';
-    btn.style.color = 'white';
-    btn.disabled = true;
-
-    setTimeout(() => {
-        btn.textContent = '📤 QR';
-        btn.style.background = '';
-        btn.style.color = '';
-        btn.disabled = false;
-    }, 2000);
-
-    window.open('/2d3t/pro/Pro6/', '_blank');
-}
-
-// ============ ОТКРЫТЬ СКАНЕР В PRO6 ============
-function openQRScanner() {
-    localStorage.setItem('qrCommand', JSON.stringify({
-        action: 'openScanner',
-        from: 'Pro5',
-        timestamp: Date.now()
-    }));
-    window.open('/2d3t/pro/Pro6/', '_blank');
-}
-
-// ============ БЛОКИРОВКА СНА ============
-async function keepScreenAwake() {
-    try {
-        const wakeLock = await navigator.wakeLock.request('screen');
-        console.log('[WakeLock] Экран не уснёт');
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                navigator.wakeLock.request('screen').then(wl => {
-                    console.log('[WakeLock] Возобновлён');
-                }).catch(() => {});
-            }
-        });
-    } catch (e) {
-        console.log('[WakeLock] Не поддерживается:', e);
-    }
-}
-document.addEventListener('DOMContentLoaded', keepScreenAwake);
-
-// ============ КНОПКА "ПОДЕЛИТЬСЯ ФАЙЛОМ" ============
-function shareFile() {
-    const code = document.getElementById('codeArea').value;
-    if (!code.trim()) {
-        alert('⚠️ Нет текста для отправки!');
-        return;
-    }
-
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        animation: fadeIn 0.25s ease;
-        padding: 20px;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-    `;
-
-    const card = document.createElement('div');
-    card.style.cssText = `
-        background: #141a24;
-        border-radius: 24px;
-        padding: 24px;
-        max-width: 400px;
-        width: 100%;
-        border: 1px solid #2a3340;
-        text-align: center;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-    `;
-
-    let defaultExt = 'txt';
-    const trimmed = code.trim();
-    if (trimmed.toLowerCase().startsWith('<!doctype') || 
-        trimmed.toLowerCase().startsWith('<html') ||
-        trimmed.includes('<body') ||
-        trimmed.includes('<div')) {
-        defaultExt = 'html';
-    }
-
-    card.innerHTML = `
-        <h3 style="color: #e2e8f0; margin: 0 0 8px 0;">📤 Поделиться файлом</h3>
-        <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
-            Введите имя файла
-        </p>
-        <div style="margin-bottom: 16px;">
-            <input type="text" id="fileNameInput" value="code" 
-                   style="width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid #2a3340; 
-                          background: #0d1117; color: #e2e8f0; font-size: 16px; box-sizing: border-box;
-                          outline: none; transition: border-color 0.2s;"
-                   placeholder="Имя файла" 
-                   onfocus="this.style.borderColor='#3b4de0'"
-                   onblur="this.style.borderColor='#2a3340'">
-        </div>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
-            <button onclick="doShare('txt')" 
-                    style="flex:1; min-width:100px; background:#3b4de0; color:white; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; transition: transform 0.1s;"
-                    onmouseover="this.style.transform='scale(1.02)'"
-                    onmouseout="this.style.transform='scale(1)'">
-                📄 TXT
-            </button>
-            <button onclick="doShare('html')" 
-                    style="flex:1; min-width:100px; background:#7c5a00; color:#fcd34d; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; transition: transform 0.1s;"
-                    onmouseover="this.style.transform='scale(1.02)'"
-                    onmouseout="this.style.transform='scale(1)'">
-                🌐 HTML
-            </button>
-        </div>
-        <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
-                style="margin-top:14px; background:#1e2630; color:#94a3b8; border:1px solid #2a3340; border-radius:40px; padding:8px 24px; font-size:14px; cursor:pointer; width:auto; transition: background 0.2s;"
-                onmouseover="this.style.background='#2a3340'"
-                onmouseout="this.style.background='#1e2630'">
-            ✕ Отмена
-        </button>
-    `;
-
-    modal.appendChild(card);
-    document.body.appendChild(modal);
-
-    setTimeout(() => {
-        const input = document.getElementById('fileNameInput');
-        if (input) {
-            input.focus();
-            input.select();
-        }
-    }, 100);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
-
-    document.addEventListener('keydown', function escapeHandler(e) {
-        if (e.key === 'Escape') {
-            modal.remove();
-            document.removeEventListener('keydown', escapeHandler);
-        }
+// Отрисовка блоков
+function drawBlocks() {
+    blocks.forEach(block => {
+        ctx.beginPath();
+        ctx.rect(block.x, block.y, blockWidth, blockHeight);
+        ctx.fillStyle = "#ff5733";
+        ctx.fill();
+        ctx.closePath();
     });
 }
 
-function doShare(format) {
-    const code = document.getElementById('codeArea').value;
-    if (!code.trim()) {
-        alert('⚠️ Нет данных!');
+// Обновление блоков
+function updateBlocks() {
+    blocks.forEach(block => {
+        block.y += speed;
+    });
+
+    blocks = blocks.filter(block => {
+        if (block.y + blockHeight > canvas.height - platformHeight - 10 &&
+            block.x > platformX && block.x < platformX + platformWidth) {
+            score++; // Увеличиваем счёт за поимку блока
+            return false;
+        } else if (block.y + blockHeight > canvas.height) {
+            gameOver = true;
+            return false;
+        }
+        return true;
+    });
+}
+
+// Добавление нового блока
+function spawnBlock() {
+    const x = Math.random() * (canvas.width - blockWidth);
+    blocks.push({ x: x, y: 0 });
+}
+
+// Обновление платформы
+function updatePlatform() {
+    if (rightPressed && platformX < canvas.width - platformWidth) {
+        platformX += 5;
+    } else if (leftPressed && platformX > 0) {
+        platformX -= 5;
+    }
+}
+
+// Основной цикл игры
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawPlatform();
+    drawBlocks();
+    updateBlocks();
+    updatePlatform();
+
+    // Отображение очков
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#FFD700"; // Жёлтый текст
+    ctx.fillText(`Очки: ${score}`, 10, 30);
+
+    // Отображение уровня сложности
+    ctx.fillText(`Уровень: ${difficultySelect.value}`, canvas.width - 120, 30);
+
+    if (gameOver) {
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "#FF0000"; // Красный текст
+        ctx.fillText("Игра окончена", 60, canvas.height / 2 - 20);
+        startButton.style.display = "none";
+        pauseButton.style.display = "none";
+        nameInput.style.display = "block";
+        saveButton.style.display = "block";
+        restartButton.style.display = "block";
+        exitButton.style.display = "block";
+        clearInterval(blockInterval);
+        cancelAnimationFrame(animationId);
         return;
     }
 
-    const fileNameInput = document.getElementById('fileNameInput');
-    let fileName = fileNameInput ? fileNameInput.value.trim() : 'code';
-    if (!fileName) fileName = 'code';
-
-    const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
-    if (modal) modal.remove();
-
-    let blob, fullFilename, mimeType;
-
-    if (format === 'txt') {
-        blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-        fullFilename = fileName + '.txt';
-        mimeType = 'text/plain';
-    } else {
-        let htmlContent = code.trim();
-        if (!htmlContent.toLowerCase().startsWith('<!doctype') && 
-            !htmlContent.toLowerCase().startsWith('<html')) {
-            htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${fileName}</title>
-<style>
-    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
-</style>
-</head>
-<body>
-${code}
-</body>
-</html>`;
-        }
-        blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        fullFilename = fileName + '.html';
-        mimeType = 'text/html';
+    if (!gamePaused) {
+        animationId = requestAnimationFrame(draw);
     }
+}
 
-    const file = new File([blob], fullFilename, { 
-        type: mimeType,
-        lastModified: Date.now()
-    });
+// Сброс игры
+function resetGame() {
+    platformX = (canvas.width - platformWidth) / 2;
+    blocks = [];
+    gameOver = false;
+    gameStarted = true;
+    gamePaused = false;
+    score = 0;
+    nameInput.style.display = "none";
+    saveButton.style.display = "none";
+    restartButton.style.display = "none";
+    pauseButton.style.display = "block";
+    exitButton.style.display = "block";
+    startButton.style.display = "none";
+    difficultyContainer.style.display = "none";
+    pauseButton.textContent = "Пауза";
+    
+    // Установка скорости в зависимости от уровня сложности
+    const difficulty = parseInt(difficultySelect.value);
+    // Для уровня 1: speed = 2 * 2^0 = 2
+    // Для уровня 2: speed = 2 * 2^1 = 4
+    // Для уровня 3: speed = 2 * 2^2 = 8 и т.д.
+    speed = baseSpeed * Math.pow(2, difficulty - 1);
+    
+    // Очистка предыдущего интервала
+    if (blockInterval) {
+        clearInterval(blockInterval);
+    }
+    
+    // Установка нового интервала спавна блоков
+    const spawnInterval = Math.max(300, 1000 - (difficulty - 1) * 150); // Минимальный интервал 300мс
+    blockInterval = setInterval(spawnBlock, spawnInterval);
+    
+    // Запуск игрового цикла
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+    draw();
+}
 
-    if (navigator.share) {
-        const shareData = {
-            files: [file]
-        };
-        if (navigator.canShare && navigator.canShare(shareData)) {
-            navigator.share(shareData)
-                .then(() => {
-                    console.log('✅ Файл успешно отправлен');
-                })
-                .catch((err) => {
-                    if (err.name !== 'AbortError') {
-                        console.error('Ошибка отправки:', err);
-                        fallbackDownload(blob, fullFilename);
-                    }
-                });
-            return;
+// Функция паузы
+function togglePause() {
+    gamePaused = !gamePaused;
+    pauseButton.textContent = gamePaused ? "Продолжить" : "Пауза";
+    
+    if (!gamePaused && !gameOver) {
+        draw();
+    }
+}
+
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+
+    for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = context.measureText(testLine);
+        const testWidth = metrics.width;
+
+        if (testWidth > maxWidth && n > 0) {
+            context.fillText(line, x, y);
+            line = words[n] + ' ';
+            y += lineHeight;
         } else {
-            navigator.share(shareData)
-                .catch((err) => {
-                    if (err.name !== 'AbortError') {
-                        fallbackDownload(blob, fullFilename);
-                    }
-                });
-            return;
+            line = testLine;
         }
     }
-    fallbackDownload(blob, fullFilename);
+    context.fillText(line, x, y);
 }
 
-function fallbackDownload(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+// Сохранение результата
+function saveResult() {
+    const name = nameInput.value || "Игрок"; // Имя игрока
+    const date = new Date().toLocaleString(); // Дата и время
+    const gameTitle = "В игре Anty Batty"; // Название игры
+    const resultText = `${gameTitle}: ${name} набрал ${score} очков. Дата: ${date}`;
+    
+    // Очистка и подготовка фона
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#001f3f"; // Тёмно-синий фон
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Настройка шрифта и цвета текста
+    ctx.font = "20px Arial";
+    ctx.fillStyle = "#FFD700"; // Жёлтый текст
+
+    // Отрисовка текста с переносом строк
+    wrapText(ctx, resultText, 10, 50, canvas.width - 20, 30);
+
+    // Сохранение как JPEG
+    const link = document.createElement("a");
+    link.download = "game_result.jpg";
+    link.href = canvas.toDataURL("image/jpeg");
+    link.click();
 }
 
-if (!document.querySelector('style[data-share-style]')) {
-    const style = document.createElement('style');
-    style.setAttribute('data-share-style', '');
-    style.textContent = `
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// ============ БИБЛИОТЕКА ============
-const LIBRARY_PATH = 'Biblio/';
-
-function openLibrary() {
-  const overlay = document.getElementById('libraryOverlay');
-  const content = document.getElementById('libraryContent');
-  overlay.classList.add('active');
-  content.innerHTML = '<div class="library-loading">⏳ Загрузка файлов...</div>';
-  fetchLibraryFiles();
-}
-
-function closeLibrary() {
-  document.getElementById('libraryOverlay').classList.remove('active');
-}
-
-document.getElementById('libraryOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeLibrary();
+// Управление через касания
+document.addEventListener("touchstart", (e) => {
+    if (!gameStarted || gamePaused || gameOver) return;
+    const touchX = e.touches[0].clientX;
+    if (touchX > window.innerWidth / 2) {
+        rightPressed = true;
+    } else {
+        leftPressed = true;
+    }
+});
+document.addEventListener("touchend", () => {
+    rightPressed = false;
+    leftPressed = false;
 });
 
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    const overlay = document.getElementById('libraryOverlay');
-    if (overlay.classList.contains('active')) closeLibrary();
-  }
+// Управление с клавиатуры
+document.addEventListener("keydown", (e) => {
+    if (!gameStarted || gamePaused || gameOver) return;
+    if (e.key === "ArrowRight") {
+        rightPressed = true;
+    } else if (e.key === "ArrowLeft") {
+        leftPressed = true;
+    }
+});
+document.addEventListener("keyup", (e) => {
+    if (e.key === "ArrowRight") {
+        rightPressed = false;
+    } else if (e.key === "ArrowLeft") {
+        leftPressed = false;
+    }
 });
 
-async function fetchLibraryFiles() {
-  const content = document.getElementById('libraryContent');
-  
-  try {
-    const response = await fetch(LIBRARY_PATH + 'index.json');
-    if (!response.ok) {
-      content.innerHTML = `
-        <div class="library-empty">
-          📂 Файлы не найдены.<br>
-          Создайте папку <code>Biblio</code> рядом с программой.<br>
-          <small>Создайте файл <code>Biblio/index.json</code> со списком файлов.</small>
-          <br><br>
-          <button onclick="createSampleLibrary()">📁 Создать пример библиотеки</button>
-        </div>
-      `;
-      return;
-    }
-    
-    const files = await response.json();
-    renderLibraryFiles(files);
-  } catch (error) {
-    content.innerHTML = `
-      <div class="library-empty">
-        ⚠️ Не удалось загрузить список файлов.<br>
-        <small>Убедитесь, что папка <code>Biblio</code> существует.</small>
-        <br><br>
-        <button onclick="createSampleLibrary()">📁 Создать пример библиотеки</button>
-      </div>
-    `;
-    console.error('Ошибка загрузки библиотеки:', error);
-  }
-}
+// Кнопки
+startButton.addEventListener("click", () => {
+    difficultyContainer.style.display = "block";
+    startButton.style.display = "none";
+});
 
-function renderLibraryFiles(files) {
-  const content = document.getElementById('libraryContent');
-  
-  if (!files || files.length === 0) {
-    content.innerHTML = '<div class="library-empty">📭 В библиотеке нет файлов</div>';
-    return;
-  }
-  
-  const jsFiles = files.filter(f => f.endsWith('.js'));
-  if (jsFiles.length === 0) {
-    content.innerHTML = '<div class="library-empty">📭 Нет .js файлов в библиотеке</div>';
-    return;
-  }
-  
-  let html = '<ul class="library-file-list">';
-  jsFiles.forEach(file => {
-    const safeName = file.replace(/['"\\]/g, '');
-    html += `
-      <li>
-        <span class="file-name">📄 ${safeName}</span>
-        <button class="copy-btn" data-file="${safeName}" onclick="copyLibraryFile('${safeName}', this)">
-          📋 Копировать
-        </button>
-      </li>
-    `;
-  });
-  html += '</ul>';
-  content.innerHTML = html;
-}
+confirmDifficulty.addEventListener("click", resetGame);
 
-async function copyLibraryFile(filename, button) {
-  try {
-    const originalText = button.textContent;
-    button.textContent = '⏳ Загрузка...';
-    button.disabled = true;
-    
-    const response = await fetch(LIBRARY_PATH + filename);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const content = await response.text();
-    
-    if (!content || content.trim() === '') {
-      throw new Error('Файл пустой');
-    }
-    
-    try {
-      await navigator.clipboard.writeText(content);
-    } catch (clipboardError) {
-      const textarea = document.createElement('textarea');
-      textarea.value = content;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
-    
-    button.textContent = '✅ Скопировано!';
-    button.classList.add('copied');
-    button.disabled = false;
-    
-    setTimeout(() => {
-      button.textContent = '📋 Копировать';
-      button.classList.remove('copied');
-    }, 2000);
-    
-    console.log(`✅ Файл ${filename} скопирован в буфер (${content.length} символов)`);
-    
-  } catch (error) {
-    console.error('Ошибка копирования:', error);
-    button.textContent = '❌ Ошибка';
-    button.disabled = false;
-    
-    let errorMessage = `Не удалось скопировать файл "${filename}"`;
-    if (error.message.includes('HTTP 404')) {
-      errorMessage += '\n\n❌ Файл не найден в папке Biblio';
-    } else if (error.message.includes('HTTP 403')) {
-      errorMessage += '\n\n🚫 Нет доступа к файлу';
-    } else if (error.message.includes('NetworkError')) {
-      errorMessage += '\n\n🌐 Ошибка сети. Проверьте подключение';
-    } else {
-      errorMessage += `\n\n${error.message}`;
-    }
-    alert(errorMessage);
-    
-    setTimeout(() => {
-      button.textContent = '📋 Копировать';
-    }, 2000);
-  }
-}
+pauseButton.addEventListener("click", togglePause);
 
-async function createSampleLibrary() {
-  try {
-    if ('showDirectoryPicker' in window) {
-      try {
-        const dirHandle = await window.showDirectoryPicker();
-        const biblioHandle = await dirHandle.getDirectoryHandle('Biblio', { create: true });
-        
-        const indexFile = await biblioHandle.getFileHandle('index.json', { create: true });
-        const writable = await indexFile.createWritable();
-        await writable.write(JSON.stringify(['example.js', 'helper.js'], null, 2));
-        await writable.close();
-        
-        const exampleFile = await biblioHandle.getFileHandle('example.js', { create: true });
-        const writable2 = await exampleFile.createWritable();
-        await writable2.write(`// Пример скрипта из библиотеки
-function sayHello() {
-    console.log('👋 Привет из библиотеки!');
-}
-
-function calculateSum(a, b) {
-    return a + b;
-}
-
-window.myLibrary = {
-    sayHello,
-    calculateSum
-};`);
-        await writable2.close();
-        
-        const helperFile = await biblioHandle.getFileHandle('helper.js', { create: true });
-        const writable3 = await helperFile.createWritable();
-        await writable3.write(`// Вспомогательные функции
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
-}
-
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-}`);
-        await writable3.close();
-        
-        alert('✅ Библиотека создана!\n\n' +
-              '📁 Папка: Biblio\n' +
-              '📄 Файлы: index.json, example.js, helper.js\n\n' +
-              'Теперь нажмите "📚 Библиотека" снова');
-        
-        fetchLibraryFiles();
-        
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          alert('❌ Не удалось создать библиотеку: ' + err.message);
-        }
-      }
-    } else {
-      alert('📁 Создайте папку "Biblio" рядом с index.html\n\n' +
-            '1. Создайте папку Biblio\n' +
-            '2. Создайте файл index.json с содержимым:\n' +
-            '   ["example.js", "helper.js"]\n' +
-            '3. Добавьте .js файлы в папку\n\n' +
-            'После создания нажмите "📚 Библиотека"');
+restartButton.addEventListener("click", () => {
+    // Сброс и показ выбора уровня
+    difficultyContainer.style.display = "block";
+    restartButton.style.display = "none";
+    saveButton.style.display = "none";
+    exitButton.style.display = "none";
+    pauseButton.style.display = "none";
+    nameInput.style.display = "none";
+    
+    // Очистка игрового состояния
+    if (blockInterval) {
+        clearInterval(blockInterval);
     }
-  } catch (error) {
-    console.error('Ошибка:', error);
-    alert('❌ Ошибка: ' + error.message);
-  }
-}
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+    gameStarted = false;
+    gameOver = false;
+    gamePaused = false;
+});
+
+saveButton.addEventListener("click", saveResult);
+
+exitButton.addEventListener("click", () => {
+    window.location.href = "https://2d3t.github.io/index.html/";
+});
+
+instructionsButton.addEventListener("click", () => {
+    instructions.style.display = "block";
+});
+
+closeInstructions.addEventListener("click", () => {
+    instructions.style.display = "none";
+});
+
 </script>
-
 
 
 
