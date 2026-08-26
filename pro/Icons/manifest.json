@@ -1,8 +1,8 @@
 {
-  "name": "Icon Generator",
+  "name": "Icons Creator",
   "short_name": "Icons",
-  "description": "Делай селфи с забавными искажениями",
-  "start_url": "/2d3t/pro/Icons/index.html",
+  "description": "Делай Иконки Легко!",
+  "start_url": "/2d3t/pro/MirrorX/index.html",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#111111",
