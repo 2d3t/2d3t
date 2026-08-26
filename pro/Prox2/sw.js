@@ -64,7 +64,7 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(() => {
                         // Fallback на главную страницу при офлайне
-                        return caches.match('/2d3t/Prox/index.html');
+                        return caches.match('/2d3t/pro/Prox2/index.html');
                     });
             })
     );
