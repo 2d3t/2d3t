@@ -1,10 +1,10 @@
 const CACHE_NAME = 'prox-pwa-v3';
 const FILES_TO_CACHE = [
-    '/2d3t/pro/ProX/index.html',
-    '/2d3t/pro/ProX/manifest.json',
+    '/2d3t/pro/Prox2/index.html',
+    '/2d3t/pro/Prox2/manifest.json',
     // Добавляем все иконки в кэш
-    '/2d3t/pro/Prox/icon-192.png',
-    '/2d3t/pro/Prox/icon-512.png'
+    '/2d3t/pro/Prox2/icon-192.png',
+    '/2d3t/pro/Prox2/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
