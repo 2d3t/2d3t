@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello World PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <!-- Добавляем иконки для браузера -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #0a0e14;
+            color: #e2e8f0;
+            flex-direction: column;
+            gap: 20px;
+        }
+        h1 { font-size: 4rem; }
+        p { font-size: 1.2rem; color: #94a3b8; }
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: #1e293b;
+            font-size: 0.9rem;
+        }
+        .online { color: #4ade80; }
+        .offline { color: #f87171; }
+    </style>
+</head>
+<body>
+    <h1>👋 Hello World!</h1>
+    <p>Это PWA-приложение работает офлайн</p>
+    <div class="status" id="status">🟢 Онлайн</div>
+
+    <script>
+        // Проверка статуса сети
+        function updateStatus() {
+            const status = document.getElementById('status');
+            if (navigator.onLine) {
+                status.textContent = '🟢 Онлайн';
+                status.className = 'status online';
+            } else {
+                status.textContent = '🔴 Офлайн (работает из кэша)';
+                status.className = 'status offline';
+            }
+        }
+
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        updateStatus();
+
+        // Регистрация Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('[SW] ✅ Зарегистрирован'))
+                .catch(err => console.log('[SW] ❌ Ошибка:', err));
+        }
+    </script>
+</body>
+</html>
