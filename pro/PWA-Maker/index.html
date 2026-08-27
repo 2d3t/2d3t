@@ -109,6 +109,11 @@
             border-color: #5f7aff;
             box-shadow: 0 0 0 3px rgba(79, 110, 255, 0.15);
         }
+        input[readonly] {
+            opacity: 0.7;
+            cursor: default;
+            border-color: #2a2d36;
+        }
         textarea {
             min-height: 80px;
             resize: vertical;
@@ -219,6 +224,13 @@
             color: #8690ad;
             font-size: 0.75rem;
             margin-top: 0.2rem;
+        }
+        .helper .auto-path {
+            color: #4b6aff;
+            font-family: monospace;
+            background: #1a1c23;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
         }
         hr {
             border: none;
@@ -407,21 +419,23 @@
             </div>
         </div>
 
+        <!-- ОПТИМИЗИРОВАННЫЙ БЛОК ПУТЕЙ -->
         <div>
             <label>Путь к index.html (start_url + базовый путь)</label>
             <input type="text" id="basePath" value="/2d3t/pro/MirrorX/index.html" placeholder="/ваш/путь/index.html">
-            <div class="helper">Путь используется для start_url, кэша и fallback. Измените под свой сервер.</div>
-        </div>
-        <div class="row-2">
-            <div>
-                <label>Иконка 192x192 (src)</label>
-                <input type="text" id="icon192" value="/2d3t/pro/MirrorX/icon-192.png" placeholder="/путь/icon-192.png">
-            </div>
-            <div>
-                <label>Иконка 512x512 (src)</label>
-                <input type="text" id="icon512" value="/2d3t/pro/MirrorX/icon-512.png" placeholder="/путь/icon-512.png">
+            <div class="helper">
+                📁 Пути для иконок будут сгенерированы автоматически:
+                <br>
+                <span class="auto-path" id="icon192Preview">/2d3t/pro/MirrorX/icon-192.png</span>
+                <span style="color:#5a627a; margin:0 4px;">·</span>
+                <span class="auto-path" id="icon512Preview">/2d3t/pro/MirrorX/icon-512.png</span>
             </div>
         </div>
+
+        <!-- СКРЫТЫЕ ПОЛЯ ДЛЯ ИКОНОК (автозаполняются) -->
+        <input type="hidden" id="icon192" value="/2d3t/pro/MirrorX/icon-192.png">
+        <input type="hidden" id="icon512" value="/2d3t/pro/MirrorX/icon-512.png">
+
         <div style="margin-top: 0.6rem;">
             <label>Cache Name (версия кэша)</label>
             <input type="text" id="cacheName" value="prox-pwa-v2" placeholder="cache-name-v1">
@@ -686,6 +700,10 @@
     const icon512 = document.getElementById('icon512');
     const cacheName = document.getElementById('cacheName');
 
+    // Элементы для предпросмотра путей иконок
+    const icon192Preview = document.getElementById('icon192Preview');
+    const icon512Preview = document.getElementById('icon512Preview');
+
     const htmlCode = document.getElementById('htmlCode');
     const manifestCode = document.getElementById('manifestCode');
     const swCode = document.getElementById('swCode');
@@ -698,8 +716,29 @@
         return fullPath.substring(0, lastSlash + 1);
     }
 
+    // Функция автоматической генерации путей для иконок
+    function updateIconPaths() {
+        const path = basePath.value.trim() || '/index.html';
+        const baseDir = getBaseDir(path);
+        
+        // Генерируем пути для иконок
+        const icon192Path = baseDir + 'icon-192.png';
+        const icon512Path = baseDir + 'icon-512.png';
+        
+        // Обновляем скрытые поля
+        icon192.value = icon192Path;
+        icon512.value = icon512Path;
+        
+        // Обновляем предпросмотр
+        if (icon192Preview) icon192Preview.textContent = icon192Path;
+        if (icon512Preview) icon512Preview.textContent = icon512Path;
+    }
+
     // Генерация всех трёх файлов
     function generateAll() {
+        // Сначала обновляем пути иконок
+        updateIconPaths();
+        
         const name = appName.value.trim() || '🪞 Кривое Зеркало';
         const short = shortName.value.trim() || '';
         const desc = appDesc.value.trim() || '';
@@ -905,7 +944,7 @@ self.addEventListener('fetch', (event) => {
     });
 
     // Генерация при изменении полей
-    const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, icon192, icon512, cacheName];
+    const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, cacheName];
     inputs.forEach(inp => {
         inp.addEventListener('input', generateAll);
         inp.addEventListener('change', generateAll);
@@ -984,8 +1023,6 @@ self.addEventListener('fetch', (event) => {
         bgColor.value = '#111111';
         themeColor.value = '#111111';
         basePath.value = '/2d3t/pro/MirrorX/index.html';
-        icon192.value = '/2d3t/pro/MirrorX/icon-192.png';
-        icon512.value = '/2d3t/pro/MirrorX/icon-512.png';
         cacheName.value = 'prox-pwa-v2';
         
         // Обновляем пикеры
