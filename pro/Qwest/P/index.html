@@ -1304,30 +1304,60 @@ self.addEventListener('fetch', event => {
 
 
 <script>
-
-// Добавьте эту функцию в ваш скрипт
-function setFavicon(iconData) {
-    // iconData может быть: URL, Base64, SVG или эмодзи
-    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
-    link.type = 'image/x-icon';
-    link.rel = 'shortcut icon';
-    link.href = iconData;
-    document.head.appendChild(link);
-}
-
-// Использование:
-// 1. С эмодзи
-setFavicon("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>");
-
-// 2. С Base64
-setFavicon("data:image/png;base64,...");
-
-// 3. Из localStorage (сохранили и загружаем)
-Storage.save('favicon', 'data:image/png;base64,...');
-const savedIcon = Storage.load('favicon');
-if (savedIcon) setFavicon(savedIcon);
-
-
+// Вставьте после вашего основного скрипта
+(function() {
+    // Создаём иконку через JavaScript
+    function setFavicon() {
+        // Вариант с эмодзи
+        const svg = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>";
+        
+        // Проверяем, есть ли уже иконка
+        let link = document.querySelector("link[rel*='icon']");
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+        }
+        
+        // Устанавливаем иконку
+        link.href = svg;
+        link.type = 'image/svg+xml';
+        
+        // Дублируем для старых браузеров
+        let shortcut = document.querySelector("link[rel='shortcut icon']");
+        if (!shortcut) {
+            shortcut = document.createElement('link');
+            shortcut.rel = 'shortcut icon';
+            document.head.appendChild(shortcut);
+        }
+        shortcut.href = svg;
+    }
+    
+    // Запускаем
+    setFavicon();
+    
+    // Добавляем возможность менять иконку
+    window.setAppIcon = function(emoji) {
+        const svg = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${emoji}</text></svg>`;
+        const links = document.querySelectorAll("link[rel*='icon'], link[rel='shortcut icon']");
+        links.forEach(link => {
+            link.href = svg;
+            link.type = 'image/svg+xml';
+        });
+        // Сохраняем в localStorage
+        if (window.Storage) {
+            Storage.save('app_icon', emoji);
+        }
+    };
+    
+    // Загружаем сохранённую иконку
+    if (window.Storage) {
+        const savedEmoji = Storage.load('app_icon');
+        if (savedEmoji) {
+            window.setAppIcon(savedEmoji);
+        }
+    }
+})();
 </script>
 
 
