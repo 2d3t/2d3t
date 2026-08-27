@@ -4,13 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Моя страница</title>
-    
+    <script>
+// Базовая настройка
+OfflineKit.PWA.setup({
+    name: 'Моё Приложение',
+    shortName: 'Приложение',
+    themeColor: '#2563eb',
+    color: '#2563eb'
+});
+
+// Или с полными параметрами
+OfflineKit.PWA.setup({
+    name: 'Моё Приложение',
+    shortName: 'Приложение',
+    description: 'Работает офлайн',
+    themeColor: '#1e293b',
+    backgroundColor: '#ffffff',
+    display: 'standalone',
+    startUrl: '/',
+    scope: '/',
+    color: '#2563eb',
+    registerSW: true,  // Автоматически добавит Service Worker
+    swCacheName: 'app-v1'
+}); это куда вставлять 
 
 
 
 
-
-<script>
 // ============================================================
 // УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ
 // Вставьте этот код в любую страницу — работает сразу
@@ -403,147 +423,399 @@ self.addEventListener('fetch', event => {
     console.log('[OfflineKit] ✅ Загружен v1.0.0');
 
 })(window);
-</script>
 
 
+// ============================================================
+// ДОПОЛНЕНИЕ: PWA ИКОНКА НА ТЕЛЕФОНЕ
+// Добавьте этот код после основного скрипта
+// ============================================================
 
-    <script>
-    // ============================================================
-    // ВЕСЬ ВАШ ОГРОМНЫЙ СКРИПТ ЗДЕСЬ (OfflineKit и всё остальное)
-    // ============================================================
-    
-    // ---------- СОЗДАЁМ ИКОНКУ ЧЕРЕЗ CANVAS (100% РАБОТАЕТ) ----------
-    (function() {
-        'use strict';
-        
-        // Функция создания иконки
-        function createFavicon(text, bgColor = '#4A90D9', textColor = '#FFFFFF') {
-            // Создаём canvas
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
+(function(global) {
+    'use strict';
+
+    // ---------- 7. PWA / ИКОНКА НА ТЕЛЕФОНЕ ----------
+    const PWA = {
+        /**
+         * Создать манифест для PWA
+         * @param {Object} config - Конфигурация
+         * @param {string} config.name - Полное имя приложения
+         * @param {string} config.shortName - Короткое имя
+         * @param {string} config.description - Описание
+         * @param {string} config.themeColor - Цвет темы (HEX)
+         * @param {string} config.backgroundColor - Цвет фона (HEX)
+         * @param {string} config.display - 'standalone' | 'fullscreen' | 'minimal-ui' | 'browser'
+         * @param {string} config.startUrl - Стартовый URL
+         * @param {Array} config.icons - Массив иконок
+         * @param {Array} config.screenshots - Скриншоты (опционально)
+         * @param {string} config.scope - Scope приложения
+         * @returns {string} - JSON манифеста
+         */
+        generateManifest({
+            name = 'Моё приложение',
+            shortName = 'Приложение',
+            description = 'Описание приложения',
+            themeColor = '#1e293b',
+            backgroundColor = '#ffffff',
+            display = 'standalone',
+            startUrl = '/',
+            icons = null,
+            screenshots = null,
+            scope = '/'
+        } = {}) {
             
-            // Рисуем фон
-            ctx.fillStyle = bgColor;
-            ctx.beginPath();
-            ctx.roundRect(0, 0, 64, 64, 12);
-            ctx.fill();
+            // Иконки по умолчанию (генерируются из SVG)
+            const defaultIcons = this.generateDefaultIcons(name);
             
-            // Рисуем текст
-            ctx.fillStyle = textColor;
-            ctx.font = 'bold 40px Arial, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, 32, 34);
-            
-            // Конвертируем в data URL
-            return canvas.toDataURL('image/png');
-        }
-        
-        // Функция установки иконки
-        function setFavicon(iconData) {
-            // Удаляем старые иконки
-            const oldLinks = document.querySelectorAll('link[rel*="icon"], link[rel="shortcut icon"]');
-            oldLinks.forEach(link => link.remove());
-            
-            // Создаём новую
-            const link = document.createElement('link');
-            link.rel = 'icon';
-            link.type = 'image/png';
-            link.href = iconData;
-            document.head.appendChild(link);
-            
-            // Для старых браузеров
-            const shortcut = document.createElement('link');
-            shortcut.rel = 'shortcut icon';
-            shortcut.href = iconData;
-            document.head.appendChild(shortcut);
-            
-            // Для Apple
-            const apple = document.createElement('link');
-            apple.rel = 'apple-touch-icon';
-            apple.href = iconData;
-            document.head.appendChild(apple);
-        }
-        
-        // Создаём иконку
-        let iconText = '📄'; // Можно заменить на любую букву или цифру
-        
-        // Пробуем загрузить сохранённую
-        try {
-            const saved = localStorage.getItem('app_icon_text');
-            if (saved) {
-                iconText = saved;
+            const manifest = {
+                name: name,
+                short_name: shortName,
+                description: description,
+                theme_color: themeColor,
+                background_color: backgroundColor,
+                display: display,
+                start_url: startUrl,
+                scope: scope,
+                icons: icons || defaultIcons,
+                orientation: 'portrait',
+                categories: ['utility', 'productivity'],
+                lang: 'ru',
+                prefer_related_applications: false
+            };
+
+            if (screenshots) {
+                manifest.screenshots = screenshots;
             }
-        } catch(e) {}
-        
-        // Создаём и устанавливаем
-        const iconData = createFavicon(iconText);
-        setFavicon(iconData);
-        
-        // Функция для смены иконки (доступна глобально)
-        window.changeAppIcon = function(newText, bgColor = '#4A90D9', textColor = '#FFFFFF') {
-            const newIcon = createFavicon(newText, bgColor, textColor);
-            setFavicon(newIcon);
+
+            return JSON.stringify(manifest, null, 2);
+        },
+
+        /**
+         * Создать иконки из SVG (встроенные)
+         * @param {string} appName - Имя приложения для инициалов
+         * @param {string} color - Цвет иконки
+         * @returns {Array} - Массив иконок
+         */
+        generateDefaultIcons(appName = 'APP', color = '#1e293b') {
+            const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+            const initial = appName.charAt(0).toUpperCase();
             
-            // Сохраняем
-            try {
-                localStorage.setItem('app_icon_text', newText);
-            } catch(e) {}
-            
-            // Уведомление
-            if (window.Utils && Utils.showToast) {
-                Utils.showToast('✅ Иконка обновлена: ' + newText);
-            } else {
-                alert('Иконка обновлена: ' + newText);
+            // SVG шаблон с инициалами
+            const svgTemplate = (size) => {
+                const fontSize = size * 0.5;
+                return `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+                        <rect width="${size}" height="${size}" rx="${size * 0.15}" fill="${color}"/>
+                        <text x="${size/2}" y="${size/2 + fontSize * 0.35}" 
+                              text-anchor="middle" 
+                              font-family="Arial, sans-serif" 
+                              font-size="${fontSize}" 
+                              font-weight="bold" 
+                              fill="white">${initial}</text>
+                    </svg>
+                `;
+            };
+
+            return sizes.map(size => {
+                const svg = svgTemplate(size);
+                const base64 = btoa(unescape(encodeURIComponent(svg)));
+                return {
+                    src: `data:image/svg+xml;base64,${base64}`,
+                    sizes: `${size}x${size}`,
+                    type: 'image/svg+xml',
+                    purpose: 'any maskable'
+                };
+            });
+        },
+
+        /**
+         * Сгенерировать HTML-код для вставки манифеста
+         * @param {Object} config - Конфигурация манифеста
+         * @returns {string} - HTML код
+         */
+        generateManifestHTML(config = {}) {
+            const manifest = this.generateManifest(config);
+            const encoded = encodeURIComponent(manifest);
+            return `<link rel="manifest" href='data:application/json;charset=utf-8,${encoded}'>`;
+        },
+
+        /**
+         * Создать HTML для мета-тегов PWA
+         * @param {Object} config - Конфигурация
+         * @returns {string} - HTML код
+         */
+        generateMetaTags({
+            name = 'Моё приложение',
+            themeColor = '#1e293b',
+            appleTouchIcon = null,
+            appleStatusBarStyle = 'black-translucent'
+        } = {}) {
+            let html = `
+                <meta name="apple-mobile-web-app-capable" content="yes">
+                <meta name="apple-mobile-web-app-status-bar-style" content="${appleStatusBarStyle}">
+                <meta name="apple-mobile-web-app-title" content="${name}">
+                <meta name="theme-color" content="${themeColor}">
+                <meta name="mobile-web-app-capable" content="yes">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            `;
+
+            if (appleTouchIcon) {
+                html += `
+                    <link rel="apple-touch-icon" href="${appleTouchIcon}">
+                    <link rel="apple-touch-icon-precomposed" href="${appleTouchIcon}">
+                `;
             }
-        };
-        
-        console.log('✅ Иконка установлена:', iconText);
-    })();
-    
-    // Полифил для roundRect (если браузер старый)
-    if (!CanvasRenderingContext2D.prototype.roundRect) {
-        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
-            if (r > w/2) r = w/2;
-            if (r > h/2) r = h/2;
-            this.moveTo(x + r, y);
-            this.lineTo(x + w - r, y);
-            this.quadraticCurveTo(x + w, y, x + w, y + r);
-            this.lineTo(x + w, y + h - r);
-            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-            this.lineTo(x + r, y + h);
-            this.quadraticCurveTo(x, y + h, x, y + h - r);
-            this.lineTo(x, y + r);
-            this.quadraticCurveTo(x, y, x + r, y);
-            return this;
-        };
+
+            return html;
+        },
+
+        /**
+         * Автоматическая установка PWA (всё в одном)
+         * @param {Object} config - Конфигурация
+         * @param {boolean} injectManifest - Внедрить манифест в HTML
+         * @param {boolean} registerSW - Зарегистрировать Service Worker
+         * @returns {Promise}
+         */
+        async setup({
+            name = 'Моё приложение',
+            shortName = 'Приложение',
+            description = 'Работает даже без интернета',
+            themeColor = '#1e293b',
+            backgroundColor = '#ffffff',
+            display = 'standalone',
+            startUrl = '/',
+            scope = '/',
+            color = '#1e293b',
+            injectManifest = true,
+            registerSW = true,
+            swCacheName = 'app-v1'
+        } = {}) {
+            
+            // 1. Создаём манифест
+            const manifestConfig = {
+                name,
+                shortName,
+                description,
+                themeColor,
+                backgroundColor,
+                display,
+                startUrl,
+                scope,
+                icons: this.generateDefaultIcons(name, color)
+            };
+
+            // 2. Внедряем манифест
+            if (injectManifest) {
+                const manifestHTML = this.generateManifestHTML(manifestConfig);
+                const link = document.createElement('link');
+                link.rel = 'manifest';
+                link.href = `data:application/json;charset=utf-8,${encodeURIComponent(this.generateManifest(manifestConfig))}`;
+                document.head.appendChild(link);
+            }
+
+            // 3. Мета-теги
+            const metaHTML = this.generateMetaTags({ name, themeColor });
+            const metaContainer = document.createElement('div');
+            metaContainer.innerHTML = metaHTML;
+            while (metaContainer.firstChild) {
+                document.head.appendChild(metaContainer.firstChild);
+            }
+
+            // 4. Регистрируем Service Worker
+            if (registerSW && 'serviceWorker' in navigator) {
+                try {
+                    await global.SWHelper.setupOffline(swCacheName);
+                    console.log('[PWA] ✅ Service Worker зарегистрирован');
+                } catch (e) {
+                    console.warn('[PWA] SW не зарегистрирован:', e);
+                }
+            }
+
+            // 5. Добавляем подсказку об установке (для Android)
+            this.addInstallPrompt();
+
+            console.log('[PWA] ✅ Настроено:', name);
+            
+            return {
+                manifest: manifestConfig,
+                manifestHTML: this.generateManifestHTML(manifestConfig),
+                metaHTML
+            };
+        },
+
+        /**
+         * Добавить подсказку об установке приложения
+         */
+        addInstallPrompt() {
+            // Проверяем, не установлено ли уже
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('[PWA] Приложение уже установлено');
+                return;
+            }
+
+            // Создаём кнопку установки
+            let installPromptShown = false;
+            
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                const deferredPrompt = e;
+                
+                // Проверяем, не показали ли уже
+                if (installPromptShown) return;
+                installPromptShown = true;
+
+                // Создаём кнопку
+                const installBtn = document.createElement('div');
+                installBtn.id = '_installAppBtn';
+                installBtn.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        bottom: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: #1e293b;
+                        color: white;
+                        padding: 14px 28px;
+                        border-radius: 60px;
+                        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+                        font-family: system-ui, sans-serif;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        z-index: 10000;
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        animation: slideUp 0.5s ease;
+                    ">
+                        <span style="font-size: 1.5rem;">📱</span>
+                        Установить приложение
+                    </div>
+                    <style>
+                        @keyframes slideUp {
+                            from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+                            to { transform: translateX(-50%) translateY(0); opacity: 1; }
+                        }
+                        #_installAppBtn:hover {
+                            transform: translateX(-50%) scale(1.05);
+                        }
+                    </style>
+                `;
+                document.body.appendChild(installBtn);
+
+                // Обработчик установки
+                installBtn.addEventListener('click', async () => {
+                    installBtn.style.display = 'none';
+                    try {
+                        const result = await deferredPrompt.prompt();
+                        if (result.outcome === 'accepted') {
+                            console.log('[PWA] ✅ Установлено');
+                            global.Utils.showToast('✅ Приложение установлено!', 3000);
+                        } else {
+                            console.log('[PWA] ❌ Установка отменена');
+                        }
+                    } catch (error) {
+                        console.error('[PWA] Ошибка установки:', error);
+                    }
+                    installBtn.remove();
+                });
+            });
+
+            // Скрываем кнопку после установки
+            window.addEventListener('appinstalled', () => {
+                const btn = document.getElementById('_installAppBtn');
+                if (btn) btn.remove();
+                console.log('[PWA] ✅ Приложение установлено');
+                global.Utils.showToast('🎉 Приложение успешно установлено!', 3000);
+            });
+        },
+
+        /**
+         * Создать HTML-страницу для иконки Apple Touch (заглушка)
+         * @param {string} text - Текст на иконке
+         * @param {string} color - Цвет
+         * @returns {string} - HTML изображение
+         */
+        generateAppleIconHTML(text = 'APP', color = '#1e293b') {
+            return `
+                <svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+                    <rect width="180" height="180" rx="40" fill="${color}"/>
+                    <text x="90" y="115" text-anchor="middle" 
+                          font-family="-apple-system, system-ui, sans-serif" 
+                          font-size="72" font-weight="bold" 
+                          fill="white">${text.charAt(0).toUpperCase()}</text>
+                </svg>
+            `;
+        },
+
+        /**
+         * Проверить, запущено ли приложение в режиме standalone (PWA)
+         * @returns {boolean}
+         */
+        isStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+        },
+
+        /**
+         * Получить информацию о текущем PWA
+         * @returns {Object}
+         */
+        getInfo() {
+            return {
+                isStandalone: this.isStandalone(),
+                isOnline: global.Network.isOnline(),
+                platform: navigator.platform,
+                userAgent: navigator.userAgent,
+                displayMode: window.matchMedia('(display-mode: standalone)').matches 
+                    ? 'standalone' 
+                    : 'browser'
+            };
+        }
+    };
+
+    // ---------- 7.1 АВТОЗАПУСК ----------
+    const AutoPWA = {
+        /**
+         * Автоматическая настройка PWA с параметрами из атрибутов
+         * Используйте data-pwa-* атрибуты на теге <html>
+         */
+        initFromAttributes() {
+            const html = document.documentElement;
+            
+            const config = {
+                name: html.getAttribute('data-pwa-name') || document.title || 'Приложение',
+                shortName: html.getAttribute('data-pwa-short-name') || 
+                           document.title?.slice(0, 12) || 'Приложение',
+                description: html.getAttribute('data-pwa-description') || 
+                            'Работает даже без интернета',
+                themeColor: html.getAttribute('data-pwa-theme-color') || '#1e293b',
+                backgroundColor: html.getAttribute('data-pwa-bg-color') || '#ffffff',
+                color: html.getAttribute('data-pwa-color') || '#1e293b',
+                startUrl: html.getAttribute('data-pwa-start-url') || '/',
+                scope: html.getAttribute('data-pwa-scope') || '/'
+            };
+
+            return global.PWA.setup(config);
+        }
+    };
+
+    // ---------- ЭКСПОРТ ----------
+    global.PWA = PWA;
+    global.AutoPWA = AutoPWA;
+
+    // Автозапуск, если есть атрибуты
+    if (document.documentElement.hasAttribute('data-pwa-auto')) {
+        AutoPWA.initFromAttributes().catch(console.warn);
     }
-    </script>
-</head>
-<body>
-    <!-- Ваш контент -->
-    <h1>Привет!</h1>
-    
-    <button onclick="changeAppIcon('📱')">Иконка 📱</button>
-    <button onclick="changeAppIcon('🚀')">Иконка 🚀</button>
-    <button onclick="changeAppIcon('⭐', '#FF6B6B', '#FFF')">Иконка ⭐</button>
-    <button onclick="changeAppIcon('A', '#2ECC71', '#FFF')">Иконка A</button>
 
+    console.log('[PWA] ✅ Модуль иконок загружен');
 
+})(window);
 
-
-
-<script>
-// После загрузки основного скрипта и дополнения
-document.addEventListener('DOMContentLoaded', () => {
-    OfflineKit.PWA.setup({
-        name: 'Моё Приложение',
-        color: '#2563eb'
-    });
-});
 </script>
+
+
+
 
 </body>
 </html>
