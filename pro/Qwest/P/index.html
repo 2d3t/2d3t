@@ -7,15 +7,7 @@
     
 
 
-<script>
-// После загрузки основного скрипта и дополнения
-document.addEventListener('DOMContentLoaded', () => {
-    OfflineKit.PWA.setup({
-        name: 'Моё Приложение',
-        color: '#2563eb'
-    });
-});
-</script>
+
 
 
 <script>
@@ -538,5 +530,20 @@ self.addEventListener('fetch', event => {
     <button onclick="changeAppIcon('🚀')">Иконка 🚀</button>
     <button onclick="changeAppIcon('⭐', '#FF6B6B', '#FFF')">Иконка ⭐</button>
     <button onclick="changeAppIcon('A', '#2ECC71', '#FFF')">Иконка A</button>
+
+
+
+
+
+<script>
+// После загрузки основного скрипта и дополнения
+document.addEventListener('DOMContentLoaded', () => {
+    OfflineKit.PWA.setup({
+        name: 'Моё Приложение',
+        color: '#2563eb'
+    });
+});
+</script>
+
 </body>
 </html>
