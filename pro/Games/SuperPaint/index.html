@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+<link rel="manifest" href="manifest.json">
+    
+    <!-- Ваши иконки -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
     <title>🌈 Радужный рисователь → GIF | Живая анимация</title>
     <style>
         * {
@@ -884,6 +891,12 @@
 
 
 
+
+
+
+
+
+
 <script>
 // ============================================================
 // УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ
@@ -1278,6 +1291,100 @@ self.addEventListener('fetch', event => {
 
 })(window);
 </script>
+
+
+
+
+
+
+
+<script>
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНЫЙ ОФЛАЙН-БЛОК
+    // - Работает с любым существующим manifest.json
+    // - Работает с любым существующим sw.js
+    // - Не создаёт конфликтов
+    // - Просто дублирует регистрацию SW (безопасно)
+    // ============================================================
+
+    // ---------- 1. Регистрация Service Worker (если ещё не зарегистрирован) ----------
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        // Проверяем, не зарегистрирован ли уже SW
+        navigator.serviceWorker.getRegistration()
+            .then((registration) => {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+
+                // Если не зарегистрирован — регистрируем
+                navigator.serviceWorker.register('sw.js')
+                    .then((reg) => {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch((err) => {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch((err) => {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    // ---------- 2. Проверка сети (без индикаторов) ----------
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log(`📡 ${status}`);
+    }
+
+    // ---------- 3. Обработка событий сети ----------
+    function setupNetworkListeners() {
+        window.addEventListener('online', () => {
+            console.log('📡 Сеть восстановлена');
+            
+            // Обновляем SW при появлении сети
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then((registration) => {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(() => {});
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    // ---------- 4. Инициализация ----------
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    // Запускаем
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+
 
 
 </body>
