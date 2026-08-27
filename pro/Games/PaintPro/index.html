@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🎨 Детская раскраска — полноэкранный режим</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #f9e6b3 0%, #f4cda6 100%);
+            font-family: 'Segoe UI', 'Comic Neue', 'Comic Sans MS', 'Chalkboard SE', cursive, sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode {
+            background: #2c2c2c;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        .app-container {
+            max-width: 550px;
+            width: 100%;
+            background: rgba(255, 251, 240, 0.9);
+            border-radius: 64px 48px 64px 48px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.2), inset 0 1px 4px rgba(255,255,200,0.8);
+            padding: 20px 16px 22px;
+            backdrop-filter: blur(2px);
+            transition: all 0.3s ease;
+            margin: 12px auto;
+        }
+
+        body.fullscreen-mode .app-container {
+            max-width: 100%;
+            height: 100vh;
+            margin: 0;
+            padding: 10px;
+            border-radius: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.9rem;
+            margin: 0 0 8px 0;
+            color: #d44c2f;
+            text-shadow: 3px 3px 0 #ffd966;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode h1 {
+            font-size: 1.2rem;
+            margin: 0 0 5px 0;
+            padding: 0;
+        }
+
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+            gap: 8px;
+        }
+
+        .sound-toggle, .fullscreen-toggle {
+            background: #fff7e8;
+            border: none;
+            font-size: 1.3rem;
+            padding: 8px 15px;
+            border-radius: 60px;
+            font-weight: bold;
+            box-shadow: 0 4px 0 #c29a6b;
+            cursor: pointer;
+            transition: 0.07s linear;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #5a3e2b;
+        }
+
+        .sound-toggle:active, .fullscreen-toggle:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #c29a6b;
+        }
+
+        .sound-toggle.muted {
+            background: #e0c8a8;
+            opacity: 0.7;
+        }
+
+        body.fullscreen-mode .sound-toggle,
+        body.fullscreen-mode .fullscreen-toggle {
+            font-size: 1rem;
+            padding: 6px 12px;
+        }
+
+        .tools-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin: 15px 0 12px;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode .tools-row {
+            margin: 5px 0;
+            gap: 8px;
+        }
+
+        .tool-btn {
+            background: #fff7e8;
+            border: none;
+            font-size: 1.7rem;
+            padding: 8px 16px;
+            border-radius: 60px;
+            font-weight: bold;
+            box-shadow: 0 5px 0 #c29a6b;
+            cursor: pointer;
+            transition: 0.07s linear;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #5a3e2b;
+        }
+
+        body.fullscreen-mode .tool-btn {
+            font-size: 1.2rem;
+            padding: 6px 12px;
+        }
+
+        .tool-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #c29a6b;
+        }
+
+        .tool-btn.active {
+            background: #ffcf9a;
+            color: #b3411a;
+            box-shadow: 0 2px 0 #a57248;
+            transform: translateY(3px);
+        }
+
+        .slider-group {
+            background: #fff0dc;
+            padding: 6px 12px;
+            border-radius: 48px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: inset 0 0 0 1px #ffefc0, 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        body.fullscreen-mode .slider-group {
+            padding: 4px 10px;
+            gap: 8px;
+        }
+
+        .slider-group label {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #b4512c;
+        }
+
+        body.fullscreen-mode .slider-group label {
+            font-size: 0.9rem;
+        }
+
+        input[type="range"] {
+            width: 130px;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #f3bc7c;
+            border-radius: 10px;
+        }
+
+        body.fullscreen-mode input[type="range"] {
+            width: 100px;
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #e07c3e;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px black;
+        }
+
+        #brushSizeValue {
+            min-width: 38px;
+            background: #e9cfaa;
+            border-radius: 40px;
+            padding: 4px 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .palette {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin: 15px 0 18px;
+            background: #ffefdb;
+            padding: 12px 10px;
+            border-radius: 100px;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode .palette {
+            margin: 8px 0;
+            padding: 8px 10px;
+            gap: 8px;
+        }
+
+        .color-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: transform 0.1s ease, border 0.1s;
+            border: 3px solid white;
+        }
+
+        body.fullscreen-mode .color-circle {
+            width: 40px;
+            height: 40px;
+        }
+
+        .color-circle:active {
+            transform: scale(0.92);
+        }
+
+        .color-circle.active-color {
+            border: 4px solid #2c2c2c;
+            box-shadow: 0 0 0 2px gold;
+            transform: scale(1.02);
+        }
+
+        .canvas-area {
+            background: #e6d5b8;
+            border-radius: 48px;
+            padding: 12px;
+            box-shadow: inset 0 0 0 3px #fff3cf, 0 12px 18px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.fullscreen-mode .canvas-area {
+            border-radius: 24px;
+            padding: 8px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            cursor: crosshair;
+            touch-action: none;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode canvas {
+            max-height: calc(100vh - 200px);
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .file-label {
+            background: #aad6d1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 40px;
+            font-weight: bold;
+            color: #2c5a4a;
+            margin-top: 12px;
+            cursor: pointer;
+            transition: 0.1s;
+            border: none;
+            box-shadow: 0 5px 0 #6f9e93;
+        }
+
+        body.fullscreen-mode .file-label {
+            padding: 6px 12px;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+
+        .file-label:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #6f9e93;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode .action-buttons {
+            margin-top: 8px;
+            gap: 8px;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: #ffbc7a;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 12px 6px;
+            border-radius: 50px;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #4c2f1a;
+            box-shadow: 0 5px 0 #b1622c;
+            cursor: pointer;
+            transition: 0.07s linear;
+        }
+
+        body.fullscreen-mode .action-btn {
+            padding: 8px 4px;
+            font-size: 0.9rem;
+        }
+
+        .action-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #b1622c;
+        }
+
+        .info-message {
+            text-align: center;
+            font-size: 0.8rem;
+            margin-top: 12px;
+            background: #ffe2b5;
+            border-radius: 40px;
+            padding: 6px;
+            color: #8b5a2e;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode .info-message {
+            font-size: 0.7rem;
+            margin-top: 5px;
+            padding: 4px;
+        }
+
+        footer {
+            font-size: 0.7rem;
+            text-align: center;
+            margin-top: 14px;
+            color: #b68b54;
+            transition: all 0.3s ease;
+        }
+
+        body.fullscreen-mode footer {
+            display: none;
+        }
+
+        @media (max-width: 500px) {
+            .app-container {
+                padding: 14px;
+            }
+            .color-circle {
+                width: 42px;
+                height: 42px;
+            }
+            .tool-btn {
+                font-size: 1.2rem;
+                padding: 6px 14px;
+            }
+            .sound-toggle, .fullscreen-toggle {
+                font-size: 1rem;
+                padding: 6px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="header-controls">
+        <button id="fullscreenToggleBtn" class="fullscreen-toggle">🖥️ Во весь экран</button>
+        <button id="soundToggleBtn" class="sound-toggle">🔊 Звук вкл</button>
+    </div>
+    <h1>
+        <span>🖍️</span> Детская раскраска <span>🎨</span>
+    </h1>
+    <div class="tools-row">
+        <button id="eraserBtn" class="tool-btn">🧽 Ластик</button>
+        <div class="slider-group">
+            <label>✏️ Кисть</label>
+            <input type="range" id="brushSlider" min="3" max="40" value="14" step="1">
+            <span id="brushSizeValue">14</span>
+        </div>
+    </div>
+
+    <div class="palette" id="paletteContainer"></div>
+
+    <div class="canvas-area">
+        <canvas id="mainCanvas" width="500" height="500" style="width:100%; height:auto; max-width:500px; aspect-ratio:1/1"></canvas>
+    </div>
+
+    <div style="display: flex; justify-content: center; margin-top: 14px;">
+        <label class="file-label" id="uploadLabel">
+            📷 Загрузить фото → Ч/Б
+            <input type="file" id="photoUpload" accept="image/jpeg, image/png, image/webp">
+        </label>
+    </div>
+
+    <div class="action-buttons">
+        <button id="saveBtn" class="action-btn">💾 Сохранить рисунок</button>
+        <button id="clearCanvasBtn" class="action-btn">🧽 Очистить всё</button>
+    </div>
+    <div class="info-message">
+        ✨ Нажми на фото → оно станет ч/б. Раскрашивай пальцем! Ластик стирает нарисованное
+    </div>
+    <footer>🎉 Регулируй толщину, выбирай яркие цвета! 🖥️ Нажми "Во весь экран" для удобства</footer>
+</div>
+
+<script>
+    (function(){
+        // ---------- Звуковая система ----------
+        let soundEnabled = true;
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const fullscreenToggleBtn = document.getElementById('fullscreenToggleBtn');
+        
+        let audioCtx = null;
+        
+        function initAudio() {
+            if (!audioCtx && soundEnabled) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch(e) {
+                    console.log("Web Audio API не поддерживается");
+                    soundEnabled = false;
+                    soundToggleBtn.textContent = '🔇 Звук выкл';
+                    soundToggleBtn.classList.add('muted');
+                }
+            }
+        }
+        
+        function playBeep(frequency = 800, duration = 0.08, volume = 0.2) {
+            if (!soundEnabled || !audioCtx) return;
+            
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = frequency;
+                
+                gainNode.gain.value = volume;
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + duration);
+            } catch(e) {
+                console.log("Ошибка воспроизведения звука");
+            }
+        }
+        
+        function playButtonSound() {
+            playBeep(650, 0.08, 0.15);
+        }
+        
+        function playDrawSound() {
+            playBeep(880, 0.03, 0.08);
+        }
+        
+        function playToggleSound() {
+            playBeep(520, 0.1, 0.12);
+        }
+        
+        function playColorSound() {
+            playBeep(720, 0.07, 0.12);
+        }
+        
+        function playSaveSound() {
+            playBeep(440, 0.12, 0.18);
+            setTimeout(() => playBeep(660, 0.12, 0.18), 100);
+        }
+        
+        function playClearSound() {
+            playBeep(300, 0.2, 0.16);
+            setTimeout(() => playBeep(280, 0.15, 0.16), 150);
+        }
+        
+        function playPhotoSound() {
+            playBeep(520, 0.1, 0.14);
+            setTimeout(() => playBeep(620, 0.1, 0.14), 80);
+        }
+        
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled) {
+                soundToggleBtn.textContent = '🔊 Звук вкл';
+                soundToggleBtn.classList.remove('muted');
+                if (!audioCtx) {
+                    initAudio();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                playButtonSound();
+            } else {
+                soundToggleBtn.textContent = '🔇 Звук выкл';
+                soundToggleBtn.classList.add('muted');
+                if (audioCtx && audioCtx.state === 'running') {
+                    audioCtx.suspend();
+                }
+            }
+        }
+        
+        soundToggleBtn.addEventListener('click', () => {
+            toggleSound();
+        });
+        
+        function initAudioOnFirstInteraction() {
+            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            document.removeEventListener('click', initAudioOnFirstInteraction);
+            document.removeEventListener('touchstart', initAudioOnFirstInteraction);
+        }
+        
+        document.addEventListener('click', initAudioOnFirstInteraction);
+        document.addEventListener('touchstart', initAudioOnFirstInteraction);
+        
+        // ---------- Полноэкранный режим ----------
+        let isFullscreen = false;
+        
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                // Включаем полноэкранный режим
+                document.body.classList.add('fullscreen-mode');
+                fullscreenToggleBtn.innerHTML = '🏠 Выйти';
+                isFullscreen = true;
+                
+                // Прокручиваем к canvas
+                setTimeout(() => {
+                    const canvasArea = document.querySelector('.canvas-area');
+                    if (canvasArea) {
+                        canvasArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            } else {
+                // Выключаем полноэкранный режим
+                document.body.classList.remove('fullscreen-mode');
+                fullscreenToggleBtn.innerHTML = '🖥️ Во весь экран';
+                isFullscreen = false;
+            }
+            playButtonSound();
+        }
+        
+        fullscreenToggleBtn.addEventListener('click', toggleFullscreen);
+        
+        // Обработка клавиши Escape для выхода из полноэкранного режима
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isFullscreen) {
+                toggleFullscreen();
+            }
+        });
+        
+        // ---------- Остальная логика раскраски ----------
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const CANVAS_W = 500;
+        const CANVAS_H = 500;
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
+        
+        let drawing = false;
+        let isErasing = false;
+        let currentColor = '#FF4081';
+        let brushSize = 14;
+        
+        let lastX = 0, lastY = 0;
+        let lastDrawTime = 0;
+        
+        let blackWhiteImageData = null;
+        
+        const brushSlider = document.getElementById('brushSlider');
+        const brushSizeValue = document.getElementById('brushSizeValue');
+        const eraserBtn = document.getElementById('eraserBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const clearCanvasBtn = document.getElementById('clearCanvasBtn');
+        const photoUpload = document.getElementById('photoUpload');
+        const paletteContainer = document.getElementById('paletteContainer');
+        
+        const colorPalette = [
+            '#FF4136', '#FF851B', '#FFDC00', '#2ECC40',
+            '#39CCCC', '#0074D9', '#B10DC9', '#F012BE',
+            '#FF6EB4', '#8B4513', '#FFA07A', '#FFFFFF'
+        ];
+        
+        function buildPalette() {
+            paletteContainer.innerHTML = '';
+            colorPalette.forEach(color => {
+                const colorDiv = document.createElement('div');
+                colorDiv.className = 'color-circle';
+                colorDiv.style.backgroundColor = color;
+                colorDiv.setAttribute('data-color', color);
+                if(color === currentColor) colorDiv.classList.add('active-color');
+                colorDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if(isErasing) {
+                        isErasing = false;
+                        eraserBtn.classList.remove('active');
+                        playToggleSound();
+                    }
+                    currentColor = color;
+                    document.querySelectorAll('.color-circle').forEach(el => {
+                        el.classList.remove('active-color');
+                    });
+                    colorDiv.classList.add('active-color');
+                    playColorSound();
+                });
+                paletteContainer.appendChild(colorDiv);
+            });
+        }
+        
+        function updateActiveColorInPalette() {
+            document.querySelectorAll('.color-circle').forEach(el => {
+                if(el.style.backgroundColor === currentColor || el.getAttribute('data-color') === currentColor) {
+                    el.classList.add('active-color');
+                } else {
+                    el.classList.remove('active-color');
+                }
+            });
+        }
+        
+        function restoreFromBWLayer(x, y, radius) {
+            if(!blackWhiteImageData) {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fill();
+                return;
+            }
+            
+            const bwData = blackWhiteImageData.data;
+            const width = blackWhiteImageData.width;
+            const height = blackWhiteImageData.height;
+            
+            const startX = Math.max(0, Math.floor(x - radius));
+            const startY = Math.max(0, Math.floor(y - radius));
+            const endX = Math.min(width, Math.ceil(x + radius));
+            const endY = Math.min(height, Math.ceil(y + radius));
+            
+            for (let py = startY; py < endY; py++) {
+                for (let px = startX; px < endX; px++) {
+                    const dx = px - x;
+                    const dy = py - y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance <= radius) {
+                        const idx = (py * width + px) * 4;
+                        if (idx >= 0 && idx + 3 < bwData.length) {
+                            ctx.fillStyle = `rgb(${bwData[idx]}, ${bwData[idx+1]}, ${bwData[idx+2]})`;
+                            ctx.fillRect(px, py, 1, 1);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function drawLine(fromX, fromY, toX, toY) {
+            if (isErasing) {
+                const distance = Math.hypot(toX - fromX, toY - fromY);
+                const steps = Math.max(2, Math.ceil(distance / (brushSize / 3)));
+                
+                for (let step = 0; step <= steps; step++) {
+                    const t = step / steps;
+                    const x = fromX + (toX - fromX) * t;
+                    const y = fromY + (toY - fromY) * t;
+                    restoreFromBWLayer(x, y, brushSize / 2);
+                }
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.beginPath();
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = brushSize;
+                ctx.strokeStyle = currentColor;
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.stroke();
+            }
+        }
+        
+        function drawDot(x, y) {
+            if (isErasing) {
+                restoreFromBWLayer(x, y, brushSize / 2);
+            } else {
+                ctx.fillStyle = currentColor;
+                ctx.beginPath();
+                ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let clientX, clientY;
+            
+            if(e.touches) {
+                if(e.touches.length === 0) return null;
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            let canvasX = (clientX - rect.left) * scaleX;
+            let canvasY = (clientY - rect.top) * scaleY;
+            canvasX = Math.min(Math.max(0, canvasX), canvas.width);
+            canvasY = Math.min(Math.max(0, canvasY), canvas.height);
+            return { x: canvasX, y: canvasY };
+        }
+        
+        function startDraw(e) {
+            e.preventDefault();
+            const coords = getCanvasCoords(e);
+            if(!coords) return;
+            drawing = true;
+            lastX = coords.x;
+            lastY = coords.y;
+            drawDot(lastX, lastY);
+            
+            const now = Date.now();
+            if (now - lastDrawTime > 30) {
+                playDrawSound();
+                lastDrawTime = now;
+            }
+        }
+        
+        function drawMove(e) {
+            if(!drawing) return;
+            e.preventDefault();
+            const coords = getCanvasCoords(e);
+            if(!coords) return;
+            const currentX = coords.x;
+            const currentY = coords.y;
+            drawLine(lastX, lastY, currentX, currentY);
+            lastX = currentX;
+            lastY = currentY;
+            
+            const now = Date.now();
+            if (now - lastDrawTime > 25) {
+                playDrawSound();
+                lastDrawTime = now;
+            }
+        }
+        
+        function endDraw(e) {
+            drawing = false;
+            e.preventDefault();
+        }
+        
+        canvas.addEventListener('mousedown', startDraw);
+        window.addEventListener('mousemove', drawMove);
+        window.addEventListener('mouseup', endDraw);
+        
+        canvas.addEventListener('touchstart', startDraw, {passive: false});
+        canvas.addEventListener('touchmove', drawMove, {passive: false});
+        canvas.addEventListener('touchend', endDraw);
+        canvas.addEventListener('touchcancel', endDraw);
+        
+        function updateBrushSize() {
+            brushSize = parseInt(brushSlider.value, 10);
+            brushSizeValue.innerText = brushSize;
+            playButtonSound();
+        }
+        brushSlider.addEventListener('input', updateBrushSize);
+        updateBrushSize();
+        
+        eraserBtn.addEventListener('click', () => {
+            isErasing = !isErasing;
+            if(isErasing) {
+                eraserBtn.classList.add('active');
+                document.querySelectorAll('.color-circle').forEach(el => {
+                    el.classList.remove('active-color');
+                });
+            } else {
+                eraserBtn.classList.remove('active');
+                updateActiveColorInPalette();
+            }
+            playToggleSound();
+        });
+        
+        function clearCanvas() {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+            blackWhiteImageData = null;
+            playClearSound();
+        }
+        
+        clearCanvasBtn.addEventListener('click', () => {
+            clearCanvas();
+            if(isErasing) {
+                isErasing = false;
+                eraserBtn.classList.remove('active');
+                updateActiveColorInPalette();
+            }
+        });
+        
+        saveBtn.addEventListener('click', () => {
+            try {
+                const link = document.createElement('a');
+                link.download = 'rozmalovka.png';
+                link.href = canvas.toDataURL();
+                link.click();
+                playSaveSound();
+            } catch(e) {
+                alert("Не удалось сохранить рисунок");
+            }
+        });
+        
+        function loadAndConvertToBW(file) {
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = CANVAS_W;
+                    tempCanvas.height = CANVAS_H;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    const scale = Math.max(CANVAS_W / img.width, CANVAS_H / img.height);
+                    const xOffset = (CANVAS_W - img.width * scale) / 2;
+                    const yOffset = (CANVAS_H - img.height * scale) / 2;
+                    tempCtx.drawImage(img, 0, 0, img.width, img.height, xOffset, yOffset, img.width * scale, img.height * scale);
+                    
+                    let imageData = tempCtx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+                    let data = imageData.data;
+                    for(let i = 0; i < data.length; i += 4) {
+                        let r = data[i];
+                        let g = data[i+1];
+                        let b = data[i+2];
+                        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                        data[i] = gray;
+                        data[i+1] = gray;
+                        data[i+2] = gray;
+                    }
+                    tempCtx.putImageData(imageData, 0, 0);
+                    
+                    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+                    ctx.drawImage(tempCanvas, 0, 0);
+                    
+                    blackWhiteImageData = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+                    
+                    if(isErasing) {
+                        isErasing = false;
+                        eraserBtn.classList.remove('active');
+                        updateActiveColorInPalette();
+                    }
+                    
+                    playPhotoSound();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        photoUpload.addEventListener('change', (e) => {
+            if(e.target.files && e.target.files[0]) {
+                loadAndConvertToBW(e.target.files[0]);
+                playButtonSound();
+            }
+        });
+        
+        buildPalette();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        blackWhiteImageData = null;
+        currentColor = '#FF4081';
+        updateActiveColorInPalette();
+        
+        const allButtons = document.querySelectorAll('button, .file-label');
+        allButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (e.target.closest('.sound-toggle') || e.target.closest('.fullscreen-toggle')) return;
+                playButtonSound();
+            });
+        });
+    })();
+</script>
+
+
+
+<script>
+// ============================================================
+// УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ
+// Вставьте этот код в любую страницу — работает сразу
+// ============================================================
+
+(function(global) {
+    'use strict';
+
+    // ---------- 1. ХРАНИЛИЩЕ В LOCALSTORAGE ----------
+    const Storage = {
+        save(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка сохранения:', e);
+                return false;
+            }
+        },
+
+        load(key, defaultData = null) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw === null) {
+                    if (defaultData !== null) {
+                        this.save(key, defaultData);
+                    }
+                    return defaultData;
+                }
+                return JSON.parse(raw);
+            } catch (e) {
+                console.error('[Storage] Ошибка загрузки:', e);
+                return defaultData;
+            }
+        },
+
+        remove(key) {
+            try {
+                localStorage.removeItem(key);
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка удаления:', e);
+                return false;
+            }
+        },
+
+        has(key) {
+            return localStorage.getItem(key) !== null;
+        },
+
+        clear() {
+            try {
+                localStorage.clear();
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка очистки:', e);
+                return false;
+            }
+        }
+    };
+
+    // ---------- 2. РАБОТА С МАССИВАМИ ----------
+    const ArrayHelper = {
+        add(key, item, defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) data = [];
+            data.push(item);
+            return Storage.save(key, data);
+        },
+
+        remove(key, identifier, idField = 'id', defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) return false;
+
+            let index = -1;
+            if (typeof identifier === 'function') {
+                index = data.findIndex(identifier);
+            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
+                index = identifier;
+            } else if (identifier !== undefined && identifier !== null) {
+                index = data.findIndex(item => item && item[idField] === identifier);
+            }
+
+            if (index === -1) return false;
+            data.splice(index, 1);
+            return Storage.save(key, data);
+        },
+
+        update(key, identifier, newData, idField = 'id', defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) return false;
+
+            let index = -1;
+            if (typeof identifier === 'function') {
+                index = data.findIndex(identifier);
+            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
+                index = identifier;
+            } else if (identifier !== undefined && identifier !== null) {
+                index = data.findIndex(item => item && item[idField] === identifier);
+            }
+
+            if (index === -1) return false;
+            data[index] = { ...data[index], ...newData };
+            return Storage.save(key, data);
+        },
+
+        get(key, defaultData = []) {
+            const data = Storage.load(key, defaultData);
+            return Array.isArray(data) ? data : [];
+        },
+
+        find(key, predicate, defaultData = []) {
+            const data = this.get(key, defaultData);
+            return data.find(predicate) || null;
+        },
+
+        filter(key, predicate, defaultData = []) {
+            const data = this.get(key, defaultData);
+            return data.filter(predicate);
+        },
+
+        clear(key) {
+            return Storage.save(key, []);
+        }
+    };
+
+    // ---------- 3. СТАТУС СЕТИ ----------
+    const Network = {
+        getStatus() {
+            return navigator.onLine ? 'online' : 'offline';
+        },
+
+        isOnline() {
+            return navigator.onLine;
+        },
+
+        isOffline() {
+            return !navigator.onLine;
+        },
+
+        onChange(callback) {
+            const onlineHandler = () => callback('online', true);
+            const offlineHandler = () => callback('offline', false);
+            
+            window.addEventListener('online', onlineHandler);
+            window.addEventListener('offline', offlineHandler);
+            
+            return () => {
+                window.removeEventListener('online', onlineHandler);
+                window.removeEventListener('offline', offlineHandler);
+            };
+        },
+
+        // Обновить элемент с статусом
+        updateStatusElement(elementId, onlineText = '🟢 Онлайн', offlineText = '🔴 Офлайн') {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            const update = () => {
+                el.textContent = this.isOnline() ? onlineText : offlineText;
+                el.className = this.isOnline() ? 'status-online' : 'status-offline';
+            };
+            
+            update();
+            return this.onChange(update);
+        }
+    };
+
+    // ---------- 4. SERVICE WORKER (ОФЛАЙН-ПОДДЕРЖКА) ----------
+    const SW = {
+        /**
+         * Зарегистрировать Service Worker
+         * @param {string} swPath - Путь к sw.js (по умолчанию 'sw.js')
+         * @param {Object} options - Опции регистрации
+         * @returns {Promise}
+         */
+        register(swPath = 'sw.js', options = {}) {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] Service Worker не поддерживается');
+                return Promise.reject(new Error('SW не поддерживается'));
+            }
+
+            return navigator.serviceWorker.register(swPath, options)
+                .then(registration => {
+                    console.log('[SW] ✅ Зарегистрирован');
+                    return registration;
+                })
+                .catch(error => {
+                    console.error('[SW] ❌ Ошибка:', error);
+                    throw error;
+                });
+        },
+
+        /**
+         * Проверить активен ли SW
+         * @returns {Promise<boolean>}
+         */
+        async isActive() {
+            if (!('serviceWorker' in navigator)) return false;
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                return registration !== undefined && registration.active !== null;
+            } catch {
+                return false;
+            }
+        },
+
+        /**
+         * Создать и зарегистрировать SW из строки (встроенный SW)
+         * @param {string} swCode - Код Service Worker
+         * @param {string} scope - Scope для SW
+         * @returns {Promise}
+         */
+        registerInline(swCode, scope = '/') {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] Service Worker не поддерживается');
+                return Promise.reject(new Error('SW не поддерживается'));
+            }
+
+            try {
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                return navigator.serviceWorker.register(swUrl, { scope });
+            } catch (error) {
+                console.error('[SW] Ошибка создания inline SW:', error);
+                return Promise.reject(error);
+            }
+        },
+
+        /**
+         * Сгенерировать код SW для кеширования текущей страницы
+         * @param {string} cacheName - Имя кеша
+         * @param {Array} urls - URL для кеширования (по умолчанию текущая страница)
+         * @returns {string} - Код SW
+         */
+        generateCacheSW(cacheName = 'app-v1', urls = null) {
+            if (!urls) {
+                urls = [window.location.pathname || '/'];
+                // Добавляем текущий URL с параметрами
+                if (window.location.search) {
+                    urls.push(window.location.pathname + window.location.search);
+                }
+            }
+
+            return `
+const CACHE_NAME = '${cacheName}';
+const urlsToCache = ${JSON.stringify(urls)};
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('[SW] Кеширование:', urlsToCache);
+                return cache.addAll(urlsToCache);
+            })
+            .then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(name => {
+                    if (name !== CACHE_NAME) {
+                        console.log('[SW] Удаление старого кеша:', name);
+                        return caches.delete(name);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
+});
+
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => response || fetch(event.request))
+            .catch(() => caches.match('/'))
+    );
+});
+`;
+        },
+
+        /**
+         * Автоматическая настройка SW (создаёт и регистрирует)
+         * @param {string} cacheName - Имя кеша
+         * @returns {Promise}
+         */
+        async setupOffline(cacheName = 'app-v1') {
+            const swCode = this.generateCacheSW(cacheName);
+            return this.registerInline(swCode);
+        }
+    };
+
+    // ---------- 5. ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ ----------
+    const Utils = {
+        /**
+         * Глубокое копирование
+         */
+        deepClone(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        },
+
+        /**
+         * Генерация уникального ID
+         */
+        generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        },
+
+        /**
+         * Форматирование даты
+         */
+        formatDate(date, format = 'DD.MM.YYYY HH:mm') {
+            const d = new Date(date);
+            const pad = n => String(n).padStart(2, '0');
+            const replacements = {
+                'YYYY': d.getFullYear(),
+                'MM': pad(d.getMonth() + 1),
+                'DD': pad(d.getDate()),
+                'HH': pad(d.getHours()),
+                'mm': pad(d.getMinutes()),
+                'ss': pad(d.getSeconds())
+            };
+            return format.replace(/YYYY|MM|DD|HH|mm|ss/g, match => replacements[match]);
+        },
+
+        /**
+         * Показать toast-уведомление
+         */
+        showToast(message, duration = 2000) {
+            // Создаём элемент если его нет
+            let toast = document.getElementById('_toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = '_toast';
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 30px;
+                    left: 50%;
+                    transform: translateX(-50%) translateY(100px);
+                    background: #1e293b;
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 60px;
+                    font-size: 0.9rem;
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+                    opacity: 0;
+                    transition: all 0.3s ease;
+                    z-index: 9999;
+                    pointer-events: none;
+                    font-family: system-ui, sans-serif;
+                `;
+                document.body.appendChild(toast);
+            }
+
+            toast.textContent = message;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(100px)';
+            }, duration);
+        }
+    };
+
+    // ---------- 6. ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ----------
+    const OfflineKit = {
+        Storage,
+        ArrayHelper,
+        Network,
+        SW,
+        Utils,
+        version: '1.0.0'
+    };
+
+    // Добавляем в глобальный объект
+    global.OfflineKit = OfflineKit;
+
+    // Для удобства добавляем сокращения
+    global.Store = Storage;
+    global.ArrayStore = ArrayHelper;
+    global.NetworkStatus = Network;
+    global.SWHelper = SW;
+    global.Utils = Utils;
+
+    console.log('[OfflineKit] ✅ Загружен v1.0.0');
+
+})(window);
+</script>
+
+
+</body>
+</html>
+```
