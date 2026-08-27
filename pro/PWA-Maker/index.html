@@ -8,6 +8,12 @@
     <!-- Ваши иконки -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    
     <title>🪞 PWA - Maker - Butterfly</title>
     <style>
         * {
@@ -227,6 +233,13 @@
             align-items: center;
             gap: 0.5rem;
             border: 1px solid #3c425a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .icon-link:hover {
+            background: #2a3040;
+            border-color: #4b6aff;
+            transform: scale(1.02);
         }
         .icon-link a {
             color: #b4c2e6;
@@ -252,6 +265,73 @@
         .color-preset:hover {
             transform: scale(1.2);
         }
+
+        /* Стили для оверлея перехода */
+        .transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a12;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .transition-topbar {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(16, 16, 30, 0.98);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 12px;
+            flex-shrink: 0;
+            min-height: 56px;
+        }
+
+        .transition-back {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #e2e8f0;
+            padding: 8px 18px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .transition-back:hover {
+            background: rgba(255,255,255,0.16);
+            transform: scale(1.02);
+        }
+
+        .transition-title {
+            color: #94a3b8;
+            font-size: 14px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .transition-iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+            background: #ffffff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
         @media (max-width: 540px) {
             .row-2 {
                 grid-template-columns: 1fr;
@@ -352,11 +432,11 @@
         </div>
     </div>
 
-    <!-- Генератор иконок + внешний переход -->
+    <!-- Генератор иконок + внешний переход (ТЕПЕРЬ ЧЕРЕЗ ФУНКЦИЮ) -->
     <div style="display:flex; justify-content: flex-end; margin-bottom: 1rem;">
-        <div class="icon-link">
+        <div class="icon-link" onclick="openExternalSite('https://2d3t.github.io/2d3t/pro/Icons/index.html', '🖼️ Генератор иконок')">
             <span>🖼️</span>
-            <a href="https://2d3t.github.io/2d3t/pro/Icons/index.html" target="_blank">Генератор иконок</a>
+            <span style="color: #b4c2e6; font-size: 0.9rem;">Генератор иконок</span>
             <span style="opacity:0.4; margin:0 0.2rem;">→</span>
         </div>
     </div>
@@ -509,45 +589,130 @@
 </div>
 
 <script>
-    (function() {
-        // DOM-ссылки
-        const appName = document.getElementById('appName');
-        const shortName = document.getElementById('shortName');
-        const appDesc = document.getElementById('appDesc');
-        const bgColor = document.getElementById('bgColor');
-        const themeColor = document.getElementById('themeColor');
-        const basePath = document.getElementById('basePath');
-        const icon192 = document.getElementById('icon192');
-        const icon512 = document.getElementById('icon512');
-        const cacheName = document.getElementById('cacheName');
+(function() {
+    "use strict";
 
-        const htmlCode = document.getElementById('htmlCode');
-        const manifestCode = document.getElementById('manifestCode');
-        const swCode = document.getElementById('swCode');
-
-        // Функция получения базового пути без index.html для sw и fallback
-        function getBaseDir(fullPath) {
-            if (!fullPath) return '/';
-            const lastSlash = fullPath.lastIndexOf('/');
-            if (lastSlash === -1) return '/';
-            return fullPath.substring(0, lastSlash + 1);
+    // ============================================================
+    // ФУНКЦИЯ ОТКРЫТИЯ ВНЕШНИХ САЙТОВ (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openExternalSite(url, title) {
+        // Удаляем старый оверлей, если есть
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
         }
 
-        // Генерация всех трёх файлов
-        function generateAll() {
-            const name = appName.value.trim() || '🪞 Кривое Зеркало';
-            const short = shortName.value.trim() || '';
-            const desc = appDesc.value.trim() || '';
-            const bg = bgColor.value.trim() || '#111111';
-            const theme = themeColor.value.trim() || '#111111';
-            const startPath = basePath.value.trim() || '/2d3t/';
-            const baseDir = getBaseDir(startPath);
-            const icon192src = icon192.value.trim() || (baseDir + 'icon-192.png');
-            const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
-            const cache = cacheName.value.trim() || '';
+        // Создаём оверлей
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
 
-            // ---- 1. HTML скрипт (вставка) ----
-            const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
+        // Верхняя панель
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        // Кнопка "Назад"
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        // Заголовок
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        // Iframe
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        // Обработка Escape
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        // Обновляем заголовок при загрузке iframe
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {
+                // Игнорируем CORS ошибки
+            }
+        };
+
+        // Добавляем обработчик клика на оверлей (закрытие по клику вне iframe)
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        return overlay;
+    }
+
+    // Делаем функцию глобальной
+    window.openExternalSite = openExternalSite;
+
+    // ============================================================
+    // ОСТАЛЬНОЙ КОД (генератор, копирование и т.д.)
+    // ============================================================
+
+    // DOM-ссылки
+    const appName = document.getElementById('appName');
+    const shortName = document.getElementById('shortName');
+    const appDesc = document.getElementById('appDesc');
+    const bgColor = document.getElementById('bgColor');
+    const themeColor = document.getElementById('themeColor');
+    const basePath = document.getElementById('basePath');
+    const icon192 = document.getElementById('icon192');
+    const icon512 = document.getElementById('icon512');
+    const cacheName = document.getElementById('cacheName');
+
+    const htmlCode = document.getElementById('htmlCode');
+    const manifestCode = document.getElementById('manifestCode');
+    const swCode = document.getElementById('swCode');
+
+    // Функция получения базового пути без index.html для sw и fallback
+    function getBaseDir(fullPath) {
+        if (!fullPath) return '/';
+        const lastSlash = fullPath.lastIndexOf('/');
+        if (lastSlash === -1) return '/';
+        return fullPath.substring(0, lastSlash + 1);
+    }
+
+    // Генерация всех трёх файлов
+    function generateAll() {
+        const name = appName.value.trim() || '🪞 Кривое Зеркало';
+        const short = shortName.value.trim() || '';
+        const desc = appDesc.value.trim() || '';
+        const bg = bgColor.value.trim() || '#111111';
+        const theme = themeColor.value.trim() || '#111111';
+        const startPath = basePath.value.trim() || '/2d3t/';
+        const baseDir = getBaseDir(startPath);
+        const icon192src = icon192.value.trim() || (baseDir + 'icon-192.png');
+        const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
+        const cache = cacheName.value.trim() || '';
+
+        // ---- 1. HTML скрипт (вставка) ----
+        const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -594,37 +759,37 @@
         <\/script>
     </body>`;
 
-            htmlCode.textContent = htmlScript;
+        htmlCode.textContent = htmlScript;
 
-            // ---- 2. manifest.json ----
-            const manifest = {
-                name: name,
-                short_name: short,
-                description: desc,
-                start_url: startPath,
-                display: "standalone",
-                background_color: bg,
-                theme_color: theme,
-                orientation: "portrait",
-                icons: [
-                    {
-                        src: icon192src,
-                        sizes: "192x192",
-                        type: "image/png",
-                        purpose: "any maskable"
-                    },
-                    {
-                        src: icon512src,
-                        sizes: "512x512",
-                        type: "image/png",
-                        purpose: "any maskable"
-                    }
-                ]
-            };
-            manifestCode.textContent = JSON.stringify(manifest, null, 2);
+        // ---- 2. manifest.json ----
+        const manifest = {
+            name: name,
+            short_name: short,
+            description: desc,
+            start_url: startPath,
+            display: "standalone",
+            background_color: bg,
+            theme_color: theme,
+            orientation: "portrait",
+            icons: [
+                {
+                    src: icon192src,
+                    sizes: "192x192",
+                    type: "image/png",
+                    purpose: "any maskable"
+                },
+                {
+                    src: icon512src,
+                    sizes: "512x512",
+                    type: "image/png",
+                    purpose: "any maskable"
+                }
+            ]
+        };
+        manifestCode.textContent = JSON.stringify(manifest, null, 2);
 
-            // ---- 3. service-worker.js ----
-            const sw = `const CACHE_NAME = '${cache}';
+        // ---- 3. service-worker.js ----
+        const sw = `const CACHE_NAME = '${cache}';
 const FILES_TO_CACHE = [
     '${startPath}',
     '${baseDir}manifest.json'
@@ -692,156 +857,156 @@ self.addEventListener('fetch', (event) => {
             })
     );
 });`;
-            swCode.textContent = sw;
-        }
+        swCode.textContent = sw;
+    }
 
-        // Копирование содержимого блока (без кнопки-бадж)
-        function copyBlockContent(blockId) {
-            const block = document.getElementById(blockId);
-            if (!block) return;
-            // Ищем внутри <code> или берём весь текст
-            const codeElem = block.querySelector('code');
-            let text = codeElem ? codeElem.textContent : block.textContent;
+    // Копирование содержимого блока (без кнопки-бадж)
+    function copyBlockContent(blockId) {
+        const block = document.getElementById(blockId);
+        if (!block) return;
+        // Ищем внутри <code> или берём весь текст
+        const codeElem = block.querySelector('code');
+        let text = codeElem ? codeElem.textContent : block.textContent;
+        
+        // Если это скрытый блок — убираем лишние отступы
+        if (blockId === 'headBlock' || blockId === 'scriptBlock') {
+            text = text.trim();
+        }
+        
+        navigator.clipboard.writeText(text).then(() => {
+            const badge = block.querySelector('.copy-badge');
+            if (badge) {
+                const orig = badge.textContent;
+                badge.textContent = '✅ скопировано!';
+                setTimeout(() => { badge.textContent = orig; }, 1800);
+            }
+        }).catch(() => {
+            alert('Не удалось скопировать. Попробуйте выделить вручную.');
+        });
+    }
+
+    // Навесить события на кнопки копирования (стиль .copy-btn)
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const target = this.dataset.target;
+            if (target) copyBlockContent(target);
+        });
+    });
+
+    // Также клик по "copy-badge" внутри блока
+    document.querySelectorAll('.copy-badge').forEach(badge => {
+        badge.addEventListener('click', function(e) {
+            const block = this.closest('.code-block');
+            if (block) {
+                const id = block.id;
+                if (id) copyBlockContent(id);
+            }
+        });
+    });
+
+    // Генерация при изменении полей
+    const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, icon192, icon512, cacheName];
+    inputs.forEach(inp => {
+        inp.addEventListener('input', generateAll);
+        inp.addEventListener('change', generateAll);
+    });
+
+    // ===== НОВАЯ ЛОГИКА ДЛЯ ВЫБОРА ЦВЕТА =====
+
+    // 1. Связываем пикеры с текстовыми полями
+    const bgPicker = document.getElementById('bgColorPicker');
+    const themePicker = document.getElementById('themeColorPicker');
+
+    // Функция синхронизации пикера и текстового поля
+    function syncColor(picker, textField) {
+        if (picker && textField) {
+            picker.addEventListener('input', function() {
+                textField.value = this.value;
+                // Триггерим событие, чтобы генератор обновил код
+                textField.dispatchEvent(new Event('input'));
+            });
             
-            // Если это скрытый блок — убираем лишние отступы
-            if (blockId === 'headBlock' || blockId === 'scriptBlock') {
-                text = text.trim();
+            // Обратная синхронизация (если пользователь ввел HEX вручную)
+            textField.addEventListener('input', function() {
+                const val = this.value.trim();
+                if (/^#[0-9a-f]{6}$/i.test(val)) {
+                    picker.value = val;
+                }
+            });
+            
+            // При загрузке — установить значение пикера из текстового поля
+            if (textField.value) {
+                picker.value = textField.value;
+            }
+        }
+    }
+
+    syncColor(bgPicker, bgColor);
+    syncColor(themePicker, themeColor);
+
+    // 2. Логика для кнопок-пресетов
+    document.querySelectorAll('.color-preset').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target; // 'bgColor' или 'themeColor'
+            const targetInput = document.getElementById(targetId);
+            // Цвет берем из фона кнопки (убираем возможные градиенты)
+            const color = window.getComputedStyle(this).backgroundColor;
+            
+            // Конвертируем rgb в hex (если нужно)
+            function rgbToHex(rgb) {
+                const match = rgb.match(/\d+/g);
+                if (!match) return '#111111';
+                const r = parseInt(match[0]);
+                const g = parseInt(match[1]);
+                const b = parseInt(match[2]);
+                return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
             }
             
-            navigator.clipboard.writeText(text).then(() => {
-                const badge = block.querySelector('.copy-badge');
-                if (badge) {
-                    const orig = badge.textContent;
-                    badge.textContent = '✅ скопировано!';
-                    setTimeout(() => { badge.textContent = orig; }, 1800);
-                }
-            }).catch(() => {
-                alert('Не удалось скопировать. Попробуйте выделить вручную.');
-            });
-        }
-
-        // Навесить события на кнопки копирования (стиль .copy-btn)
-        document.querySelectorAll('.copy-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                const target = this.dataset.target;
-                if (target) copyBlockContent(target);
-            });
-        });
-
-        // Также клик по "copy-badge" внутри блока
-        document.querySelectorAll('.copy-badge').forEach(badge => {
-            badge.addEventListener('click', function(e) {
-                const block = this.closest('.code-block');
-                if (block) {
-                    const id = block.id;
-                    if (id) copyBlockContent(id);
-                }
-            });
-        });
-
-        // Генерация при изменении полей
-        const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, icon192, icon512, cacheName];
-        inputs.forEach(inp => {
-            inp.addEventListener('input', generateAll);
-            inp.addEventListener('change', generateAll);
-        });
-
-        // ===== НОВАЯ ЛОГИКА ДЛЯ ВЫБОРА ЦВЕТА =====
-
-        // 1. Связываем пикеры с текстовыми полями
-        const bgPicker = document.getElementById('bgColorPicker');
-        const themePicker = document.getElementById('themeColorPicker');
-
-        // Функция синхронизации пикера и текстового поля
-        function syncColor(picker, textField) {
-            if (picker && textField) {
-                picker.addEventListener('input', function() {
-                    textField.value = this.value;
-                    // Триггерим событие, чтобы генератор обновил код
-                    textField.dispatchEvent(new Event('input'));
-                });
+            const hex = rgbToHex(color);
+            if (targetInput) {
+                targetInput.value = hex;
+                // Триггерим обновление
+                targetInput.dispatchEvent(new Event('input'));
                 
-                // Обратная синхронизация (если пользователь ввел HEX вручную)
-                textField.addEventListener('input', function() {
-                    const val = this.value.trim();
-                    if (/^#[0-9a-f]{6}$/i.test(val)) {
-                        picker.value = val;
-                    }
-                });
-                
-                // При загрузке — установить значение пикера из текстового поля
-                if (textField.value) {
-                    picker.value = textField.value;
-                }
+                // Обновляем пикер, если он есть
+                const pickerId = targetId === 'bgColor' ? 'bgColorPicker' : 'themeColorPicker';
+                const picker = document.getElementById(pickerId);
+                if (picker) picker.value = hex;
             }
-        }
-
-        syncColor(bgPicker, bgColor);
-        syncColor(themePicker, themeColor);
-
-        // 2. Логика для кнопок-пресетов
-        document.querySelectorAll('.color-preset').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const targetId = this.dataset.target; // 'bgColor' или 'themeColor'
-                const targetInput = document.getElementById(targetId);
-                // Цвет берем из фона кнопки (убираем возможные градиенты)
-                const color = window.getComputedStyle(this).backgroundColor;
-                
-                // Конвертируем rgb в hex (если нужно)
-                function rgbToHex(rgb) {
-                    const match = rgb.match(/\d+/g);
-                    if (!match) return '#111111';
-                    const r = parseInt(match[0]);
-                    const g = parseInt(match[1]);
-                    const b = parseInt(match[2]);
-                    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
-                }
-                
-                const hex = rgbToHex(color);
-                if (targetInput) {
-                    targetInput.value = hex;
-                    // Триггерим обновление
-                    targetInput.dispatchEvent(new Event('input'));
-                    
-                    // Обновляем пикер, если он есть
-                    const pickerId = targetId === 'bgColor' ? 'bgColorPicker' : 'themeColorPicker';
-                    const picker = document.getElementById(pickerId);
-                    if (picker) picker.value = hex;
-                }
-            });
         });
+    });
 
-        // Сброс к значениям по умолчанию
-        document.getElementById('resetDefaults').addEventListener('click', function() {
-            appName.value = '🪞 Кривое Зеркало';
-            shortName.value = 'Зеркало';
-            appDesc.value = 'Делай селфи с забавными искажениями';
-            bgColor.value = '#111111';
-            themeColor.value = '#111111';
-            basePath.value = '/2d3t/pro/MirrorX/index.html';
-            icon192.value = '/2d3t/pro/MirrorX/icon-192.png';
-            icon512.value = '/2d3t/pro/MirrorX/icon-512.png';
-            cacheName.value = 'prox-pwa-v2';
-            
-            // Обновляем пикеры
-            if (bgPicker) bgPicker.value = '#111111';
-            if (themePicker) themePicker.value = '#111111';
-            
-            generateAll();
-        });
-
-        // Кнопка "Обновить код" (дубль)
-        document.getElementById('generateBtn').addEventListener('click', generateAll);
-
-        // Первичная генерация
+    // Сброс к значениям по умолчанию
+    document.getElementById('resetDefaults').addEventListener('click', function() {
+        appName.value = '🪞 Кривое Зеркало';
+        shortName.value = 'Зеркало';
+        appDesc.value = 'Делай селфи с забавными искажениями';
+        bgColor.value = '#111111';
+        themeColor.value = '#111111';
+        basePath.value = '/2d3t/pro/MirrorX/index.html';
+        icon192.value = '/2d3t/pro/MirrorX/icon-192.png';
+        icon512.value = '/2d3t/pro/MirrorX/icon-512.png';
+        cacheName.value = 'prox-pwa-v2';
+        
+        // Обновляем пикеры
+        if (bgPicker) bgPicker.value = '#111111';
+        if (themePicker) themePicker.value = '#111111';
+        
         generateAll();
+    });
 
-        // Обновляем статус (индикатор)
-        const statusInd = document.getElementById('statusIndicator');
-        if (statusInd) {
-            statusInd.textContent = '✅ готово';
-        }
-    })();
+    // Кнопка "Обновить код" (дубль)
+    document.getElementById('generateBtn').addEventListener('click', generateAll);
+
+    // Первичная генерация
+    generateAll();
+
+    // Обновляем статус (индикатор)
+    const statusInd = document.getElementById('statusIndicator');
+    if (statusInd) {
+        statusInd.textContent = '✅ готово';
+    }
+})();
 </script>
 
 <!-- Универсальный офлайн-блок -->
