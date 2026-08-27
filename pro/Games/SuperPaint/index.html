@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>🌈 Радужный рисователь → GIF | Живая анимация</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0a0f1c 0%, #0f172a 100%);
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            padding: 16px;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            height: calc(100vh - 32px);
+            display: flex;
+            flex-direction: column;
+            background: rgba(17, 25, 45, 0.95);
+            border-radius: 48px;
+            border: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+
+        /* Шапка */
+        .header {
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .title h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c4e0ff, #ff99cc, #7aa9ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .title p {
+            color: #9ca3af;
+            font-size: 0.7rem;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            background: rgba(30, 40, 60, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: monospace;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .btn-reset {
+            background: rgba(80, 40, 60, 0.9);
+            border-color: #ff66cc;
+        }
+
+        .btn-gif {
+            background: linear-gradient(105deg, #059669, #10b981);
+            border: none;
+        }
+
+        /* Холст — занимает всё свободное место */
+        .canvas-area {
+            flex: 1;
+            background: #030712;
+            margin: 16px;
+            border-radius: 32px;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: black;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(145deg, #0f172a, #0a0f1c);
+            border-radius: 48px;
+            max-width: 500px;
+            width: 90%;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 25px 50px -12px black;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: white;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, #c4e0ff, #7aa9ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .close-modal {
+            background: rgba(255,80,80,0.3);
+            border: none;
+            font-size: 20px;
+            padding: 8px 14px;
+        }
+
+        .setting-item {
+            margin-bottom: 20px;
+        }
+
+        .setting-item label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #cbd5e6;
+            margin-bottom: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        .btn-generate {
+            background: linear-gradient(105deg, #059669, #10b981);
+        }
+
+        /* Прогресс и результат */
+        .progress-area {
+            background: #0f172e;
+            border-radius: 32px;
+            padding: 16px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-bar-container {
+            background: #1f2937;
+            border-radius: 40px;
+            height: 28px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #a855f7);
+            border-radius: 40px;
+            transition: width 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            color: #cbd5e6;
+            text-align: center;
+            font-family: monospace;
+        }
+
+        .gif-result {
+            background: #030712;
+            border-radius: 24px;
+            padding: 16px;
+            margin-top: 16px;
+            display: none;
+            text-align: center;
+        }
+
+        .gif-result img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 20px;
+            background: black;
+        }
+
+        .status-msg {
+            font-size: 0.75rem;
+            background: #00000044;
+            border-radius: 32px;
+            padding: 10px 16px;
+            text-align: center;
+            color: #b9c3db;
+            margin-top: 12px;
+        }
+
+        .recording-indicator {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,0,80,0.95);
+            backdrop-filter: blur(8px);
+            padding: 12px 24px;
+            border-radius: 60px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
+        .recording-dot {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @media (max-width: 700px) {
+            body { padding: 8px; }
+            .app-container { height: calc(100vh - 16px); }
+            .header { padding: 12px 16px; }
+            button { padding: 8px 16px; font-size: 12px; }
+            .title h1 { font-size: 1.1rem; }
+            .title p { display: none; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <div class="header">
+        <div class="title">
+            <h1>🌈 Радужный рисователь</h1>
+            <p>рисуй пальцем — создавай живые анимации</p>
+        </div>
+        <div class="toolbar">
+            <button class="btn-reset" id="resetBtn">🗑️ Очистить</button>
+            <button class="btn-gif" id="openModalBtn">🎬 Создать GIF</button>
+        </div>
+    </div>
+
+    <div class="canvas-area">
+        <canvas id="rainbowCanvas"></canvas>
+    </div>
+
+    <div class="status-msg" id="statusMsg">
+        🎨 Рисуй! Цвета будут переливаться в анимации
+    </div>
+</div>
+
+<!-- Модальное окно с настройками GIF -->
+<div id="gifModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>🎬 Создание GIF-анимации</h2>
+            <button class="close-modal" id="closeModalBtn">✖️</button>
+        </div>
+
+        <div class="setting-item">
+            <label><span>🎞️ Частота кадров (FPS)</span><span id="fpsValue">10</span></label>
+            <input type="range" id="fpsSlider" min="5" max="20" step="1" value="10">
+        </div>
+
+        <div class="setting-item">
+            <label><span>📏 Ширина (px)</span><span id="widthValue">480</span></label>
+            <input type="range" id="widthSlider" min="320" max="640" step="16" value="480">
+        </div>
+
+        <div class="setting-item">
+            <label><span>🎨 Качество сжатия</span><span id="qualityValue">80</span></label>
+            <input type="range" id="qualitySlider" min="50" max="100" step="5" value="80">
+        </div>
+
+        <div class="setting-item">
+            <label><span>⏱️ Длительность (сек)</span><span id="durationValue">3</span></label>
+            <input type="range" id="durationSlider" min="2" max="5" step="0.5" value="3">
+        </div>
+
+        <div id="modalProgressArea" class="progress-area" style="display: none;">
+            <div class="progress-bar-container">
+                <div id="modalProgressFill" class="progress-fill" style="width:0%">0%</div>
+            </div>
+            <div id="modalProgressText" class="progress-text">⚙️ Подготовка...</div>
+            <button id="modalCancelBtn" style="margin-top:8px; background:#7c2d12; padding:8px;">✖️ Отменить</button>
+        </div>
+
+        <div id="modalGifResult" class="gif-result" style="display: none;">
+            <img id="modalGifPreview" alt="GIF preview">
+            <button id="modalDownloadBtn" class="btn-generate" style="margin-top:12px;">⬇️ Скачать GIF</button>
+        </div>
+
+        <div class="modal-buttons">
+            <button id="generateGifBtn" class="btn-generate">🎬 Создать GIF</button>
+            <button id="cancelModalBtn">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div id="recordingIndicator" class="recording-indicator">
+    <span class="recording-dot"></span>
+    <span>СОЗДАНИЕ GIF...</span>
+</div>
+
+<script>
+    (function() {
+        // -------- КАНВАС И РИСОВАНИЕ --------
+        const canvas = document.getElementById('rainbowCanvas');
+        let ctx = canvas.getContext('2d');
+        let canvasWidth = 800, canvasHeight = 500;
+        
+        let strokes = [];
+        let currentStroke = null;
+        let isDrawing = false;
+        let lineWidth = 16;
+        const RAINBOW_SPEED = 1.5;
+        
+        // Для GIF
+        let gifEncoder = null;
+        let isRecordingGif = false;
+        let cancelRequested = false;
+        let recordingTimer = null;
+        
+        // DOM элементы
+        const resetBtn = document.getElementById('resetBtn');
+        const openModalBtn = document.getElementById('openModalBtn');
+        const gifModal = document.getElementById('gifModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        const generateGifBtn = document.getElementById('generateGifBtn');
+        const statusMsg = document.getElementById('statusMsg');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        
+        // Элементы внутри модалки
+        const fpsSlider = document.getElementById('fpsSlider');
+        const fpsValue = document.getElementById('fpsValue');
+        const widthSlider = document.getElementById('widthSlider');
+        const widthValue = document.getElementById('widthValue');
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityValue = document.getElementById('qualityValue');
+        const durationSlider = document.getElementById('durationSlider');
+        const durationValue = document.getElementById('durationValue');
+        const modalProgressArea = document.getElementById('modalProgressArea');
+        const modalProgressFill = document.getElementById('modalProgressFill');
+        const modalProgressText = document.getElementById('modalProgressText');
+        const modalCancelBtn = document.getElementById('modalCancelBtn');
+        const modalGifResult = document.getElementById('modalGifResult');
+        const modalGifPreview = document.getElementById('modalGifPreview');
+        const modalDownloadBtn = document.getElementById('modalDownloadBtn');
+        
+        // Обновление отображения слайдеров
+        fpsSlider.addEventListener('input', () => fpsValue.textContent = fpsSlider.value);
+        widthSlider.addEventListener('input', () => widthValue.textContent = widthSlider.value);
+        qualitySlider.addEventListener('input', () => qualityValue.textContent = qualitySlider.value);
+        durationSlider.addEventListener('input', () => durationValue.textContent = durationSlider.value);
+        
+        // Открыть/закрыть модалку
+        openModalBtn.addEventListener('click', () => {
+            gifModal.classList.add('active');
+            // Сбрасываем отображение результатов в модалке
+            modalProgressArea.style.display = 'none';
+            modalGifResult.style.display = 'none';
+        });
+        
+        function closeModal() {
+            gifModal.classList.remove('active');
+            // Если идёт запись — не прерываем, просто закрываем окно
+        }
+        
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelModalBtn.addEventListener('click', closeModal);
+        
+        // Нажатие вне модалки
+        gifModal.addEventListener('click', (e) => {
+            if (e.target === gifModal) closeModal();
+        });
+        
+        // ---------- ФУНКЦИИ РИСОВАНИЯ ----------
+        function getCurrentHueForStroke(stroke, nowSec) {
+            const elapsed = nowSec - stroke.startTimeSec;
+            let hue = (elapsed * RAINBOW_SPEED * 60) % 360;
+            if (hue < 0) hue += 360;
+            return hue;
+        }
+        
+        function getRainbowColor(hue) {
+            return `hsl(${hue}, 100%, 60%)`;
+        }
+        
+        function redrawAllStrokes() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            const nowSec = performance.now() / 1000;
+            
+            for (let s of strokes) {
+                drawStroke(ctx, s, nowSec);
+            }
+            
+            if (currentStroke && currentStroke.points && currentStroke.points.length >= 2) {
+                drawStroke(ctx, currentStroke, nowSec);
+            } else if (currentStroke && currentStroke.points && currentStroke.points.length === 1) {
+                const hue = getCurrentHueForStroke(currentStroke, nowSec);
+                ctx.beginPath();
+                ctx.fillStyle = getRainbowColor(hue);
+                const radius = lineWidth * 0.5;
+                const p = currentStroke.points[0];
+                ctx.arc(p.x, p.y, radius, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+        
+        function drawStroke(context, stroke, nowSec) {
+            if (!stroke.points || stroke.points.length === 0) return;
+            
+            if (stroke.points.length === 1) {
+                const hue = getCurrentHueForStroke(stroke, nowSec);
+                context.beginPath();
+                context.fillStyle = getRainbowColor(hue);
+                const radius = (stroke.lineWidth || lineWidth) * 0.5;
+                const p = stroke.points[0];
+                context.arc(p.x, p.y, radius, 0, Math.PI*2);
+                context.fill();
+                return;
+            }
+            
+            const hue = getCurrentHueForStroke(stroke, nowSec);
+            context.beginPath();
+            context.strokeStyle = getRainbowColor(hue);
+            context.lineWidth = stroke.lineWidth || lineWidth;
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            
+            context.moveTo(stroke.points[0].x, stroke.points[0].y);
+            for (let i = 1; i < stroke.points.length; i++) {
+                context.lineTo(stroke.points[i].x, stroke.points[i].y);
+            }
+            context.stroke();
+        }
+        
+        function finishCurrentStroke() {
+            if (currentStroke && currentStroke.points && currentStroke.points.length >= 1) {
+                strokes.push(currentStroke);
+            }
+            currentStroke = null;
+            isDrawing = false;
+        }
+        
+        function startStroke(x, y, timestampMs) {
+            if (currentStroke) finishCurrentStroke();
+            const nowSec = timestampMs / 1000;
+            currentStroke = {
+                points: [{ x: x, y: y }],
+                startTimeSec: nowSec,
+                lineWidth: lineWidth
+            };
+            isDrawing = true;
+            redrawAllStrokes();
+        }
+        
+        function addPointToStroke(x, y) {
+            if (!isDrawing || !currentStroke) return;
+            const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+            const distance = Math.hypot(lastPoint.x - x, lastPoint.y - y);
+            if (distance > 2.0) {
+                currentStroke.points.push({ x: x, y: y });
+            } else if (distance > 0.5) {
+                currentStroke.points.push({ x: x, y: y });
+            }
+        }
+        
+        function resetCanvas() {
+            strokes = [];
+            if (currentStroke) currentStroke = null;
+            isDrawing = false;
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            statusMsg.innerHTML = '🎨 Холст очищен! Рисуй что-нибудь новое';
+            // Закрываем результат в модалке если он там был
+            modalGifResult.style.display = 'none';
+        }
+        
+        // Изменение размера холста
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const rect = container.getBoundingClientRect();
+            canvasWidth = rect.width;
+            canvasHeight = rect.height;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Масштабируем существующие штрихи
+            if (strokes.length > 0 || currentStroke) {
+                // Простая перерисовка без масштабирования для простоты
+                redrawAllStrokes();
+            }
+        }
+        
+        // ---------- ПОЛУЧЕНИЕ КООРДИНАТ ----------
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            let clientX, clientY;
+            
+            if (e.touches) {
+                if (e.touches.length === 0) return null;
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            let canvasX = (clientX - rect.left) * scaleX;
+            let canvasY = (clientY - rect.top) * scaleY;
+            canvasX = Math.min(Math.max(0, canvasX), canvas.width);
+            canvasY = Math.min(Math.max(0, canvasY), canvas.height);
+            return { x: canvasX, y: canvasY };
+        }
+        
+        // ---------- СОЗДАНИЕ GIF ----------
+        async function startGifRecording() {
+            if (isRecordingGif) {
+                statusMsg.innerHTML = '⏳ Уже идёт создание GIF, подождите...';
+                return;
+            }
+            
+            if (strokes.length === 0 && (!currentStroke || currentStroke.points.length === 0)) {
+                statusMsg.innerHTML = '🎨 Сначала нарисуйте что-нибудь!';
+                return;
+            }
+            
+            isRecordingGif = true;
+            cancelRequested = false;
+            modalProgressArea.style.display = 'block';
+            modalGifResult.style.display = 'none';
+            recordingIndicator.style.display = 'flex';
+            statusMsg.innerHTML = '🎬 Создание GIF... Рисунок оживёт!';
+            
+            const fps = parseInt(fpsSlider.value);
+            const targetWidth = parseInt(widthSlider.value);
+            const quality = parseInt(qualitySlider.value);
+            const durationSec = parseFloat(durationSlider.value);
+            
+            const originalWidth = canvas.width;
+            const originalHeight = canvas.height;
+            const targetHeight = Math.floor(targetWidth * (originalHeight / originalWidth));
+            
+            const totalFrames = Math.floor(durationSec * fps);
+            const frameDelay = 1000 / fps;
+            
+            modalProgressFill.style.width = '0%';
+            modalProgressFill.textContent = '0%';
+            modalProgressText.textContent = `📸 Съёмка кадров: 0/${totalFrames}`;
+            
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = targetWidth;
+            captureCanvas.height = targetHeight;
+            const captureCtx = captureCanvas.getContext('2d');
+            
+            const frames = [];
+            
+            function captureCurrentFrame(timestamp) {
+                captureCtx.clearRect(0, 0, targetWidth, targetHeight);
+                captureCtx.drawImage(canvas, 0, 0, originalWidth, originalHeight, 0, 0, targetWidth, targetHeight);
+                
+                if (currentStroke && currentStroke.points && currentStroke.points.length > 0) {
+                    const nowSec = timestamp / 1000;
+                    captureCtx.save();
+                    const hue = getCurrentHueForStroke(currentStroke, nowSec);
+                    captureCtx.strokeStyle = getRainbowColor(hue);
+                    captureCtx.lineWidth = (currentStroke.lineWidth || lineWidth) * (targetWidth / originalWidth);
+                    captureCtx.lineCap = 'round';
+                    captureCtx.lineJoin = 'round';
+                    
+                    if (currentStroke.points.length >= 2) {
+                        const scale = targetWidth / originalWidth;
+                        captureCtx.beginPath();
+                        const first = currentStroke.points[0];
+                        captureCtx.moveTo(first.x * scale, first.y * scale);
+                        for (let i = 1; i < currentStroke.points.length; i++) {
+                            captureCtx.lineTo(currentStroke.points[i].x * scale, currentStroke.points[i].y * scale);
+                        }
+                        captureCtx.stroke();
+                    } else if (currentStroke.points.length === 1) {
+                        const scale = targetWidth / originalWidth;
+                        captureCtx.beginPath();
+                        captureCtx.fillStyle = getRainbowColor(hue);
+                        const radius = (currentStroke.lineWidth || lineWidth) * 0.5 * scale;
+                        const p = currentStroke.points[0];
+                        captureCtx.arc(p.x * scale, p.y * scale, radius, 0, Math.PI*2);
+                        captureCtx.fill();
+                    }
+                    captureCtx.restore();
+                }
+                
+                return captureCtx.getImageData(0, 0, targetWidth, targetHeight);
+            }
+            
+            const startTime = performance.now();
+            let frameIndex = 0;
+            
+            const captureInterval = setInterval(() => {
+                if (cancelRequested || frameIndex >= totalFrames) {
+                    clearInterval(captureInterval);
+                    return;
+                }
+                
+                const now = performance.now();
+                const frameData = captureCurrentFrame(now);
+                frames.push(frameData);
+                frameIndex++;
+                
+                const percent = Math.floor((frameIndex / totalFrames) * 50);
+                modalProgressFill.style.width = percent + '%';
+                modalProgressFill.textContent = percent + '%';
+                modalProgressText.textContent = `📸 Съёмка кадров: ${frameIndex}/${totalFrames}`;
+                
+                if (frameIndex >= totalFrames) {
+                    clearInterval(captureInterval);
+                    renderGifFromFrames(frames, fps, quality, targetWidth, targetHeight);
+                }
+            }, frameDelay);
+            
+            recordingTimer = setTimeout(() => {
+                if (frameIndex < totalFrames && !cancelRequested) {
+                    clearInterval(captureInterval);
+                    renderGifFromFrames(frames, fps, quality, targetWidth, targetHeight);
+                }
+            }, durationSec * 1000 + 500);
+        }
+        
+        function renderGifFromFrames(frames, fps, quality, targetWidth, targetHeight) {
+            if (cancelRequested || frames.length === 0) {
+                finishRecording(false);
+                return;
+            }
+            
+            modalProgressText.textContent = `🎨 Создание GIF из ${frames.length} кадров...`;
+            
+            const workerCode = `
+                importScripts('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
+            `;
+            const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(workerBlob);
+            
+            gifEncoder = new GIF({
+                workers: 2,
+                quality: Math.floor(quality / 10),
+                width: targetWidth,
+                height: targetHeight,
+                workerScript: workerUrl
+            });
+            
+            gifEncoder.on('progress', (progress) => {
+                if (!cancelRequested) {
+                    const percent = 50 + Math.floor(progress * 50);
+                    modalProgressFill.style.width = percent + '%';
+                    modalProgressFill.textContent = percent + '%';
+                    modalProgressText.textContent = `🎨 Сборка GIF: ${Math.floor(progress * 100)}%`;
+                }
+            });
+            
+            gifEncoder.on('finished', (blob) => {
+                URL.revokeObjectURL(workerUrl);
+                if (cancelRequested) {
+                    finishRecording(false);
+                    return;
+                }
+                
+                const gifUrl = URL.createObjectURL(blob);
+                modalGifPreview.src = gifUrl;
+                modalGifResult.style.display = 'block';
+                modalProgressArea.style.display = 'none';
+                modalProgressFill.style.width = '100%';
+                statusMsg.innerHTML = `✨ GIF создан! Размер: ${(blob.size / 1024).toFixed(1)} KB`;
+                
+                modalDownloadBtn.onclick = () => {
+                    const a = document.createElement('a');
+                    a.href = gifUrl;
+                    a.download = `rainbow_animation_${Date.now()}.gif`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    statusMsg.innerHTML = '📁 GIF сохранён на устройство';
+                };
+                
+                finishRecording(true);
+            });
+            
+            for (let frameData of frames) {
+                gifEncoder.addFrame(frameData, { delay: 1000 / fps });
+            }
+            
+            gifEncoder.render();
+        }
+        
+        function finishRecording(success) {
+            if (recordingTimer) clearTimeout(recordingTimer);
+            isRecordingGif = false;
+            recordingIndicator.style.display = 'none';
+            
+            if (!success || cancelRequested) {
+                modalProgressArea.style.display = 'none';
+                statusMsg.innerHTML = cancelRequested ? '❌ Создание GIF отменено' : '⚠️ Ошибка при создании GIF';
+                cancelRequested = false;
+            }
+        }
+        
+        modalCancelBtn.addEventListener('click', () => {
+            if (isRecordingGif) {
+                cancelRequested = true;
+                if (gifEncoder) {
+                    try { gifEncoder = null; } catch(e) {}
+                }
+                statusMsg.innerHTML = '⏹️ Отмена создания GIF...';
+                modalProgressText.textContent = '❌ Отменено';
+                finishRecording(false);
+            }
+        });
+        
+        generateGifBtn.addEventListener('click', () => {
+            if (!isRecordingGif) {
+                startGifRecording();
+            }
+        });
+        
+        // ---------- ОБРАБОТЧИКИ СОБЫТИЙ РИСОВАНИЯ ----------
+        function onPointerStart(e) {
+            e.preventDefault();
+            const coords = getCanvasCoords(e);
+            if (!coords) return;
+            startStroke(coords.x, coords.y, performance.now());
+        }
+        
+        function onPointerMove(e) {
+            e.preventDefault();
+            if (!isDrawing || !currentStroke) return;
+            const coords = getCanvasCoords(e);
+            if (!coords) return;
+            addPointToStroke(coords.x, coords.y);
+            redrawAllStrokes();
+        }
+        
+        function onPointerEnd(e) {
+            e.preventDefault();
+            if (currentStroke) finishCurrentStroke();
+            isDrawing = false;
+            redrawAllStrokes();
+        }
+        
+        // ---------- ИНИЦИАЛИЗАЦИЯ ----------
+        function init() {
+            resizeCanvas();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+            });
+            
+            canvas.addEventListener('touchstart', onPointerStart, { passive: false });
+            canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+            canvas.addEventListener('touchend', onPointerEnd);
+            canvas.addEventListener('touchcancel', onPointerEnd);
+            canvas.addEventListener('mousedown', onPointerStart);
+            window.addEventListener('mousemove', (e) => {
+                if (isDrawing && (e.buttons === 1)) {
+                    e.preventDefault();
+                    const coords = getCanvasCoords(e);
+                    if (coords) addPointToStroke(coords.x, coords.y);
+                    redrawAllStrokes();
+                } else if (isDrawing && e.buttons !== 1) {
+                    if (currentStroke) finishCurrentStroke();
+                    isDrawing = false;
+                    redrawAllStrokes();
+                }
+            });
+            window.addEventListener('mouseup', onPointerEnd);
+            
+            resetBtn.addEventListener('click', resetCanvas);
+            
+            function animate() {
+                redrawAllStrokes();
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+        
+        init();
+    })();
+</script>
+
+
+
+
+<script>
+// ============================================================
+// УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ
+// Вставьте этот код в любую страницу — работает сразу
+// ============================================================
+
+(function(global) {
+    'use strict';
+
+    // ---------- 1. ХРАНИЛИЩЕ В LOCALSTORAGE ----------
+    const Storage = {
+        save(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка сохранения:', e);
+                return false;
+            }
+        },
+
+        load(key, defaultData = null) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw === null) {
+                    if (defaultData !== null) {
+                        this.save(key, defaultData);
+                    }
+                    return defaultData;
+                }
+                return JSON.parse(raw);
+            } catch (e) {
+                console.error('[Storage] Ошибка загрузки:', e);
+                return defaultData;
+            }
+        },
+
+        remove(key) {
+            try {
+                localStorage.removeItem(key);
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка удаления:', e);
+                return false;
+            }
+        },
+
+        has(key) {
+            return localStorage.getItem(key) !== null;
+        },
+
+        clear() {
+            try {
+                localStorage.clear();
+                return true;
+            } catch (e) {
+                console.error('[Storage] Ошибка очистки:', e);
+                return false;
+            }
+        }
+    };
+
+    // ---------- 2. РАБОТА С МАССИВАМИ ----------
+    const ArrayHelper = {
+        add(key, item, defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) data = [];
+            data.push(item);
+            return Storage.save(key, data);
+        },
+
+        remove(key, identifier, idField = 'id', defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) return false;
+
+            let index = -1;
+            if (typeof identifier === 'function') {
+                index = data.findIndex(identifier);
+            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
+                index = identifier;
+            } else if (identifier !== undefined && identifier !== null) {
+                index = data.findIndex(item => item && item[idField] === identifier);
+            }
+
+            if (index === -1) return false;
+            data.splice(index, 1);
+            return Storage.save(key, data);
+        },
+
+        update(key, identifier, newData, idField = 'id', defaultData = []) {
+            let data = Storage.load(key, defaultData);
+            if (!Array.isArray(data)) return false;
+
+            let index = -1;
+            if (typeof identifier === 'function') {
+                index = data.findIndex(identifier);
+            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
+                index = identifier;
+            } else if (identifier !== undefined && identifier !== null) {
+                index = data.findIndex(item => item && item[idField] === identifier);
+            }
+
+            if (index === -1) return false;
+            data[index] = { ...data[index], ...newData };
+            return Storage.save(key, data);
+        },
+
+        get(key, defaultData = []) {
+            const data = Storage.load(key, defaultData);
+            return Array.isArray(data) ? data : [];
+        },
+
+        find(key, predicate, defaultData = []) {
+            const data = this.get(key, defaultData);
+            return data.find(predicate) || null;
+        },
+
+        filter(key, predicate, defaultData = []) {
+            const data = this.get(key, defaultData);
+            return data.filter(predicate);
+        },
+
+        clear(key) {
+            return Storage.save(key, []);
+        }
+    };
+
+    // ---------- 3. СТАТУС СЕТИ ----------
+    const Network = {
+        getStatus() {
+            return navigator.onLine ? 'online' : 'offline';
+        },
+
+        isOnline() {
+            return navigator.onLine;
+        },
+
+        isOffline() {
+            return !navigator.onLine;
+        },
+
+        onChange(callback) {
+            const onlineHandler = () => callback('online', true);
+            const offlineHandler = () => callback('offline', false);
+            
+            window.addEventListener('online', onlineHandler);
+            window.addEventListener('offline', offlineHandler);
+            
+            return () => {
+                window.removeEventListener('online', onlineHandler);
+                window.removeEventListener('offline', offlineHandler);
+            };
+        },
+
+        // Обновить элемент с статусом
+        updateStatusElement(elementId, onlineText = '🟢 Онлайн', offlineText = '🔴 Офлайн') {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            const update = () => {
+                el.textContent = this.isOnline() ? onlineText : offlineText;
+                el.className = this.isOnline() ? 'status-online' : 'status-offline';
+            };
+            
+            update();
+            return this.onChange(update);
+        }
+    };
+
+    // ---------- 4. SERVICE WORKER (ОФЛАЙН-ПОДДЕРЖКА) ----------
+    const SW = {
+        /**
+         * Зарегистрировать Service Worker
+         * @param {string} swPath - Путь к sw.js (по умолчанию 'sw.js')
+         * @param {Object} options - Опции регистрации
+         * @returns {Promise}
+         */
+        register(swPath = 'sw.js', options = {}) {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] Service Worker не поддерживается');
+                return Promise.reject(new Error('SW не поддерживается'));
+            }
+
+            return navigator.serviceWorker.register(swPath, options)
+                .then(registration => {
+                    console.log('[SW] ✅ Зарегистрирован');
+                    return registration;
+                })
+                .catch(error => {
+                    console.error('[SW] ❌ Ошибка:', error);
+                    throw error;
+                });
+        },
+
+        /**
+         * Проверить активен ли SW
+         * @returns {Promise<boolean>}
+         */
+        async isActive() {
+            if (!('serviceWorker' in navigator)) return false;
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                return registration !== undefined && registration.active !== null;
+            } catch {
+                return false;
+            }
+        },
+
+        /**
+         * Создать и зарегистрировать SW из строки (встроенный SW)
+         * @param {string} swCode - Код Service Worker
+         * @param {string} scope - Scope для SW
+         * @returns {Promise}
+         */
+        registerInline(swCode, scope = '/') {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] Service Worker не поддерживается');
+                return Promise.reject(new Error('SW не поддерживается'));
+            }
+
+            try {
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                return navigator.serviceWorker.register(swUrl, { scope });
+            } catch (error) {
+                console.error('[SW] Ошибка создания inline SW:', error);
+                return Promise.reject(error);
+            }
+        },
+
+        /**
+         * Сгенерировать код SW для кеширования текущей страницы
+         * @param {string} cacheName - Имя кеша
+         * @param {Array} urls - URL для кеширования (по умолчанию текущая страница)
+         * @returns {string} - Код SW
+         */
+        generateCacheSW(cacheName = 'app-v1', urls = null) {
+            if (!urls) {
+                urls = [window.location.pathname || '/'];
+                // Добавляем текущий URL с параметрами
+                if (window.location.search) {
+                    urls.push(window.location.pathname + window.location.search);
+                }
+            }
+
+            return `
+const CACHE_NAME = '${cacheName}';
+const urlsToCache = ${JSON.stringify(urls)};
+
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('[SW] Кеширование:', urlsToCache);
+                return cache.addAll(urlsToCache);
+            })
+            .then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys().then(cacheNames => {
+            return Promise.all(
+                cacheNames.map(name => {
+                    if (name !== CACHE_NAME) {
+                        console.log('[SW] Удаление старого кеша:', name);
+                        return caches.delete(name);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
+});
+
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => response || fetch(event.request))
+            .catch(() => caches.match('/'))
+    );
+});
+`;
+        },
+
+        /**
+         * Автоматическая настройка SW (создаёт и регистрирует)
+         * @param {string} cacheName - Имя кеша
+         * @returns {Promise}
+         */
+        async setupOffline(cacheName = 'app-v1') {
+            const swCode = this.generateCacheSW(cacheName);
+            return this.registerInline(swCode);
+        }
+    };
+
+    // ---------- 5. ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ ----------
+    const Utils = {
+        /**
+         * Глубокое копирование
+         */
+        deepClone(obj) {
+            return JSON.parse(JSON.stringify(obj));
+        },
+
+        /**
+         * Генерация уникального ID
+         */
+        generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        },
+
+        /**
+         * Форматирование даты
+         */
+        formatDate(date, format = 'DD.MM.YYYY HH:mm') {
+            const d = new Date(date);
+            const pad = n => String(n).padStart(2, '0');
+            const replacements = {
+                'YYYY': d.getFullYear(),
+                'MM': pad(d.getMonth() + 1),
+                'DD': pad(d.getDate()),
+                'HH': pad(d.getHours()),
+                'mm': pad(d.getMinutes()),
+                'ss': pad(d.getSeconds())
+            };
+            return format.replace(/YYYY|MM|DD|HH|mm|ss/g, match => replacements[match]);
+        },
+
+        /**
+         * Показать toast-уведомление
+         */
+        showToast(message, duration = 2000) {
+            // Создаём элемент если его нет
+            let toast = document.getElementById('_toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = '_toast';
+                toast.style.cssText = `
+                    position: fixed;
+                    bottom: 30px;
+                    left: 50%;
+                    transform: translateX(-50%) translateY(100px);
+                    background: #1e293b;
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 60px;
+                    font-size: 0.9rem;
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+                    opacity: 0;
+                    transition: all 0.3s ease;
+                    z-index: 9999;
+                    pointer-events: none;
+                    font-family: system-ui, sans-serif;
+                `;
+                document.body.appendChild(toast);
+            }
+
+            toast.textContent = message;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(100px)';
+            }, duration);
+        }
+    };
+
+    // ---------- 6. ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ----------
+    const OfflineKit = {
+        Storage,
+        ArrayHelper,
+        Network,
+        SW,
+        Utils,
+        version: '1.0.0'
+    };
+
+    // Добавляем в глобальный объект
+    global.OfflineKit = OfflineKit;
+
+    // Для удобства добавляем сокращения
+    global.Store = Storage;
+    global.ArrayStore = ArrayHelper;
+    global.NetworkStatus = Network;
+    global.SWHelper = SW;
+    global.Utils = Utils;
+
+    console.log('[OfflineKit] ✅ Загружен v1.0.0');
+
+})(window);
+</script>
+
+
+</body>
+</html>
