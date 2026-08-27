@@ -1046,6 +1046,32 @@
 </script>
 
 
+<script>
+
+
+// Внутри игры при скачивании
+function downloadImage(dataUrl, filename) {
+    if (window.parent && window.parent !== window) {
+        // Отправляем родителю для скачивания
+        window.parent.postMessage({
+            type: 'download',
+            content: dataUrl, // или сам файл
+            filename: filename || 'picture.png',
+            mimeType: 'image/png'
+        }, '*');
+    } else {
+        // Обычное скачивание если не в iframe
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = filename || 'picture.png';
+        a.click();
+    }
+}
+
+</script>
+
+
+
 </body>
 </html>
 ```
