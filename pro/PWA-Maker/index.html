@@ -457,7 +457,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
 
     <!-- Генератор иконок + внешний переход (ТЕПЕРЬ ЧЕРЕЗ ФУНКЦИЮ) -->
     <div style="display:flex; justify-content: flex-end; margin-bottom: 1rem;">
-        <div class="icon-link" onclick="openExternalSite('https://2d3t.github.io/2d3t/pro/Icons/index.html', '🖼️ Генератор иконок')">
+        <div class="icon-link" onclick="openExternalSite('https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html', '🖼️ Генератор иконок')">
             <span>🖼️</span>
             <span style="color: #b4c2e6; font-size: 0.9rem;">Генератор иконок</span>
             <span style="opacity:0.4; margin:0 0.2rem;">→</span>
@@ -1501,8 +1501,8 @@ console.log('[SW] ✅ Service Worker загружен');`;
                     console.log('[APP] ✅ SW уже зарегистрирован');
                     return registration;
                 }
-                return navigator.serviceWorker.register('/2d3t/pro/Games/sw.js', {
-                    scope: '/2d3t/pro/Games/'
+                return navigator.serviceWorker.register('/2d3t/pro/PWA-Maker/sw.js', {
+                    scope: '/2d3t/pro/PWA-MAKER/'
                 });
             })
             .then(reg => {
