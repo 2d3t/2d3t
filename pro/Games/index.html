@@ -683,5 +683,145 @@
 })();
 </script>
 
+
+
+
+<script>
+// ============================================================
+// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ СТРАНИЦ (РЕШЕНИЕ 3)
+// ============================================================
+(function() {
+    "use strict";
+
+    // ============================================================
+    // 1. РЕГИСТРАЦИЯ SERVICE WORKER
+    // ============================================================
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('✅ SW зарегистрирован'))
+            .catch(err => console.warn('❌ SW ошибка:', err));
+    }
+
+    // ============================================================
+    // 2. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ
+    // ============================================================
+    const CACHE_NAME = 'auto-cache-v1';
+    const cachedUrls = new Set();
+
+    // Кешируем URL
+    async function cacheUrl(url) {
+        if (cachedUrls.has(url)) return false;
+        
+        try {
+            const response = await fetch(url, {
+                mode: 'cors',
+                headers: { 'Cache-Control': 'no-cache' }
+            });
+            
+            if (response.ok) {
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(url, response);
+                cachedUrls.add(url);
+                console.log(`📥 Закешировано: ${url}`);
+                return true;
+            }
+        } catch (error) {
+            // Просто игнорируем ошибки
+        }
+        return false;
+    }
+
+    // Кешируем все ссылки на странице
+    async function cacheAllLinks() {
+        if (!('caches' in window)) return;
+        
+        const links = document.querySelectorAll('a[href]');
+        const urls = new Set();
+        
+        links.forEach(link => {
+            const href = link.href;
+            if (href && href.startsWith(window.location.origin)) {
+                if (!href.includes('#') && !href.includes('mailto:') && !href.includes('tel:')) {
+                    urls.add(href);
+                }
+            }
+        });
+
+        let count = 0;
+        for (const url of urls) {
+            if (await cacheUrl(url)) {
+                count++;
+                await new Promise(r => setTimeout(r, 200)); // пауза
+            }
+        }
+        
+        if (count > 0) {
+            console.log(`✅ Закешировано ${count} новых страниц`);
+        }
+    }
+
+    // Кешируем текущую страницу
+    async function cacheCurrentPage() {
+        await cacheUrl(window.location.href);
+    }
+
+    // ============================================================
+    // 3. ЗАПУСК
+    // ============================================================
+    
+    // Ждем загрузку страницы
+    if (document.readyState === 'complete') {
+        setTimeout(() => {
+            cacheCurrentPage();
+            setTimeout(cacheAllLinks, 1000);
+        }, 1000);
+    } else {
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                cacheCurrentPage();
+                setTimeout(cacheAllLinks, 1000);
+            }, 1000);
+        });
+    }
+
+    // Наблюдаем за новыми ссылками
+    if (window.MutationObserver) {
+        const observer = new MutationObserver(() => {
+            clearTimeout(window.cacheTimeout);
+            window.cacheTimeout = setTimeout(cacheAllLinks, 2000);
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    // ============================================================
+    // 4. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
+    // ============================================================
+    let hoverTimeout;
+    document.addEventListener('mouseover', (event) => {
+        const link = event.target.closest('a[href]');
+        if (link && link.href && link.href.startsWith(window.location.origin)) {
+            clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => {
+                cacheUrl(link.href);
+            }, 300);
+        }
+    });
+
+    // ============================================================
+    // 5. ДОСТУП В КОНСОЛИ
+    // ============================================================
+    window.cacheAll = cacheAllLinks;
+    window.cacheCurrent = cacheCurrentPage;
+    
+    console.log('💡 Команды: cacheAll() - кешировать все ссылки, cacheCurrent() - кешировать текущую страницу');
+})();
+</script>
+
+
+
 </body>
 </html>
