@@ -688,52 +688,87 @@
 
 <script>
 // ============================================================
-// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ СТРАНИЦ (РЕШЕНИЕ 3)
+// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ДЛЯ ВАШЕЙ СТРУКТУРЫ
 // ============================================================
 (function() {
     "use strict";
+
+    console.log('[APP] 🔄 Запуск AutoCache...');
 
     // ============================================================
     // 1. РЕГИСТРАЦИЯ SERVICE WORKER
     // ============================================================
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('✅ SW зарегистрирован'))
-            .catch(err => console.warn('❌ SW ошибка:', err));
+        // Проверяем, не зарегистрирован ли уже SW
+        navigator.serviceWorker.getRegistration()
+            .then(registration => {
+                if (registration) {
+                    console.log('[APP] ✅ SW уже зарегистрирован');
+                    return registration;
+                }
+                // Регистрируем новый
+                return navigator.serviceWorker.register('/2d3t/pro/Games/sw.js', {
+                    scope: '/2d3t/pro/Games/'
+                });
+            })
+            .then(reg => {
+                console.log('[APP] ✅ SW зарегистрирован:', reg);
+                
+                // Проверяем обновления
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('[APP] 🔄 Новый SW установлен, перезагрузите страницу');
+                        }
+                    });
+                });
+            })
+            .catch(err => {
+                console.warn('[APP] ❌ Ошибка регистрации SW:', err);
+            });
+    } else {
+        console.warn('[APP] ❌ Service Worker не поддерживается');
     }
 
     // ============================================================
-    // 2. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ
+    // 2. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ СТРАНИЦ
     // ============================================================
-    const CACHE_NAME = 'auto-cache-v1';
+    const CACHE_NAME = 'games-pwa-v2';
     const cachedUrls = new Set();
 
-    // Кешируем URL
+    // Функция для кеширования URL
     async function cacheUrl(url) {
         if (cachedUrls.has(url)) return false;
         
         try {
+            // Проверяем, что URL принадлежит нашему сайту
+            if (!url.startsWith(window.location.origin)) return false;
+            
             const response = await fetch(url, {
                 mode: 'cors',
                 headers: { 'Cache-Control': 'no-cache' }
             });
             
-            if (response.ok) {
+            if (response && response.ok) {
                 const cache = await caches.open(CACHE_NAME);
                 await cache.put(url, response);
                 cachedUrls.add(url);
-                console.log(`📥 Закешировано: ${url}`);
+                console.log(`[APP] 📥 Закешировано: ${url}`);
                 return true;
             }
         } catch (error) {
-            // Просто игнорируем ошибки
+            // Игнорируем ошибки
         }
         return false;
     }
 
-    // Кешируем все ссылки на странице
+    // Функция для кеширования всех ссылок на странице
     async function cacheAllLinks() {
-        if (!('caches' in window)) return;
+        if (!('caches' in window)) {
+            console.warn('[APP] ❌ Cache API не поддерживается');
+            return;
+        }
         
         const links = document.querySelectorAll('a[href]');
         const urls = new Set();
@@ -741,86 +776,130 @@
         links.forEach(link => {
             const href = link.href;
             if (href && href.startsWith(window.location.origin)) {
-                if (!href.includes('#') && !href.includes('mailto:') && !href.includes('tel:')) {
+                // Исключаем якоря, mailto, tel
+                if (!href.includes('#') && 
+                    !href.includes('mailto:') && 
+                    !href.includes('tel:') &&
+                    !href.includes('javascript:')) {
                     urls.add(href);
                 }
             }
         });
 
+        console.log(`[APP] 🔗 Найдено ${urls.size} ссылок для кеширования`);
+        
         let count = 0;
         for (const url of urls) {
             if (await cacheUrl(url)) {
                 count++;
-                await new Promise(r => setTimeout(r, 200)); // пауза
+                // Задержка, чтобы не перегружать сеть
+                await new Promise(r => setTimeout(r, 300));
             }
         }
         
         if (count > 0) {
-            console.log(`✅ Закешировано ${count} новых страниц`);
+            console.log(`[APP] ✅ Закешировано ${count} новых страниц`);
+        } else {
+            console.log(`[APP] ✅ Все страницы уже закешированы`);
         }
     }
 
     // Кешируем текущую страницу
     async function cacheCurrentPage() {
-        await cacheUrl(window.location.href);
+        const url = window.location.href;
+        console.log(`[APP] 📄 Кешируем текущую страницу: ${url}`);
+        await cacheUrl(url);
     }
 
     // ============================================================
-    // 3. ЗАПУСК
+    // 3. ЗАПУСК АВТОКЕШИРОВАНИЯ
     // ============================================================
     
-    // Ждем загрузку страницы
-    if (document.readyState === 'complete') {
-        setTimeout(() => {
-            cacheCurrentPage();
-            setTimeout(cacheAllLinks, 1000);
-        }, 1000);
-    } else {
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                cacheCurrentPage();
-                setTimeout(cacheAllLinks, 1000);
-            }, 1000);
-        });
+    // Ждем загрузку DOM
+    function initAutoCache() {
+        console.log('[APP] 🚀 Запуск автокеширования...');
+        
+        // Кешируем текущую страницу
+        setTimeout(cacheCurrentPage, 500);
+        
+        // Кешируем все ссылки
+        setTimeout(cacheAllLinks, 2000);
     }
 
-    // Наблюдаем за новыми ссылками
-    if (window.MutationObserver) {
-        const observer = new MutationObserver(() => {
-            clearTimeout(window.cacheTimeout);
-            window.cacheTimeout = setTimeout(cacheAllLinks, 2000);
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
+    if (document.readyState === 'complete') {
+        initAutoCache();
+    } else {
+        document.addEventListener('DOMContentLoaded', initAutoCache);
+        // Дополнительно на полную загрузку
+        window.addEventListener('load', () => {
+            setTimeout(cacheAllLinks, 3000);
         });
     }
 
     // ============================================================
-    // 4. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
+    // 4. МОНИТОРИНГ НОВЫХ ССЫЛОК
+    // ============================================================
+    if (window.MutationObserver) {
+        let observerTimeout;
+        const observer = new MutationObserver(() => {
+            clearTimeout(observerTimeout);
+            observerTimeout = setTimeout(() => {
+                console.log('[APP] 🔄 Обнаружены изменения, проверяем новые ссылки...');
+                cacheAllLinks();
+            }, 2000);
+        });
+        
+        // Начинаем наблюдение после загрузки
+        setTimeout(() => {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            console.log('[APP] 👁️ Наблюдение за новыми ссылками запущено');
+        }, 3000);
+    }
+
+    // ============================================================
+    // 5. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
     // ============================================================
     let hoverTimeout;
     document.addEventListener('mouseover', (event) => {
         const link = event.target.closest('a[href]');
         if (link && link.href && link.href.startsWith(window.location.origin)) {
-            clearTimeout(hoverTimeout);
-            hoverTimeout = setTimeout(() => {
-                cacheUrl(link.href);
-            }, 300);
+            if (!link.href.includes('#') && 
+                !link.href.includes('mailto:') && 
+                !link.href.includes('tel:')) {
+                clearTimeout(hoverTimeout);
+                hoverTimeout = setTimeout(() => {
+                    console.log(`[APP] 🔄 Предзагрузка: ${link.href}`);
+                    cacheUrl(link.href);
+                }, 500);
+            }
         }
     });
 
     // ============================================================
-    // 5. ДОСТУП В КОНСОЛИ
+    // 6. ДОСТУП В КОНСОЛИ
     // ============================================================
     window.cacheAll = cacheAllLinks;
     window.cacheCurrent = cacheCurrentPage;
-    
-    console.log('💡 Команды: cacheAll() - кешировать все ссылки, cacheCurrent() - кешировать текущую страницу');
+    window.cacheUrl = cacheUrl;
+    window.cacheStatus = async function() {
+        const cache = await caches.open(CACHE_NAME);
+        const keys = await cache.keys();
+        console.log(`📦 В кеше ${keys.length} файлов:`);
+        keys.forEach(req => console.log(`  - ${req.url}`));
+    };
+
+    console.log('[APP] ✅ AutoCache инициализирован');
+    console.log('[APP] 💡 Доступные команды:');
+    console.log('  cacheAll() - кешировать все ссылки');
+    console.log('  cacheCurrent() - кешировать текущую страницу');
+    console.log('  cacheUrl("url") - кешировать конкретный URL');
+    console.log('  cacheStatus() - показать содержимое кеша');
+
 })();
 </script>
-
 
 
 </body>
