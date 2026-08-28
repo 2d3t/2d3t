@@ -1514,15 +1514,14 @@ console.log('[SW] ✅ Service Worker загружен');`;
     }
 
     // ============================================================
-    // 2. СПИСОК ИГР ДЛЯ ПРЕДЗАГРУЗКИ
+    // 2. СПИСОК УТИЛИТ ДЛЯ ПРЕДЗАГРУЗКИ
     // ============================================================
     const GAMES_TO_PRECACHE = [
-        'https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html',
-        'https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html'
+        'https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html'
         // Добавьте сюда другие игры, если есть
     ];
 
-    const CACHE_NAME = 'games-pwa-v2';
+    const CACHE_NAME = 'iconmaker-pwa-v2';
 
     // ============================================================
     // 3. ФУНКЦИЯ КЕШИРОВАНИЯ С ОЖИДАНИЕМ
