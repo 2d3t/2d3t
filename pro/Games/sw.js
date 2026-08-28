@@ -1,67 +1,72 @@
-const CACHE_NAME = 'games-pwa-v1';
-const FILES_TO_CACHE = [
-    '/2d3t/pro/Games/index.html',
-    '/2d3t/pro/Games/manifest.json'
-];
+// sw.js - Упрощенная версия для AutoCache
+const CACHE_NAME = 'auto-cache-v1';
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Кэшируем ProX...');
-                return cache.addAll(FILES_TO_CACHE);
+                return cache.addAll([
+                    '/',
+                    '/index.html',
+                    '/manifest.json',
+                    '/icon-192.png',
+                    '/icon-512.png',
+                    '/offline.html'
+                ]);
             })
             .then(() => self.skipWaiting())
     );
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys().then(cacheNames => {
+        caches.keys().then(keys => {
             return Promise.all(
-                cacheNames.map(name => {
-                    if (name !== CACHE_NAME) {
-                        console.log('[SW] Удаляем старый кэш:', name);
-                        return caches.delete(name);
-                    }
-                })
+                keys.filter(key => key !== CACHE_NAME)
+                    .map(key => caches.delete(key))
             );
-        }).then(() => self.clients.claim())
+        })
+        .then(() => self.clients.claim())
     );
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
+    if (event.request.url.includes('/api/')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
-            .then(cachedResponse => {
-                if (cachedResponse) {
-                    // Фоновое обновление кэша
-                    fetch(event.request)
-                        .then(response => {
-                            if (response && response.status === 200) {
-                                const clone = response.clone();
-                                caches.open(CACHE_NAME).then(cache => {
-                                    cache.put(event.request, clone);
-                                });
-                            }
-                        })
-                        .catch(() => {});
-                    return cachedResponse;
+            .then(response => {
+                if (response) {
+                    if (navigator.onLine) {
+                        fetch(event.request)
+                            .then(freshResponse => {
+                                if (freshResponse.ok) {
+                                    caches.open(CACHE_NAME)
+                                        .then(cache => cache.put(event.request, freshResponse));
+                                }
+                            })
+                            .catch(() => {});
+                    }
+                    return response;
                 }
-                
+
                 return fetch(event.request)
                     .then(response => {
-                        if (response && response.status === 200) {
+                        if (response.ok) {
                             const clone = response.clone();
-                            caches.open(CACHE_NAME).then(cache => {
-                                cache.put(event.request, clone);
-                            });
+                            caches.open(CACHE_NAME)
+                                .then(cache => cache.put(event.request, clone));
                         }
                         return response;
                     })
                     .catch(() => {
-                        // Fallback на главную страницу при офлайне
-                        return caches.match('/2d3t/pro/Games/index.html');
+                        return caches.match('/offline.html')
+                            .then(offline => offline || new Response('Офлайн режим', {
+                                status: 503,
+                                statusText: 'Service Unavailable'
+                            }));
                     });
             })
     );
