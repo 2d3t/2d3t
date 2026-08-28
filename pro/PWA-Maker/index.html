@@ -440,6 +440,15 @@
             <label>Cache Name (версия кэша)</label>
             <input type="text" id="cacheName" value="prox-pwa-v2" placeholder="cache-name-v1">
         </div>
+
+        <!-- НОВЫЙ БЛОК: СТРАНИЦЫ ДЛЯ ПРЕДЗАГРУЗКИ -->
+        <div style="margin-top: 1rem;">
+            <label>📌 Страницы для предзагрузки (по одной на строку)</label>
+            <textarea id="precacheUrls" rows="4" placeholder="https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html&#10;https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html">https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html
+https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
+            <div class="helper">✅ Эти страницы будут доступны офлайн сразу после загрузки</div>
+        </div>
+
         <div class="btn-group">
             <button class="btn btn-primary" id="generateBtn">🔄 Обновить код</button>
             <button class="btn btn-icon" id="resetDefaults">↺ Сбросить</button>
@@ -699,6 +708,7 @@
     const icon192 = document.getElementById('icon192');
     const icon512 = document.getElementById('icon512');
     const cacheName = document.getElementById('cacheName');
+    const precacheUrls = document.getElementById('precacheUrls');
 
     // Элементы для предпросмотра путей иконок
     const icon192Preview = document.getElementById('icon192Preview');
@@ -748,55 +758,332 @@
         const baseDir = getBaseDir(startPath);
         const icon192src = icon192.value.trim() || (baseDir + 'icon-192.png');
         const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
-        const cache = cacheName.value.trim() || '';
+        const cache = cacheName.value.trim() || 'pwa-cache-v1';
+        
+        // Получаем список страниц для предзагрузки
+        const precacheList = precacheUrls.value
+            .split('\n')
+            .map(url => url.trim())
+            .filter(url => url.length > 0);
+        const precacheArrayStr = JSON.stringify(precacheList);
 
-        // ---- 1. HTML скрипт (вставка) ----
+        // ---- 1. HTML скрипт (вставка с AUTOCACHE) ----
         const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        
-        <!-- ПОДКЛЮЧЕНИЕ MANIFEST -->
-        <link rel="manifest" href="${baseDir}manifest.json">
-        
-        <!-- ПОДКЛЮЧЕНИЕ ИКОНОК (ВАЖНО ДЛЯ УСТАНОВКИ) -->
-        <link rel="icon" type="image/png" sizes="192x192" href="${icon192src}">
-        <link rel="icon" type="image/png" sizes="512x512" href="${icon512src}">
-        
-        <!-- APPLE TOUCH ICON (для iOS) -->
-        <link rel="apple-touch-icon" href="${icon192src}">
-        
-        <title>${name}</title>
-    </head>
-    <body>
-        <!-- Ваш контент -->
-        <div class="status" id="status">🟢 Онлайн</div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- ПОДКЛЮЧЕНИЕ MANIFEST -->
+    <link rel="manifest" href="${baseDir}manifest.json">
+    
+    <!-- ПОДКЛЮЧЕНИЕ ИКОНОК (ВАЖНО ДЛЯ УСТАНОВКИ) -->
+    <link rel="icon" type="image/png" sizes="192x192" href="${icon192src}">
+    <link rel="icon" type="image/png" sizes="512x512" href="${icon512src}">
+    
+    <!-- APPLE TOUCH ICON (для iOS) -->
+    <link rel="apple-touch-icon" href="${icon192src}">
+    
+    <title>${name}</title>
+</head>
+<body>
+    <!-- Ваш контент -->
+    <div class="status" id="status">🟢 Онлайн</div>
 
-        <script>
-            // Проверка статуса сети
-            function updateStatus() {
-                const status = document.getElementById('status');
-                if (navigator.onLine) {
-                    status.textContent = '🟢 Онлайн';
-                    status.className = 'status online';
-                } else {
-                    status.textContent = '🔴 Офлайн (работает из кэша)';
-                    status.className = 'status offline';
+    <script>
+        // Проверка статуса сети
+        function updateStatus() {
+            const status = document.getElementById('status');
+            if (navigator.onLine) {
+                status.textContent = '🟢 Онлайн';
+                status.className = 'status online';
+            } else {
+                status.textContent = '🔴 Офлайн (работает из кэша)';
+                status.className = 'status offline';
+            }
+        }
+
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        updateStatus();
+    <\/script>
+
+    <!-- ============================================================
+    AUTOCACHE - АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ СТРАНИЦ
+    ============================================================ -->
+    <script>
+    (function() {
+        "use strict";
+
+        console.log('[APP] 🔄 Запуск AutoCache...');
+
+        // ============================================================
+        // 1. РЕГИСТРАЦИЯ SERVICE WORKER
+        // ============================================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration()
+                .then(registration => {
+                    if (registration) {
+                        console.log('[APP] ✅ SW уже зарегистрирован');
+                        return registration;
+                    }
+                    return navigator.serviceWorker.register('${baseDir}sw.js', {
+                        scope: '${baseDir}'
+                    });
+                })
+                .then(reg => {
+                    console.log('[APP] ✅ SW зарегистрирован:', reg);
+                    
+                    // Проверяем обновления
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('[APP] 🔄 Новый SW установлен, перезагрузите страницу');
+                            }
+                        });
+                    });
+                })
+                .catch(err => {
+                    console.warn('[APP] ❌ Ошибка регистрации SW:', err);
+                });
+        }
+
+        // ============================================================
+        // 2. СПИСОК СТРАНИЦ ДЛЯ ПРЕДЗАГРУЗКИ
+        // ============================================================
+        const PAGES_TO_PRECACHE = ${precacheArrayStr};
+
+        const CACHE_NAME = '${cache}';
+        const cachedUrls = new Set();
+
+        // ============================================================
+        // 3. ФУНКЦИЯ КЕШИРОВАНИЯ
+        // ============================================================
+        async function cacheUrl(url, retries = 3) {
+            if (!('caches' in window)) return false;
+            if (cachedUrls.has(url)) return true;
+            
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                    console.log(\`[APP] 📥 Попытка \${attempt}/\${retries}: \${url}\`);
+                    
+                    const response = await fetch(url, {
+                        mode: 'cors',
+                        headers: { 'Cache-Control': 'no-cache' }
+                    });
+                    
+                    if (response && response.ok) {
+                        const cache = await caches.open(CACHE_NAME);
+                        await cache.put(url, response);
+                        cachedUrls.add(url);
+                        console.log(\`[APP] ✅ Закешировано: \${url}\`);
+                        return true;
+                    }
+                } catch (error) {
+                    console.warn(\`[APP] ⚠️ Ошибка (\${attempt}/\${retries}):\`, error.message);
+                    if (attempt < retries) {
+                        await new Promise(r => setTimeout(r, 2000 * attempt));
+                    }
                 }
             }
+            return false;
+        }
 
-            window.addEventListener('online', updateStatus);
-            window.addEventListener('offline', updateStatus);
-            updateStatus();
-
-            // Регистрация Service Worker
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('${baseDir}sw.js')
-                    .then(() => console.log('[SW] ✅ Зарегистрирован'))
-                    .catch(err => console.log('[SW] ❌ Ошибка:', err));
+        // ============================================================
+        // 4. ПРЕДЗАГРУЗКА ВСЕХ СТРАНИЦ
+        // ============================================================
+        async function precacheAllPages() {
+            console.log('[APP] 🚀 Начинаем предзагрузку страниц...');
+            
+            if (!navigator.onLine) {
+                console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
+                return;
             }
-        <\/script>
-    </body>`;
+
+            let successCount = 0;
+            for (const pageUrl of PAGES_TO_PRECACHE) {
+                if (await cacheUrl(pageUrl, 3)) {
+                    successCount++;
+                }
+                await new Promise(r => setTimeout(r, 500));
+            }
+            
+            console.log(\`[APP] ✅ Предзагружено \${successCount}/\${PAGES_TO_PRECACHE.length} страниц\`);
+            
+            if (successCount === PAGES_TO_PRECACHE.length && PAGES_TO_PRECACHE.length > 0) {
+                showNotification('✅ Все страницы сохранены для офлайн-доступа!');
+            }
+        }
+
+        // ============================================================
+        // 5. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ ССЫЛОК
+        // ============================================================
+        async function cacheAllLinks() {
+            if (!('caches' in window)) return;
+            
+            const links = document.querySelectorAll('a[href]');
+            const urls = new Set();
+            
+            links.forEach(link => {
+                const href = link.href;
+                if (href && href.startsWith(window.location.origin)) {
+                    if (!href.includes('#') && 
+                        !href.includes('mailto:') && 
+                        !href.includes('tel:') &&
+                        !href.includes('javascript:')) {
+                        urls.add(href);
+                    }
+                }
+            });
+
+            let count = 0;
+            for (const url of urls) {
+                if (await cacheUrl(url, 2)) {
+                    count++;
+                    await new Promise(r => setTimeout(r, 200));
+                }
+            }
+            
+            if (count > 0) {
+                console.log(\`[APP] ✅ Закешировано \${count} страниц со ссылок\`);
+            }
+        }
+
+        // ============================================================
+        // 6. УВЕДОМЛЕНИЕ
+        // ============================================================
+        function showNotification(message) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = \`
+                position: fixed;
+                bottom: 30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(46, 125, 50, 0.95);
+                color: white;
+                padding: 16px 32px;
+                border-radius: 16px;
+                font-size: 16px;
+                z-index: 999999;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                animation: slideUp 0.3s ease;
+                backdrop-filter: blur(8px);
+                font-family: 'Segoe UI', cursive, sans-serif;
+                max-width: 90%;
+                text-align: center;
+            \`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.5s';
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+
+        // ============================================================
+        // 7. ЗАПУСК
+        // ============================================================
+        window.addEventListener('load', () => {
+            console.log('[APP] 📄 Страница загружена');
+            
+            // Кешируем текущую страницу
+            setTimeout(() => cacheUrl(window.location.href, 2), 500);
+            
+            // Предзагружаем важные страницы
+            setTimeout(precacheAllPages, 2000);
+            
+            // Кешируем все ссылки
+            setTimeout(cacheAllLinks, 4000);
+        });
+
+        // ============================================================
+        // 8. МОНИТОРИНГ НОВЫХ ССЫЛОК
+        // ============================================================
+        if (window.MutationObserver) {
+            let observerTimeout;
+            const observer = new MutationObserver(() => {
+                clearTimeout(observerTimeout);
+                observerTimeout = setTimeout(() => {
+                    console.log('[APP] 🔄 Обнаружены изменения, проверяем новые ссылки...');
+                    cacheAllLinks();
+                }, 2000);
+            });
+            
+            setTimeout(() => {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }, 5000);
+        }
+
+        // ============================================================
+        // 9. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
+        // ============================================================
+        let hoverTimeout;
+        document.addEventListener('mouseover', (event) => {
+            const link = event.target.closest('a[href]');
+            if (link && link.href && link.href.startsWith(window.location.origin)) {
+                if (!link.href.includes('#') && 
+                    !link.href.includes('mailto:') && 
+                    !link.href.includes('tel:')) {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = setTimeout(() => {
+                        cacheUrl(link.href, 2);
+                    }, 500);
+                }
+            }
+        });
+
+        // ============================================================
+        // 10. ДОСТУП В КОНСОЛИ
+        // ============================================================
+        window.precacheAllPages = precacheAllPages;
+        window.cacheAll = cacheAllLinks;
+        window.cacheUrl = cacheUrl;
+        window.cacheStatus = async function() {
+            const cache = await caches.open(CACHE_NAME);
+            const keys = await cache.keys();
+            console.log(\`📦 В кеше \${keys.length} файлов:\`);
+            keys.forEach(req => console.log(\`  - \${req.url}\`));
+        };
+
+        console.log('[APP] ✅ AutoCache инициализирован');
+        console.log('[APP] 💡 Доступные команды:');
+        console.log('  precacheAllPages() - предзагрузить ВСЕ страницы');
+        console.log('  cacheAll() - кешировать все ссылки');
+        console.log('  cacheStatus() - проверить кеш');
+        console.log('  cacheUrl("url") - кешировать конкретный URL');
+
+    })();
+    <\/script>
+
+    <style>
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .status {
+        padding: 10px 20px;
+        border-radius: 8px;
+        margin: 10px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    .status.online {
+        background: rgba(46, 125, 50, 0.2);
+        color: #4caf50;
+        border: 1px solid #4caf50;
+    }
+    .status.offline {
+        background: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        border: 1px solid #f44336;
+    }
+    <\/style>
+</body>`;
 
         htmlCode.textContent = htmlScript;
 
@@ -827,75 +1114,126 @@
         };
         manifestCode.textContent = JSON.stringify(manifest, null, 2);
 
-        // ---- 3. service-worker.js ----
-        const sw = `const CACHE_NAME = '${cache}';
+        // ---- 3. service-worker.js (УНИВЕРСАЛЬНЫЙ С AUTOCACHE) ----
+        const sw = `// sw.js - Универсальный кеш для всех страниц
+const CACHE_NAME = '${cache}';
+
+// Базовые файлы для кеширования
 const FILES_TO_CACHE = [
     '${startPath}',
-    '${baseDir}manifest.json'
+    '${baseDir}manifest.json',
+    '${icon192src}',
+    '${icon512src}'
 ];
 
+// Установка
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Кэшируем ProX...');
-                return cache.addAll(FILES_TO_CACHE);
+                console.log('[SW] Кэшируем базовые файлы...');
+                return cache.addAll(FILES_TO_CACHE).catch(err => {
+                    console.warn('[SW] Некоторые файлы не закешированы:', err);
+                });
             })
-            .then(() => self.skipWaiting())
+            .then(() => {
+                console.log('[SW] ✅ Установка завершена');
+                return self.skipWaiting();
+            })
     );
 });
 
+// Активация
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(name => {
                     if (name !== CACHE_NAME) {
-                        console.log('[SW] Удаляем старый кэш:', name);
+                        console.log('[SW] 🗑️ Удаляем старый кэш:', name);
                         return caches.delete(name);
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => {
+            console.log('[SW] ✅ Активация завершена');
+            return self.clients.claim();
+        })
     );
 });
 
+// ============================================================
+// УНИВЕРСАЛЬНЫЙ FETCH - КЕШИРУЕТ ВСЁ!
+// ============================================================
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+    
+    // Пропускаем API и аналитику
+    if (url.pathname.includes('/api/') || url.pathname.includes('/analytics/')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
                 if (cachedResponse) {
-                    // Фоновое обновление кэша
-                    fetch(event.request)
-                        .then(response => {
-                            if (response && response.status === 200) {
-                                const clone = response.clone();
-                                caches.open(CACHE_NAME).then(cache => {
-                                    cache.put(event.request, clone);
-                                });
-                            }
-                        })
-                        .catch(() => {});
+                    console.log('[SW] 📦 Из кеша:', url.pathname);
+                    
+                    // Фоновое обновление (если есть сеть)
+                    if (navigator.onLine) {
+                        fetch(event.request)
+                            .then(response => {
+                                if (response && response.status === 200) {
+                                    const clone = response.clone();
+                                    caches.open(CACHE_NAME).then(cache => {
+                                        cache.put(event.request, clone);
+                                        console.log('[SW] 🔄 Обновлен кеш:', url.pathname);
+                                    });
+                                }
+                            })
+                            .catch(() => {});
+                    }
+                    
                     return cachedResponse;
                 }
                 
+                // Нет в кеше - загружаем из сети
                 return fetch(event.request)
                     .then(response => {
                         if (response && response.status === 200) {
                             const clone = response.clone();
                             caches.open(CACHE_NAME).then(cache => {
                                 cache.put(event.request, clone);
+                                console.log('[SW] 💾 Добавлен в кеш:', url.pathname);
                             });
                         }
                         return response;
                     })
                     .catch(() => {
-                        // Fallback на главную страницу при офлайне
-                        return caches.match('${startPath}');
+                        // Офлайн - показываем главную страницу
+                        console.log('[SW] ⚠️ Офлайн режим для:', url.pathname);
+                        return caches.match('${startPath}')
+                            .then(fallback => {
+                                if (fallback) return fallback;
+                                return new Response('Страница недоступна офлайн', {
+                                    status: 503,
+                                    statusText: 'Service Unavailable'
+                                });
+                            });
                     });
             })
     );
-});`;
+});
+
+// Обработка сообщений от страницы
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
+console.log('[SW] ✅ Service Worker загружен');`;
+        
         swCode.textContent = sw;
     }
 
@@ -944,7 +1282,7 @@ self.addEventListener('fetch', (event) => {
     });
 
     // Генерация при изменении полей
-    const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, cacheName];
+    const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, cacheName, precacheUrls];
     inputs.forEach(inp => {
         inp.addEventListener('input', generateAll);
         inp.addEventListener('change', generateAll);
@@ -1024,6 +1362,7 @@ self.addEventListener('fetch', (event) => {
         themeColor.value = '#111111';
         basePath.value = '/2d3t/pro/MirrorX/index.html';
         cacheName.value = 'prox-pwa-v2';
+        precacheUrls.value = 'https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html\nhttps://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html';
         
         // Обновляем пикеры
         if (bgPicker) bgPicker.value = '#111111';
