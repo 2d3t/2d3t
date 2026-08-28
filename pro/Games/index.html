@@ -685,10 +685,9 @@
 
 
 
-
 <script>
 // ============================================================
-// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ДЛЯ ВАШЕЙ СТРУКТУРЫ
+// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ + ПРЕДЗАГРУЗКА ИГР
 // ============================================================
 (function() {
     "use strict";
@@ -699,76 +698,136 @@
     // 1. РЕГИСТРАЦИЯ SERVICE WORKER
     // ============================================================
     if ('serviceWorker' in navigator) {
-        // Проверяем, не зарегистрирован ли уже SW
         navigator.serviceWorker.getRegistration()
             .then(registration => {
                 if (registration) {
                     console.log('[APP] ✅ SW уже зарегистрирован');
                     return registration;
                 }
-                // Регистрируем новый
                 return navigator.serviceWorker.register('/2d3t/pro/Games/sw.js', {
                     scope: '/2d3t/pro/Games/'
                 });
             })
             .then(reg => {
                 console.log('[APP] ✅ SW зарегистрирован:', reg);
-                
-                // Проверяем обновления
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            console.log('[APP] 🔄 Новый SW установлен, перезагрузите страницу');
-                        }
-                    });
-                });
             })
             .catch(err => {
                 console.warn('[APP] ❌ Ошибка регистрации SW:', err);
             });
-    } else {
-        console.warn('[APP] ❌ Service Worker не поддерживается');
     }
 
     // ============================================================
-    // 2. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ СТРАНИЦ
+    // 2. СПИСОК ИГР ДЛЯ ПРЕДЗАГРУЗКИ
     // ============================================================
-    const CACHE_NAME = 'games-pwa-v2';
-    const cachedUrls = new Set();
+    const GAMES_TO_PRECACHE = [
+        'https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html',
+        'https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html'
+        // Добавьте сюда другие игры, если есть
+    ];
 
-    // Функция для кеширования URL
-    async function cacheUrl(url) {
-        if (cachedUrls.has(url)) return false;
+    const CACHE_NAME = 'games-pwa-v2';
+
+    // ============================================================
+    // 3. ФУНКЦИЯ КЕШИРОВАНИЯ С ОЖИДАНИЕМ
+    // ============================================================
+    async function cacheUrl(url, retries = 3) {
+        if (!('caches' in window)) return false;
         
-        try {
-            // Проверяем, что URL принадлежит нашему сайту
-            if (!url.startsWith(window.location.origin)) return false;
-            
-            const response = await fetch(url, {
-                mode: 'cors',
-                headers: { 'Cache-Control': 'no-cache' }
-            });
-            
-            if (response && response.ok) {
-                const cache = await caches.open(CACHE_NAME);
-                await cache.put(url, response);
-                cachedUrls.add(url);
-                console.log(`[APP] 📥 Закешировано: ${url}`);
-                return true;
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                console.log(`[APP] 📥 Попытка ${attempt}/${retries}: ${url}`);
+                
+                const response = await fetch(url, {
+                    mode: 'cors',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                
+                if (response && response.ok) {
+                    const cache = await caches.open(CACHE_NAME);
+                    await cache.put(url, response);
+                    console.log(`[APP] ✅ Закешировано: ${url}`);
+                    return true;
+                }
+            } catch (error) {
+                console.warn(`[APP] ⚠️ Ошибка (${attempt}/${retries}):`, error.message);
+                if (attempt < retries) {
+                    await new Promise(r => setTimeout(r, 2000 * attempt)); // Ждем дольше с каждой попыткой
+                }
             }
-        } catch (error) {
-            // Игнорируем ошибки
         }
         return false;
     }
 
-    // Функция для кеширования всех ссылок на странице
-    async function cacheAllLinks() {
-        if (!('caches' in window)) {
-            console.warn('[APP] ❌ Cache API не поддерживается');
+    // ============================================================
+    // 4. ПРЕДЗАГРУЗКА ВСЕХ ИГР
+    // ============================================================
+    async function precacheAllGames() {
+        console.log('[APP] 🚀 Начинаем предзагрузку игр...');
+        
+        // Проверяем интернет
+        if (!navigator.onLine) {
+            console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
             return;
         }
+
+        let successCount = 0;
+        for (const gameUrl of GAMES_TO_PRECACHE) {
+            if (await cacheUrl(gameUrl, 3)) {
+                successCount++;
+            }
+            // Пауза между загрузками, чтобы не перегружать сервер
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        
+        console.log(`[APP] ✅ Предзагружено ${successCount}/${GAMES_TO_PRECACHE.length} игр`);
+        
+        if (successCount === GAMES_TO_PRECACHE.length) {
+            console.log('[APP] 🎉 Все игры готовы к офлайн-работе!');
+            showNotification('✅ Все игры сохранены для офлайн-доступа!');
+        } else {
+            console.warn('[APP] ⚠️ Некоторые игры не загрузились, попробуйте обновить страницу');
+            showNotification('⚠️ Часть игр не загрузилась, проверьте интернет');
+        }
+    }
+
+    // ============================================================
+    // 5. УВЕДОМЛЕНИЕ ДЛЯ ПОЛЬЗОВАТЕЛЯ
+    // ============================================================
+    function showNotification(message, isSuccess = true) {
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: ${isSuccess ? 'rgba(46, 125, 50, 0.95)' : 'rgba(198, 40, 40, 0.95)'};
+            color: white;
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-size: 16px;
+            z-index: 999999;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease;
+            backdrop-filter: blur(8px);
+            font-family: 'Segoe UI', cursive, sans-serif;
+            max-width: 90%;
+            text-align: center;
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.5s';
+            setTimeout(() => toast.remove(), 500);
+        }, 5000);
+    }
+
+    // ============================================================
+    // 6. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ ССЫЛОК
+    // ============================================================
+    async function cacheAllLinks() {
+        if (!('caches' in window)) return;
         
         const links = document.querySelectorAll('a[href]');
         const urls = new Set();
@@ -776,7 +835,6 @@
         links.forEach(link => {
             const href = link.href;
             if (href && href.startsWith(window.location.origin)) {
-                // Исключаем якоря, mailto, tel
                 if (!href.includes('#') && 
                     !href.includes('mailto:') && 
                     !href.includes('tel:') &&
@@ -786,58 +844,41 @@
             }
         });
 
-        console.log(`[APP] 🔗 Найдено ${urls.size} ссылок для кеширования`);
-        
         let count = 0;
         for (const url of urls) {
-            if (await cacheUrl(url)) {
+            if (await cacheUrl(url, 2)) {
                 count++;
-                // Задержка, чтобы не перегружать сеть
-                await new Promise(r => setTimeout(r, 300));
+                await new Promise(r => setTimeout(r, 200));
             }
         }
         
         if (count > 0) {
-            console.log(`[APP] ✅ Закешировано ${count} новых страниц`);
-        } else {
-            console.log(`[APP] ✅ Все страницы уже закешированы`);
+            console.log(`[APP] ✅ Закешировано ${count} страниц со ссылок`);
         }
     }
 
-    // Кешируем текущую страницу
-    async function cacheCurrentPage() {
-        const url = window.location.href;
-        console.log(`[APP] 📄 Кешируем текущую страницу: ${url}`);
-        await cacheUrl(url);
-    }
-
     // ============================================================
-    // 3. ЗАПУСК АВТОКЕШИРОВАНИЯ
+    // 7. ЗАПУСК - ПРИОРИТЕТ: СНАЧАЛА ИГРЫ, ПОТОМ ВСЁ ОСТАЛЬНОЕ
     // ============================================================
     
-    // Ждем загрузку DOM
-    function initAutoCache() {
-        console.log('[APP] 🚀 Запуск автокеширования...');
+    // Ждем полной загрузки страницы
+    window.addEventListener('load', () => {
+        console.log('[APP] 📄 Страница загружена');
         
-        // Кешируем текущую страницу
-        setTimeout(cacheCurrentPage, 500);
+        // 1. Сначала кешируем игры (самое важное!)
+        setTimeout(precacheAllGames, 1000);
         
-        // Кешируем все ссылки
-        setTimeout(cacheAllLinks, 2000);
-    }
-
-    if (document.readyState === 'complete') {
-        initAutoCache();
-    } else {
-        document.addEventListener('DOMContentLoaded', initAutoCache);
-        // Дополнительно на полную загрузку
-        window.addEventListener('load', () => {
-            setTimeout(cacheAllLinks, 3000);
-        });
-    }
+        // 2. Потом кешируем текущую страницу
+        setTimeout(() => {
+            cacheUrl(window.location.href, 2);
+        }, 3000);
+        
+        // 3. И только потом все ссылки на странице
+        setTimeout(cacheAllLinks, 5000);
+    });
 
     // ============================================================
-    // 4. МОНИТОРИНГ НОВЫХ ССЫЛОК
+    // 8. МОНИТОРИНГ НОВЫХ ССЫЛОК
     // ============================================================
     if (window.MutationObserver) {
         let observerTimeout;
@@ -849,18 +890,16 @@
             }, 2000);
         });
         
-        // Начинаем наблюдение после загрузки
         setTimeout(() => {
             observer.observe(document.body, {
                 childList: true,
                 subtree: true
             });
-            console.log('[APP] 👁️ Наблюдение за новыми ссылками запущено');
-        }, 3000);
+        }, 5000);
     }
 
     // ============================================================
-    // 5. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
+    // 9. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
     // ============================================================
     let hoverTimeout;
     document.addEventListener('mouseover', (event) => {
@@ -871,36 +910,55 @@
                 !link.href.includes('tel:')) {
                 clearTimeout(hoverTimeout);
                 hoverTimeout = setTimeout(() => {
-                    console.log(`[APP] 🔄 Предзагрузка: ${link.href}`);
-                    cacheUrl(link.href);
+                    cacheUrl(link.href, 2);
                 }, 500);
             }
         }
     });
 
     // ============================================================
-    // 6. ДОСТУП В КОНСОЛИ
+    // 10. ДОСТУП В КОНСОЛИ
     // ============================================================
+    window.precacheAllGames = precacheAllGames;
     window.cacheAll = cacheAllLinks;
-    window.cacheCurrent = cacheCurrentPage;
     window.cacheUrl = cacheUrl;
     window.cacheStatus = async function() {
         const cache = await caches.open(CACHE_NAME);
         const keys = await cache.keys();
         console.log(`📦 В кеше ${keys.length} файлов:`);
         keys.forEach(req => console.log(`  - ${req.url}`));
+        
+        // Проверяем, есть ли игры
+        const gameUrls = GAMES_TO_PRECACHE;
+        let found = 0;
+        for (const url of gameUrls) {
+            const response = await cache.match(url);
+            if (response) {
+                console.log(`  ✅ Игра в кеше: ${url}`);
+                found++;
+            } else {
+                console.log(`  ❌ Игра НЕ в кеше: ${url}`);
+            }
+        }
+        console.log(`📊 Игр в кеше: ${found}/${gameUrls.length}`);
     };
 
     console.log('[APP] ✅ AutoCache инициализирован');
     console.log('[APP] 💡 Доступные команды:');
+    console.log('  precacheAllGames() - предзагрузить ВСЕ игры');
     console.log('  cacheAll() - кешировать все ссылки');
-    console.log('  cacheCurrent() - кешировать текущую страницу');
+    console.log('  cacheStatus() - проверить кеш');
     console.log('  cacheUrl("url") - кешировать конкретный URL');
-    console.log('  cacheStatus() - показать содержимое кеша');
 
 })();
 </script>
 
+<style>
+@keyframes slideUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+</style>
 
 </body>
 </html>
