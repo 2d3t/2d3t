@@ -685,6 +685,7 @@
 
 
 
+
 <script>
 // ============================================================
 // АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ + ПРЕДЗАГРУЗКА ИГР
@@ -751,7 +752,7 @@
             } catch (error) {
                 console.warn(`[APP] ⚠️ Ошибка (${attempt}/${retries}):`, error.message);
                 if (attempt < retries) {
-                    await new Promise(r => setTimeout(r, 2000 * attempt)); // Ждем дольше с каждой попыткой
+                    await new Promise(r => setTimeout(r, 2000 * attempt));
                 }
             }
         }
@@ -764,7 +765,6 @@
     async function precacheAllGames() {
         console.log('[APP] 🚀 Начинаем предзагрузку игр...');
         
-        // Проверяем интернет
         if (!navigator.onLine) {
             console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
             return;
@@ -775,7 +775,6 @@
             if (await cacheUrl(gameUrl, 3)) {
                 successCount++;
             }
-            // Пауза между загрузками, чтобы не перегружать сервер
             await new Promise(r => setTimeout(r, 1000));
         }
         
@@ -783,45 +782,14 @@
         
         if (successCount === GAMES_TO_PRECACHE.length) {
             console.log('[APP] 🎉 Все игры готовы к офлайн-работе!');
-            showNotification('✅ Все игры сохранены для офлайн-доступа!');
         } else {
             console.warn('[APP] ⚠️ Некоторые игры не загрузились, попробуйте обновить страницу');
-            showNotification('⚠️ Часть игр не загрузилась, проверьте интернет');
         }
     }
 
     // ============================================================
-    // 5. УВЕДОМЛЕНИЕ ДЛЯ ПОЛЬЗОВАТЕЛЯ
+    // 5. ФУНКЦИЯ УВЕДОМЛЕНИЙ УДАЛЕНА - только логи в консоль
     // ============================================================
-    function showNotification(message, isSuccess = true) {
-        const toast = document.createElement('div');
-        toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: ${isSuccess ? 'rgba(46, 125, 50, 0.95)' : 'rgba(198, 40, 40, 0.95)'};
-            color: white;
-            padding: 16px 32px;
-            border-radius: 16px;
-            font-size: 16px;
-            z-index: 999999;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            animation: slideUp 0.3s ease;
-            backdrop-filter: blur(8px);
-            font-family: 'Segoe UI', cursive, sans-serif;
-            max-width: 90%;
-            text-align: center;
-        `;
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transition = 'opacity 0.5s';
-            setTimeout(() => toast.remove(), 500);
-        }, 5000);
-    }
 
     // ============================================================
     // 6. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ ССЫЛОК
@@ -861,19 +829,15 @@
     // 7. ЗАПУСК - ПРИОРИТЕТ: СНАЧАЛА ИГРЫ, ПОТОМ ВСЁ ОСТАЛЬНОЕ
     // ============================================================
     
-    // Ждем полной загрузки страницы
     window.addEventListener('load', () => {
         console.log('[APP] 📄 Страница загружена');
         
-        // 1. Сначала кешируем игры (самое важное!)
         setTimeout(precacheAllGames, 1000);
         
-        // 2. Потом кешируем текущую страницу
         setTimeout(() => {
             cacheUrl(window.location.href, 2);
         }, 3000);
         
-        // 3. И только потом все ссылки на странице
         setTimeout(cacheAllLinks, 5000);
     });
 
@@ -928,7 +892,6 @@
         console.log(`📦 В кеше ${keys.length} файлов:`);
         keys.forEach(req => console.log(`  - ${req.url}`));
         
-        // Проверяем, есть ли игры
         const gameUrls = GAMES_TO_PRECACHE;
         let found = 0;
         for (const url of gameUrls) {
@@ -952,13 +915,5 @@
 
 })();
 </script>
-
-<style>
-@keyframes slideUp {
-    from { opacity: 0; transform: translateX(-50%) translateY(30px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-</style>
-
 </body>
 </html>
