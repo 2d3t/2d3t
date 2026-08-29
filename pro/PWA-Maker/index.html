@@ -344,6 +344,43 @@
             to { opacity: 1; transform: scale(1); }
         }
 
+        /* Стили для сообщения о скачивании */
+        .download-notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(16, 16, 30, 0.95);
+            backdrop-filter: blur(12px);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 9999999;
+            font-size: 16px;
+            font-family: inherit;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .download-notification.success {
+            border-color: #00b894;
+            background: rgba(0, 184, 148, 0.2);
+        }
+
+        .download-notification.error {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
         @media (max-width: 540px) {
             .row-2 {
                 grid-template-columns: 1fr;
@@ -387,7 +424,7 @@
             </div>
         </div>
         
-        <!-- НОВЫЙ БЛОК С ВЫБОРОМ ЦВЕТА -->
+        <!-- БЛОК С ВЫБОРОМ ЦВЕТА -->
         <div class="row-2">
             <div>
                 <label>Цвет фона (background_color)</label>
@@ -419,7 +456,7 @@
             </div>
         </div>
 
-        <!-- ОПТИМИЗИРОВАННЫЙ БЛОК ПУТЕЙ -->
+        <!-- БЛОК ПУТЕЙ -->
         <div>
             <label>Путь к index.html (start_url + базовый путь)</label>
             <input type="text" id="basePath" value="/2d3t/pro/MirrorX/index.html" placeholder="/ваш/путь/index.html">
@@ -432,7 +469,7 @@
             </div>
         </div>
 
-        <!-- СКРЫТЫЕ ПОЛЯ ДЛЯ ИКОНОК (автозаполняются) -->
+        <!-- СКРЫТЫЕ ПОЛЯ ДЛЯ ИКОНОК -->
         <input type="hidden" id="icon192" value="/2d3t/pro/MirrorX/icon-192.png">
         <input type="hidden" id="icon512" value="/2d3t/pro/MirrorX/icon-512.png">
 
@@ -441,7 +478,7 @@
             <input type="text" id="cacheName" value="prox-pwa-v2" placeholder="cache-name-v1">
         </div>
 
-        <!-- НОВЫЙ БЛОК: СТРАНИЦЫ ДЛЯ ПРЕДЗАГРУЗКИ -->
+        <!-- СТРАНИЦЫ ДЛЯ ПРЕДЗАГРУЗКИ -->
         <div style="margin-top: 1rem;">
             <label>📌 Страницы для предзагрузки (по одной на строку)</label>
             <textarea id="precacheUrls" rows="4" placeholder="https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html&#10;https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html">https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html
@@ -455,7 +492,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         </div>
     </div>
 
-    <!-- Генератор иконок + внешний переход (ТЕПЕРЬ ЧЕРЕЗ ФУНКЦИЮ) -->
+    <!-- Генератор иконок + внешний переход -->
     <div style="display:flex; justify-content: flex-end; margin-bottom: 1rem;">
         <div class="icon-link" onclick="openExternalSite('https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html', '🖼️ Генератор иконок')">
             <span>🖼️</span>
@@ -509,7 +546,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         </div>
     </div>
 
-    <!-- скрытые блоки для копирования отдельных частей -->
+    <!-- скрытые блоки для копирования -->
     <div style="display: none;" id="headBlock">
         <code>&lt;link rel="manifest" href="manifest.json"&gt;
     
@@ -524,20 +561,14 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
 
     // ============================================================
     // УНИВЕРСАЛЬНЫЙ ОФЛАЙН-БЛОК
-    // - Работает с любым существующим manifest.json
-    // - Работает с любым существующим sw.js
-    // - Не создаёт конфликтов
-    // - Просто дублирует регистрацию SW (безопасно)
     // ============================================================
 
-    // ---------- 1. Регистрация Service Worker (если ещё не зарегистрирован) ----------
     function registerSW() {
         if (!('serviceWorker' in navigator)) {
             console.warn('[SW] ❌ Service Worker не поддерживается');
             return;
         }
 
-        // Проверяем, не зарегистрирован ли уже SW
         navigator.serviceWorker.getRegistration()
             .then((registration) => {
                 if (registration) {
@@ -545,7 +576,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
                     return;
                 }
 
-                // Если не зарегистрирован — регистрируем
                 navigator.serviceWorker.register('sw.js')
                     .then((reg) => {
                         console.log('[SW] ✅ Зарегистрирован:', reg);
@@ -559,18 +589,14 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
             });
     }
 
-    // ---------- 2. Проверка сети (без индикаторов) ----------
     function checkNetwork() {
         const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
         console.log(`📡 ${status}`);
     }
 
-    // ---------- 3. Обработка событий сети ----------
     function setupNetworkListeners() {
         window.addEventListener('online', () => {
             console.log('📡 Сеть восстановлена');
-            
-            // Обновляем SW при появлении сети
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready
                     .then((registration) => {
@@ -586,7 +612,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         });
     }
 
-    // ---------- 4. Инициализация ----------
     function init() {
         registerSW();
         checkNetwork();
@@ -594,7 +619,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         console.log('[APP] ✅ Офлайн-функционал активирован');
     }
 
-    // Запускаем
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -616,24 +640,20 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     "use strict";
 
     // ============================================================
-    // ФУНКЦИЯ ОТКРЫТИЯ ВНЕШНИХ САЙТОВ (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ФУНКЦИЯ ОТКРЫТИЯ ВНЕШНИХ САЙТОВ С ОВЕРЛЕЕМ И СКАЧИВАНИЕМ
     // ============================================================
     function openExternalSite(url, title) {
-        // Удаляем старый оверлей, если есть
         const oldOverlay = document.querySelector('.transition-overlay');
         if (oldOverlay) {
             oldOverlay.remove();
         }
 
-        // Создаём оверлей
         const overlay = document.createElement('div');
         overlay.className = 'transition-overlay';
 
-        // Верхняя панель
         const topBar = document.createElement('div');
         topBar.className = 'transition-topbar';
 
-        // Кнопка "Назад"
         const backBtn = document.createElement('button');
         backBtn.className = 'transition-back';
         backBtn.textContent = '← Назад';
@@ -641,7 +661,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
             overlay.remove();
         };
 
-        // Заголовок
         const titleEl = document.createElement('span');
         titleEl.className = 'transition-title';
         titleEl.textContent = title || '🌐 Загрузка...';
@@ -650,7 +669,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         topBar.appendChild(titleEl);
         overlay.appendChild(topBar);
 
-        // Iframe
         const iframe = document.createElement('iframe');
         iframe.className = 'transition-iframe';
         iframe.src = url;
@@ -660,7 +678,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         overlay.appendChild(iframe);
         document.body.appendChild(overlay);
 
-        // Обработка Escape
         const escapeHandler = function(e) {
             if (e.key === 'Escape') {
                 overlay.remove();
@@ -669,36 +686,110 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         };
         document.addEventListener('keydown', escapeHandler);
 
-        // Обновляем заголовок при загрузке iframe
         iframe.onload = function() {
             try {
                 const frameTitle = iframe.contentDocument?.title;
                 if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
                     titleEl.textContent = frameTitle;
                 }
-            } catch (e) {
-                // Игнорируем CORS ошибки
-            }
+            } catch (e) {}
         };
 
-        // Добавляем обработчик клика на оверлей (закрытие по клику вне iframe)
         overlay.addEventListener('click', function(e) {
             if (e.target === overlay) {
                 overlay.remove();
             }
         });
 
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
         return overlay;
     }
 
-    // Делаем функцию глобальной
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
     window.openExternalSite = openExternalSite;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
 
     // ============================================================
-    // ОСТАЛЬНОЙ КОД (генератор, копирование и т.д.)
+    // ГЕНЕРАТОР КОДА
     // ============================================================
 
-    // DOM-ссылки
     const appName = document.getElementById('appName');
     const shortName = document.getElementById('shortName');
     const appDesc = document.getElementById('appDesc');
@@ -710,7 +801,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     const cacheName = document.getElementById('cacheName');
     const precacheUrls = document.getElementById('precacheUrls');
 
-    // Элементы для предпросмотра путей иконок
     const icon192Preview = document.getElementById('icon192Preview');
     const icon512Preview = document.getElementById('icon512Preview');
 
@@ -718,7 +808,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     const manifestCode = document.getElementById('manifestCode');
     const swCode = document.getElementById('swCode');
 
-    // Функция получения базового пути без index.html для sw и fallback
     function getBaseDir(fullPath) {
         if (!fullPath) return '/';
         const lastSlash = fullPath.lastIndexOf('/');
@@ -726,27 +815,21 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         return fullPath.substring(0, lastSlash + 1);
     }
 
-    // Функция автоматической генерации путей для иконок
     function updateIconPaths() {
         const path = basePath.value.trim() || '/index.html';
         const baseDir = getBaseDir(path);
         
-        // Генерируем пути для иконок
         const icon192Path = baseDir + 'icon-192.png';
         const icon512Path = baseDir + 'icon-512.png';
         
-        // Обновляем скрытые поля
         icon192.value = icon192Path;
         icon512.value = icon512Path;
         
-        // Обновляем предпросмотр
         if (icon192Preview) icon192Preview.textContent = icon192Path;
         if (icon512Preview) icon512Preview.textContent = icon512Path;
     }
 
-    // Генерация всех трёх файлов
     function generateAll() {
-        // Сначала обновляем пути иконок
         updateIconPaths();
         
         const name = appName.value.trim() || '🪞 Кривое Зеркало';
@@ -760,51 +843,355 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
         const cache = cacheName.value.trim() || 'pwa-cache-v1';
         
-        // Получаем список страниц для предзагрузки
         const precacheList = precacheUrls.value
             .split('\n')
             .map(url => url.trim())
             .filter(url => url.length > 0);
         const precacheArrayStr = JSON.stringify(precacheList);
 
-        // ---- 1. HTML скрипт (вставка с AUTOCACHE) ----
+        // ---- HTML СКРИПТ С ПОЛНЫМ ФУНКЦИОНАЛОМ ОВЕРЛЕЯ И СКАЧИВАНИЯ ----
         const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <!-- ПОДКЛЮЧЕНИЕ MANIFEST -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
     <link rel="manifest" href="${baseDir}manifest.json">
     
-    <!-- ПОДКЛЮЧЕНИЕ ИКОНОК (ВАЖНО ДЛЯ УСТАНОВКИ) -->
     <link rel="icon" type="image/png" sizes="192x192" href="${icon192src}">
     <link rel="icon" type="image/png" sizes="512x512" href="${icon512src}">
     
-    <!-- APPLE TOUCH ICON (для iOS) -->
-    <link rel="apple-touch-icon" href="${icon192src}">
-    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
     <title>${name}</title>
+    <style>
+        /* ============================================================
+        СТИЛИ ДЛЯ ОВЕРЛЕЯ И УВЕДОМЛЕНИЙ
+        ============================================================ */
+        .transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a12;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .transition-topbar {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(16, 16, 30, 0.98);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 12px;
+            flex-shrink: 0;
+            min-height: 56px;
+        }
+
+        .transition-back {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #e2e8f0;
+            padding: 8px 18px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .transition-back:hover {
+            background: rgba(255,255,255,0.16);
+            transform: scale(1.02);
+        }
+
+        .transition-title {
+            color: #94a3b8;
+            font-size: 14px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .transition-iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+            background: #ffffff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .download-notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(16, 16, 30, 0.95);
+            backdrop-filter: blur(12px);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 9999999;
+            font-size: 16px;
+            font-family: inherit;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .download-notification.success {
+            border-color: #00b894;
+            background: rgba(0, 184, 148, 0.2);
+        }
+
+        .download-notification.error {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+    <\/style>
 </head>
 <body>
     <!-- Ваш контент -->
-    <div class="status" id="status">🟢 Онлайн</div>
 
     <script>
-        // Проверка статуса сети
-        function updateStatus() {
-            const status = document.getElementById('status');
-            if (navigator.onLine) {
-                status.textContent = '🟢 Онлайн';
-                status.className = 'status online';
-            } else {
-                status.textContent = '🔴 Офлайн (работает из кэша)';
-                status.className = 'status offline';
+    (function() {
+        "use strict";
+
+        // ============================================================
+        // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+        // ============================================================
+        function openGame(url, title) {
+            const oldOverlay = document.querySelector('.transition-overlay');
+            if (oldOverlay) {
+                oldOverlay.remove();
+            }
+
+            const overlay = document.createElement('div');
+            overlay.className = 'transition-overlay';
+
+            const topBar = document.createElement('div');
+            topBar.className = 'transition-topbar';
+
+            const backBtn = document.createElement('button');
+            backBtn.className = 'transition-back';
+            backBtn.textContent = '← Назад';
+            backBtn.onclick = function() {
+                overlay.remove();
+            };
+
+            const titleEl = document.createElement('span');
+            titleEl.className = 'transition-title';
+            titleEl.textContent = title || '🌐 Загрузка...';
+
+            topBar.appendChild(backBtn);
+            topBar.appendChild(titleEl);
+            overlay.appendChild(topBar);
+
+            const iframe = document.createElement('iframe');
+            iframe.className = 'transition-iframe';
+            iframe.src = url;
+            iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+            iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+            overlay.appendChild(iframe);
+            document.body.appendChild(overlay);
+
+            const escapeHandler = function(e) {
+                if (e.key === 'Escape') {
+                    overlay.remove();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+
+            iframe.onload = function() {
+                try {
+                    const frameTitle = iframe.contentDocument?.title;
+                    if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                        titleEl.textContent = frameTitle;
+                    }
+                } catch (e) {}
+            };
+
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
+
+            // ============================================================
+            // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+            // ============================================================
+            window.addEventListener('message', function(event) {
+                if (event.source !== iframe.contentWindow) return;
+                const data = event.data;
+                if (data && data.type === 'download') {
+                    handleDownload(data.content, data.filename, data.mimeType);
+                }
+            });
+
+            return overlay;
+        }
+
+        // ============================================================
+        // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+        // ============================================================
+        function handleDownload(content, filename, mimeType) {
+            try {
+                if (typeof content === 'string' && content.startsWith('http')) {
+                    const a = document.createElement('a');
+                    a.href = content;
+                    a.download = filename || 'download';
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showNotification('✅ Скачивание началось!', 'success');
+                    return;
+                }
+
+                let blob;
+                if (typeof content === 'string') {
+                    blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+                } else if (content instanceof Blob) {
+                    blob = content;
+                } else {
+                    throw new Error('Неподдерживаемый формат данных');
+                }
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename || 'download';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                setTimeout(function() {
+                    URL.revokeObjectURL(url);
+                }, 5000);
+
+                showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+            } catch (error) {
+                console.error('Ошибка скачивания:', error);
+                showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
             }
         }
 
-        window.addEventListener('online', updateStatus);
-        window.addEventListener('offline', updateStatus);
-        updateStatus();
+        // ============================================================
+        // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+        // ============================================================
+        function showNotification(message, type) {
+            const old = document.querySelector('.download-notification');
+            if (old) old.remove();
+
+            const notification = document.createElement('div');
+            notification.className = 'download-notification ' + (type || '');
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(function() {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s';
+                setTimeout(function() {
+                    notification.remove();
+                }, 500);
+            }, 3000);
+        }
+
+        // Делаем функции глобальными
+        window.openGame = openGame;
+        window.handleDownload = handleDownload;
+        window.showNotification = showNotification;
+
+        // ============================================================
+        // ОФЛАЙН-ФУНКЦИОНАЛ
+        // ============================================================
+
+        function registerSW() {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] ❌ Service Worker не поддерживается');
+                return;
+            }
+
+            navigator.serviceWorker.getRegistration()
+                .then(function(registration) {
+                    if (registration) {
+                        console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                        return;
+                    }
+                    navigator.serviceWorker.register('${baseDir}sw.js', {
+                        scope: '${baseDir}'
+                    })
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+                })
+                .catch(function(err) {
+                    console.error('[SW] ❌ Ошибка проверки:', err);
+                });
+        }
+
+        function checkNetwork() {
+            const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+            console.log('📡 ' + status);
+        }
+
+        function setupNetworkListeners() {
+            window.addEventListener('online', function() {
+                console.log('📡 Сеть восстановлена');
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready
+                        .then(function(registration) {
+                            registration.update();
+                            console.log('[SW] 🔄 Проверка обновлений...');
+                        })
+                        .catch(function() {});
+                }
+            });
+
+            window.addEventListener('offline', function() {
+                console.log('📡 Сеть отключена (работаем из кэша)');
+            });
+        }
+
+        function init() {
+            registerSW();
+            checkNetwork();
+            setupNetworkListeners();
+            console.log('[APP] ✅ Офлайн-функционал активирован');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+    })();
     <\/script>
 
     <!-- ============================================================
@@ -832,16 +1219,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
                 })
                 .then(reg => {
                     console.log('[APP] ✅ SW зарегистрирован:', reg);
-                    
-                    // Проверяем обновления
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('[APP] 🔄 Новый SW установлен, перезагрузите страницу');
-                            }
-                        });
-                    });
                 })
                 .catch(err => {
                     console.warn('[APP] ❌ Ошибка регистрации SW:', err);
@@ -857,7 +1234,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         const cachedUrls = new Set();
 
         // ============================================================
-        // 3. ФУНКЦИЯ КЕШИРОВАНИЯ
+        // 3. ФУНКЦИЯ КЕШИРОВАНИЯ С ОЖИДАНИЕМ
         // ============================================================
         async function cacheUrl(url, retries = 3) {
             if (!('caches' in window)) return false;
@@ -905,13 +1282,15 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
                 if (await cacheUrl(pageUrl, 3)) {
                     successCount++;
                 }
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 1000));
             }
             
             console.log(\`[APP] ✅ Предзагружено \${successCount}/\${PAGES_TO_PRECACHE.length} страниц\`);
             
-            if (successCount === PAGES_TO_PRECACHE.length && PAGES_TO_PRECACHE.length > 0) {
-                showNotification('✅ Все страницы сохранены для офлайн-доступа!');
+            if (successCount === PAGES_TO_PRECACHE.length) {
+                console.log('[APP] 🎉 Все страницы готовы к офлайн-работе!');
+            } else {
+                console.warn('[APP] ⚠️ Некоторые страницы не загрузились');
             }
         }
 
@@ -950,56 +1329,18 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         }
 
         // ============================================================
-        // 6. УВЕДОМЛЕНИЕ
-        // ============================================================
-        function showNotification(message) {
-            const toast = document.createElement('div');
-            toast.textContent = message;
-            toast.style.cssText = \`
-                position: fixed;
-                bottom: 30px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(46, 125, 50, 0.95);
-                color: white;
-                padding: 16px 32px;
-                border-radius: 16px;
-                font-size: 16px;
-                z-index: 999999;
-                box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-                animation: slideUp 0.3s ease;
-                backdrop-filter: blur(8px);
-                font-family: 'Segoe UI', cursive, sans-serif;
-                max-width: 90%;
-                text-align: center;
-            \`;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transition = 'opacity 0.5s';
-                setTimeout(() => toast.remove(), 500);
-            }, 5000);
-        }
-
-        // ============================================================
-        // 7. ЗАПУСК
+        // 6. ЗАПУСК
         // ============================================================
         window.addEventListener('load', () => {
             console.log('[APP] 📄 Страница загружена');
             
-            // Кешируем текущую страницу
             setTimeout(() => cacheUrl(window.location.href, 2), 500);
-            
-            // Предзагружаем важные страницы
             setTimeout(precacheAllPages, 2000);
-            
-            // Кешируем все ссылки
             setTimeout(cacheAllLinks, 4000);
         });
 
         // ============================================================
-        // 8. МОНИТОРИНГ НОВЫХ ССЫЛОК
+        // 7. МОНИТОРИНГ НОВЫХ ССЫЛОК
         // ============================================================
         if (window.MutationObserver) {
             let observerTimeout;
@@ -1020,7 +1361,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         }
 
         // ============================================================
-        // 9. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
+        // 8. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
         // ============================================================
         let hoverTimeout;
         document.addEventListener('mouseover', (event) => {
@@ -1038,7 +1379,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         });
 
         // ============================================================
-        // 10. ДОСТУП В КОНСОЛИ
+        // 9. ДОСТУП В КОНСОЛИ
         // ============================================================
         window.precacheAllPages = precacheAllPages;
         window.cacheAll = cacheAllLinks;
@@ -1059,35 +1400,11 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
 
     })();
     <\/script>
-
-    <style>
-    @keyframes slideUp {
-        from { opacity: 0; transform: translateX(-50%) translateY(30px); }
-        to { opacity: 1; transform: translateX(-50%) translateY(0); }
-    }
-    .status {
-        padding: 10px 20px;
-        border-radius: 8px;
-        margin: 10px;
-        font-weight: 500;
-        transition: all 0.3s;
-    }
-    .status.online {
-        background: rgba(46, 125, 50, 0.2);
-        color: #4caf50;
-        border: 1px solid #4caf50;
-    }
-    .status.offline {
-        background: rgba(244, 67, 54, 0.2);
-        color: #f44336;
-        border: 1px solid #f44336;
-    }
-    <\/style>
 </body>`;
 
         htmlCode.textContent = htmlScript;
 
-        // ---- 2. manifest.json ----
+        // ---- manifest.json ----
         const manifest = {
             name: name,
             short_name: short,
@@ -1114,11 +1431,10 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         };
         manifestCode.textContent = JSON.stringify(manifest, null, 2);
 
-        // ---- 3. service-worker.js (УНИВЕРСАЛЬНЫЙ С AUTOCACHE) ----
+        // ---- service-worker.js ----
         const sw = `// sw.js - Универсальный кеш для всех страниц
 const CACHE_NAME = '${cache}';
 
-// Базовые файлы для кеширования
 const FILES_TO_CACHE = [
     '${startPath}',
     '${baseDir}manifest.json',
@@ -1126,7 +1442,6 @@ const FILES_TO_CACHE = [
     '${icon512src}'
 ];
 
-// Установка
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -1143,7 +1458,6 @@ self.addEventListener('install', (event) => {
     );
 });
 
-// Активация
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
@@ -1168,7 +1482,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     
-    // Пропускаем API и аналитику
     if (url.pathname.includes('/api/') || url.pathname.includes('/analytics/')) {
         return;
     }
@@ -1179,7 +1492,6 @@ self.addEventListener('fetch', (event) => {
                 if (cachedResponse) {
                     console.log('[SW] 📦 Из кеша:', url.pathname);
                     
-                    // Фоновое обновление (если есть сеть)
                     if (navigator.onLine) {
                         fetch(event.request)
                             .then(response => {
@@ -1197,7 +1509,6 @@ self.addEventListener('fetch', (event) => {
                     return cachedResponse;
                 }
                 
-                // Нет в кеше - загружаем из сети
                 return fetch(event.request)
                     .then(response => {
                         if (response && response.status === 200) {
@@ -1210,7 +1521,6 @@ self.addEventListener('fetch', (event) => {
                         return response;
                     })
                     .catch(() => {
-                        // Офлайн - показываем главную страницу
                         console.log('[SW] ⚠️ Офлайн режим для:', url.pathname);
                         return caches.match('${startPath}')
                             .then(fallback => {
@@ -1225,7 +1535,6 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-// Обработка сообщений от страницы
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting();
@@ -1237,15 +1546,13 @@ console.log('[SW] ✅ Service Worker загружен');`;
         swCode.textContent = sw;
     }
 
-    // Копирование содержимого блока (без кнопки-бадж)
+    // Копирование
     function copyBlockContent(blockId) {
         const block = document.getElementById(blockId);
         if (!block) return;
-        // Ищем внутри <code> или берём весь текст
         const codeElem = block.querySelector('code');
         let text = codeElem ? codeElem.textContent : block.textContent;
         
-        // Если это скрытый блок — убираем лишние отступы
         if (blockId === 'headBlock' || blockId === 'scriptBlock') {
             text = text.trim();
         }
@@ -1262,7 +1569,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
         });
     }
 
-    // Навесить события на кнопки копирования (стиль .copy-btn)
     document.querySelectorAll('.copy-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             const target = this.dataset.target;
@@ -1270,7 +1576,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
         });
     });
 
-    // Также клик по "copy-badge" внутри блока
     document.querySelectorAll('.copy-badge').forEach(badge => {
         badge.addEventListener('click', function(e) {
             const block = this.closest('.code-block');
@@ -1288,22 +1593,17 @@ console.log('[SW] ✅ Service Worker загружен');`;
         inp.addEventListener('change', generateAll);
     });
 
-    // ===== НОВАЯ ЛОГИКА ДЛЯ ВЫБОРА ЦВЕТА =====
-
-    // 1. Связываем пикеры с текстовыми полями
+    // Цветовые пикеры
     const bgPicker = document.getElementById('bgColorPicker');
     const themePicker = document.getElementById('themeColorPicker');
 
-    // Функция синхронизации пикера и текстового поля
     function syncColor(picker, textField) {
         if (picker && textField) {
             picker.addEventListener('input', function() {
                 textField.value = this.value;
-                // Триггерим событие, чтобы генератор обновил код
                 textField.dispatchEvent(new Event('input'));
             });
             
-            // Обратная синхронизация (если пользователь ввел HEX вручную)
             textField.addEventListener('input', function() {
                 const val = this.value.trim();
                 if (/^#[0-9a-f]{6}$/i.test(val)) {
@@ -1311,7 +1611,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
                 }
             });
             
-            // При загрузке — установить значение пикера из текстового поля
             if (textField.value) {
                 picker.value = textField.value;
             }
@@ -1321,15 +1620,13 @@ console.log('[SW] ✅ Service Worker загружен');`;
     syncColor(bgPicker, bgColor);
     syncColor(themePicker, themeColor);
 
-    // 2. Логика для кнопок-пресетов
+    // Пресеты цветов
     document.querySelectorAll('.color-preset').forEach(btn => {
         btn.addEventListener('click', function() {
-            const targetId = this.dataset.target; // 'bgColor' или 'themeColor'
+            const targetId = this.dataset.target;
             const targetInput = document.getElementById(targetId);
-            // Цвет берем из фона кнопки (убираем возможные градиенты)
             const color = window.getComputedStyle(this).backgroundColor;
             
-            // Конвертируем rgb в hex (если нужно)
             function rgbToHex(rgb) {
                 const match = rgb.match(/\d+/g);
                 if (!match) return '#111111';
@@ -1342,10 +1639,8 @@ console.log('[SW] ✅ Service Worker загружен');`;
             const hex = rgbToHex(color);
             if (targetInput) {
                 targetInput.value = hex;
-                // Триггерим обновление
                 targetInput.dispatchEvent(new Event('input'));
                 
-                // Обновляем пикер, если он есть
                 const pickerId = targetId === 'bgColor' ? 'bgColorPicker' : 'themeColorPicker';
                 const picker = document.getElementById(pickerId);
                 if (picker) picker.value = hex;
@@ -1353,7 +1648,7 @@ console.log('[SW] ✅ Service Worker загружен');`;
         });
     });
 
-    // Сброс к значениям по умолчанию
+    // Сброс
     document.getElementById('resetDefaults').addEventListener('click', function() {
         appName.value = '🪞 Кривое Зеркало';
         shortName.value = 'Зеркало';
@@ -1364,20 +1659,16 @@ console.log('[SW] ✅ Service Worker загружен');`;
         cacheName.value = 'prox-pwa-v2';
         precacheUrls.value = 'https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html\nhttps://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html';
         
-        // Обновляем пикеры
         if (bgPicker) bgPicker.value = '#111111';
         if (themePicker) themePicker.value = '#111111';
         
         generateAll();
     });
 
-    // Кнопка "Обновить код" (дубль)
     document.getElementById('generateBtn').addEventListener('click', generateAll);
 
-    // Первичная генерация
     generateAll();
 
-    // Обновляем статус (индикатор)
     const statusInd = document.getElementById('statusIndicator');
     if (statusInd) {
         statusInd.textContent = '✅ готово';
@@ -1390,22 +1681,12 @@ console.log('[SW] ✅ Service Worker загружен');`;
 (function() {
     "use strict";
 
-    // ============================================================
-    // УНИВЕРСАЛЬНЫЙ ОФЛАЙН-БЛОК
-    // - Работает с любым существующим manifest.json
-    // - Работает с любым существующим sw.js
-    // - Не создаёт конфликтов
-    // - Просто дублирует регистрацию SW (безопасно)
-    // ============================================================
-
-    // ---------- 1. Регистрация Service Worker (если ещё не зарегистрирован) ----------
     function registerSW() {
         if (!('serviceWorker' in navigator)) {
             console.warn('[SW] ❌ Service Worker не поддерживается');
             return;
         }
 
-        // Проверяем, не зарегистрирован ли уже SW
         navigator.serviceWorker.getRegistration()
             .then((registration) => {
                 if (registration) {
@@ -1413,7 +1694,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
                     return;
                 }
 
-                // Если не зарегистрирован — регистрируем
                 navigator.serviceWorker.register('sw.js')
                     .then((reg) => {
                         console.log('[SW] ✅ Зарегистрирован:', reg);
@@ -1427,18 +1707,14 @@ console.log('[SW] ✅ Service Worker загружен');`;
             });
     }
 
-    // ---------- 2. Проверка сети (без индикаторов) ----------
     function checkNetwork() {
         const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
         console.log(`📡 ${status}`);
     }
 
-    // ---------- 3. Обработка событий сети ----------
     function setupNetworkListeners() {
         window.addEventListener('online', () => {
             console.log('📡 Сеть восстановлена');
-            
-            // Обновляем SW при появлении сети
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready
                     .then((registration) => {
@@ -1454,7 +1730,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
         });
     }
 
-    // ---------- 4. Инициализация ----------
     function init() {
         registerSW();
         checkNetwork();
@@ -1462,7 +1737,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
         console.log('[APP] ✅ Офлайн-функционал активирован');
     }
 
-    // Запускаем
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -1472,28 +1746,15 @@ console.log('[SW] ✅ Service Worker загружен');`;
 })();
 </script>
 
-
-
-
-
-
-
-
-
-
-
 <script>
 // ============================================================
-// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ + ПРЕДЗАГРУЗКА ИГР
+// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ + ПРЕДЗАГРУЗКА
 // ============================================================
 (function() {
     "use strict";
 
     console.log('[APP] 🔄 Запуск AutoCache...');
 
-    // ============================================================
-    // 1. РЕГИСТРАЦИЯ SERVICE WORKER
-    // ============================================================
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistration()
             .then(registration => {
@@ -1513,19 +1774,12 @@ console.log('[SW] ✅ Service Worker загружен');`;
             });
     }
 
-    // ============================================================
-    // 2. СПИСОК УТИЛИТ ДЛЯ ПРЕДЗАГРУЗКИ
-    // ============================================================
     const GAMES_TO_PRECACHE = [
         'https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html'
-        // Добавьте сюда другие игры, если есть
     ];
 
     const CACHE_NAME = 'iconmaker-pwa-v2';
 
-    // ============================================================
-    // 3. ФУНКЦИЯ КЕШИРОВАНИЯ С ОЖИДАНИЕМ
-    // ============================================================
     async function cacheUrl(url, retries = 3) {
         if (!('caches' in window)) return false;
         
@@ -1554,11 +1808,8 @@ console.log('[SW] ✅ Service Worker загружен');`;
         return false;
     }
 
-    // ============================================================
-    // 4. ПРЕДЗАГРУЗКА ВСЕХ ИГР
-    // ============================================================
     async function precacheAllGames() {
-        console.log('[APP] 🚀 Начинаем предзагрузку игр...');
+        console.log('[APP] 🚀 Начинаем предзагрузку...');
         
         if (!navigator.onLine) {
             console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
@@ -1573,22 +1824,15 @@ console.log('[SW] ✅ Service Worker загружен');`;
             await new Promise(r => setTimeout(r, 1000));
         }
         
-        console.log(`[APP] ✅ Предзагружено ${successCount}/${GAMES_TO_PRECACHE.length} игр`);
+        console.log(`[APP] ✅ Предзагружено ${successCount}/${GAMES_TO_PRECACHE.length}`);
         
         if (successCount === GAMES_TO_PRECACHE.length) {
-            console.log('[APP] 🎉 Все игры готовы к офлайн-работе!');
+            console.log('[APP] 🎉 Всё готово к офлайн-работе!');
         } else {
-            console.warn('[APP] ⚠️ Некоторые игры не загрузились, попробуйте обновить страницу');
+            console.warn('[APP] ⚠️ Некоторые страницы не загрузились');
         }
     }
 
-    // ============================================================
-    // 5. ФУНКЦИЯ УВЕДОМЛЕНИЙ УДАЛЕНА - только логи в консоль
-    // ============================================================
-
-    // ============================================================
-    // 6. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ ССЫЛОК
-    // ============================================================
     async function cacheAllLinks() {
         if (!('caches' in window)) return;
         
@@ -1620,25 +1864,13 @@ console.log('[SW] ✅ Service Worker загружен');`;
         }
     }
 
-    // ============================================================
-    // 7. ЗАПУСК - ПРИОРИТЕТ: СНАЧАЛА ИГРЫ, ПОТОМ ВСЁ ОСТАЛЬНОЕ
-    // ============================================================
-    
     window.addEventListener('load', () => {
         console.log('[APP] 📄 Страница загружена');
-        
         setTimeout(precacheAllGames, 1000);
-        
-        setTimeout(() => {
-            cacheUrl(window.location.href, 2);
-        }, 3000);
-        
+        setTimeout(() => cacheUrl(window.location.href, 2), 3000);
         setTimeout(cacheAllLinks, 5000);
     });
 
-    // ============================================================
-    // 8. МОНИТОРИНГ НОВЫХ ССЫЛОК
-    // ============================================================
     if (window.MutationObserver) {
         let observerTimeout;
         const observer = new MutationObserver(() => {
@@ -1657,9 +1889,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
         }, 5000);
     }
 
-    // ============================================================
-    // 9. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
-    // ============================================================
     let hoverTimeout;
     document.addEventListener('mouseover', (event) => {
         const link = event.target.closest('a[href]');
@@ -1675,9 +1904,6 @@ console.log('[SW] ✅ Service Worker загружен');`;
         }
     });
 
-    // ============================================================
-    // 10. ДОСТУП В КОНСОЛИ
-    // ============================================================
     window.precacheAllGames = precacheAllGames;
     window.cacheAll = cacheAllLinks;
     window.cacheUrl = cacheUrl;
@@ -1692,18 +1918,18 @@ console.log('[SW] ✅ Service Worker загружен');`;
         for (const url of gameUrls) {
             const response = await cache.match(url);
             if (response) {
-                console.log(`  ✅ Игра в кеше: ${url}`);
+                console.log(`  ✅ Страница в кеше: ${url}`);
                 found++;
             } else {
-                console.log(`  ❌ Игра НЕ в кеше: ${url}`);
+                console.log(`  ❌ Страница НЕ в кеше: ${url}`);
             }
         }
-        console.log(`📊 Игр в кеше: ${found}/${gameUrls.length}`);
+        console.log(`📊 Страниц в кеше: ${found}/${gameUrls.length}`);
     };
 
     console.log('[APP] ✅ AutoCache инициализирован');
     console.log('[APP] 💡 Доступные команды:');
-    console.log('  precacheAllGames() - предзагрузить ВСЕ игры');
+    console.log('  precacheAllGames() - предзагрузить ВСЕ страницы');
     console.log('  cacheAll() - кешировать все ссылки');
     console.log('  cacheStatus() - проверить кеш');
     console.log('  cacheUrl("url") - кешировать конкретный URL');
