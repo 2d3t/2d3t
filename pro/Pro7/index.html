@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VAD-кодек v9 (кристально чистый)</title>
+    <title>VAD-кодек v9 (с пресетами)</title>
     <style>
         body {
             font-family: system-ui;
@@ -37,6 +37,21 @@
         button:disabled {
             opacity: 0.3;
             cursor: not-allowed;
+        }
+        select {
+            background: #2a2a3f;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            transition: 0.2s;
+            min-width: 180px;
+        }
+        select:hover {
+            background: #3d3d5c;
         }
         .status-box {
             margin: 15px 0;
@@ -115,6 +130,7 @@
             flex-wrap: wrap;
             gap: 6px;
             margin: 8px 0;
+            align-items: center;
         }
         #audioContainer {
             margin: 10px 0;
@@ -149,52 +165,54 @@
             margin: 5px 0;
             border-left: 3px solid #4a6cf7;
         }
-        .compression-badge {
-            background: linear-gradient(135deg, #1a3a2a, #0a2a1a);
-            border: 1px solid #22c55e;
-            padding: 8px 16px;
-            border-radius: 8px;
+        .segment-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0a0a0f;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: monospace;
             margin: 8px 0;
-            text-align: center;
-            animation: glow 2s ease-in-out infinite alternate;
         }
-        @keyframes glow {
-            from { box-shadow: 0 0 10px rgba(34, 197, 94, 0.1); }
-            to { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+        .segment-item {
+            padding: 2px 6px;
+            margin: 1px 0;
+            border-radius: 3px;
         }
-        .compression-badge .big-number {
-            font-size: 2rem;
-            font-weight: bold;
+        .segment-item.speech {
             color: #4ade80;
+            background: #1a3a2a;
         }
-        .compression-badge .label {
+        .segment-item.pause {
             color: #94a3b8;
-            font-size: 0.9rem;
+            background: #1a1a2a;
         }
-        .compression-badge .quality-stars {
-            color: #fbbf24;
-            font-size: 1.2rem;
-            letter-spacing: 2px;
+        .preset-info {
+            background: #1a2a2a;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin: 5px 0;
+            border-left: 3px solid #22c55e;
+            color: #86efac;
         }
-        .quality-indicator {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 8px;
-            flex-wrap: wrap;
+        .params-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 4px;
+            margin: 5px 0;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            background: #0a0a0f;
+            padding: 6px 10px;
+            border-radius: 4px;
         }
-        .quality-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.85rem;
+        .params-display span {
+            white-space: nowrap;
         }
-        .quality-item .icon {
-            font-size: 1.2rem;
-        }
-        .quality-item .value {
-            color: #4ade80;
+        .params-display .param-value {
+            color: #e2e8f0;
             font-weight: bold;
         }
     </style>
@@ -203,14 +221,38 @@
 
 <div class="container">
     <h2>🎙️ VAD-кодек v9</h2>
-    <p style="font-size:0.9rem;color:#9ca3af;">Opus 8 кбит/с — кристально чистый голос</p>
+    <p style="font-size:0.9rem;color:#9ca3af;">Речь → Opus, тишина → логи (с пресетами)</p>
 
     <div class="row">
+        <select id="presetSelect">
+            <option value="standard">📊 Стандартный</option>
+            <option value="fast">⚡ Быстрая речь</option>
+            <option value="slow">🐢 Медленная речь</option>
+            <option value="whisper">🤫 Шепот</option>
+            <option value="music">🎵 Музыка/Пение</option>
+            <option value="noisy">📢 Шумное окружение</option>
+            <option value="dictation">📝 Диктовка</option>
+            <option value="conversation">💬 Разговорный</option>
+            <option value="lecture">🎓 Лекция</option>
+            <option value="custom">⚙️ Пользовательский</option>
+        </select>
         <button id="btnRecord">🔴 Запись</button>
         <button id="btnStop" disabled>⏹ Стоп</button>
         <button id="btnPlay" disabled>▶️ Воспр.</button>
         <button id="btnExport" disabled>💾 Экспорт .vad</button>
         <button id="btnLoad" style="background:#2a2a3f;">📂 Загрузить .vad</button>
+    </div>
+
+    <div class="preset-info" id="presetInfo">
+        📊 Стандартный: Универсальные настройки для обычной речи
+    </div>
+
+    <div class="params-display" id="paramsDisplay">
+        <span>🔊 Порог: <span class="param-value" id="pThreshold">0.02</span></span>
+        <span>⏸ Пауза: <span class="param-value" id="pMinSilence">500</span>мс</span>
+        <span>📦 Битрейт: <span class="param-value" id="pBitrate">6</span> kbps</span>
+        <span>⏳ Буфер: <span class="param-value" id="pPrebuffer">300</span>мс</span>
+        <span>🔄 Интервал: <span class="param-value" id="pVadInterval">100</span>мс</span>
     </div>
 
     <div class="status-box" id="statusBox">
@@ -222,38 +264,8 @@
         <div id="debugInfo" style="font-size:0.75rem;color:#6b7280;margin-top:4px;"></div>
     </div>
 
-    <div class="compression-badge" id="compressionBadge" style="display:none;">
-        <div>
-            <span class="big-number" id="compressionRatio">0</span>
-            <span class="label">× сжатие</span>
-            <span style="margin-left:15px;" class="quality-stars" id="qualityStars">⭐⭐⭐⭐⭐</span>
-        </div>
-        <div class="quality-indicator">
-            <div class="quality-item">
-                <span class="icon">⏱️</span>
-                <span class="value" id="totalDurationDisplay">0с</span>
-                <span style="color:#94a3b8;">речи</span>
-            </div>
-            <div class="quality-item">
-                <span class="icon">💾</span>
-                <span class="value" id="totalSizeDisplay">0 KB</span>
-                <span style="color:#94a3b8;">всего</span>
-            </div>
-            <div class="quality-item">
-                <span class="icon">📊</span>
-                <span class="value" id="bitrateDisplay">0</span>
-                <span style="color:#94a3b8;">kbps</span>
-            </div>
-            <div class="quality-item">
-                <span class="icon">🎯</span>
-                <span class="value" id="qualityScore">100</span>
-                <span style="color:#94a3b8;">% качество</span>
-            </div>
-        </div>
-    </div>
-
     <div class="prebuffer-info" id="prebufferInfo">
-        ⚡ Пре-буфер 2с | Opus 8 кбит/с | SILK-кодек для речи
+        ⚡ Выберите пресет для оптимальной настройки под ваш тип речи
     </div>
 
     <div class="stats-grid">
@@ -267,7 +279,7 @@
         <span class="value" id="dataSize">0 KB</span>
     </div>
 
-    <div class="meta-view" id="metaView">(нет данных)</div>
+    <div class="segment-list" id="segmentList"></div>
 
     <div id="audioContainer"></div>
 
@@ -276,14 +288,111 @@
 
 <script>
 // ============================================================
+// ПРЕСЕТЫ
+// ============================================================
+const PRESETS = {
+    standard: {
+        name: '📊 Стандартный',
+        description: 'Универсальные настройки для обычной речи',
+        threshold: 0.02,
+        minSilenceMs: 500,
+        bitrate: 6000,
+        prebufferMs: 300,
+        vadInterval: 100,
+    },
+    fast: {
+        name: '⚡ Быстрая речь',
+        description: 'Для отрывистой речи с короткими паузами (1, 2, 3)',
+        threshold: 0.025,
+        minSilenceMs: 250,
+        bitrate: 8000,
+        prebufferMs: 150,
+        vadInterval: 50,
+    },
+    slow: {
+        name: '🐢 Медленная речь',
+        description: 'Для плавной речи с длинными паузами',
+        threshold: 0.015,
+        minSilenceMs: 800,
+        bitrate: 8000,
+        prebufferMs: 500,
+        vadInterval: 80,
+    },
+    whisper: {
+        name: '🤫 Шепот',
+        description: 'Для тихой речи и шепота (повышенная чувствительность)',
+        threshold: 0.008,
+        minSilenceMs: 400,
+        bitrate: 12000,
+        prebufferMs: 400,
+        vadInterval: 50,
+    },
+    music: {
+        name: '🎵 Музыка/Пение',
+        description: 'Для музыкальных записей и пения',
+        threshold: 0.01,
+        minSilenceMs: 600,
+        bitrate: 32000,
+        prebufferMs: 500,
+        vadInterval: 50,
+    },
+    noisy: {
+        name: '📢 Шумное окружение',
+        description: 'Для записи в шумной обстановке',
+        threshold: 0.04,
+        minSilenceMs: 300,
+        bitrate: 12000,
+        prebufferMs: 200,
+        vadInterval: 50,
+    },
+    dictation: {
+        name: '📝 Диктовка',
+        description: 'Для диктовки текста с четкими паузами',
+        threshold: 0.018,
+        minSilenceMs: 400,
+        bitrate: 8000,
+        prebufferMs: 250,
+        vadInterval: 50,
+    },
+    conversation: {
+        name: '💬 Разговорный',
+        description: 'Для естественных диалогов с короткими репликами',
+        threshold: 0.022,
+        minSilenceMs: 450,
+        bitrate: 6000,
+        prebufferMs: 250,
+        vadInterval: 80,
+    },
+    lecture: {
+        name: '🎓 Лекция',
+        description: 'Для длительных монологов с редкими паузами',
+        threshold: 0.015,
+        minSilenceMs: 1000,
+        bitrate: 8000,
+        prebufferMs: 600,
+        vadInterval: 100,
+    },
+    custom: {
+        name: '⚙️ Пользовательский',
+        description: 'Настройте параметры вручную',
+        threshold: 0.02,
+        minSilenceMs: 500,
+        bitrate: 6000,
+        prebufferMs: 300,
+        vadInterval: 100,
+    },
+};
+
+// ============================================================
 // КОНФИГ
 // ============================================================
-const CFG = {
+let CFG = {
     threshold: 0.02,
     minSilenceMs: 500,
-    bitrate: 8000, // 8 кбит/с - кристально чистый голос!
+    bitrate: 6000,
     mimeType: 'audio/webm;codecs=opus',
-    prebufferMs: 2000,
+    prebufferMs: 300,
+    vadInterval: 100,
 };
 
 // ============================================================
@@ -309,6 +418,12 @@ let state = {
     fullAudioBuffer: null,
     recordingStartTime: 0,
     prebufferChunks: [],
+    isPrebuffering: false,
+    currentSpeechStart: 0,
+    speechStartOffset: 0,
+    hasActiveSpeech: false,
+    lastSpeechEndTime: 0,
+    currentPreset: 'standard',
 };
 
 // DOM
@@ -318,11 +433,11 @@ const btnStop = $('btnStop');
 const btnPlay = $('btnPlay');
 const btnExport = $('btnExport');
 const btnLoad = $('btnLoad');
+const presetSelect = $('presetSelect');
 const statusBadge = $('statusBadge');
 const counterText = $('counterText');
 const meterFill = $('meterFill');
 const debugInfo = $('debugInfo');
-const metaView = $('metaView');
 const audioContainer = $('audioContainer');
 const fileInfo = $('fileInfo');
 const speechCount = $('speechCount');
@@ -330,13 +445,47 @@ const pauseCount = $('pauseCount');
 const totalDuration = $('totalDuration');
 const dataSize = $('dataSize');
 const prebufferInfo = $('prebufferInfo');
-const compressionBadge = $('compressionBadge');
-const compressionRatio = $('compressionRatio');
-const totalDurationDisplay = $('totalDurationDisplay');
-const totalSizeDisplay = $('totalSizeDisplay');
-const bitrateDisplay = $('bitrateDisplay');
-const qualityScore = $('qualityScore');
-const qualityStars = $('qualityStars');
+const segmentList = $('segmentList');
+const presetInfo = $('presetInfo');
+
+// Параметры отображения
+const pThreshold = $('pThreshold');
+const pMinSilence = $('pMinSilence');
+const pBitrate = $('pBitrate');
+const pPrebuffer = $('pPrebuffer');
+const pVadInterval = $('pVadInterval');
+
+// ============================================================
+// УПРАВЛЕНИЕ ПРЕСЕТАМИ
+// ============================================================
+function applyPreset(presetName) {
+    const preset = PRESETS[presetName];
+    if (!preset) return;
+
+    state.currentPreset = presetName;
+    
+    // Обновляем конфиг
+    CFG.threshold = preset.threshold;
+    CFG.minSilenceMs = preset.minSilenceMs;
+    CFG.bitrate = preset.bitrate;
+    CFG.prebufferMs = preset.prebufferMs;
+    CFG.vadInterval = preset.vadInterval;
+
+    // Обновляем отображение
+    presetInfo.textContent = `${preset.name}: ${preset.description}`;
+    pThreshold.textContent = preset.threshold.toFixed(3);
+    pMinSilence.textContent = preset.minSilenceMs;
+    pBitrate.textContent = (preset.bitrate / 1000).toFixed(0);
+    pPrebuffer.textContent = preset.prebufferMs;
+    pVadInterval.textContent = preset.vadInterval;
+
+    // Если есть активная запись - перезапускаем с новыми параметрами
+    if (state.isRecording) {
+        alert('Пресет изменен во время записи. Остановите и начните запись заново для применения настроек.');
+    }
+
+    console.log(`✅ Применен пресет: ${preset.name}`, preset);
+}
 
 // ============================================================
 // АУДИО-ДЕТЕКТОР
@@ -376,88 +525,6 @@ function getRMS() {
 }
 
 // ============================================================
-// ОЦЕНКА КАЧЕСТВА
-// ============================================================
-function calculateQuality(bitrate, compression) {
-    // Opus при 8 kbps дает отличное качество для речи
-    // Оценка на основе битрейта и сжатия
-    let score = 100;
-    
-    // Штраф за слишком низкий битрейт (ниже 6 kbps)
-    if (bitrate < 6) {
-        score -= (6 - bitrate) * 5;
-    }
-    
-    // Бонус за эффективное сжатие
-    if (compression > 50) {
-        score += Math.min((compression - 50) / 2, 10);
-    }
-    
-    // Ограничиваем
-    score = Math.min(Math.max(score, 0), 100);
-    
-    // Звезды
-    let stars = '';
-    if (score >= 90) stars = '⭐⭐⭐⭐⭐';
-    else if (score >= 75) stars = '⭐⭐⭐⭐';
-    else if (score >= 60) stars = '⭐⭐⭐';
-    else if (score >= 40) stars = '⭐⭐';
-    else stars = '⭐';
-    
-    return { score: Math.round(score), stars };
-}
-
-// ============================================================
-// РАСЧЕТ КОМПРЕССИИ
-// ============================================================
-function calculateCompression() {
-    if (!state.fullAudioBlob) return;
-    
-    const sizeBytes = state.fullAudioBlob.size;
-    const sizeKB = sizeBytes / 1024;
-    
-    let totalSpeechMs = 0;
-    state.segments.forEach(seg => {
-        if (seg.type === 'speech') {
-            totalSpeechMs += seg.duration || 0;
-        }
-    });
-    const totalSpeechSec = totalSpeechMs / 1000;
-    
-    // PCM 16-bit, 16kHz, моно = 32 KB/сек
-    const uncompressedKB = totalSpeechSec * 32;
-    const ratio = uncompressedKB / (sizeKB || 1);
-    const bitrate = (sizeBytes * 8) / (totalSpeechSec || 1) / 1000;
-    
-    // Оценка качества
-    const quality = calculateQuality(bitrate, ratio);
-    
-    // Обновляем UI
-    compressionBadge.style.display = 'block';
-    compressionRatio.textContent = ratio.toFixed(1);
-    totalDurationDisplay.textContent = totalSpeechSec.toFixed(1) + 'с';
-    totalSizeDisplay.textContent = sizeKB.toFixed(1) + ' KB';
-    bitrateDisplay.textContent = bitrate.toFixed(1);
-    qualityScore.textContent = quality.score;
-    qualityStars.textContent = quality.stars;
-    
-    // Цвет бейджа в зависимости от качества
-    if (quality.score >= 85) {
-        compressionBadge.style.borderColor = '#22c55e';
-        compressionBadge.style.background = 'linear-gradient(135deg, #1a3a2a, #0a2a1a)';
-    } else if (quality.score >= 70) {
-        compressionBadge.style.borderColor = '#eab308';
-        compressionBadge.style.background = 'linear-gradient(135deg, #3a3a1a, #2a2a0a)';
-    } else {
-        compressionBadge.style.borderColor = '#ef4444';
-        compressionBadge.style.background = 'linear-gradient(135deg, #3a1a1a, #2a0a0a)';
-    }
-    
-    // Обновляем информацию
-    prebufferInfo.textContent = `✅ Opus ${bitrate.toFixed(1)} kbps | Сжатие ${ratio.toFixed(1)}× | Качество ${quality.score}% ${quality.stars}`;
-}
-
-// ============================================================
 // ОСНОВНАЯ ЛОГИКА
 // ============================================================
 function startRecording() {
@@ -475,9 +542,13 @@ function startRecording() {
             state.isSpeaking = false;
             state.silenceStart = 0;
             state.speechStartTime = 0;
-            state.lastSegmentTime = performance.now();
+            state.lastSegmentTime = 0;
             state.recordingStartTime = performance.now();
             state.prebufferChunks = [];
+            state.hasActiveSpeech = false;
+            state.currentSpeechStart = 0;
+            state.speechStartOffset = 0;
+            state.lastSpeechEndTime = 0;
 
             const options = {
                 mimeType: CFG.mimeType,
@@ -487,16 +558,19 @@ function startRecording() {
             const recorder = new MediaRecorder(stream, options);
             state.mediaRecorder = recorder;
             
-            let currentSpeechStart = 0;
             let isCurrentlySpeaking = false;
             let speechStartTime = 0;
+            let silenceStartTime = 0;
+            let lastSpeechEndTime = 0;
+            let segmentStartTime = 0;
+            let isFirstSpeech = true;
 
             recorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
                     state.allChunks.push(e.data);
                     state.prebufferChunks.push(e.data);
                     
-                    const prebufferLimit = CFG.prebufferMs / 250 * 2;
+                    const prebufferLimit = Math.ceil(CFG.prebufferMs / 250) * 2;
                     if (state.prebufferChunks.length > prebufferLimit) {
                         state.prebufferChunks.shift();
                     }
@@ -515,80 +589,84 @@ function startRecording() {
 
                 const isVoice = rms > CFG.threshold;
 
-                if (isVoice) {
-                    if (!isCurrentlySpeaking) {
-                        isCurrentlySpeaking = true;
-                        state.isSpeaking = true;
-                        state.silenceStart = 0;
-                        
-                        const prebufferTime = CFG.prebufferMs;
-                        currentSpeechStart = now - prebufferTime;
-                        speechStartTime = (now - state.recordingStartTime) - prebufferTime;
-                        
-                        if (speechStartTime < 0) speechStartTime = 0;
-                        
-                        if (state.lastSegmentTime > 0) {
-                            const pauseDuration = (now - state.lastSegmentTime) - prebufferTime;
-                            if (pauseDuration > 50) {
-                                state.segments.push({
-                                    type: 'pause',
-                                    duration: pauseDuration
-                                });
-                            }
+                if (isVoice && !isCurrentlySpeaking) {
+                    isCurrentlySpeaking = true;
+                    state.isSpeaking = true;
+                    state.hasActiveSpeech = true;
+                    
+                    const prebufferTime = Math.min(CFG.prebufferMs, 1000);
+                    const speechAbsoluteStart = now - prebufferTime;
+                    const speechRelativeStart = Math.max(0, (now - state.recordingStartTime) - prebufferTime);
+                    
+                    state.currentSpeechStart = speechAbsoluteStart;
+                    state.speechStartOffset = speechRelativeStart;
+                    
+                    if (lastSpeechEndTime > 0) {
+                        const pauseDuration = (speechAbsoluteStart - lastSpeechEndTime);
+                        if (pauseDuration > 100) {
+                            state.segments.push({
+                                type: 'pause',
+                                duration: pauseDuration,
+                                startTime: lastSpeechEndTime,
+                                endTime: speechAbsoluteStart,
+                            });
+                            console.log(`⏸ Пауза: ${(pauseDuration/1000).toFixed(2)}с`);
                         }
+                    }
+                    
+                    state.speechStartTime = speechAbsoluteStart;
+                    console.log(`🎤 Речь началась (${(speechRelativeStart/1000).toFixed(2)}с)`);
+                    
+                    isFirstSpeech = false;
+
+                } else if (!isVoice && isCurrentlySpeaking) {
+                    if (silenceStartTime === 0) {
+                        silenceStartTime = now;
+                    } else if (now - silenceStartTime > CFG.minSilenceMs) {
+                        const speechEndTime = now;
+                        const speechDuration = speechEndTime - state.currentSpeechStart;
                         
+                        const speechSegment = {
+                            type: 'speech',
+                            duration: speechDuration,
+                            startTime: state.currentSpeechStart,
+                            endTime: speechEndTime,
+                            startTimeOffset: state.speechStartOffset,
+                            endTimeOffset: Math.max(0, (now - state.recordingStartTime)),
+                            buffer: null,
+                            blob: null,
+                        };
+                        
+                        state.segments.push(speechSegment);
                         state.speechBoundaries.push({
-                            start: currentSpeechStart,
-                            end: 0,
-                            startTime: speechStartTime
+                            start: state.currentSpeechStart,
+                            end: speechEndTime,
+                            startTime: state.speechStartOffset,
+                            endTime: (now - state.recordingStartTime),
                         });
                         
-                        console.log(`🎤 Речь началась (+${CFG.prebufferMs/1000}с пре-буфера)`);
+                        console.log(`🎤 Речь: ${(speechDuration/1000).toFixed(2)}с (${(state.speechStartOffset/1000).toFixed(2)}с - ${((now - state.recordingStartTime)/1000).toFixed(2)}с)`);
+                        
+                        isCurrentlySpeaking = false;
+                        state.isSpeaking = false;
+                        state.hasActiveSpeech = false;
+                        lastSpeechEndTime = speechEndTime;
+                        state.lastSpeechEndTime = speechEndTime;
+                        silenceStartTime = 0;
+                        
+                        state.prebufferChunks = [];
+                        
+                        updateUI();
+                        updateSegmentList();
+                        updateStats();
                     }
-                } else {
-                    if (isCurrentlySpeaking) {
-                        if (state.silenceStart === 0) {
-                            state.silenceStart = now;
-                        } else if (now - state.silenceStart > CFG.minSilenceMs) {
-                            const speechDuration = now - currentSpeechStart;
-                            const speechEndTime = now - state.recordingStartTime;
-                            
-                            if (state.speechBoundaries.length > 0) {
-                                const last = state.speechBoundaries[state.speechBoundaries.length - 1];
-                                last.end = now;
-                                last.endTime = speechEndTime;
-                                last.duration = speechDuration;
-                            }
-                            
-                            const adjustedStart = Math.max(0, speechStartTime);
-                            
-                            state.segments.push({
-                                type: 'speech',
-                                duration: speechDuration,
-                                startTime: currentSpeechStart,
-                                endTime: now,
-                                startTimeOffset: adjustedStart,
-                                endTimeOffset: speechEndTime,
-                                blob: null
-                            });
-                            
-                            console.log(`🎤 Речь: ${(speechDuration/1000).toFixed(2)}с`);
-                            
-                            isCurrentlySpeaking = false;
-                            state.isSpeaking = false;
-                            state.silenceStart = 0;
-                            state.lastSegmentTime = now;
-                            
-                            updateUI();
-                            updateMetaView();
-                            updateStats();
-                        }
-                    }
+                } else if (!isVoice && !isCurrentlySpeaking) {
+                    silenceStartTime = 0;
                 }
 
-                debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ${isCurrentlySpeaking ? '🔴 РЕЧЬ' : '⚪ ТИШИНА'} | Сегментов: ${state.segments.length}`;
+                debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ${isCurrentlySpeaking ? '🔴 РЕЧЬ' : '⚪ ТИШИНА'} | Сегментов: ${state.segments.length} | Пре-буфер: ${state.prebufferChunks.length} чанков | Пресет: ${PRESETS[state.currentPreset].name}`;
                 updateUI();
-            }, 100);
+            }, CFG.vadInterval);
 
             state._checkInterval = checkInterval;
             
@@ -600,7 +678,6 @@ function startRecording() {
             btnStop.disabled = false;
             btnPlay.disabled = true;
             btnExport.disabled = true;
-            compressionBadge.style.display = 'none';
 
             const stopHandler = () => {
                 if (state._checkInterval) {
@@ -610,42 +687,23 @@ function startRecording() {
                 
                 if (isCurrentlySpeaking) {
                     const now = performance.now();
-                    const speechDuration = now - currentSpeechStart;
-                    const speechEndTime = now - state.recordingStartTime;
-                    
-                    if (state.speechBoundaries.length > 0) {
-                        const last = state.speechBoundaries[state.speechBoundaries.length - 1];
-                        last.end = now;
-                        last.endTime = speechEndTime;
-                        last.duration = speechDuration;
-                    }
-                    
-                    const adjustedStart = Math.max(0, speechStartTime);
+                    const speechDuration = now - state.currentSpeechStart;
+                    const speechEndTime = Math.max(0, (now - state.recordingStartTime));
                     
                     state.segments.push({
                         type: 'speech',
                         duration: speechDuration,
-                        startTime: currentSpeechStart,
+                        startTime: state.currentSpeechStart,
                         endTime: now,
-                        startTimeOffset: adjustedStart,
+                        startTimeOffset: state.speechStartOffset,
                         endTimeOffset: speechEndTime,
-                        blob: null
+                        buffer: null,
+                        blob: null,
                     });
                     
-                    console.log(`🎤 Последняя речь: ${(speechDuration/1000).toFixed(2)}с`);
+                    console.log(`🎤 Последняя речь: ${(speechDuration/1000).toFixed(2)}с (${(state.speechStartOffset/1000).toFixed(2)}с - ${(speechEndTime/1000).toFixed(2)}с)`);
                     isCurrentlySpeaking = false;
                     state.isSpeaking = false;
-                }
-                
-                const now = performance.now();
-                if (state.lastSegmentTime > 0) {
-                    const finalPause = now - state.lastSegmentTime;
-                    if (finalPause > 50) {
-                        state.segments.push({
-                            type: 'pause',
-                            duration: finalPause
-                        });
-                    }
                 }
                 
                 if (state.allChunks.length > 0) {
@@ -669,10 +727,11 @@ function startRecording() {
                             btnPlay.disabled = false;
                             btnExport.disabled = false;
                             updateUI();
-                            updateMetaView();
+                            updateSegmentList();
                             updateStats();
-                            calculateCompression();
                             
+                            const speechSegments = state.segments.filter(s => s.type === 'speech').length;
+                            prebufferInfo.textContent = `✅ Запись завершена. Сегментов речи: ${speechSegments}. Пресет: ${PRESETS[state.currentPreset].name}`;
                         } catch (err) {
                             console.error('Ошибка декодирования:', err);
                             fileInfo.textContent = '❌ Ошибка декодирования аудио';
@@ -820,7 +879,7 @@ async function playWithPauses() {
 }
 
 // ============================================================
-// ЭКСПОРТ / ИМПОРТ
+// ЭКСПОРТ / ИМПОРТ .vad
 // ============================================================
 function exportVAD() {
     if (state.segments.length === 0) return;
@@ -896,7 +955,7 @@ function loadVAD(file) {
         let offset = 0;
 
         const magic = new TextDecoder().decode(data.slice(0, 4));
-        if (!['VAD5','VAD6','VAD7','VAD8','VAD9'].includes(magic)) {
+        if (!['VAD5', 'VAD6', 'VAD7', 'VAD8', 'VAD9'].includes(magic)) {
             alert('Неверный формат .vad');
             return;
         }
@@ -919,14 +978,13 @@ function loadVAD(file) {
                     const ctx = await getAudioContext();
                     const audioBuffer = await ctx.decodeAudioData(e.target.result);
                     state.fullAudioBuffer = audioBuffer;
+                    console.log(`✅ Аудио декодировано: ${audioBuffer.duration.toFixed(2)}с`);
                     
                     state.segments.forEach(seg => {
                         if (seg.type === 'speech') {
                             seg.buffer = audioBuffer;
                         }
                     });
-                    
-                    calculateCompression();
                 } catch (err) {
                     console.error('Ошибка декодирования:', err);
                 }
@@ -947,7 +1005,7 @@ function loadVAD(file) {
                 offset += 4;
                 
                 let startTimeOffset = 0, endTimeOffset = 0;
-                if (['VAD6','VAD7','VAD8','VAD9'].includes(magic)) {
+                if (['VAD6', 'VAD7', 'VAD8', 'VAD9'].includes(magic)) {
                     startTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
                     offset += 4;
                     endTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
@@ -973,10 +1031,11 @@ function loadVAD(file) {
         btnPlay.disabled = false;
         btnExport.disabled = false;
         updateUI();
-        updateMetaView();
+        updateSegmentList();
         updateStats();
         
-        fileInfo.textContent = `📂 Загружено: ${state.segments.length} сегментов`;
+        fileInfo.textContent = `📂 Загружено: ${state.segments.length} сегментов, ${state.fullAudioBlob ? (state.fullAudioBlob.size/1024).toFixed(1) : 0} KB аудио`;
+        prebufferInfo.textContent = `📂 Загружен файл с ${state.segments.filter(s => s.type === 'speech').length} речевыми сегментами`;
     });
 }
 
@@ -1022,28 +1081,35 @@ function updateStats() {
     dataSize.textContent = (totalSize / 1024).toFixed(1) + ' KB';
 }
 
-function updateMetaView() {
+function updateSegmentList() {
     if (state.segments.length === 0) {
-        metaView.innerHTML = '(нет данных)';
+        segmentList.innerHTML = '(нет сегментов)';
         return;
     }
     
     let html = '';
+    let speechNum = 0;
     state.segments.forEach((seg, i) => {
         const dur = seg.duration || 0;
         if (seg.type === 'speech') {
+            speechNum++;
             const start = seg.startTimeOffset || 0;
-            html += `<span class="segment speech-seg">🎤 ${(dur/1000).toFixed(2)}с</span>`;
+            const end = seg.endTimeOffset || (start + dur);
+            html += `<div class="segment-item speech">🎤 #${speechNum} ${(dur/1000).toFixed(2)}с (${(start/1000).toFixed(2)}с-${(end/1000).toFixed(2)}с)</div>`;
         } else {
-            html += `<span class="segment pause-seg">⏸️ ${(dur/1000).toFixed(2)}с</span>`;
+            html += `<div class="segment-item pause">⏸️ Пауза ${(dur/1000).toFixed(2)}с</div>`;
         }
     });
-    metaView.innerHTML = html;
+    segmentList.innerHTML = html;
 }
 
 // ============================================================
 // ОБРАБОТЧИКИ
 // ============================================================
+presetSelect.addEventListener('change', (e) => {
+    applyPreset(e.target.value);
+});
+
 btnRecord.addEventListener('click', startRecording);
 btnStop.addEventListener('click', stopRecording);
 btnPlay.addEventListener('click', playWithPauses);
@@ -1061,14 +1127,14 @@ btnLoad.addEventListener('click', () => {
 });
 
 // Инициализация
+applyPreset('standard');
 updateUI();
-updateMetaView();
+updateSegmentList();
 updateStats();
-fileInfo.textContent = '🎙️ Opus 8 кбит/с — кристально чистый голос!';
-prebufferInfo.textContent = '⚡ SILK-кодек | 8 kbps | Пре-буфер 2с | До 100× сжатие';
+fileInfo.textContent = '🎙️ Выберите пресет под ваш тип речи и нажмите "Запись"';
+prebufferInfo.textContent = '💡 Доступно 10 пресетов для разных сценариев использования';
 
-console.log('✅ VAD-кодек v9 загружен');
-console.log('🎤 Opus 8 kbps — кристально чистый голос при 60-100× сжатии!');
+console.log('✅ VAD-кодек v9 загружен (с пресетами)');
 </script>
 </body>
 </html>
