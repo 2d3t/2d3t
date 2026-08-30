@@ -116,7 +116,7 @@
       reader.readAsDataURL(file);
     });
 
-    function downloadIcon(size) {
+    async function downloadIcon(size) {
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = size;
@@ -125,11 +125,29 @@
       ctx.clearRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
 
+      // Преобразуем canvas в Blob
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      
+      // Создаём объект File с нужным именем
+      const fileName = `icon-${size}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // Используем showDirectoryPicker для возможности замены
+      // Но для простоты используем стандартный download с заменой
+      // Для этого создаём временный URL и используем ссылку с атрибутом download
+      const url = URL.createObjectURL(file);
+      
       const link = document.createElement('a');
-      // Имя файла: icon-192.png (только число после дефиса)
-      link.download = `icon-${size}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = url;
+      link.download = fileName; // Это имя будет предложено для сохранения
+      
+      // Симулируем клик для начала скачивания
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      
+      // Освобождаем URL
+      setTimeout(() => URL.revokeObjectURL(url), 100);
     }
   </script>
 </body>
