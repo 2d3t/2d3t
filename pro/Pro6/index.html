@@ -7,15 +7,8 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<!-- ====================================== -->
-
-<!-- Вместо CDN-ссылок используйте локальные файлы -->
 <script src="qrcode.js"></script>
 <script src="html5-qrcode.js"></script>
-
-
-
-
 <style>
     * {
         box-sizing: border-box;
@@ -40,7 +33,6 @@
         font-weight: 300;
         letter-spacing: 0.5px;
     }
-
     .tabs {
         display: flex;
         gap: 6px;
@@ -65,14 +57,12 @@
         color: white;
         box-shadow: 0 0 15px rgba(59, 77, 224, 0.3);
     }
-
     .page {
         display: none;
     }
     .page.active {
         display: block;
     }
-
     .card {
         background: #141a24;
         border-radius: 22px;
@@ -81,7 +71,6 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         border: 1px solid #2a3340;
     }
-
     textarea {
         width: 100%;
         min-height: 150px;
@@ -105,7 +94,6 @@
     textarea::placeholder {
         color: #475569;
     }
-
     button {
         width: 100%;
         border: 0;
@@ -174,7 +162,6 @@
     .info-btn:hover:not(:disabled) {
         background: #433d8a;
     }
-
     .info {
         font-size: 14px;
         line-height: 1.6;
@@ -187,7 +174,6 @@
     .center {
         text-align: center;
     }
-
     .qr-item {
         background: #0d121c;
         border-radius: 18px;
@@ -217,7 +203,6 @@
         font-size: 13px;
         word-break: break-word;
     }
-
     .progress {
         height: 12px;
         background: #1e2630;
@@ -231,7 +216,6 @@
         background: #3b4de0;
         transition: width .25s ease;
     }
-
     #reader {
         width: 100%;
         overflow: hidden;
@@ -239,7 +223,6 @@
         background: #0d121c;
         min-height: 200px;
     }
-
     .status {
         text-align: center;
         padding: 10px;
@@ -257,7 +240,6 @@
     .info-status {
         color: #818cf8;
     }
-
     .parts {
         display: flex;
         flex-wrap: wrap;
@@ -283,7 +265,6 @@
         color: #475569;
         border: 1px solid #2a3340;
     }
-
     .small {
         color: #94a3b8;
         font-size: 13px;
@@ -303,7 +284,6 @@
     .hidden {
         display: none;
     }
-
     .size-control {
         display: flex;
         align-items: center;
@@ -336,7 +316,6 @@
         font-size: 12px;
         color: #475569;
     }
-
     .transfer-container {
         background: #141a24;
         border-radius: 22px;
@@ -374,7 +353,6 @@
         color: #94a3b8;
         margin-top: 5px;
     }
-
     .transfer-controls {
         display: flex;
         gap: 10px;
@@ -385,7 +363,6 @@
         flex: 1;
         min-width: 80px;
     }
-
     .speed-control {
         display: flex;
         align-items: center;
@@ -416,13 +393,11 @@
         text-align: center;
         color: #818cf8;
     }
-
     .transfer-status {
         margin-top: 10px;
         font-size: 14px;
         color: #94a3b8;
     }
-
     .file-upload-area {
         border: 2px dashed #2a3340;
         border-radius: 18px;
@@ -454,7 +429,6 @@
         font-size: 12px;
         margin-top: 4px;
     }
-
     .file-info {
         margin-top: 12px;
         padding: 12px;
@@ -471,7 +445,6 @@
     .file-info .filesize {
         color: #94a3b8;
     }
-
     .btn-group {
         display: flex;
         gap: 8px;
@@ -481,7 +454,6 @@
         flex: 1;
         min-width: 100px;
     }
-
     .badge {
         display: inline-block;
         background: #1e2630;
@@ -491,7 +463,6 @@
         color: #94a3b8;
         border: 1px solid #2a3340;
     }
-
     .preview-container {
         margin: 12px 0;
         padding: 12px;
@@ -511,12 +482,10 @@
         display: block;
         font-weight: 600;
     }
-
-    /* ======== ГЛАВНЫЙ БЛОК С ТЕКСТОМ ======== */
     .text-preview {
         max-height: 400px;
         overflow-y: auto;
-        background: #1e293b;  /* тёмный фон */
+        background: #1e293b;
         padding: 14px;
         border-radius: 12px;
         border: 1px solid #334155;
@@ -525,15 +494,13 @@
         line-height: 1.6;
         white-space: pre-wrap;
         word-break: break-word;
-        color: #e2e8f0;  /* светлый текст */
+        color: #e2e8f0;
         box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
     }
     .text-preview:focus {
         outline: 2px solid #3b4de0;
         outline-offset: 1px;
     }
-
-    /* ======== ПОЛЕ BASE64 ======== */
     #resultText {
         width: 100%;
         min-height: 50px;
@@ -552,7 +519,6 @@
     #resultText::placeholder {
         color: #64748b;
     }
-
     .file-type-badge {
         display: inline-block;
         padding: 4px 14px;
@@ -573,7 +539,6 @@
         color: #94a3b8;
         border: 1px solid #2a3340;
     }
-
     .action-buttons {
         display: flex;
         gap: 8px;
@@ -584,7 +549,6 @@
         flex: 1;
         min-width: 120px;
     }
-
     .mode-indicator {
         display: inline-block;
         padding: 4px 12px;
@@ -605,7 +569,6 @@
         background: #0f3a2a;
         color: #6ee7b7;
     }
-
     .sound-indicator {
         display: inline-block;
         width: 12px;
@@ -622,7 +585,6 @@
         50% { transform: scale(1.5); }
         100% { transform: scale(1); }
     }
-
     .progress-indicator {
         display: none;
         text-align: center;
@@ -658,7 +620,6 @@
         color: #94a3b8;
         margin-top: 4px;
     }
-
     .top-actions {
         display: flex;
         gap: 8px;
@@ -672,7 +633,6 @@
         padding: 10px;
         font-size: 13px;
     }
-
     .copy-btn-container {
         display: flex;
         gap: 8px;
@@ -686,7 +646,6 @@
         padding: 10px;
         font-size: 13px;
     }
-
     .input-mode-toggle {
         display: flex;
         gap: 8px;
@@ -716,7 +675,6 @@
         background: #2a3340;
         color: #e2e8f0;
     }
-
     .text-input-area textarea {
         font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
         min-height: 180px;
@@ -727,7 +685,6 @@
         margin-top: 6px;
         font-style: italic;
     }
-
     .image-preview-container {
         margin: 12px 0;
         padding: 12px;
@@ -768,7 +725,6 @@
         font-size: 12px;
         min-width: auto;
     }
-
     .timer-container {
         display: flex;
         justify-content: center;
@@ -812,7 +768,6 @@
         border-radius: 20px;
         border: 1px solid #2a3340;
     }
-
     .settings-saved {
         display: inline-block;
         padding: 4px 12px;
@@ -825,17 +780,25 @@
         transition: opacity 0.5s;
         border: 1px solid #1a5a3a;
     }
+    .filename-display {
+        font-weight: bold;
+        color: #e2e8f0;
+        word-break: break-all;
+        background: #0d121c;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #2a3340;
+        margin: 8px 0;
+        font-size: 14px;
+    }
+    .filename-display .label {
+        color: #94a3b8;
+        font-weight: normal;
+    }
+    .filename-display .name {
+        color: #93bbfc;
+    }
 </style>
-
-
-
-
-
-
-
-
-
-
 
 <script>
 function toggleQR() {
@@ -856,20 +819,11 @@ function toggleQR() {
 }
 </script>
 
-
-
-
-
-
     <div class="app">
         <h1>📦 QR File Transfer</h1>
 
         <div class="top-actions">
-            
-
-<button class="secondary" onclick="showAppQR()">📱 Поделиться приложением</button>
-
-
+            <button class="secondary" onclick="showAppQR()">📱 Поделиться приложением</button>
             <button class="secondary" onclick="showAbout()">ℹ️ О программе</button>
         </div>
 
@@ -878,8 +832,6 @@ function toggleQR() {
             <button id="tabScanner" class="tab" onclick="showPage('scanner')">📷 Сборщик</button>
             <button id="tabTransfer" class="tab" onclick="showPage('transfer')">📺 Передача</button>
         </div>
-
-
 
         <!-- ГЕНЕРАТОР -->
         <div id="generator" class="page active">
@@ -895,12 +847,11 @@ function toggleQR() {
                     <button id="modeTextBtn" class="inactive-mode" onclick="setInputMode('text')">✏️ Ввести текст</button>
                 </div>
 
-                <!-- Режим загрузки файла -->
                 <div id="fileInputArea">
                     <div class="file-upload-area" onclick="document.getElementById('fileInput').click()">
                         <span class="icon">📁</span>
                         <div class="text">Нажмите для загрузки файла</div>
-                        <div class="subtext">Поддерживаются TXT, MP3, изображения и другие файлы</div>
+                        <div class="subtext">Поддерживаются любые файлы: .vad.txt, .mp3, изображения и другие</div>
                         <input type="file" id="fileInput" onchange="handleFileUpload(event)">
                     </div>
                     <div id="fileInfo" class="file-info hidden">
@@ -910,14 +861,12 @@ function toggleQR() {
                     </div>
                 </div>
 
-                <!-- Режим ввода текста (создание TXT файла) -->
                 <div id="textInputArea" class="text-input-area hidden">
                     <textarea id="textInput" placeholder="Введите любой текст на любом языке..."></textarea>
                     <div class="hint">💡 Текст будет преобразован в TXT-файл и закодирован в Base64</div>
                     <button class="primary" onclick="convertTextToFile()" style="margin-top: 8px;">📄 Преобразовать в TXT</button>
                 </div>
 
-                <!-- Скрытый оригинальный textarea оставлен для совместимости -->
                 <textarea id="sourceText" class="hidden" placeholder=""></textarea>
 
                 <div class="size-control">
@@ -958,7 +907,12 @@ function toggleQR() {
                 <div class="progress"><div id="scanProgress" class="progress-bar"></div></div>
                 <div id="scanProgressText" class="small" style="margin-top:8px;">Отсканируйте первый QR-код.</div>
 
-                <!-- ОБРАТНЫЙ ТАЙМЕР -->
+                <!-- Имя файла -->
+                <div id="filenameDisplay" class="filename-display hidden">
+                    <span class="label">📄 Имя файла:</span>
+                    <span class="name" id="restoredFilename">—</span>
+                </div>
+
                 <div id="timerContainer" class="timer-container hidden">
                     <span class="timer-icon">⏳</span>
                     <span class="timer-label">Осталось:</span>
@@ -969,97 +923,55 @@ function toggleQR() {
                 <div id="partsList" class="parts"></div>
             </div>
 
-
-
-
-
-
-
-            <!-- ========================================================== -->
-<!-- ============ РАСШИФРОВАННЫЙ ТЕКСТ (БОЛЬШОЙ) ============= -->
-<!-- ========================================================== -->
-
-
-
-<div id="textPreviewContainer" class="preview-container hidden">
-    <span class="label">📄 Расшифрованный текст:</span>
-    <div id="textPreview" class="text-preview"></div>
-   
-
-
- <div class="copy-btn-container">
-    <button class="secondary" onclick="copyDecodedText()">📋 Копировать текст</button>
-    <button class="secondary" onclick="copyAndOpenKlikEdit()">✏️ Открыть в KlikEdit</button>
-</div>
-</div>
-
-
-
-
-
-<!-- ============ РЕЖИМЫ ПРОСМОТРА ============================ -->
-<!-- ========================================================== -->
-<div>
-    
-<div style="display:none;">
-    <span style="color:#94a3b8; font-weight:600;">Режим просмотра:</span>
-    <button class="secondary" onclick="setViewMode('auto')" id="modeAutoBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">🔀 Авто</button>
-    <button class="secondary" onclick="setViewMode('text')" id="modeTextBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">📄 Текст</button>
-    <button class="secondary" onclick="setViewMode('audio')" id="modeAudioBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">🎵 Аудио</button>
-    <button class="secondary" onclick="setViewMode('image')" id="modeImageBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">🖼️ Изображение</button>
-</div>
-
-
-
-
-
-<!-- ========================================================== -->
-<!-- ============ BASE64 (УЗКИЙ) ============================== -->
-<!-- ========================================================== -->
-<div style="margin-top: 12px;">
-    <b style="font-size:13px; color:#94a3b8;">📦 Base64 (сырые данные):</b>
-  
-
-
-
-  <textarea id="resultText" readonly placeholder="После получения всех частей здесь появится Base64..."></textarea>
-</div>
-
-
-
-
-
-
-                
-
-                <div id="audioPreviewContainer" class="preview-container hidden">
-                    <span class="label">🎵 Аудио плеер:</span>
-                    <audio controls id="audioPlayer"></audio>
-                    <div style="margin-top: 8px; font-size: 12px; color: #64748b;">Нажмите ▶ для воспроизведения</div>
+            <div id="textPreviewContainer" class="preview-container hidden">
+                <span class="label">📄 Расшифрованный текст:</span>
+                <div id="textPreview" class="text-preview"></div>
+                <div class="copy-btn-container">
+                    <button class="secondary" onclick="copyDecodedText()">📋 Копировать текст</button>
+                    <button class="secondary" onclick="copyAndOpenKlikEdit()">✏️ Открыть в KlikEdit</button>
                 </div>
+            </div>
 
-                <div id="imagePreviewContainer" class="image-preview-container hidden">
-                    <span class="label">🖼️ Изображение:</span>
-                    <img id="imagePreview" src="" alt="Восстановленное изображение">
-                    <div class="image-info" id="imageInfo"></div>
-                    <div class="image-actions">
-                        <button class="secondary" onclick="downloadImageFromPreview()">💾 Скачать изображение</button>
-                        <button class="secondary" onclick="copyImageToClipboard()">📋 Копировать в буфер</button>
-                    </div>
-                </div>
+            <div style="display:none;">
+                <span style="color:#94a3b8; font-weight:600;">Режим просмотра:</span>
+                <button class="secondary" onclick="setViewMode('auto')" id="modeAutoBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">🔀 Авто</button>
+                <button class="secondary" onclick="setViewMode('text')" id="modeTextBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">📄 Текст</button>
+                <button class="secondary" onclick="setViewMode('audio')" id="modeAudioBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">🎵 Аудио</button>
+                <button class="secondary" onclick="setViewMode('image')" id="modeImageBtn" style="flex:0 1 auto; padding:6px 16px; margin:0; font-size:13px; width:auto;">🖼️ Изображение</button>
+            </div>
 
-                <div class="action-buttons">
-                    <button class="success" onclick="downloadResultFile()">📁 Скачать файл</button>
-                    <button class="info-btn" onclick="previewAsText()">📄 Показать как текст</button>
-                    <button class="warning-btn" onclick="previewAsAudio()">🎵 Слушать как аудио</button>
-                    <button class="primary" onclick="previewAsImage()">🖼️ Показать как изображение</button>
-                </div>
+            <div style="margin-top: 12px;">
+                <b style="font-size:13px; color:#94a3b8;">📦 Base64 (сырые данные):</b>
+                <textarea id="resultText" readonly placeholder="После получения всех частей здесь появится Base64..."></textarea>
+            </div>
 
-                <div class="btn-group">
-                    <button class="secondary" onclick="copyResult()">📋 Копировать Base64</button>
-                    <button class="secondary" onclick="saveResultTxt()">💾 Сохранить TXT</button>
-                    <button class="danger" onclick="clearScanner()">🗑 Очистить</button>
+            <div id="audioPreviewContainer" class="preview-container hidden">
+                <span class="label">🎵 Аудио плеер:</span>
+                <audio controls id="audioPlayer"></audio>
+                <div style="margin-top: 8px; font-size: 12px; color: #64748b;">Нажмите ▶ для воспроизведения</div>
+            </div>
+
+            <div id="imagePreviewContainer" class="image-preview-container hidden">
+                <span class="label">🖼️ Изображение:</span>
+                <img id="imagePreview" src="" alt="Восстановленное изображение">
+                <div class="image-info" id="imageInfo"></div>
+                <div class="image-actions">
+                    <button class="secondary" onclick="downloadImageFromPreview()">💾 Скачать изображение</button>
+                    <button class="secondary" onclick="copyImageToClipboard()">📋 Копировать в буфер</button>
                 </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="success" onclick="downloadResultFile()">📁 Скачать файл</button>
+                <button class="info-btn" onclick="previewAsText()">📄 Показать как текст</button>
+                <button class="warning-btn" onclick="previewAsAudio()">🎵 Слушать как аудио</button>
+                <button class="primary" onclick="previewAsImage()">🖼️ Показать как изображение</button>
+            </div>
+
+            <div class="btn-group">
+                <button class="secondary" onclick="copyResult()">📋 Копировать Base64</button>
+                <button class="secondary" onclick="saveResultTxt()">💾 Сохранить TXT</button>
+                <button class="danger" onclick="clearScanner()">🗑 Очистить</button>
             </div>
 
             <div id="verification" class="card info hidden">
@@ -1077,21 +989,13 @@ function toggleQR() {
                 <div class="transfer-info" id="transferInfo">Нет QR-кодов</div>
                 <div class="transfer-counter" id="transferCounter">0 / 0</div>
 
-
-
-
-<div class="transfer-controls">
-    <button class="primary" id="transferStartBtn" onclick="startTransfer()">▶ Старт</button>
-    <button class="secondary" id="transferStopBtn" onclick="stopTransfer()" disabled>⏹ Стоп</button>
-    <button class="secondary" onclick="transferPrev()">◀ Назад</button>
-    <button class="secondary" onclick="transferNext()">Вперед ▶</button>
-    <button class="secondary" onclick="showBlockSelector()" style="background:#7c5a00; color:#fcd34d;">🎯 Выбрать блоки</button>
-</div>
-                
-
-
-
-
+                <div class="transfer-controls">
+                    <button class="primary" id="transferStartBtn" onclick="startTransfer()">▶ Старт</button>
+                    <button class="secondary" id="transferStopBtn" onclick="stopTransfer()" disabled>⏹ Стоп</button>
+                    <button class="secondary" onclick="transferPrev()">◀ Назад</button>
+                    <button class="secondary" onclick="transferNext()">Вперед ▶</button>
+                    <button class="secondary" onclick="showBlockSelector()" style="background:#7c5a00; color:#fcd34d;">🎯 Выбрать блоки</button>
+                </div>
 
                 <div class="speed-control">
                     <label for="transferSpeed">Скорость:</label>
@@ -1189,6 +1093,7 @@ function toggleQR() {
         let scanTotal = null;
         let scanHash = null;
         let scanDocumentId = null;
+        let scanFilename = null; // Имя файла из QR
 
         let currentFileInfo = {
             name: '',
@@ -1201,24 +1106,21 @@ function toggleQR() {
         let currentViewMode = 'auto';
         let lastDecodedData = null;
         let lastDecodedBase64 = null;
-        let currentInputMode = 'file'; // 'file' или 'text'
+        let currentInputMode = 'file';
 
         // Переменные для таймера обратного отсчёта
         let scanStartTime = null;
         let timerInterval = null;
         let timerRunning = false;
-        let estimatedTotalTime = 0; // в секундах
-        let avgScanSpeed = 0; // среднее время на один QR в секундах
+        let estimatedTotalTime = 0;
+        let avgScanSpeed = 0;
 
         /* =========================================================
-           СОХРАНЕНИЕ НАСТРОЕК В localStorage (привязка к устройству)
+           СОХРАНЕНИЕ НАСТРОЕК В localStorage
         ========================================================= */
         function getDeviceId() {
-            // Используем User-Agent как идентификатор устройства
             const ua = navigator.userAgent || '';
-            // Берём первые 100 символов для компактности
             let deviceId = ua.substring(0, 100).replace(/[^a-zA-Z0-9]/g, '_');
-            // Если слишком коротко, добавляем хеш от экрана
             if (deviceId.length < 20) {
                 deviceId += '_' + (window.screen.width + 'x' + window.screen.height);
             }
@@ -1280,8 +1182,6 @@ function toggleQR() {
                 hint.textContent = '💾 запомнено для ' + deviceName + ' — ' + saved + ' байт';
                 badge.classList.remove('hidden');
                 badge.textContent = '💾 сохранено для ' + deviceName;
-
-                // Показываем уведомление с анимацией
                 badge.style.opacity = '1';
                 setTimeout(() => {
                     badge.style.opacity = '0.6';
@@ -1307,31 +1207,25 @@ function toggleQR() {
                 badge.classList.remove('hidden');
                 badge.textContent = '💾 сохранено для ' + deviceName;
                 badge.style.opacity = '1';
-
-                // Анимация сохранения
                 setTimeout(() => {
                     badge.style.opacity = '0.6';
                 }, 2000);
             }
         }
 
-        // Сохраняем настройку при изменении поля
         document.addEventListener('DOMContentLoaded', function() {
             const input = document.getElementById('maxChunkSize');
             if (input) {
                 input.addEventListener('change', saveCurrentSettings);
                 input.addEventListener('input', function() {
-                    // Показываем, что значение изменилось
                     const badge = document.getElementById('settingsBadge');
                     badge.textContent = '✏️ изменили...';
                     badge.style.opacity = '1';
                     badge.classList.remove('hidden');
                 });
             }
-            // Загружаем сохранённые настройки
             loadSavedSettings();
 
-            // Остальная инициализация
             const speedSlider = document.getElementById('transferSpeed');
             if (speedSlider) {
                 speedSlider.addEventListener('input', function() {
@@ -1370,7 +1264,6 @@ function toggleQR() {
                 document.getElementById('generatorInfo').innerHTML = 'Введите текст, нажмите «Преобразовать в TXT», затем «Создать QR-коды».';
             }
 
-            // Очищаем предыдущие данные при переключении
             document.getElementById('sourceText').value = '';
             document.getElementById('fileInfo').classList.add('hidden');
             currentFileInfo = { name: '', size: 0, type: '', base64: '' };
@@ -1384,7 +1277,6 @@ function toggleQR() {
             }
 
             try {
-                // Создаем Blob с текстом в UTF-8
                 const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -1397,7 +1289,6 @@ function toggleQR() {
                         }
                         const base64 = btoa(binary);
 
-                        // Создаем имя файла на основе первых символов текста
                         let filename = 'text_file.txt';
                         const firstLine = text.split('\n')[0].trim().slice(0, 30);
                         if (firstLine) {
@@ -1471,7 +1362,8 @@ function toggleQR() {
                 '🔹 Сборщик — отсканируйте QR-коды камерой, восстановите файл.\n' +
                 '🔹 Передача — автоматический показ QR-кодов на экране.\n\n' +
                 'Файлы кодируются в Base64 и разбиваются на части.\n' +
-                'Поддерживаются любые типы файлов: текст, аудио, изображения и другие.\n\n' +
+                'Поддерживаются любые типы файлов: текст, аудио, изображения и другие.\n' +
+                '✅ Сохраняется оригинальное имя файла (включая расширение)!\n\n' +
                 '💾 Настройка "Байт на QR" запоминается для каждого устройства отдельно!\n' +
                 'Сделано с ❤️ для удобного обмена данными.'
             );
@@ -1526,8 +1418,9 @@ function toggleQR() {
                     }
                     const base64 = btoa(binary);
 
+                    // Сохраняем ПОЛНОЕ имя файла (включая все расширения)
                     currentFileInfo = {
-                        name: file.name,
+                        name: file.name,  // Полное имя: example.vad.txt
                         size: file.size,
                         type: file.type,
                         base64: base64
@@ -1559,7 +1452,8 @@ function toggleQR() {
                     document.getElementById('fileSize').textContent = 'Размер: ' + formatFileSize(file.size);
                     document.getElementById('fileTypeInfo').innerHTML =
                         '<span class="file-type-badge ' + typeClass + '">' + typeLabel + '</span> | ' +
-                        'Base64: ' + formatFileSize(base64.length) + ' (' + base64.length + ' симв.)';
+                        'Base64: ' + formatFileSize(base64.length) + ' (' + base64.length + ' симв.)<br>' +
+                        '<span style="color:#64748b; font-size:12px;">Имя файла: <b>' + file.name + '</b></span>';
 
                     document.getElementById('generatorInfo').innerHTML =
                         '<span class="ok">✅ Файл загружен и преобразован в Base64</span><br>' +
@@ -1596,10 +1490,10 @@ function toggleQR() {
         }
 
         /* =========================================================
-           ГЕНЕРАЦИЯ QR
+           ГЕНЕРАЦИЯ QR (С СОХРАНЕНИЕМ ИМЕНИ ФАЙЛА)
         ========================================================= */
-        function createPacket(documentId, partNumber, totalParts, hash, data) {
-            return ["QRTX", "1", documentId, String(partNumber), String(totalParts), hash, DATA_SEPARATOR, data].join("|");
+        function createPacket(documentId, partNumber, totalParts, hash, filename, data) {
+            return ["QRTX", "1", documentId, String(partNumber), String(totalParts), hash, filename, DATA_SEPARATOR, data].join("|");
         }
 
         function canFitQR(text) {
@@ -1613,7 +1507,7 @@ function toggleQR() {
             }
         }
 
-        function splitData(data, maxBytes) {
+        function splitData(data, maxBytes, filename) {
             const chunks = [];
             let pos = 0;
 
@@ -1623,7 +1517,7 @@ function toggleQR() {
 
                 while (size > 0) {
                     const chunk = data.substr(pos, size);
-                    const packet = createPacket("test", 1, 1, "test", chunk);
+                    const packet = createPacket("test", 1, 1, "test", filename, chunk);
                     if (canFitQR(packet)) {
                         chunks.push(chunk);
                         pos += size;
@@ -1652,7 +1546,6 @@ function toggleQR() {
             }
             maxBytes = Math.max(10, Math.min(1000, maxBytes));
 
-            // Сохраняем использованное значение
             saveChunkSize(maxBytes);
 
             const info = document.getElementById("generatorInfo");
@@ -1681,10 +1574,11 @@ function toggleQR() {
                 const hash = await sha256(text);
                 progressSub.textContent = 'Вычислен SHA-256, разбиваю данные...';
 
-                const documentId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(
-                36);
+                const documentId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36);
 
-                const chunks = splitData(text, maxBytes);
+                // Используем имя файла из currentFileInfo
+                const filename = currentFileInfo.name || 'recovered_file';
+                const chunks = splitData(text, maxBytes, filename);
                 const totalParts = chunks.length;
 
                 transferQRs = [];
@@ -1693,11 +1587,10 @@ function toggleQR() {
 
                 for (let i = 0; i < chunks.length; i++) {
                     const percent = Math.round((i / chunks.length) * 100);
-                    progressText.textContent = 'Создание QR-кодов... ' + (i + 1) + ' из ' + totalParts + ' (' + percent +
-                    '%)';
+                    progressText.textContent = 'Создание QR-кодов... ' + (i + 1) + ' из ' + totalParts + ' (' + percent + '%)';
                     progressSub.textContent = 'Генерация QR ' + (i + 1) + ' из ' + totalParts;
 
-                    const packet = createPacket(documentId, i + 1, totalParts, hash, chunks[i]);
+                    const packet = createPacket(documentId, i + 1, totalParts, hash, filename, chunks[i]);
                     const qr = qrcode(0, QR_ERROR_LEVEL);
                     qr.addData(packet);
                     qr.make();
@@ -1726,7 +1619,7 @@ function toggleQR() {
 
                     const meta = document.createElement("div");
                     meta.className = "qr-meta";
-                    meta.innerHTML = "Часть " + (i + 1) + " из " + totalParts + " | " + chunks[i].length + " символов";
+                    meta.innerHTML = "Часть " + (i + 1) + " из " + totalParts + " | " + chunks[i].length + " символов | 📄 " + filename;
                     item.appendChild(meta);
 
                     const download = document.createElement("button");
@@ -1749,7 +1642,7 @@ function toggleQR() {
 
                 let fileInfo = '';
                 if (currentFileInfo.name) {
-                    fileInfo = '📄 Файл: <b>' + currentFileInfo.name + '</b><br>';
+                    fileInfo = '📄 Имя файла: <b>' + currentFileInfo.name + '</b><br>';
                 }
 
                 info.innerHTML =
@@ -1759,20 +1652,17 @@ function toggleQR() {
                     '🔐 Контрольная сумма SHA-256:<br><div class="hash">' + hash + '</div>' +
                     '<br><span class="ok">✅ QR-коды созданы!</span>';
 
-                // "Пробуждаем" звук перед воспроизведением
-try {
-    if (window.audioContext && window.audioContext.state === 'suspended') {
-        await window.audioContext.resume();
-    }
-} catch(e) {
-    // Если что-то пошло не так — просто игнорируем
-}
-playSuccessBeep();
+                try {
+                    if (window.audioContext && window.audioContext.state === 'suspended') {
+                        await window.audioContext.resume();
+                    }
+                } catch(e) {}
+
+                playSuccessBeep();
 
                 if (transferQRs.length > 0) {
                     updateTransferUI();
-                    document.getElementById("transferStatus").textContent = "Готово к передаче (" + transferQRs.length +
-                        " QR)";
+                    document.getElementById("transferStatus").textContent = "Готово к передаче (" + transferQRs.length + " QR)";
 
                     setTimeout(() => {
                         showPage('transfer');
@@ -1899,7 +1789,7 @@ playSuccessBeep();
         }
 
         /* =========================================================
-           СБОРЩИК (с обратным таймером)
+           СБОРЩИК
         ========================================================= */
         function startTimerDisplay() {
             if (timerInterval) return;
@@ -1921,13 +1811,11 @@ playSuccessBeep();
             const remaining = scanTotal - received;
 
             if (remaining === 0) {
-                // Все получено
                 document.getElementById('timerDisplay').textContent = '00:00';
                 document.getElementById('timerEstimate').textContent = '✅ Готово!';
                 return;
             }
 
-            // Рассчитываем среднюю скорость сканирования
             const elapsed = (Date.now() - scanStartTime) / 1000;
             if (received >= 2 && elapsed > 1) {
                 avgScanSpeed = elapsed / received;
@@ -1940,7 +1828,6 @@ playSuccessBeep();
                     const display = document.getElementById('timerDisplay');
                     display.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
 
-                    // Оценка точности
                     const accuracy = Math.round((elapsed / estimatedTotalTime) * 100);
                     let estimateText = 'осталось ~' + Math.round(remainingTime) + 'с';
                     if (accuracy > 20 && accuracy < 80) {
@@ -1954,7 +1841,6 @@ playSuccessBeep();
                     document.getElementById('timerEstimate').textContent = 'финализация...';
                 }
             } else {
-                // Недостаточно данных для прогноза
                 document.getElementById('timerDisplay').textContent = '--:--';
                 document.getElementById('timerEstimate').textContent = 'сканируется... (' + received + '/' + scanTotal + ')';
             }
@@ -1977,6 +1863,17 @@ playSuccessBeep();
             timerContainer.classList.add('hidden');
             document.getElementById('timerDisplay').textContent = '--:--';
             document.getElementById('timerEstimate').textContent = 'ожидание...';
+        }
+
+        function showFilename(filename) {
+            const container = document.getElementById('filenameDisplay');
+            const nameSpan = document.getElementById('restoredFilename');
+            if (filename) {
+                container.classList.remove('hidden');
+                nameSpan.textContent = filename;
+            } else {
+                container.classList.add('hidden');
+            }
         }
 
         async function startScanner() {
@@ -2040,8 +1937,8 @@ playSuccessBeep();
             const data = packet.substring(separatorIndex + DATA_SEPARATOR.length + 2);
             const fields = header.split("|");
 
-            if (fields.length < 6) {
-                setScanStatus("Неверный QR.", "error");
+            if (fields.length < 7) {
+                setScanStatus("Неверный QR (ожидается 7 полей).", "error");
                 return;
             }
 
@@ -2051,6 +1948,7 @@ playSuccessBeep();
             const partNumber = Number(fields[3]);
             const total = Number(fields[4]);
             const hash = fields[5];
+            const filename = fields[6]; // Имя файла из QR
 
             if (format !== "QRTX" || version !== "1") {
                 setScanStatus("Неподдерживаемый формат QR.", "error");
@@ -2066,7 +1964,8 @@ playSuccessBeep();
                 scanDocumentId = documentId;
                 scanTotal = total;
                 scanHash = hash;
-                // Запускаем таймер при получении первого QR
+                scanFilename = filename; // Сохраняем имя файла
+                showFilename(filename);
                 startTimerDisplay();
             } else {
                 if (documentId !== scanDocumentId) {
@@ -2094,9 +1993,7 @@ playSuccessBeep();
             setScanStatus("✓ Получен QR " + partNumber + " / " + total, "ok");
 
             if (Object.keys(receivedParts).length === scanTotal) {
-                // Останавливаем таймер при завершении сборки
                 stopTimerDisplay();
-                // Показываем финальное время
                 const elapsed = (Date.now() - scanStartTime) / 1000;
                 const minutes = Math.floor(elapsed / 60);
                 const seconds = Math.floor(elapsed % 60);
@@ -2169,23 +2066,21 @@ playSuccessBeep();
                 return 'audio';
             }
 
-            // Проверка на изображения по магическим числам
             if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
-                return 'image'; // PNG
+                return 'image';
             }
             if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
-                return 'image'; // JPEG
+                return 'image';
             }
             if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
-                return 'image'; // GIF
+                return 'image';
             }
             if (bytes[0] === 0x42 && bytes[1] === 0x4D) {
-                return 'image'; // BMP
+                return 'image';
             }
             if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) {
-                // Может быть WEBP
                 if (bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
-                    return 'image'; // WEBP
+                    return 'image';
                 }
             }
 
@@ -2336,33 +2231,30 @@ playSuccessBeep();
         }
 
         function showImage(bytes) {
-    const container = document.getElementById('imagePreviewContainer');
-    const img = document.getElementById('imagePreview');
-    const info = document.getElementById('imageInfo');
+            const container = document.getElementById('imagePreviewContainer');
+            const img = document.getElementById('imagePreview');
+            const info = document.getElementById('imageInfo');
 
-    const url = bytesToImageUrl(bytes);
-    if (url) {
-        img.src = url;
-        const imgType = getImageType(bytes);
-        const size = bytes.length;
-        info.textContent = '📐 ' + imgType + ' | ' + formatFileSize(size) + ' (' + size + ' байт)';
-        container.classList.remove('hidden');
-        document.getElementById('textPreviewContainer').classList.add('hidden');
-        document.getElementById('audioPreviewContainer').classList.add('hidden');
+            const url = bytesToImageUrl(bytes);
+            if (url) {
+                img.src = url;
+                const imgType = getImageType(bytes);
+                const size = bytes.length;
+                info.textContent = '📐 ' + imgType + ' | ' + formatFileSize(size) + ' (' + size + ' байт)';
+                container.classList.remove('hidden');
+                document.getElementById('textPreviewContainer').classList.add('hidden');
+                document.getElementById('audioPreviewContainer').classList.add('hidden');
 
-        if (currentViewMode === 'auto') {
-            setScanStatus('🖼️ Изображение восстановлено!', 'ok');
-            playSuccessBeep();
+                if (currentViewMode === 'auto') {
+                    setScanStatus('🖼️ Изображение восстановлено!', 'ok');
+                    playSuccessBeep();
+                }
+
+                setTimeout(() => {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 350);
+            }
         }
-
-        // 👇👇👇 ПРОВЕРЬ, ЧТО ЭТОТ БЛОК ЕСТЬ 👇👇👇
-        setTimeout(() => {
-            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 350);
-        // 👆👆👆 ДОЛЖЕН БЫТЬ ТУТ 👆👆👆
-
-    }  // ← закрывает if (url)
-}      // ← закрывает функцию
 
         function isBase64Image(base64) {
             if (!base64) return false;
@@ -2406,7 +2298,7 @@ playSuccessBeep();
             }
             const a = document.createElement('a');
             a.href = img.src;
-            a.download = 'restored_image.png';
+            a.download = scanFilename || 'restored_image.png';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -2434,6 +2326,9 @@ playSuccessBeep();
             }
         }
 
+        /* =========================================================
+           СБОРКА ДАННЫХ (С СОХРАНЕНИЕМ ИМЕНИ ФАЙЛА)
+        ========================================================= */
         async function assembleData() {
             let fullData = "";
 
@@ -2500,8 +2395,11 @@ playSuccessBeep();
                     timeStr = `⏱️ Время сборки: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} сек`;
                 }
 
+                const filenameDisplay = scanFilename || 'неизвестно';
+
                 verificationText.innerHTML =
                     "<p class='ok'>✅ Данные восстановлены полностью!</p>" +
+                    "<p>📄 Имя файла: <b style='color:#93bbfc;'>" + filenameDisplay + "</b></p>" +
                     "<p>Все " + scanTotal + " частей получены.</p>" +
                     "<p><b>SHA-256 совпадает.</b></p>" +
                     "<div class='hash'>" + calculatedHash + "</div>" +
@@ -2561,6 +2459,9 @@ playSuccessBeep();
             URL.revokeObjectURL(url);
         }
 
+        /* =========================================================
+           СКАЧИВАНИЕ ФАЙЛА (С СОХРАНЕНИЕМ ИМЕНИ)
+        ========================================================= */
         function downloadResultFile() {
             const base64Text = document.getElementById("resultText").value;
             if (!base64Text) {
@@ -2580,65 +2481,55 @@ playSuccessBeep();
                     bytes[i] = binaryString.charCodeAt(i);
                 }
 
-                let ext = '.bin';
-                let mimeType = 'application/octet-stream';
-                let fileName = 'recovered_file';
+                // Используем сохранённое имя файла или определяем по типу
+                let fileName = scanFilename || 'recovered_file';
 
-                const header = base64Text.substring(0, 20);
-                if (header.startsWith('/9j/')) { ext = '.jpg';
-                    mimeType = 'image/jpeg';
-                    fileName = 'recovered_image'; } else if (header.startsWith('iVBOR')) { ext = '.png';
-                    mimeType = 'image/png';
-                    fileName = 'recovered_image'; } else if (header.startsWith('R0lGOD')) { ext = '.gif';
-                    mimeType = 'image/gif';
-                    fileName = 'recovered_image'; } else if (header.startsWith('Qk1')) { ext = '.bmp';
-                    mimeType = 'image/bmp';
-                    fileName = 'recovered_image'; } else if (header.startsWith('UklGR')) { ext = '.webp';
-                    mimeType = 'image/webp';
-                    fileName = 'recovered_image'; } else if (header.startsWith('UEs')) { ext = '.zip';
-                    mimeType = 'application/zip';
-                    fileName = 'recovered_archive'; } else if (header.startsWith('H4sI')) { ext = '.gz';
-                    mimeType = 'application/gzip';
-                    fileName = 'recovered_archive'; } else if (header.startsWith('JVBER')) { ext = '.pdf';
-                    mimeType = 'application/pdf';
-                    fileName = 'recovered_document'; } else if (header.startsWith('ID3')) { ext = '.mp3';
-                    mimeType = 'audio/mpeg';
-                    fileName = 'recovered_audio'; } else if (header.startsWith('AAAA')) { ext = '.wav';
-                    mimeType = 'audio/wav';
-                    fileName = 'recovered_audio'; } else if (header.startsWith('fLaC')) { ext = '.flac';
-                    mimeType = 'audio/flac';
-                    fileName = 'recovered_audio'; }
-
-                // Если не удалось определить тип по заголовку, проверяем байты
-                if (ext === '.bin') {
-                    const fileType = detectFileType(bytes);
-                    if (fileType === 'image') {
-                        ext = '.img';
-                        mimeType = 'image/*';
-                        fileName = 'recovered_image';
-                    } else if (fileType === 'text') {
-                        try {
-                            const text = new TextDecoder('utf-8').decode(bytes);
-                            if (text.length > 0 && /[\p{L}\p{N}\p{P}\s]/u.test(text)) {
-                                ext = '.txt';
-                                mimeType = 'text/plain';
-                                fileName = 'recovered_text';
-                            }
-                        } catch (e) {}
-                    }
+                // Если имя не содержит расширения, пытаемся определить
+                if (!fileName.includes('.')) {
+                    let ext = '.bin';
+                    const header = base64Text.substring(0, 20);
+                    if (header.startsWith('/9j/')) ext = '.jpg';
+                    else if (header.startsWith('iVBOR')) ext = '.png';
+                    else if (header.startsWith('R0lGOD')) ext = '.gif';
+                    else if (header.startsWith('Qk1')) ext = '.bmp';
+                    else if (header.startsWith('UklGR')) ext = '.webp';
+                    else if (header.startsWith('ID3')) ext = '.mp3';
+                    else if (header.startsWith('fLaC')) ext = '.flac';
+                    else if (header.startsWith('AAAA')) ext = '.wav';
+                    else if (header.startsWith('UEs')) ext = '.zip';
+                    else if (header.startsWith('H4sI')) ext = '.gz';
+                    else if (header.startsWith('JVBER')) ext = '.pdf';
+                    
+                    fileName = fileName + ext;
                 }
+
+                // Определяем MIME-тип
+                let mimeType = 'application/octet-stream';
+                const ext = fileName.split('.').pop().toLowerCase();
+                if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+                else if (ext === 'png') mimeType = 'image/png';
+                else if (ext === 'gif') mimeType = 'image/gif';
+                else if (ext === 'bmp') mimeType = 'image/bmp';
+                else if (ext === 'webp') mimeType = 'image/webp';
+                else if (ext === 'mp3') mimeType = 'audio/mpeg';
+                else if (ext === 'wav') mimeType = 'audio/wav';
+                else if (ext === 'flac') mimeType = 'audio/flac';
+                else if (ext === 'txt') mimeType = 'text/plain';
+                else if (ext === 'pdf') mimeType = 'application/pdf';
+                else if (ext === 'zip') mimeType = 'application/zip';
+                else if (ext === 'gz') mimeType = 'application/gzip';
 
                 const blob = new Blob([bytes], { type: mimeType });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = fileName + ext;
+                a.download = fileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                setScanStatus("✅ Файл скачан как: " + fileName + ext, "ok");
+                setScanStatus("✅ Файл скачан как: " + fileName, "ok");
 
             } catch (error) {
                 console.error(error);
@@ -2669,6 +2560,7 @@ playSuccessBeep();
             scanTotal = null;
             scanHash = null;
             scanDocumentId = null;
+            scanFilename = null;
             lastScanText = "";
             lastScanTime = 0;
             isComplete = false;
@@ -2676,8 +2568,11 @@ playSuccessBeep();
             lastDecodedBase64 = null;
             currentViewMode = 'auto';
 
-            // Сброс таймера
             resetTimerDisplay();
+
+            // Скрываем имя файла
+            document.getElementById('filenameDisplay').classList.add('hidden');
+            document.getElementById('restoredFilename').textContent = '—';
 
             document.getElementById("receivedCount").textContent = "0";
             document.getElementById("totalCount").textContent = "?";
@@ -2714,557 +2609,493 @@ playSuccessBeep();
             if (page === 'transfer') updateTransferUI();
         }
     </script>
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('[SW] ✅ Зарегистрирован'))
-        .catch(err => console.log('[SW] ❌ Ошибка:', err));
-}
-</script>
 
-
-
-
-
-<!-- ============ СВЯЗЬ С PRO5 (автозагрузка + генерация QR) ============ -->
-<script>
-async function checkForSharedCode() {
-    try {
-        const raw = localStorage.getItem('sharedCode');
-        if (!raw) return;
-        const data = JSON.parse(raw);
-        if (Date.now() - data.timestamp > 300000) { 
-            localStorage.removeItem('sharedCode'); 
-            return; 
-        }
-        if (data.from === 'Pro5' && data.code) {
-            const code = data.code;
-            
-            // === 1. ПРЕОБРАЗУЕМ ТЕКСТ В Base64 ===
-            const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-            const arrayBuffer = await blob.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
-            let binary = '';
-            for (let i = 0; i < uint8Array.length; i++) {
-                binary += String.fromCharCode(uint8Array[i]);
-            }
-            const base64 = btoa(binary);
-
-            // === 2. ПОДСТАВЛЯЕМ В ПОЛЕ sourceText ===
-            const sourceText = document.getElementById('sourceText');
-            if (sourceText) {
-                sourceText.value = base64;
-            }
-
-            // === 3. ОБНОВЛЯЕМ ИНФОРМАЦИЮ О ФАЙЛЕ ===
-            const filename = 'from_editor.txt';
-            currentFileInfo = {
-                name: filename,
-                size: blob.size,
-                type: 'text/plain',
-                base64: base64
-            };
-
-            const fileInfo = document.getElementById('fileInfo');
-            if (fileInfo) {
-                fileInfo.classList.remove('hidden');
-                document.getElementById('fileName').textContent = '📄 ' + filename;
-                document.getElementById('fileSize').textContent = 'Размер: ' + formatFileSize(blob.size);
-                document.getElementById('fileTypeInfo').innerHTML =
-                    '<span class="file-type-badge file-type-txt">Текстовый файл</span> | ' +
-                    'Base64: ' + formatFileSize(base64.length) + ' (' + base64.length + ' симв.)';
-            }
-
-            // === 4. ПОКАЗЫВАЕМ ИНФОРМАЦИЮ ПОЛЬЗОВАТЕЛЮ ===
-            const info = document.getElementById('generatorInfo');
-            if (info) {
-                info.innerHTML = `
-                    <span class="ok">✅ Код получен из редактора Pro5!</span><br>
-                    Размер: <b>${formatFileSize(blob.size)}</b><br>
-                    Base64 длина: <b>${base64.length}</b> символов<br>
-                    <span class="badge">⏳ Автоматическая генерация QR-кодов...</span>
-                `;
-            }
-
-            // === 5. УДАЛЯЕМ ДАННЫЕ ИЗ ХРАНИЛИЩА ===
-            localStorage.removeItem('sharedCode');
-
-            // === 6. АВТОМАТИЧЕСКИ ЗАПУСКАЕМ ГЕНЕРАЦИЮ QR ===
-            await generateQRs();
-
-            // === 7. ПЕРЕКЛЮЧАЕМСЯ НА ВКЛАДКУ ГЕНЕРАТОРА ===
-            showPage('generator');
-
-        }
-    } catch(e) { 
-        console.error('Ошибка автозагрузки:', e);
-        localStorage.removeItem('sharedCode'); 
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(() => console.log('[SW] ✅ Зарегистрирован'))
+            .catch(err => console.log('[SW] ❌ Ошибка:', err));
     }
-}
+    </script>
 
-document.addEventListener('DOMContentLoaded', () => { 
-    setTimeout(checkForSharedCode, 500); 
-});
-</script>
-<script>
+    <!-- ============ СВЯЗЬ С PRO5 ============ -->
+    <script>
+    async function checkForSharedCode() {
+        try {
+            const raw = localStorage.getItem('sharedCode');
+            if (!raw) return;
+            const data = JSON.parse(raw);
+            if (Date.now() - data.timestamp > 300000) { 
+                localStorage.removeItem('sharedCode'); 
+                return; 
+            }
+            if (data.from === 'Pro5' && data.code) {
+                const code = data.code;
+                
+                const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                let binary = '';
+                for (let i = 0; i < uint8Array.length; i++) {
+                    binary += String.fromCharCode(uint8Array[i]);
+                }
+                const base64 = btoa(binary);
 
-// ============ АВТОЗАПУСК СКАНЕРА ============
-function checkForScannerCommand() {
-    try {
-        const raw = localStorage.getItem('qrCommand');
-        if (!raw) return;
-        
-        const data = JSON.parse(raw);
-        if (Date.now() - data.timestamp > 10000) {
+                const sourceText = document.getElementById('sourceText');
+                if (sourceText) {
+                    sourceText.value = base64;
+                }
+
+                const filename = 'from_editor.txt';
+                currentFileInfo = {
+                    name: filename,
+                    size: blob.size,
+                    type: 'text/plain',
+                    base64: base64
+                };
+
+                const fileInfo = document.getElementById('fileInfo');
+                if (fileInfo) {
+                    fileInfo.classList.remove('hidden');
+                    document.getElementById('fileName').textContent = '📄 ' + filename;
+                    document.getElementById('fileSize').textContent = 'Размер: ' + formatFileSize(blob.size);
+                    document.getElementById('fileTypeInfo').innerHTML =
+                        '<span class="file-type-badge file-type-txt">Текстовый файл</span> | ' +
+                        'Base64: ' + formatFileSize(base64.length) + ' (' + base64.length + ' симв.)';
+                }
+
+                const info = document.getElementById('generatorInfo');
+                if (info) {
+                    info.innerHTML = `
+                        <span class="ok">✅ Код получен из редактора Pro5!</span><br>
+                        Размер: <b>${formatFileSize(blob.size)}</b><br>
+                        Base64 длина: <b>${base64.length}</b> символов<br>
+                        <span class="badge">⏳ Автоматическая генерация QR-кодов...</span>
+                    `;
+                }
+
+                localStorage.removeItem('sharedCode');
+                await generateQRs();
+                showPage('generator');
+
+            }
+        } catch(e) { 
+            console.error('Ошибка автозагрузки:', e);
+            localStorage.removeItem('sharedCode'); 
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { 
+        setTimeout(checkForSharedCode, 500); 
+    });
+    </script>
+
+    <script>
+    function checkForScannerCommand() {
+        try {
+            const raw = localStorage.getItem('qrCommand');
+            if (!raw) return;
+            
+            const data = JSON.parse(raw);
+            if (Date.now() - data.timestamp > 10000) {
+                localStorage.removeItem('qrCommand');
+                return;
+            }
+            
+            if (data.action === 'openScanner' && data.from === 'Pro5') {
+                localStorage.removeItem('qrCommand');
+                showPage('scanner');
+                setTimeout(() => {
+                    startScanner();
+                }, 500);
+            }
+        } catch(e) {
             localStorage.removeItem('qrCommand');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(checkForScannerCommand, 400);
+    });
+    </script>
+
+    <script>
+    function copyAndOpenKlikEdit() {
+        const preview = document.getElementById('textPreview');
+        const text = preview.textContent || '';
+        
+        if (text) {
+            navigator.clipboard.writeText(text);
+        }
+        
+        window.open('https://2d3t.github.io/2d3t/pro/Pro5/index.html', '_blank');
+    }
+    </script>
+
+    <script>
+    (function() {
+        const originalAssemble = window.assembleData;
+        
+        window.assembleData = async function() {
+            await originalAssemble.call(this);
+            
+            setTimeout(() => {
+                const container = document.getElementById('textPreviewContainer');
+                if (container && !container.classList.contains('hidden')) {
+                    container.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }
+            }, 400);
+        };
+    })();
+    </script>
+
+    <script>
+    async function keepScreenAwake() {
+        try {
+            const wakeLock = await navigator.wakeLock.request('screen');
+            console.log('[WakeLock] Экран не уснёт');
+            
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    navigator.wakeLock.request('screen').then(wl => {
+                        console.log('[WakeLock] Возобновлён');
+                    }).catch(() => {});
+                }
+            });
+        } catch (e) {
+            console.log('[WakeLock] Не поддерживается:', e);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', keepScreenAwake);
+    </script>
+
+    <!-- ============ КНОПКА "ПОДЕЛИТЬСЯ" ============ -->
+    <script>
+    function showAppQR() {
+        const oldModal = document.querySelector('.app-share-modal');
+        if (oldModal) oldModal.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'app-share-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+            padding: 20px;
+        `;
+
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: #141a24;
+            border-radius: 24px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid #2a3340;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        `;
+
+        card.innerHTML = `
+            <h2 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 20px;">📱 QR-код приложения</h2>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
+                Отсканируйте, чтобы открыть QR Transfer
+            </p>
+            <img src="https://2d3t.github.io/2d3t/pro/Pro6/qrgen.png" 
+                 alt="QR-код приложения"
+                 style="width: 100%; max-width: 280px; height: auto; border-radius: 12px; background: white; padding: 8px; margin: 0 auto 16px auto; display: block; image-rendering: pixelated;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                <button onclick="this.closest('.app-share-modal').remove()" 
+                        style="background: #3b4de0; color: white; border: 0; border-radius: 40px; padding: 10px 28px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; min-width: 120px;">
+                    ✕ Закрыть
+                </button>
+                <button onclick="shareAppLink()" 
+                        style="background: #1e2630; color: #e2e8f0; border: 1px solid #2a3340; border-radius: 40px; padding: 10px 28px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; min-width: 120px;">
+                    📤 Поделиться
+                </button>
+            </div>
+            <div style="margin-top: 12px; font-size: 12px; color: #475569; word-break: break-all;">
+                https://2d3t.github.io/2d3t/pro/Pro6/index.html
+            </div>
+        `;
+
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    }
+
+    function shareAppLink() {
+        const url = 'https://2d3t.github.io/2d3t/pro/Pro6/index.html';
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'QR File Transfer',
+                text: '📦 Передача файлов через QR-коды',
+                url: url
+            }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.querySelector('.app-share-modal button:nth-child(2)');
+                if (btn) {
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Скопировано!';
+                    setTimeout(() => { btn.textContent = originalText; }, 2000);
+                }
+            }).catch(() => {
+                alert('Ссылка: ' + url);
+            });
+        }
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    `;
+    document.head.appendChild(style);
+    </script>
+
+    <!-- ============ ВЫБОР БЛОКОВ ============ -->
+    <script>
+    function showBlockSelector() {
+        if (transferQRs.length === 0) {
+            alert('❌ Нет QR-кодов. Сначала создайте их в Генераторе.');
             return;
         }
-        
-        if (data.action === 'openScanner' && data.from === 'Pro5') {
-            localStorage.removeItem('qrCommand');
-            
-            // Переключаемся на вкладку "Сборщик"
-            showPage('scanner');
-            
-            // Запускаем камеру
-            setTimeout(() => {
-                startScanner();
-            }, 500);
-        }
-    } catch(e) {
-        localStorage.removeItem('qrCommand');
-    }
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(checkForScannerCommand, 400);
-});
-</script>
+        const oldModal = document.querySelector('.block-selector-modal');
+        if (oldModal) oldModal.remove();
 
-<script>
+        const modal = document.createElement('div');
+        modal.className = 'block-selector-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+            padding: 20px;
+        `;
 
-function copyAndOpenKlikEdit() {
-    const preview = document.getElementById('textPreview');
-    const text = preview.textContent || '';
-    
-    if (text) {
-        navigator.clipboard.writeText(text);
-    }
-    
-    window.open('https://2d3t.github.io/2d3t/pro/Pro5/index.html', '_blank');
-}
-</script>
-<script>
-// Автопрокрутка к расшифрованному тексту после сборки
-(function() {
-    // Сохраняем оригинальную функцию assembleData
-    const originalAssemble = window.assembleData;
-    
-    // Переопределяем функцию
-    window.assembleData = async function() {
-        // Вызываем оригинальную функцию
-        await originalAssemble.call(this);
-        
-        // Прокручиваем к тексту
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: #141a24;
+            border-radius: 24px;
+            padding: 24px;
+            max-width: 420px;
+            width: 100%;
+            border: 1px solid #2a3340;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        `;
+
+        const total = transferQRs.length;
+
+        card.innerHTML = `
+            <h2 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 18px;">🎯 Выбор блоков QR</h2>
+            <p style="color: #94a3b8; font-size: 13px; margin: 0 0 12px 0;">
+                Всего блоков: <b style="color: #e2e8f0;">${total}</b>
+            </p>
+            <p style="color: #94a3b8; font-size: 13px; margin: 0 0 8px 0;">
+                Введите номера блоков через запятую или через пробел(например: <b style="color: #e2e8f0;">1,3,5-7,9 или 1 3 5-7 9</b>)
+            </p>
+            <input type="text" id="blockInput" 
+                   placeholder="1,3,5-7,9" 
+                   style="width:100%; padding:10px 14px; border:1px solid #334155; border-radius:10px; background:#0f172a; color:#e2e8f0; font-size:16px; box-sizing:border-box; outline:none; margin-bottom:12px;"
+                   autofocus>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="applyBlockSelection()" 
+                        style="flex:1; background:#3b4de0; color:white; border:0; border-radius:40px; padding:10px; font-size:15px; font-weight:600; cursor:pointer; min-width:100px;">
+                    ✅ Применить
+                </button>
+                <button onclick="resetBlockSelection()" 
+                        style="flex:1; background:#1e2630; color:#e2e8f0; border:1px solid #2a3340; border-radius:40px; padding:10px; font-size:15px; font-weight:600; cursor:pointer; min-width:100px;">
+                    🔄 Сбросить
+                </button>
+                <button onclick="this.closest('.block-selector-modal').remove()" 
+                        style="flex:0.5; background:#3d1a1a; color:#f87171; border:1px solid #5f2a2a; border-radius:40px; padding:10px; font-size:15px; font-weight:600; cursor:pointer; min-width:60px;">
+                    ✕
+                </button>
+            </div>
+            <div id="blockPreview" style="margin-top:12px; font-size:12px; color:#475569; word-break:break-all; max-height:80px; overflow-y:auto; background:#0d121c; padding:8px; border-radius:8px; border:1px solid #1e2630;"></div>
+        `;
+
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+
         setTimeout(() => {
-            const container = document.getElementById('textPreviewContainer');
-            if (container && !container.classList.contains('hidden')) {
-                container.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start' 
-                });
-            }
-        }, 400);
-    };
-})();
-</script>
+            const input = document.getElementById('blockInput');
+            if (input) input.focus();
+        }, 100);
 
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
 
-
-
-
-
-<script>
-
-async function keepScreenAwake() {
-    try {
-        // Запрашиваем блокировку сна
-        const wakeLock = await navigator.wakeLock.request('screen');
-        console.log('[WakeLock] Экран не уснёт');
-        
-        // Если вкладка становится неактивной — снова запрашиваем
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                navigator.wakeLock.request('screen').then(wl => {
-                    console.log('[WakeLock] Возобновлён');
-                }).catch(() => {});
+        document.getElementById('blockInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyBlockSelection();
             }
         });
-    } catch (e) {
-        console.log('[WakeLock] Не поддерживается:', e);
-    }
-}
 
-// Запускаем при загрузке
-document.addEventListener('DOMContentLoaded', keepScreenAwake);
-</script>
-
-<!-- ============ КНОПКА "ПОДЕЛИТЬСЯ" ============ -->
-<script>
-// Функция для показа QR-кода приложения
-function showAppQR() {
-    // Удаляем старый модальный блок, если он есть
-    const oldModal = document.querySelector('.app-share-modal');
-    if (oldModal) oldModal.remove();
-
-    // Создаём модальное окно
-    const modal = document.createElement('div');
-    modal.className = 'app-share-modal';
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.85);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        animation: fadeIn 0.3s ease;
-        padding: 20px;
-    `;
-
-    const card = document.createElement('div');
-    card.style.cssText = `
-        background: #141a24;
-        border-radius: 24px;
-        padding: 24px;
-        max-width: 400px;
-        width: 100%;
-        border: 1px solid #2a3340;
-        text-align: center;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-    `;
-
-    card.innerHTML = `
-        <h2 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 20px;">📱 QR-код приложения</h2>
-        <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
-            Отсканируйте, чтобы открыть QR Transfer
-        </p>
-        <img src="https://2d3t.github.io/2d3t/pro/Pro6/qrgen.png" 
-             alt="QR-код приложения"
-             style="width: 100%; max-width: 280px; height: auto; border-radius: 12px; background: white; padding: 8px; margin: 0 auto 16px auto; display: block; image-rendering: pixelated;">
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-            <button onclick="this.closest('.app-share-modal').remove()" 
-                    style="background: #3b4de0; color: white; border: 0; border-radius: 40px; padding: 10px 28px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; min-width: 120px;">
-                ✕ Закрыть
-            </button>
-            <button onclick="shareAppLink()" 
-                    style="background: #1e2630; color: #e2e8f0; border: 1px solid #2a3340; border-radius: 40px; padding: 10px 28px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; min-width: 120px;">
-                📤 Поделиться
-            </button>
-        </div>
-        <div style="margin-top: 12px; font-size: 12px; color: #475569; word-break: break-all;">
-            https://2d3t.github.io/2d3t/pro/Pro6/index.html
-        </div>
-    `;
-
-    modal.appendChild(card);
-    document.body.appendChild(modal);
-
-    // Закрытие по клику вне карточки
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
-}
-
-// Функция для расшаривания ссылки
-function shareAppLink() {
-    const url = 'https://2d3t.github.io/2d3t/pro/Pro6/index.html';
-    
-    if (navigator.share) {
-        navigator.share({
-            title: 'QR File Transfer',
-            text: '📦 Передача файлов через QR-коды',
-            url: url
-        }).catch(() => {});
-    } else {
-        // Если Web Share API не поддерживается — копируем ссылку
-        navigator.clipboard.writeText(url).then(() => {
-            const btn = document.querySelector('.app-share-modal button:nth-child(2)');
-            if (btn) {
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Скопировано!';
-                setTimeout(() => { btn.textContent = originalText; }, 2000);
-            }
-        }).catch(() => {
-            alert('Ссылка: ' + url);
-        });
-    }
-}
-
-// Добавляем анимацию появления
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-    }
-`;
-document.head.appendChild(style);
-</script>
-
-
-<!-- ============ ВЫБОР БЛОКОВ ДЛЯ ПЕРЕДАЧИ ============ -->
-<script>
-// Функция для показа окна выбора блоков
-function showBlockSelector() {
-    if (transferQRs.length === 0) {
-        alert('❌ Нет QR-кодов. Сначала создайте их в Генераторе.');
-        return;
+        updateBlockPreview();
     }
 
-    // Удаляем старый модальный блок
-    const oldModal = document.querySelector('.block-selector-modal');
-    if (oldModal) oldModal.remove();
-
-    // Создаём модальное окно
-    const modal = document.createElement('div');
-    modal.className = 'block-selector-modal';
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.85);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        animation: fadeIn 0.3s ease;
-        padding: 20px;
-    `;
-
-    const card = document.createElement('div');
-    card.style.cssText = `
-        background: #141a24;
-        border-radius: 24px;
-        padding: 24px;
-        max-width: 420px;
-        width: 100%;
-        border: 1px solid #2a3340;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-    `;
-
-    const total = transferQRs.length;
-
-    card.innerHTML = `
-        <h2 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 18px;">🎯 Выбор блоков QR</h2>
-        <p style="color: #94a3b8; font-size: 13px; margin: 0 0 12px 0;">
-            Всего блоков: <b style="color: #e2e8f0;">${total}</b>
-        </p>
-        <p style="color: #94a3b8; font-size: 13px; margin: 0 0 8px 0;">
-            Введите номера блоков через запятую или через пробел(например: <b style="color: #e2e8f0;">1,3,5-7,9 или 1 3 5-7 9</b>)
-        </p>
-        <input type="text" id="blockInput" 
-               placeholder="1,3,5-7,9" 
-               style="width:100%; padding:10px 14px; border:1px solid #334155; border-radius:10px; background:#0f172a; color:#e2e8f0; font-size:16px; box-sizing:border-box; outline:none; margin-bottom:12px;"
-               autofocus>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="applyBlockSelection()" 
-                    style="flex:1; background:#3b4de0; color:white; border:0; border-radius:40px; padding:10px; font-size:15px; font-weight:600; cursor:pointer; min-width:100px;">
-                ✅ Применить
-            </button>
-            <button onclick="resetBlockSelection()" 
-                    style="flex:1; background:#1e2630; color:#e2e8f0; border:1px solid #2a3340; border-radius:40px; padding:10px; font-size:15px; font-weight:600; cursor:pointer; min-width:100px;">
-                🔄 Сбросить
-            </button>
-            <button onclick="this.closest('.block-selector-modal').remove()" 
-                    style="flex:0.5; background:#3d1a1a; color:#f87171; border:1px solid #5f2a2a; border-radius:40px; padding:10px; font-size:15px; font-weight:600; cursor:pointer; min-width:60px;">
-                ✕
-            </button>
-        </div>
-        <div id="blockPreview" style="margin-top:12px; font-size:12px; color:#475569; word-break:break-all; max-height:80px; overflow-y:auto; background:#0d121c; padding:8px; border-radius:8px; border:1px solid #1e2630;"></div>
-    `;
-
-    modal.appendChild(card);
-    document.body.appendChild(modal);
-
-    // Автофокус на поле ввода
-    setTimeout(() => {
+    function applyBlockSelection() {
         const input = document.getElementById('blockInput');
-        if (input) input.focus();
-    }, 100);
+        const raw = input.value.trim();
+        const modal = document.querySelector('.block-selector-modal');
+        const preview = document.getElementById('blockPreview');
 
-    // Закрытие по клику вне карточки
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
-
-    // Обработка Enter в поле ввода
-    document.getElementById('blockInput').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            applyBlockSelection();
+        if (!raw) {
+            preview.innerHTML = '⚠️ Введите номера блоков';
+            preview.style.color = '#f87171';
+            return;
         }
-    });
 
-    // Предварительный просмотр текущих выбранных блоков
-    updateBlockPreview();
-}
+        const parts = raw.replace(/,/g, ' ').split(/\s+/).filter(s => s.length > 0);
+        const selected = [];
 
-// Функция для применения выбора
-function applyBlockSelection() {
-    const input = document.getElementById('blockInput');
-    const raw = input.value.trim();
-    const modal = document.querySelector('.block-selector-modal');
-    const preview = document.getElementById('blockPreview');
-
-    if (!raw) {
-        preview.innerHTML = '⚠️ Введите номера блоков';
-        preview.style.color = '#f87171';
-        return;
-    }
-
-    // === РАЗДЕЛЯЕМ ПО ЗАПЯТЫМ И ПРОБЕЛАМ ===
-    // Заменяем запятые на пробелы, потом разбиваем по пробелам
-    const parts = raw.replace(/,/g, ' ').split(/\s+/).filter(s => s.length > 0);
-
-    const selected = [];
-
-    for (const part of parts) {
-        // Проверяем, есть ли диапазон (через дефис)
-        if (part.includes('-')) {
-            const range = part.split('-').map(Number);
-            if (range.length === 2 && !isNaN(range[0]) && !isNaN(range[1]) && range[0] <= range[1]) {
-                for (let i = range[0]; i <= range[1]; i++) {
-                    if (i >= 1 && i <= transferQRs.length) {
-                        selected.push(i);
+        for (const part of parts) {
+            if (part.includes('-')) {
+                const range = part.split('-').map(Number);
+                if (range.length === 2 && !isNaN(range[0]) && !isNaN(range[1]) && range[0] <= range[1]) {
+                    for (let i = range[0]; i <= range[1]; i++) {
+                        if (i >= 1 && i <= transferQRs.length) {
+                            selected.push(i);
+                        }
                     }
                 }
-            }
-        } else {
-            const num = Number(part);
-            if (!isNaN(num) && num >= 1 && num <= transferQRs.length) {
-                selected.push(num);
+            } else {
+                const num = Number(part);
+                if (!isNaN(num) && num >= 1 && num <= transferQRs.length) {
+                    selected.push(num);
+                }
             }
         }
-    }
 
-    // Убираем дубликаты и сортируем
-    const unique = [...new Set(selected)].sort((a, b) => a - b);
+        const unique = [...new Set(selected)].sort((a, b) => a - b);
 
-    if (unique.length === 0) {
-        preview.innerHTML = '⚠️ Нет корректных номеров (1-' + transferQRs.length + ')';
-        preview.style.color = '#f87171';
-        return;
-    }
-
-    // Сохраняем выбранные блоки
-    window.selectedBlocks = unique;
-
-    preview.style.color = '#6ee7b7';
-    preview.innerHTML = '✅ Выбрано блоков: <b>' + unique.length + '</b> из ' + transferQRs.length + '<br>' +
-                        'Номера: ' + unique.join(', ');
-
-    // Если выбран один блок — сразу переключаемся
-    if (unique.length === 1) {
-        transferIndex = unique[0] - 1;
-        updateTransferUI();
-        if (transferRunning) {
-            resetTransferTimer();
+        if (unique.length === 0) {
+            preview.innerHTML = '⚠️ Нет корректных номеров (1-' + transferQRs.length + ')';
+            preview.style.color = '#f87171';
+            return;
         }
-        modal.remove();
-    } else {
-        const applyBtn = modal.querySelector('button[onclick="applyBlockSelection()"]');
-        const originalText = applyBtn.textContent;
-        applyBtn.textContent = '✅ ' + unique.length + ' блоков';
-        setTimeout(() => {
-            applyBtn.textContent = originalText;
-        }, 2000);
-    }
-}
 
-// Функция для сброса выбора
-function resetBlockSelection() {
-    window.selectedBlocks = null;
-    const preview = document.getElementById('blockPreview');
-    if (preview) {
-        preview.innerHTML = '🔄 Выбор сброшен';
-        preview.style.color = '#94a3b8';
-    }
-    const input = document.getElementById('blockInput');
-    if (input) input.value = '';
-}
+        window.selectedBlocks = unique;
 
-// Функция для обновления предпросмотра
-function updateBlockPreview() {
-    const preview = document.getElementById('blockPreview');
-    if (!preview) return;
-
-    if (window.selectedBlocks && window.selectedBlocks.length > 0) {
-        preview.innerHTML = '✅ Выбрано: ' + window.selectedBlocks.join(', ');
         preview.style.color = '#6ee7b7';
-    } else {
-        preview.innerHTML = '💡 Введите номера блоков или оставьте пустым для всех';
-        preview.style.color = '#475569';
-    }
-}
+        preview.innerHTML = '✅ Выбрано блоков: <b>' + unique.length + '</b> из ' + transferQRs.length + '<br>' +
+                            'Номера: ' + unique.join(', ');
 
-// Переопределяем transferNext, чтобы учитывать выбранные блоки
-const originalTransferNext = window.transferNext;
-
-window.transferNext = function() {
-    if (transferQRs.length === 0) return;
-
-    // Если есть выбранные блоки
-    if (window.selectedBlocks && window.selectedBlocks.length > 0) {
-        // Находим текущий индекс в массиве selectedBlocks
-        const currentBlock = transferIndex + 1;
-        const idx = window.selectedBlocks.indexOf(currentBlock);
-        
-        if (idx === -1 || idx === window.selectedBlocks.length - 1) {
-            // Если текущий блок не выбран или последний — переключаем на первый выбранный
-            transferIndex = window.selectedBlocks[0] - 1;
+        if (unique.length === 1) {
+            transferIndex = unique[0] - 1;
+            updateTransferUI();
+            if (transferRunning) {
+                resetTransferTimer();
+            }
+            modal.remove();
         } else {
-            // Иначе — следующий выбранный
-            transferIndex = window.selectedBlocks[idx + 1] - 1;
+            const applyBtn = modal.querySelector('button[onclick="applyBlockSelection()"]');
+            const originalText = applyBtn.textContent;
+            applyBtn.textContent = '✅ ' + unique.length + ' блоков';
+            setTimeout(() => {
+                applyBtn.textContent = originalText;
+            }, 2000);
         }
-    } else {
-        // Если нет выбранных — обычный переход
-        transferIndex = (transferIndex + 1) % transferQRs.length;
     }
 
-    updateTransferUI();
-    resetTransferTimer();
-};
+    function resetBlockSelection() {
+        window.selectedBlocks = null;
+        const preview = document.getElementById('blockPreview');
+        if (preview) {
+            preview.innerHTML = '🔄 Выбор сброшен';
+            preview.style.color = '#94a3b8';
+        }
+        const input = document.getElementById('blockInput');
+        if (input) input.value = '';
+    }
 
-// Переопределяем transferPrev, чтобы учитывать выбранные блоки
-window.transferPrev = function() {
-    if (transferQRs.length === 0) return;
+    function updateBlockPreview() {
+        const preview = document.getElementById('blockPreview');
+        if (!preview) return;
 
-    if (window.selectedBlocks && window.selectedBlocks.length > 0) {
-        const currentBlock = transferIndex + 1;
-        const idx = window.selectedBlocks.indexOf(currentBlock);
-        
-        if (idx === -1 || idx === 0) {
-            transferIndex = window.selectedBlocks[window.selectedBlocks.length - 1] - 1;
+        if (window.selectedBlocks && window.selectedBlocks.length > 0) {
+            preview.innerHTML = '✅ Выбрано: ' + window.selectedBlocks.join(', ');
+            preview.style.color = '#6ee7b7';
         } else {
-            transferIndex = window.selectedBlocks[idx - 1] - 1;
+            preview.innerHTML = '💡 Введите номера блоков или оставьте пустым для всех';
+            preview.style.color = '#475569';
         }
-    } else {
-        transferIndex = (transferIndex - 1 + transferQRs.length) % transferQRs.length;
     }
 
-    updateTransferUI();
-    resetTransferTimer();
-};
-</script>
+    const originalTransferNext = window.transferNext;
 
+    window.transferNext = function() {
+        if (transferQRs.length === 0) return;
+
+        if (window.selectedBlocks && window.selectedBlocks.length > 0) {
+            const currentBlock = transferIndex + 1;
+            const idx = window.selectedBlocks.indexOf(currentBlock);
+            
+            if (idx === -1 || idx === window.selectedBlocks.length - 1) {
+                transferIndex = window.selectedBlocks[0] - 1;
+            } else {
+                transferIndex = window.selectedBlocks[idx + 1] - 1;
+            }
+        } else {
+            transferIndex = (transferIndex + 1) % transferQRs.length;
+        }
+
+        updateTransferUI();
+        resetTransferTimer();
+    };
+
+    window.transferPrev = function() {
+        if (transferQRs.length === 0) return;
+
+        if (window.selectedBlocks && window.selectedBlocks.length > 0) {
+            const currentBlock = transferIndex + 1;
+            const idx = window.selectedBlocks.indexOf(currentBlock);
+            
+            if (idx === -1 || idx === 0) {
+                transferIndex = window.selectedBlocks[window.selectedBlocks.length - 1] - 1;
+            } else {
+                transferIndex = window.selectedBlocks[idx - 1] - 1;
+            }
+        } else {
+            transferIndex = (transferIndex - 1 + transferQRs.length) % transferQRs.length;
+        }
+
+        updateTransferUI();
+        resetTransferTimer();
+    };
+    </script>
 
 </body>
 </html>
