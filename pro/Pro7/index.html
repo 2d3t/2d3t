@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
 <link rel="manifest" href="manifest.json">
     
-    <!-- Ваши иконки -->
+    <!- Ваши иконки -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-
 
 
     <title>VAD-кодек v11 — стабильная конвертация</title>
@@ -220,6 +220,17 @@
             color: #6b7280;
             margin-left: auto;
         }
+        .toggle-pause-btn {
+            background: #2a3a3a;
+            border: 1px solid #4a6a6a;
+        }
+        .toggle-pause-btn.active {
+            background: #3a5a3a;
+            border-color: #4ade80;
+        }
+        .toggle-pause-btn:hover:not(:disabled) {
+            background: #3a4a4a;
+        }
     </style>
 </head>
 <body>
@@ -244,6 +255,14 @@
         <button id="btnPlay" disabled>▶️ Воспр.</button>
         <button id="btnExport" disabled>💾 Экспорт .vad</button>
         <button id="btnLoad" style="background:#2a2a3f;">📂 Загрузить .vad</button>
+    </div>
+
+    <!-- КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ -->
+    <div class="row" style="margin-top: 4px;">
+        <button id="btnTogglePause" class="toggle-pause-btn active" style="background:#3a5a3a; border-color:#4ade80;">
+            ⏸️ Разделять по паузам (ВКЛ)
+        </button>
+        <span style="font-size:0.8rem;color:#6b7280;align-self:center;">При выкл. — всё аудио как один сегмент</span>
     </div>
 
     <div class="load-section">
@@ -289,10 +308,11 @@
 const CFG = {
     threshold: 0.01,
     minSilenceMs: 300,
-    bitrate: 5500,           // начальное значение
+    bitrate: 5500,
     mimeType: 'audio/webm;codecs=opus',
     prebufferMs: 500,
     vadInterval: 700,
+    splitByPauses: true,   // по умолчанию разделяем по паузам
 };
 
 // ============================================================
@@ -334,6 +354,7 @@ const btnPlay = $('btnPlay');
 const btnExport = $('btnExport');
 const btnLoad = $('btnLoad');
 const btnLoadAudio = $('btnLoadAudio');
+const btnTogglePause = $('btnTogglePause');
 const statusBadge = $('statusBadge');
 const counterText = $('counterText');
 const meterFill = $('meterFill');
@@ -365,7 +386,29 @@ function updateBitrateDisplay() {
 }
 
 bitrateSlider.addEventListener('input', updateBitrateDisplay);
-updateBitrateDisplay(); // инициализация
+updateBitrateDisplay();
+
+// ============================================================
+// КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ
+// ============================================================
+btnTogglePause.addEventListener('click', () => {
+    CFG.splitByPauses = !CFG.splitByPauses;
+    if (CFG.splitByPauses) {
+        btnTogglePause.textContent = '⏸️ Разделять по паузам (ВКЛ)';
+        btnTogglePause.style.background = '#3a5a3a';
+        btnTogglePause.style.borderColor = '#4ade80';
+        prebufferInfo.textContent = '⚡ Режим: разделение по паузам включено';
+    } else {
+        btnTogglePause.textContent = '⏸️ Разделять по паузам (ВЫКЛ)';
+        btnTogglePause.style.background = '#3a3a3a';
+        btnTogglePause.style.borderColor = '#6a6a6a';
+        prebufferInfo.textContent = '⚡ Режим: паузы игнорируются, всё аудио как один сегмент';
+    }
+    // Пересобираем сегменты, если есть загруженное аудио
+    if (state.fullAudioBuffer) {
+        analyzeAudioBuffer(state.fullAudioBuffer);
+    }
+});
 
 // ============================================================
 // АУДИО-ДЕТЕКТОР
@@ -405,7 +448,7 @@ function getRMS() {
 }
 
 // ============================================================
-// КОНВЕРТАЦИЯ В OPUS (СТАБИЛЬНАЯ ВЕРСИЯ)
+// КОНВЕРТАЦИЯ В OPUS
 // ============================================================
 async function convertToOpus(audioBuffer) {
     return new Promise((resolve, reject) => {
@@ -421,7 +464,7 @@ async function convertToOpus(audioBuffer) {
             const stream = dest.stream;
             const recorder = new MediaRecorder(stream, {
                 mimeType: 'audio/webm;codecs=opus',
-                audioBitsPerSecond: CFG.bitrate,  // используем текущий битрейт
+                audioBitsPerSecond: CFG.bitrate,
             });
 
             const chunks = [];
@@ -516,7 +559,8 @@ async function loadAudioFile(file) {
         updateStats();
 
         const speechSegments = state.segments.filter(s => s.type === 'speech').length;
-        fileInfo.textContent = `✅ "${file.name}" (${(opusBlob.size/1024).toFixed(1)} KB Opus, битрейт ${(CFG.bitrate/1000).toFixed(1)} kbps), речь: ${speechSegments} сегментов`;
+        const pauseSegments = state.segments.filter(s => s.type === 'pause').length;
+        fileInfo.textContent = `✅ "${file.name}" (${(opusBlob.size/1024).toFixed(1)} KB Opus, битрейт ${(CFG.bitrate/1000).toFixed(1)} kbps), речь: ${speechSegments} сегментов, пауз: ${pauseSegments}`;
         prebufferInfo.textContent = `✅ Конвертировано в Opus (${(CFG.bitrate/1000).toFixed(1)} kbps). Речевых сегментов: ${speechSegments}`;
 
         audioContainer.innerHTML = `✅ Аудио "${file.name}" загружено и сконвертировано в Opus<br>`;
@@ -540,7 +584,7 @@ async function loadAudioFile(file) {
 }
 
 // ============================================================
-// VAD-АНАЛИЗ
+// VAD-АНАЛИЗ (с учётом режима CFG.splitByPauses)
 // ============================================================
 async function analyzeAudioBuffer(audioBuffer) {
     state.segments = [];
@@ -563,6 +607,7 @@ async function analyzeAudioBuffer(audioBuffer) {
 
     const totalSamples = channelData.length;
     let pos = 0;
+    let speechSegments = [];
 
     function getRMSForWindow(start, length) {
         let sum = 0;
@@ -576,6 +621,26 @@ async function analyzeAudioBuffer(audioBuffer) {
         return Math.sqrt(sum / actualLength);
     }
 
+    // Если разделение по паузам выключено — создаём один большой сегмент
+    if (!CFG.splitByPauses) {
+        const durationMs = duration * 1000;
+        state.segments.push({
+            type: 'speech',
+            duration: durationMs,
+            startTime: 0,
+            endTime: durationMs,
+            startTimeOffset: 0,
+            endTimeOffset: durationMs,
+            buffer: state.fullAudioBuffer,
+            blob: null,
+        });
+        updateUI();
+        updateSegmentList();
+        updateStats();
+        return;
+    }
+
+    // --- Разделение по паузам (обычный режим) ---
     while (pos < totalSamples) {
         const rms = getRMSForWindow(pos, windowSize);
         const currentTime = pos / sampleRate;
@@ -664,7 +729,7 @@ async function analyzeAudioBuffer(audioBuffer) {
 }
 
 // ============================================================
-// ЗАПИСЬ (используем актуальный битрейт)
+// ЗАПИСЬ (с учётом режима CFG.splitByPauses)
 // ============================================================
 function startRecording() {
     if (state.isRecording) return;
@@ -691,7 +756,7 @@ function startRecording() {
 
             const options = {
                 mimeType: CFG.mimeType,
-                audioBitsPerSecond: CFG.bitrate, // актуальный битрейт
+                audioBitsPerSecond: CFG.bitrate,
             };
 
             const recorder = new MediaRecorder(stream, options);
@@ -700,6 +765,7 @@ function startRecording() {
             let isCurrentlySpeaking = false;
             let silenceStartTime = 0;
             let lastSpeechEndTime = 0;
+            let speechSegments = [];
 
             recorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
@@ -725,6 +791,14 @@ function startRecording() {
 
                 const isVoice = rms > CFG.threshold;
 
+                // Если разделение по паузам выключено — игнорируем VAD, просто записываем всё
+                if (!CFG.splitByPauses) {
+                    debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ⚡ РЕЖИМ БЕЗ ПАУЗ`;
+                    updateUI();
+                    return;
+                }
+
+                // --- Обычный режим с разделением по паузам ---
                 if (isVoice && !isCurrentlySpeaking) {
                     isCurrentlySpeaking = true;
                     state.isSpeaking = true;
@@ -806,6 +880,49 @@ function startRecording() {
                     state._checkInterval = null;
                 }
 
+                // Если разделение по паузам выключено — создаём один сегмент
+                if (!CFG.splitByPauses) {
+                    // Собираем всё аудио целиком
+                    if (state.allChunks.length > 0) {
+                        const fullBlob = new Blob(state.allChunks, { type: options.mimeType });
+                        state.fullAudioBlob = fullBlob;
+                        const reader = new FileReader();
+                        reader.onload = async (e) => {
+                            try {
+                                const ctx = await getAudioContext();
+                                const buffer = await ctx.decodeAudioData(e.target.result);
+                                state.fullAudioBuffer = buffer;
+                                // Создаём один сегмент на всё аудио
+                                const durationMs = buffer.duration * 1000;
+                                state.segments = [{
+                                    type: 'speech',
+                                    duration: durationMs,
+                                    startTime: 0,
+                                    endTime: durationMs,
+                                    startTimeOffset: 0,
+                                    endTimeOffset: durationMs,
+                                    buffer: buffer,
+                                    blob: null,
+                                }];
+                                btnPlay.disabled = false;
+                                btnExport.disabled = false;
+                                updateUI();
+                                updateSegmentList();
+                                updateStats();
+                                prebufferInfo.textContent = `✅ Запись завершена (режим без пауз). Один цельный сегмент.`;
+                            } catch (err) {
+                                console.error('Ошибка декодирования:', err);
+                                fileInfo.textContent = '❌ Ошибка декодирования аудио';
+                            }
+                        };
+                        reader.readAsArrayBuffer(fullBlob);
+                    }
+                    fileInfo.textContent = `📦 Запись завершена (режим без пауз)`;
+                    recorder.removeEventListener('stop', stopHandler);
+                    return;
+                }
+
+                // --- Обычный режим с разделением по паузам ---
                 if (isCurrentlySpeaking) {
                     const now = performance.now();
                     const speechDuration = now - state.currentSpeechStart;
@@ -1162,9 +1279,12 @@ function loadVAD(file) {
 // ============================================================
 function updateUI() {
     if (state.isRecording) {
-        if (state.isSpeaking) {
+        if (state.isSpeaking && CFG.splitByPauses) {
             statusBadge.className = 'badge speaking';
             statusBadge.textContent = '🔴 ГОВОРИТ';
+        } else if (state.isRecording && !CFG.splitByPauses) {
+            statusBadge.className = 'badge speaking';
+            statusBadge.textContent = '⚡ БЕЗ ПАУЗ (запись)';
         } else {
             statusBadge.className = 'badge silence';
             statusBadge.textContent = '⏸️ Тишина';
