@@ -1,441 +1,2204 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA с эмодзи-иконкой</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
     
-  
+    <!-- Ваши иконки -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>🪞 PWA - Maker - Butterfly</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0e0e12;
+            color: #ececf0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            padding: 1.5rem 1rem 3rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            max-width: 820px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        h1 {
+            font-size: 2.1rem;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.25rem;
+            color: #f0eae3;
+        }
+        .subhead {
+            color: #9aa0b0;
+            font-size: 0.95rem;
+            border-left: 3px solid #4b6aff;
+            padding-left: 1rem;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+        .card {
+            background: #1a1c23;
+            border-radius: 24px;
+            padding: 1.5rem 1.25rem;
+            margin-bottom: 1.8rem;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+            border: 1px solid #2a2d36;
+            transition: 0.2s;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+        }
+        .card-header h2 {
+            font-weight: 400;
+            font-size: 1.25rem;
+            color: #d6dbe8;
+        }
+        .badge {
+            background: #2f3340;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            color: #aab3cc;
+            letter-spacing: 0.3px;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #8f97af;
+            margin-bottom: 0.3rem;
+            margin-top: 1rem;
+        }
+        label:first-of-type {
+            margin-top: 0;
+        }
+        input, textarea {
+            width: 100%;
+            background: #11131b;
+            border: 1px solid #2b2f3b;
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            color: #f0f2f8;
+            font-size: 0.95rem;
+            transition: 0.15s;
+            font-family: inherit;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #5f7aff;
+            box-shadow: 0 0 0 3px rgba(79, 110, 255, 0.15);
+        }
+        input[readonly] {
+            opacity: 0.7;
+            cursor: default;
+            border-color: #2a2d36;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            padding: 0.8rem;
+        }
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 1.4rem;
+        }
+        .btn {
+            background: #2a2e3b;
+            border: none;
+            padding: 0.65rem 1.4rem;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #dbdff0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: 0.15s;
+            border: 1px solid #3b3f4e;
+            flex: 1 0 auto;
+            justify-content: center;
+        }
+        .btn-primary {
+            background: #4b6aff;
+            border-color: #4b6aff;
+            color: white;
+            box-shadow: 0 4px 12px rgba(75, 106, 255, 0.25);
+        }
+        .btn-primary:hover {
+            background: #3f5df0;
+            transform: scale(0.97);
+        }
+        .btn-outline {
+            background: transparent;
+            border-color: #3e4357;
+        }
+        .btn-outline:hover {
+            background: #262b38;
+        }
+        .btn-success {
+            background: #2d8f5e;
+            border-color: #2d8f5e;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #237a4e;
+        }
+        .btn-icon {
+            background: #1e212a;
+            border-color: #30354a;
+        }
+        .code-block {
+            background: #0d0f16;
+            border-radius: 18px;
+            padding: 1.2rem 1rem;
+            margin-top: 1rem;
+            border: 1px solid #282d3a;
+            position: relative;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.78rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #c8d0e0;
+        }
+        .code-block .copy-badge {
+            position: sticky;
+            top: 0;
+            float: right;
+            background: #2f3547;
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            color: #bcc5df;
+            cursor: pointer;
+            border: 1px solid #464d66;
+            margin-left: 1rem;
+            backdrop-filter: blur(4px);
+        }
+        .code-block .copy-badge:hover {
+            background: #4b6aff;
+            color: white;
+            border-color: #4b6aff;
+        }
+        .flex-between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .helper {
+            color: #8690ad;
+            font-size: 0.75rem;
+            margin-top: 0.2rem;
+        }
+        .helper .auto-path {
+            color: #4b6aff;
+            font-family: monospace;
+            background: #1a1c23;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #282d3d;
+            margin: 1.4rem 0;
+        }
+        .icon-link {
+            background: #222734;
+            border-radius: 40px;
+            padding: 0.3rem 0.3rem 0.3rem 1.2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: 1px solid #3c425a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .icon-link:hover {
+            background: #2a3040;
+            border-color: #4b6aff;
+            transform: scale(1.02);
+        }
+        .icon-link a {
+            color: #b4c2e6;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .icon-link a:hover {
+            color: white;
+            text-decoration: underline;
+        }
+        .status-badge {
+            display: inline-block;
+            background: #1f2533;
+            padding: 0.15rem 1rem;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            color: #9eb0d9;
+            border: 1px solid #2c3347;
+        }
+        .color-preset {
+            transition: transform 0.15s;
+        }
+        .color-preset:hover {
+            transform: scale(1.2);
+        }
+
+        /* Стили для оверлея перехода */
+        .transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a12;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .transition-topbar {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(16, 16, 30, 0.98);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 12px;
+            flex-shrink: 0;
+            min-height: 56px;
+        }
+
+        .transition-back {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #e2e8f0;
+            padding: 8px 18px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .transition-back:hover {
+            background: rgba(255,255,255,0.16);
+            transform: scale(1.02);
+        }
+
+        .transition-title {
+            color: #94a3b8;
+            font-size: 14px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .transition-iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+            background: #ffffff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Стили для сообщения о скачивании */
+        .download-notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(16, 16, 30, 0.95);
+            backdrop-filter: blur(12px);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 9999999;
+            font-size: 16px;
+            font-family: inherit;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .download-notification.success {
+            border-color: #00b894;
+            background: rgba(0, 184, 148, 0.2);
+        }
+
+        .download-notification.error {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        @media (max-width: 540px) {
+            .row-2 {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+            .btn-group .btn {
+                flex: 1 1 100%;
+            }
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            background: #181b24;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3d435b;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🪞 PWA-Maker Butterfly🦋</h1>
+    <div class="subhead">Заполните параметры — получите готовые файлы для офлайн-приложения</div>
+
+    <!-- Параметры -->
+    <div class="card">
+        <div class="card-header">
+            <h2>📝 Настройки приложения</h2>
+            <span class="badge">автогенерация</span>
+        </div>
+        <div class="row-2">
+            <div>
+                <label>Название (name)</label>
+                <input type="text" id="appName" value="🦋 Butterfly" placeholder="Название PWA">
+                <label>Короткое имя (short_name)</label>
+                <input type="text" id="shortName" value="Butterfly" placeholder="Сокращённое название">
+            </div>
+            <div>
+                <label>Описание</label>
+                <input type="text" id="appDesc" value="Делай PWA приложения легко!" placeholder="Краткое описание">
+            </div>
+        </div>
+        
+        <!-- БЛОК С ВЫБОРОМ ЦВЕТА -->
+        <div class="row-2">
+            <div>
+                <label>Цвет фона (background_color)</label>
+                <div style="display:flex; gap: 0.6rem; align-items: center;">
+                    <input type="color" id="bgColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
+                    <input type="text" id="bgColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
+                </div>
+                <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                    <button class="color-preset" data-target="bgColor" style="background: #0e0e12; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px #2a2d36;"></button>
+                    <button class="color-preset" data-target="bgColor" style="background: #1a1c23; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="bgColor" style="background: #f5f0eb; border: 1px solid #ccc; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="bgColor" style="background: #ffffff; border: 1px solid #aaa; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ быстрые</span>
+                </div>
+            </div>
+            <div>
+                <label>Цвет темы (theme_color)</label>
+                <div style="display:flex; gap: 0.6rem; align-items: center;">
+                    <input type="color" id="themeColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
+                    <input type="text" id="themeColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
+                </div>
+                <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                    <button class="color-preset" data-target="themeColor" style="background: #111111; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="themeColor" style="background: #4b6aff; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="themeColor" style="background: #e67e22; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <button class="color-preset" data-target="themeColor" style="background: #2d8f5e; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                    <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ пресеты</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- БЛОК ПУТЕЙ -->
+        <div>
+            <label>Путь к index.html (start_url + базовый путь)</label>
+            <input type="text" id="basePath" value="/2d3t/pro/MirrorX/index.html" placeholder="/ваш/путь/index.html">
+            <div class="helper">
+                📁 Пути для иконок будут сгенерированы автоматически:
+                <br>
+                <span class="auto-path" id="icon192Preview">/2d3t/pro/MirrorX/icon-192.png</span>
+                <span style="color:#5a627a; margin:0 4px;">·</span>
+                <span class="auto-path" id="icon512Preview">/2d3t/pro/MirrorX/icon-512.png</span>
+            </div>
+        </div>
+
+        <!-- СКРЫТЫЕ ПОЛЯ ДЛЯ ИКОНОК -->
+        <input type="hidden" id="icon192" value="/2d3t/pro/MirrorX/icon-192.png">
+        <input type="hidden" id="icon512" value="/2d3t/pro/MirrorX/icon-512.png">
+
+        <div style="margin-top: 0.6rem;">
+            <label>Cache Name (версия кэша)</label>
+            <input type="text" id="cacheName" value="prox-pwa-v2" placeholder="cache-name-v1">
+        </div>
+
+        <!-- СТРАНИЦЫ ДЛЯ ПРЕДЗАГРУЗКИ -->
+        <div style="margin-top: 1rem;">
+            <label>📌 Страницы для предзагрузки (по одной на строку)</label>
+            <textarea id="precacheUrls" rows="4" placeholder="https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html&#10;https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html">https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html
+https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
+            <div class="helper">✅ Эти страницы будут доступны офлайн сразу после загрузки</div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" id="generateBtn">🔄 Обновить код</button>
+            <button class="btn btn-icon" id="resetDefaults">↺ Сбросить</button>
+        </div>
+    </div>
+
+    <!-- Генератор иконок + внешний переход -->
+    <div style="display:flex; justify-content: flex-end; margin-bottom: 1rem;">
+        <div class="icon-link" onclick="openExternalSite('https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html', '🖼️ Генератор иконок')">
+            <span>🖼️</span>
+            <span style="color: #b4c2e6; font-size: 0.9rem;">Генератор иконок</span>
+            <span style="opacity:0.4; margin:0 0.2rem;">→</span>
+        </div>
+    </div>
+
+    <!-- Блоки кода -->
+    <div class="card">
+        <div class="card-header">
+            <h2>📄 index.html (вставка script)</h2>
+            <span class="status-badge" id="statusIndicator">⚡ готово</span>
+        </div>
+        <div class="code-block" id="htmlCodeBlock">
+            <span class="copy-badge" data-target="htmlCodeBlock">📋 копировать</span>
+            <code id="htmlCode">&lt;!-- HTML-код будет здесь --&gt;</code>
+        </div>
+        <div class="btn-group" style="margin-top:0.6rem;">
+            <button class="btn btn-success copy-btn" data-target="htmlCodeBlock">📋 Копировать HTML-скрипт</button>
+            <button class="btn btn-outline copy-btn" data-target="headPWABlock">📋 Копировать PWA-метатеги</button>
+            <button class="btn btn-outline copy-btn" data-target="headStylesBlock">📋 Копировать стили оверлея</button>
+            <button class="btn btn-outline copy-btn" data-target="scriptBlock">📋 Копировать универсальный скрипт</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>📄 manifest.json</h2>
+            <span class="badge">PWA</span>
+        </div>
+        <div class="code-block" id="manifestBlock">
+            <span class="copy-badge" data-target="manifestBlock">📋 копировать</span>
+            <code id="manifestCode">{}</code>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-success copy-btn" data-target="manifestBlock">📋 Копировать manifest</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2>⚙️ service-worker.js (sw.js)</h2>
+            <span class="badge">офлайн</span>
+        </div>
+        <div class="code-block" id="swBlock">
+            <span class="copy-badge" data-target="swBlock">📋 копировать</span>
+            <code id="swCode">// service worker код</code>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-success copy-btn" data-target="swBlock">📋 Копировать sw.js</button>
+        </div>
+    </div>
+
+    <!-- скрытые блоки для копирования -->
+    <!-- БЛОК ДЛЯ КОПИРОВАНИЯ #1: PWA-метатеги -->
+    <div style="display: none;" id="headPWABlock">
+        <code>&lt;link rel="manifest" href="manifest.json"&gt;
+
+    &lt;!-- Иконки PWA --&gt;
+    &lt;link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"&gt;
+    &lt;link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"&gt;
+
+    &lt;!-- Мета-теги для PWA --&gt;
+    &lt;meta name="apple-mobile-web-app-capable" content="yes"&gt;
+    &lt;meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"&gt;
+    &lt;meta name="mobile-web-app-capable" content="yes"&gt;</code>
+    </div>
+
+    <!-- БЛОК ДЛЯ КОПИРОВАНИЯ #2: Стили для оверлея -->
+    <div style="display: none;" id="headStylesBlock">
+        <code>&lt;style&gt;
+    /* ============================================================
+    СТИЛИ ДЛЯ ОВЕРЛЕЯ И УВЕДОМЛЕНИЙ
+    ============================================================ */
+    .transition-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #0a0a12;
+        z-index: 999999;
+        display: flex;
+        flex-direction: column;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .transition-topbar {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background: rgba(16, 16, 30, 0.98);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        gap: 12px;
+        flex-shrink: 0;
+        min-height: 56px;
+    }
+
+    .transition-back {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #e2e8f0;
+        padding: 8px 18px;
+        cursor: pointer;
+        font-size: 15px;
+        transition: all 0.2s;
+        font-family: inherit;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .transition-back:hover {
+        background: rgba(255,255,255,0.16);
+        transform: scale(1.02);
+    }
+
+    .transition-title {
+        color: #94a3b8;
+        font-size: 14px;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .transition-iframe {
+        width: 100%;
+        flex: 1;
+        border: none;
+        background: #ffffff;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.98); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    .download-notification {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(16, 16, 30, 0.95);
+        backdrop-filter: blur(12px);
+        color: white;
+        padding: 16px 32px;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.1);
+        z-index: 9999999;
+        font-size: 16px;
+        font-family: inherit;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        animation: slideUp 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .download-notification.success {
+        border-color: #00b894;
+        background: rgba(0, 184, 148, 0.2);
+    }
+
+    .download-notification.error {
+        border-color: #e74c3c;
+        background: rgba(231, 76, 60, 0.2);
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+&lt;/style&gt;</code>
+    </div>
+
+    <div style="display: none;" id="scriptBlock">
+        <code>&lt;script&gt;
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ОФЛАЙН-ФУНКЦИОНАЛ
+    // ============================================================
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        navigator.serviceWorker.getRegistration()
+            .then(function(registration) {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch(function(err) {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log('📡 ' + status);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', function() {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then(function(registration) {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(function() {});
+            }
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+&lt;/script&gt;</code>
+    </div>
+
+    <hr>
+    <div style="text-align:center; color:#5a627a; font-size:0.8rem; padding:0.5rem 0;">
+        ⚡ Все поля обновляют код автоматически. Используйте кнопки для копирования.
+    </div>
+</div>
+
 <script>
-// ============================================================
-// УНИВЕРСАЛЬНЫЙ СКРИПТ ДЛЯ ХРАНЕНИЯ + ОФЛАЙН-ПОДДЕРЖКИ
-// Вставьте этот код в любую страницу — работает сразу
-// ============================================================
+(function() {
+    "use strict";
 
-(function(global) {
-    'use strict';
+    // ============================================================
+    // ФУНКЦИЯ ОТКРЫТИЯ ВНЕШНИХ САЙТОВ С ОВЕРЛЕЕМ И СКАЧИВАНИЕМ
+    // ============================================================
+    function openExternalSite(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
 
-    // ---------- 1. ХРАНИЛИЩЕ В LOCALSTORAGE ----------
-    const Storage = {
-        save(key, data) {
-            try {
-                localStorage.setItem(key, JSON.stringify(data));
-                return true;
-            } catch (e) {
-                console.error('[Storage] Ошибка сохранения:', e);
-                return false;
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
             }
-        },
+        };
+        document.addEventListener('keydown', escapeHandler);
 
-        load(key, defaultData = null) {
+        iframe.onload = function() {
             try {
-                const raw = localStorage.getItem(key);
-                if (raw === null) {
-                    if (defaultData !== null) {
-                        this.save(key, defaultData);
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openExternalSite = openExternalSite;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ГЕНЕРАТОР КОДА
+    // ============================================================
+
+    const appName = document.getElementById('appName');
+    const shortName = document.getElementById('shortName');
+    const appDesc = document.getElementById('appDesc');
+    const bgColor = document.getElementById('bgColor');
+    const themeColor = document.getElementById('themeColor');
+    const basePath = document.getElementById('basePath');
+    const icon192 = document.getElementById('icon192');
+    const icon512 = document.getElementById('icon512');
+    const cacheName = document.getElementById('cacheName');
+    const precacheUrls = document.getElementById('precacheUrls');
+
+    const icon192Preview = document.getElementById('icon192Preview');
+    const icon512Preview = document.getElementById('icon512Preview');
+
+    const htmlCode = document.getElementById('htmlCode');
+    const manifestCode = document.getElementById('manifestCode');
+    const swCode = document.getElementById('swCode');
+
+    function getBaseDir(fullPath) {
+        if (!fullPath) return '/';
+        const lastSlash = fullPath.lastIndexOf('/');
+        if (lastSlash === -1) return '/';
+        return fullPath.substring(0, lastSlash + 1);
+    }
+
+    function updateIconPaths() {
+        const path = basePath.value.trim() || '/index.html';
+        const baseDir = getBaseDir(path);
+        
+        const icon192Path = baseDir + 'icon-192.png';
+        const icon512Path = baseDir + 'icon-512.png';
+        
+        icon192.value = icon192Path;
+        icon512.value = icon512Path;
+        
+        if (icon192Preview) icon192Preview.textContent = icon192Path;
+        if (icon512Preview) icon512Preview.textContent = icon512Path;
+    }
+
+    function generateAll() {
+        updateIconPaths();
+        
+        const name = appName.value.trim() || '🪞 Кривое Зеркало';
+        const short = shortName.value.trim() || '';
+        const desc = appDesc.value.trim() || '';
+        const bg = bgColor.value.trim() || '#111111';
+        const theme = themeColor.value.trim() || '#111111';
+        const startPath = basePath.value.trim() || '/2d3t/';
+        const baseDir = getBaseDir(startPath);
+        const icon192src = icon192.value.trim() || (baseDir + 'icon-192.png');
+        const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
+        const cache = cacheName.value.trim() || 'pwa-cache-v1';
+        
+        const precacheList = precacheUrls.value
+            .split('\n')
+            .map(url => url.trim())
+            .filter(url => url.length > 0);
+        const precacheArrayStr = JSON.stringify(precacheList);
+
+        // ---- HTML СКРИПТ С ПОЛНЫМ ФУНКЦИОНАЛОМ ОВЕРЛЕЯ И СКАЧИВАНИЯ ----
+        const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <link rel="manifest" href="${baseDir}manifest.json">
+    
+    <link rel="icon" type="image/png" sizes="192x192" href="${icon192src}">
+    <link rel="icon" type="image/png" sizes="512x512" href="${icon512src}">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <title>${name}</title>
+    <style>
+        /* ============================================================
+        СТИЛИ ДЛЯ ОВЕРЛЕЯ И УВЕДОМЛЕНИЙ
+        ============================================================ */
+        .transition-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a12;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .transition-topbar {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(16, 16, 30, 0.98);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            gap: 12px;
+            flex-shrink: 0;
+            min-height: 56px;
+        }
+
+        .transition-back {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #e2e8f0;
+            padding: 8px 18px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .transition-back:hover {
+            background: rgba(255,255,255,0.16);
+            transform: scale(1.02);
+        }
+
+        .transition-title {
+            color: #94a3b8;
+            font-size: 14px;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .transition-iframe {
+            width: 100%;
+            flex: 1;
+            border: none;
+            background: #ffffff;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .download-notification {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(16, 16, 30, 0.95);
+            backdrop-filter: blur(12px);
+            color: white;
+            padding: 16px 32px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 9999999;
+            font-size: 16px;
+            font-family: inherit;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .download-notification.success {
+            border-color: #00b894;
+            background: rgba(0, 184, 148, 0.2);
+        }
+
+        .download-notification.error {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.2);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+    <\/style>
+</head>
+<body>
+    <!-- Ваш контент -->
+
+    <script>
+    (function() {
+        "use strict";
+
+        // ============================================================
+        // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+        // ============================================================
+        function openGame(url, title) {
+            const oldOverlay = document.querySelector('.transition-overlay');
+            if (oldOverlay) {
+                oldOverlay.remove();
+            }
+
+            const overlay = document.createElement('div');
+            overlay.className = 'transition-overlay';
+
+            const topBar = document.createElement('div');
+            topBar.className = 'transition-topbar';
+
+            const backBtn = document.createElement('button');
+            backBtn.className = 'transition-back';
+            backBtn.textContent = '← Назад';
+            backBtn.onclick = function() {
+                overlay.remove();
+            };
+
+            const titleEl = document.createElement('span');
+            titleEl.className = 'transition-title';
+            titleEl.textContent = title || '🌐 Загрузка...';
+
+            topBar.appendChild(backBtn);
+            topBar.appendChild(titleEl);
+            overlay.appendChild(topBar);
+
+            const iframe = document.createElement('iframe');
+            iframe.className = 'transition-iframe';
+            iframe.src = url;
+            iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+            iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+            overlay.appendChild(iframe);
+            document.body.appendChild(overlay);
+
+            const escapeHandler = function(e) {
+                if (e.key === 'Escape') {
+                    overlay.remove();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+
+            iframe.onload = function() {
+                try {
+                    const frameTitle = iframe.contentDocument?.title;
+                    if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                        titleEl.textContent = frameTitle;
                     }
-                    return defaultData;
+                } catch (e) {}
+            };
+
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    overlay.remove();
                 }
-                return JSON.parse(raw);
-            } catch (e) {
-                console.error('[Storage] Ошибка загрузки:', e);
-                return defaultData;
-            }
-        },
+            });
 
-        remove(key) {
-            try {
-                localStorage.removeItem(key);
-                return true;
-            } catch (e) {
-                console.error('[Storage] Ошибка удаления:', e);
-                return false;
-            }
-        },
+            // ============================================================
+            // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+            // ============================================================
+            window.addEventListener('message', function(event) {
+                if (event.source !== iframe.contentWindow) return;
+                const data = event.data;
+                if (data && data.type === 'download') {
+                    handleDownload(data.content, data.filename, data.mimeType);
+                }
+            });
 
-        has(key) {
-            return localStorage.getItem(key) !== null;
-        },
-
-        clear() {
-            try {
-                localStorage.clear();
-                return true;
-            } catch (e) {
-                console.error('[Storage] Ошибка очистки:', e);
-                return false;
-            }
+            return overlay;
         }
-    };
 
-    // ---------- 2. РАБОТА С МАССИВАМИ ----------
-    const ArrayHelper = {
-        add(key, item, defaultData = []) {
-            let data = Storage.load(key, defaultData);
-            if (!Array.isArray(data)) data = [];
-            data.push(item);
-            return Storage.save(key, data);
-        },
-
-        remove(key, identifier, idField = 'id', defaultData = []) {
-            let data = Storage.load(key, defaultData);
-            if (!Array.isArray(data)) return false;
-
-            let index = -1;
-            if (typeof identifier === 'function') {
-                index = data.findIndex(identifier);
-            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
-                index = identifier;
-            } else if (identifier !== undefined && identifier !== null) {
-                index = data.findIndex(item => item && item[idField] === identifier);
-            }
-
-            if (index === -1) return false;
-            data.splice(index, 1);
-            return Storage.save(key, data);
-        },
-
-        update(key, identifier, newData, idField = 'id', defaultData = []) {
-            let data = Storage.load(key, defaultData);
-            if (!Array.isArray(data)) return false;
-
-            let index = -1;
-            if (typeof identifier === 'function') {
-                index = data.findIndex(identifier);
-            } else if (typeof identifier === 'number' && Number.isInteger(identifier)) {
-                index = identifier;
-            } else if (identifier !== undefined && identifier !== null) {
-                index = data.findIndex(item => item && item[idField] === identifier);
-            }
-
-            if (index === -1) return false;
-            data[index] = { ...data[index], ...newData };
-            return Storage.save(key, data);
-        },
-
-        get(key, defaultData = []) {
-            const data = Storage.load(key, defaultData);
-            return Array.isArray(data) ? data : [];
-        },
-
-        find(key, predicate, defaultData = []) {
-            const data = this.get(key, defaultData);
-            return data.find(predicate) || null;
-        },
-
-        filter(key, predicate, defaultData = []) {
-            const data = this.get(key, defaultData);
-            return data.filter(predicate);
-        },
-
-        clear(key) {
-            return Storage.save(key, []);
-        }
-    };
-
-    // ---------- 3. СТАТУС СЕТИ ----------
-    const Network = {
-        getStatus() {
-            return navigator.onLine ? 'online' : 'offline';
-        },
-
-        isOnline() {
-            return navigator.onLine;
-        },
-
-        isOffline() {
-            return !navigator.onLine;
-        },
-
-        onChange(callback) {
-            const onlineHandler = () => callback('online', true);
-            const offlineHandler = () => callback('offline', false);
-            
-            window.addEventListener('online', onlineHandler);
-            window.addEventListener('offline', offlineHandler);
-            
-            return () => {
-                window.removeEventListener('online', onlineHandler);
-                window.removeEventListener('offline', offlineHandler);
-            };
-        },
-
-        // Обновить элемент с статусом
-        updateStatusElement(elementId, onlineText = '🟢 Онлайн', offlineText = '🔴 Офлайн') {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            
-            const update = () => {
-                el.textContent = this.isOnline() ? onlineText : offlineText;
-                el.className = this.isOnline() ? 'status-online' : 'status-offline';
-            };
-            
-            update();
-            return this.onChange(update);
-        }
-    };
-
-    // ---------- 4. SERVICE WORKER (ОФЛАЙН-ПОДДЕРЖКА) ----------
-    const SW = {
-        /**
-         * Зарегистрировать Service Worker
-         * @param {string} swPath - Путь к sw.js (по умолчанию 'sw.js')
-         * @param {Object} options - Опции регистрации
-         * @returns {Promise}
-         */
-        register(swPath = 'sw.js', options = {}) {
-            if (!('serviceWorker' in navigator)) {
-                console.warn('[SW] Service Worker не поддерживается');
-                return Promise.reject(new Error('SW не поддерживается'));
-            }
-
-            return navigator.serviceWorker.register(swPath, options)
-                .then(registration => {
-                    console.log('[SW] ✅ Зарегистрирован');
-                    return registration;
-                })
-                .catch(error => {
-                    console.error('[SW] ❌ Ошибка:', error);
-                    throw error;
-                });
-        },
-
-        /**
-         * Проверить активен ли SW
-         * @returns {Promise<boolean>}
-         */
-        async isActive() {
-            if (!('serviceWorker' in navigator)) return false;
+        // ============================================================
+        // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+        // ============================================================
+        function handleDownload(content, filename, mimeType) {
             try {
-                const registration = await navigator.serviceWorker.getRegistration();
-                return registration !== undefined && registration.active !== null;
-            } catch {
-                return false;
-            }
-        },
+                if (typeof content === 'string' && content.startsWith('http')) {
+                    const a = document.createElement('a');
+                    a.href = content;
+                    a.download = filename || 'download';
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    showNotification('✅ Скачивание началось!', 'success');
+                    return;
+                }
 
-        /**
-         * Создать и зарегистрировать SW из строки (встроенный SW)
-         * @param {string} swCode - Код Service Worker
-         * @param {string} scope - Scope для SW
-         * @returns {Promise}
-         */
-        registerInline(swCode, scope = '/') {
-            if (!('serviceWorker' in navigator)) {
-                console.warn('[SW] Service Worker не поддерживается');
-                return Promise.reject(new Error('SW не поддерживается'));
-            }
+                let blob;
+                if (typeof content === 'string') {
+                    blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+                } else if (content instanceof Blob) {
+                    blob = content;
+                } else {
+                    throw new Error('Неподдерживаемый формат данных');
+                }
 
-            try {
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swUrl = URL.createObjectURL(blob);
-                return navigator.serviceWorker.register(swUrl, { scope });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename || 'download';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                setTimeout(function() {
+                    URL.revokeObjectURL(url);
+                }, 5000);
+
+                showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
             } catch (error) {
-                console.error('[SW] Ошибка создания inline SW:', error);
-                return Promise.reject(error);
+                console.error('Ошибка скачивания:', error);
+                showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
             }
-        },
+        }
 
-        /**
-         * Сгенерировать код SW для кеширования текущей страницы
-         * @param {string} cacheName - Имя кеша
-         * @param {Array} urls - URL для кеширования (по умолчанию текущая страница)
-         * @returns {string} - Код SW
-         */
-        generateCacheSW(cacheName = 'app-v1', urls = null) {
-            if (!urls) {
-                urls = [window.location.pathname || '/'];
-                // Добавляем текущий URL с параметрами
-                if (window.location.search) {
-                    urls.push(window.location.pathname + window.location.search);
+        // ============================================================
+        // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+        // ============================================================
+        function showNotification(message, type) {
+            const old = document.querySelector('.download-notification');
+            if (old) old.remove();
+
+            const notification = document.createElement('div');
+            notification.className = 'download-notification ' + (type || '');
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(function() {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s';
+                setTimeout(function() {
+                    notification.remove();
+                }, 500);
+            }, 3000);
+        }
+
+        // Делаем функции глобальными
+        window.openGame = openGame;
+        window.handleDownload = handleDownload;
+        window.showNotification = showNotification;
+
+        // ============================================================
+        // ОФЛАЙН-ФУНКЦИОНАЛ
+        // ============================================================
+
+        function registerSW() {
+            if (!('serviceWorker' in navigator)) {
+                console.warn('[SW] ❌ Service Worker не поддерживается');
+                return;
+            }
+
+            navigator.serviceWorker.getRegistration()
+                .then(function(registration) {
+                    if (registration) {
+                        console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                        return;
+                    }
+                    navigator.serviceWorker.register('${baseDir}sw.js', {
+                        scope: '${baseDir}'
+                    })
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+                })
+                .catch(function(err) {
+                    console.error('[SW] ❌ Ошибка проверки:', err);
+                });
+        }
+
+        function checkNetwork() {
+            const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+            console.log('📡 ' + status);
+        }
+
+        function setupNetworkListeners() {
+            window.addEventListener('online', function() {
+                console.log('📡 Сеть восстановлена');
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready
+                        .then(function(registration) {
+                            registration.update();
+                            console.log('[SW] 🔄 Проверка обновлений...');
+                        })
+                        .catch(function() {});
+                }
+            });
+
+            window.addEventListener('offline', function() {
+                console.log('📡 Сеть отключена (работаем из кэша)');
+            });
+        }
+
+        function init() {
+            registerSW();
+            checkNetwork();
+            setupNetworkListeners();
+            console.log('[APP] ✅ Офлайн-функционал активирован');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+    })();
+    <\/script>
+
+    <!-- ============================================================
+    AUTOCACHE - АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ СТРАНИЦ
+    ============================================================ -->
+    <script>
+    (function() {
+        "use strict";
+
+        console.log('[APP] 🔄 Запуск AutoCache...');
+
+        // ============================================================
+        // 1. РЕГИСТРАЦИЯ SERVICE WORKER
+        // ============================================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistration()
+                .then(registration => {
+                    if (registration) {
+                        console.log('[APP] ✅ SW уже зарегистрирован');
+                        return registration;
+                    }
+                    return navigator.serviceWorker.register('${baseDir}sw.js', {
+                        scope: '${baseDir}'
+                    });
+                })
+                .then(reg => {
+                    console.log('[APP] ✅ SW зарегистрирован:', reg);
+                })
+                .catch(err => {
+                    console.warn('[APP] ❌ Ошибка регистрации SW:', err);
+                });
+        }
+
+        // ============================================================
+        // 2. СПИСОК СТРАНИЦ ДЛЯ ПРЕДЗАГРУЗКИ
+        // ============================================================
+        const PAGES_TO_PRECACHE = ${precacheArrayStr};
+
+        const CACHE_NAME = '${cache}';
+        const cachedUrls = new Set();
+
+        // ============================================================
+        // 3. ФУНКЦИЯ КЕШИРОВАНИЯ С ОЖИДАНИЕМ
+        // ============================================================
+        async function cacheUrl(url, retries = 3) {
+            if (!('caches' in window)) return false;
+            if (cachedUrls.has(url)) return true;
+            
+            for (let attempt = 1; attempt <= retries; attempt++) {
+                try {
+                    console.log(\`[APP] 📥 Попытка \${attempt}/\${retries}: \${url}\`);
+                    
+                    const response = await fetch(url, {
+                        mode: 'cors',
+                        headers: { 'Cache-Control': 'no-cache' }
+                    });
+                    
+                    if (response && response.ok) {
+                        const cache = await caches.open(CACHE_NAME);
+                        await cache.put(url, response);
+                        cachedUrls.add(url);
+                        console.log(\`[APP] ✅ Закешировано: \${url}\`);
+                        return true;
+                    }
+                } catch (error) {
+                    console.warn(\`[APP] ⚠️ Ошибка (\${attempt}/\${retries}):\`, error.message);
+                    if (attempt < retries) {
+                        await new Promise(r => setTimeout(r, 2000 * attempt));
+                    }
                 }
             }
+            return false;
+        }
 
-            return `
-const CACHE_NAME = '${cacheName}';
-const urlsToCache = ${JSON.stringify(urls)};
+        // ============================================================
+        // 4. ПРЕДЗАГРУЗКА ВСЕХ СТРАНИЦ
+        // ============================================================
+        async function precacheAllPages() {
+            console.log('[APP] 🚀 Начинаем предзагрузку страниц...');
+            
+            if (!navigator.onLine) {
+                console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
+                return;
+            }
 
-self.addEventListener('install', event => {
+            let successCount = 0;
+            for (const pageUrl of PAGES_TO_PRECACHE) {
+                if (await cacheUrl(pageUrl, 3)) {
+                    successCount++;
+                }
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            
+            console.log(\`[APP] ✅ Предзагружено \${successCount}/\${PAGES_TO_PRECACHE.length} страниц\`);
+            
+            if (successCount === PAGES_TO_PRECACHE.length) {
+                console.log('[APP] 🎉 Все страницы готовы к офлайн-работе!');
+            } else {
+                console.warn('[APP] ⚠️ Некоторые страницы не загрузились');
+            }
+        }
+
+        // ============================================================
+        // 5. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ ССЫЛОК
+        // ============================================================
+        async function cacheAllLinks() {
+            if (!('caches' in window)) return;
+            
+            const links = document.querySelectorAll('a[href]');
+            const urls = new Set();
+            
+            links.forEach(link => {
+                const href = link.href;
+                if (href && href.startsWith(window.location.origin)) {
+                    if (!href.includes('#') && 
+                        !href.includes('mailto:') && 
+                        !href.includes('tel:') &&
+                        !href.includes('javascript:')) {
+                        urls.add(href);
+                    }
+                }
+            });
+
+            let count = 0;
+            for (const url of urls) {
+                if (await cacheUrl(url, 2)) {
+                    count++;
+                    await new Promise(r => setTimeout(r, 200));
+                }
+            }
+            
+            if (count > 0) {
+                console.log(\`[APP] ✅ Закешировано \${count} страниц со ссылок\`);
+            }
+        }
+
+        // ============================================================
+        // 6. ЗАПУСК
+        // ============================================================
+        window.addEventListener('load', () => {
+            console.log('[APP] 📄 Страница загружена');
+            
+            setTimeout(() => cacheUrl(window.location.href, 2), 500);
+            setTimeout(precacheAllPages, 2000);
+            setTimeout(cacheAllLinks, 4000);
+        });
+
+        // ============================================================
+        // 7. МОНИТОРИНГ НОВЫХ ССЫЛОК
+        // ============================================================
+        if (window.MutationObserver) {
+            let observerTimeout;
+            const observer = new MutationObserver(() => {
+                clearTimeout(observerTimeout);
+                observerTimeout = setTimeout(() => {
+                    console.log('[APP] 🔄 Обнаружены изменения, проверяем новые ссылки...');
+                    cacheAllLinks();
+                }, 2000);
+            });
+            
+            setTimeout(() => {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }, 5000);
+        }
+
+        // ============================================================
+        // 8. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
+        // ============================================================
+        let hoverTimeout;
+        document.addEventListener('mouseover', (event) => {
+            const link = event.target.closest('a[href]');
+            if (link && link.href && link.href.startsWith(window.location.origin)) {
+                if (!link.href.includes('#') && 
+                    !link.href.includes('mailto:') && 
+                    !link.href.includes('tel:')) {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = setTimeout(() => {
+                        cacheUrl(link.href, 2);
+                    }, 500);
+                }
+            }
+        });
+
+        // ============================================================
+        // 9. ДОСТУП В КОНСОЛИ
+        // ============================================================
+        window.precacheAllPages = precacheAllPages;
+        window.cacheAll = cacheAllLinks;
+        window.cacheUrl = cacheUrl;
+        window.cacheStatus = async function() {
+            const cache = await caches.open(CACHE_NAME);
+            const keys = await cache.keys();
+            console.log(\`📦 В кеше \${keys.length} файлов:\`);
+            keys.forEach(req => console.log(\`  - \${req.url}\`));
+        };
+
+        console.log('[APP] ✅ AutoCache инициализирован');
+        console.log('[APP] 💡 Доступные команды:');
+        console.log('  precacheAllPages() - предзагрузить ВСЕ страницы');
+        console.log('  cacheAll() - кешировать все ссылки');
+        console.log('  cacheStatus() - проверить кеш');
+        console.log('  cacheUrl("url") - кешировать конкретный URL');
+
+    })();
+    <\/script>
+</body>`;
+
+        htmlCode.textContent = htmlScript;
+
+        // ---- manifest.json ----
+        const manifest = {
+            name: name,
+            short_name: short,
+            description: desc,
+            start_url: startPath,
+            display: "standalone",
+            background_color: bg,
+            theme_color: theme,
+            orientation: "portrait",
+            icons: [
+                {
+                    src: icon192src,
+                    sizes: "192x192",
+                    type: "image/png",
+                    purpose: "any maskable"
+                },
+                {
+                    src: icon512src,
+                    sizes: "512x512",
+                    type: "image/png",
+                    purpose: "any maskable"
+                }
+            ]
+        };
+        manifestCode.textContent = JSON.stringify(manifest, null, 2);
+
+        // ---- service-worker.js ----
+        const sw = `// sw.js - Универсальный кеш для всех страниц
+const CACHE_NAME = '${cache}';
+
+const FILES_TO_CACHE = [
+    '${startPath}',
+    '${baseDir}manifest.json',
+    '${icon192src}',
+    '${icon512src}'
+];
+
+self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Кеширование:', urlsToCache);
-                return cache.addAll(urlsToCache);
+                console.log('[SW] Кэшируем базовые файлы...');
+                return cache.addAll(FILES_TO_CACHE).catch(err => {
+                    console.warn('[SW] Некоторые файлы не закешированы:', err);
+                });
             })
-            .then(() => self.skipWaiting())
+            .then(() => {
+                console.log('[SW] ✅ Установка завершена');
+                return self.skipWaiting();
+            })
     );
 });
 
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(name => {
                     if (name !== CACHE_NAME) {
-                        console.log('[SW] Удаление старого кеша:', name);
+                        console.log('[SW] 🗑️ Удаляем старый кэш:', name);
                         return caches.delete(name);
                     }
                 })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => {
+            console.log('[SW] ✅ Активация завершена');
+            return self.clients.claim();
+        })
     );
 });
 
-self.addEventListener('fetch', event => {
+// ============================================================
+// УНИВЕРСАЛЬНЫЙ FETCH - КЕШИРУЕТ ВСЁ!
+// ============================================================
+self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+    
+    if (url.pathname.includes('/api/') || url.pathname.includes('/analytics/')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
-            .then(response => response || fetch(event.request))
-            .catch(() => caches.match('/'))
+            .then(cachedResponse => {
+                if (cachedResponse) {
+                    console.log('[SW] 📦 Из кеша:', url.pathname);
+                    
+                    if (navigator.onLine) {
+                        fetch(event.request)
+                            .then(response => {
+                                if (response && response.status === 200) {
+                                    const clone = response.clone();
+                                    caches.open(CACHE_NAME).then(cache => {
+                                        cache.put(event.request, clone);
+                                        console.log('[SW] 🔄 Обновлен кеш:', url.pathname);
+                                    });
+                                }
+                            })
+                            .catch(() => {});
+                    }
+                    
+                    return cachedResponse;
+                }
+                
+                return fetch(event.request)
+                    .then(response => {
+                        if (response && response.status === 200) {
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME).then(cache => {
+                                cache.put(event.request, clone);
+                                console.log('[SW] 💾 Добавлен в кеш:', url.pathname);
+                            });
+                        }
+                        return response;
+                    })
+                    .catch(() => {
+                        console.log('[SW] ⚠️ Офлайн режим для:', url.pathname);
+                        return caches.match('${startPath}')
+                            .then(fallback => {
+                                if (fallback) return fallback;
+                                return new Response('Страница недоступна офлайн', {
+                                    status: 503,
+                                    statusText: 'Service Unavailable'
+                                });
+                            });
+                    });
+            })
     );
 });
-`;
-        },
 
-        /**
-         * Автоматическая настройка SW (создаёт и регистрирует)
-         * @param {string} cacheName - Имя кеша
-         * @returns {Promise}
-         */
-        async setupOffline(cacheName = 'app-v1') {
-            const swCode = this.generateCacheSW(cacheName);
-            return this.registerInline(swCode);
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
+console.log('[SW] ✅ Service Worker загружен');`;
+        
+        swCode.textContent = sw;
+    }
+
+    // Копирование
+    function copyBlockContent(blockId) {
+        const block = document.getElementById(blockId);
+        if (!block) return;
+        const codeElem = block.querySelector('code');
+        let text = codeElem ? codeElem.textContent : block.textContent;
+        
+        if (blockId === 'headPWABlock' || blockId === 'headStylesBlock' || blockId === 'scriptBlock') {
+            text = text.trim();
         }
-    };
-
-    // ---------- 5. ВСПОМОГАТЕЛЬНЫЕ УТИЛИТЫ ----------
-    const Utils = {
-        /**
-         * Глубокое копирование
-         */
-        deepClone(obj) {
-            return JSON.parse(JSON.stringify(obj));
-        },
-
-        /**
-         * Генерация уникального ID
-         */
-        generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-        },
-
-        /**
-         * Форматирование даты
-         */
-        formatDate(date, format = 'DD.MM.YYYY HH:mm') {
-            const d = new Date(date);
-            const pad = n => String(n).padStart(2, '0');
-            const replacements = {
-                'YYYY': d.getFullYear(),
-                'MM': pad(d.getMonth() + 1),
-                'DD': pad(d.getDate()),
-                'HH': pad(d.getHours()),
-                'mm': pad(d.getMinutes()),
-                'ss': pad(d.getSeconds())
-            };
-            return format.replace(/YYYY|MM|DD|HH|mm|ss/g, match => replacements[match]);
-        },
-
-        /**
-         * Показать toast-уведомление
-         */
-        showToast(message, duration = 2000) {
-            // Создаём элемент если его нет
-            let toast = document.getElementById('_toast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = '_toast';
-                toast.style.cssText = `
-                    position: fixed;
-                    bottom: 30px;
-                    left: 50%;
-                    transform: translateX(-50%) translateY(100px);
-                    background: #1e293b;
-                    color: white;
-                    padding: 12px 24px;
-                    border-radius: 60px;
-                    font-size: 0.9rem;
-                    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-                    opacity: 0;
-                    transition: all 0.3s ease;
-                    z-index: 9999;
-                    pointer-events: none;
-                    font-family: system-ui, sans-serif;
-                `;
-                document.body.appendChild(toast);
+        
+        navigator.clipboard.writeText(text).then(() => {
+            const badge = block.querySelector('.copy-badge');
+            if (badge) {
+                const orig = badge.textContent;
+                badge.textContent = '✅ скопировано!';
+                setTimeout(() => { badge.textContent = orig; }, 1800);
             }
+        }).catch(() => {
+            alert('Не удалось скопировать. Попробуйте выделить вручную.');
+        });
+    }
 
-            toast.textContent = message;
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(0)';
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const target = this.dataset.target;
+            if (target) copyBlockContent(target);
+        });
+    });
 
-            clearTimeout(toast._timeout);
-            toast._timeout = setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(-50%) translateY(100px)';
-            }, duration);
+    document.querySelectorAll('.copy-badge').forEach(badge => {
+        badge.addEventListener('click', function(e) {
+            const block = this.closest('.code-block');
+            if (block) {
+                const id = block.id;
+                if (id) copyBlockContent(id);
+            }
+        });
+    });
+
+    // Генерация при изменении полей
+    const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, cacheName, precacheUrls];
+    inputs.forEach(inp => {
+        inp.addEventListener('input', generateAll);
+        inp.addEventListener('change', generateAll);
+    });
+
+    // Цветовые пикеры
+    const bgPicker = document.getElementById('bgColorPicker');
+    const themePicker = document.getElementById('themeColorPicker');
+
+    function syncColor(picker, textField) {
+        if (picker && textField) {
+            picker.addEventListener('input', function() {
+                textField.value = this.value;
+                textField.dispatchEvent(new Event('input'));
+            });
+            
+            textField.addEventListener('input', function() {
+                const val = this.value.trim();
+                if (/^#[0-9a-f]{6}$/i.test(val)) {
+                    picker.value = val;
+                }
+            });
+            
+            if (textField.value) {
+                picker.value = textField.value;
+            }
         }
-    };
+    }
 
-    // ---------- 6. ЭКСПОРТ В ГЛОБАЛЬНЫЙ ОБЪЕКТ ----------
-    const OfflineKit = {
-        Storage,
-        ArrayHelper,
-        Network,
-        SW,
-        Utils,
-        version: '1.0.0'
-    };
+    syncColor(bgPicker, bgColor);
+    syncColor(themePicker, themeColor);
 
-    // Добавляем в глобальный объект
-    global.OfflineKit = OfflineKit;
+    // Пресеты цветов
+    document.querySelectorAll('.color-preset').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const targetInput = document.getElementById(targetId);
+            const color = window.getComputedStyle(this).backgroundColor;
+            
+            function rgbToHex(rgb) {
+                const match = rgb.match(/\d+/g);
+                if (!match) return '#111111';
+                const r = parseInt(match[0]);
+                const g = parseInt(match[1]);
+                const b = parseInt(match[2]);
+                return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+            }
+            
+            const hex = rgbToHex(color);
+            if (targetInput) {
+                targetInput.value = hex;
+                targetInput.dispatchEvent(new Event('input'));
+                
+                const pickerId = targetId === 'bgColor' ? 'bgColorPicker' : 'themeColorPicker';
+                const picker = document.getElementById(pickerId);
+                if (picker) picker.value = hex;
+            }
+        });
+    });
 
-    // Для удобства добавляем сокращения
-    global.Store = Storage;
-    global.ArrayStore = ArrayHelper;
-    global.NetworkStatus = Network;
-    global.SWHelper = SW;
-    global.Utils = Utils;
+    // Сброс
+    document.getElementById('resetDefaults').addEventListener('click', function() {
+        appName.value = '🪞 Кривое Зеркало';
+        shortName.value = 'Зеркало';
+        appDesc.value = 'Делай селфи с забавными искажениями';
+        bgColor.value = '#111111';
+        themeColor.value = '#111111';
+        basePath.value = '/2d3t/pro/MirrorX/index.html';
+        cacheName.value = 'prox-pwa-v2';
+        precacheUrls.value = 'https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html\nhttps://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html';
+        
+        if (bgPicker) bgPicker.value = '#111111';
+        if (themePicker) themePicker.value = '#111111';
+        
+        generateAll();
+    });
 
-    console.log('[OfflineKit] ✅ Загружен v1.0.0');
+    document.getElementById('generateBtn').addEventListener('click', generateAll);
 
-})(window);
+    generateAll();
+
+    const statusInd = document.getElementById('statusIndicator');
+    if (statusInd) {
+        statusInd.textContent = '✅ готово';
+    }
+})();
 </script>
-  <!-- Ваш скрипт OfflineKit -->
-    <script src="offlinekit.js"></script>
-    
-    <script>
-    // Настройка при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-        // Устанавливаем манифест с эмодзи
-        OfflineKit.Manifest.setup('🚀', {
-            name: 'Космическое приложение',
-            shortName: 'Космос',
-            description: 'Приложение с ракетой 🚀',
-            backgroundColor: '#0f172a',
-            themeColor: '#3b82f6'
+
+<!-- Универсальный офлайн-блок -->
+<script>
+(function() {
+    "use strict";
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        navigator.serviceWorker.getRegistration()
+            .then((registration) => {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+
+                navigator.serviceWorker.register('sw.js')
+                    .then((reg) => {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch((err) => {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch((err) => {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log(`📡 ${status}`);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', () => {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then((registration) => {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(() => {});
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+<script>
+// ============================================================
+// АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ + ПРЕДЗАГРУЗКА
+// ============================================================
+(function() {
+    "use strict";
+
+    console.log('[APP] 🔄 Запуск AutoCache...');
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration()
+            .then(registration => {
+                if (registration) {
+                    console.log('[APP] ✅ SW уже зарегистрирован');
+                    return registration;
+                }
+                return navigator.serviceWorker.register('/2d3t/pro/PWA-Maker/sw.js', {
+                    scope: '/2d3t/pro/PWA-MAKER/'
+                });
+            })
+            .then(reg => {
+                console.log('[APP] ✅ SW зарегистрирован:', reg);
+            })
+            .catch(err => {
+                console.warn('[APP] ❌ Ошибка регистрации SW:', err);
+            });
+    }
+
+    const GAMES_TO_PRECACHE = [
+        'https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html'
+    ];
+
+    const CACHE_NAME = 'iconmaker-pwa-v2';
+
+    async function cacheUrl(url, retries = 3) {
+        if (!('caches' in window)) return false;
+        
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                console.log(`[APP] 📥 Попытка ${attempt}/${retries}: ${url}`);
+                
+                const response = await fetch(url, {
+                    mode: 'cors',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                
+                if (response && response.ok) {
+                    const cache = await caches.open(CACHE_NAME);
+                    await cache.put(url, response);
+                    console.log(`[APP] ✅ Закешировано: ${url}`);
+                    return true;
+                }
+            } catch (error) {
+                console.warn(`[APP] ⚠️ Ошибка (${attempt}/${retries}):`, error.message);
+                if (attempt < retries) {
+                    await new Promise(r => setTimeout(r, 2000 * attempt));
+                }
+            }
+        }
+        return false;
+    }
+
+    async function precacheAllGames() {
+        console.log('[APP] 🚀 Начинаем предзагрузку...');
+        
+        if (!navigator.onLine) {
+            console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
+            return;
+        }
+
+        let successCount = 0;
+        for (const gameUrl of GAMES_TO_PRECACHE) {
+            if (await cacheUrl(gameUrl, 3)) {
+                successCount++;
+            }
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        
+        console.log(`[APP] ✅ Предзагружено ${successCount}/${GAMES_TO_PRECACHE.length}`);
+        
+        if (successCount === GAMES_TO_PRECACHE.length) {
+            console.log('[APP] 🎉 Всё готово к офлайн-работе!');
+        } else {
+            console.warn('[APP] ⚠️ Некоторые страницы не загрузились');
+        }
+    }
+
+    async function cacheAllLinks() {
+        if (!('caches' in window)) return;
+        
+        const links = document.querySelectorAll('a[href]');
+        const urls = new Set();
+        
+        links.forEach(link => {
+            const href = link.href;
+            if (href && href.startsWith(window.location.origin)) {
+                if (!href.includes('#') && 
+                    !href.includes('mailto:') && 
+                    !href.includes('tel:') &&
+                    !href.includes('javascript:')) {
+                    urls.add(href);
+                }
+            }
+        });
+
+        let count = 0;
+        for (const url of urls) {
+            if (await cacheUrl(url, 2)) {
+                count++;
+                await new Promise(r => setTimeout(r, 200));
+            }
+        }
+        
+        if (count > 0) {
+            console.log(`[APP] ✅ Закешировано ${count} страниц со ссылок`);
+        }
+    }
+
+    window.addEventListener('load', () => {
+        console.log('[APP] 📄 Страница загружена');
+        setTimeout(precacheAllGames, 1000);
+        setTimeout(() => cacheUrl(window.location.href, 2), 3000);
+        setTimeout(cacheAllLinks, 5000);
+    });
+
+    if (window.MutationObserver) {
+        let observerTimeout;
+        const observer = new MutationObserver(() => {
+            clearTimeout(observerTimeout);
+            observerTimeout = setTimeout(() => {
+                console.log('[APP] 🔄 Обнаружены изменения, проверяем новые ссылки...');
+                cacheAllLinks();
+            }, 2000);
         });
         
-        // Настраиваем офлайн-поддержку
-        OfflineKit.SW.setupOffline('app-v1')
-            .then(() => console.log('✅ Офлайн-режим активирован'))
-            .catch(() => console.warn('⚠️ Офлайн-режим недоступен'));
-            
-        // Показываем статус
-        OfflineKit.Network.updateStatusElement('status');
-    });
-    </script>
-    
-    <style>
-        #status {
-            padding: 10px 20px;
-            border-radius: 60px;
-            font-weight: bold;
+        setTimeout(() => {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }, 5000);
+    }
+
+    let hoverTimeout;
+    document.addEventListener('mouseover', (event) => {
+        const link = event.target.closest('a[href]');
+        if (link && link.href && link.href.startsWith(window.location.origin)) {
+            if (!link.href.includes('#') && 
+                !link.href.includes('mailto:') && 
+                !link.href.includes('tel:')) {
+                clearTimeout(hoverTimeout);
+                hoverTimeout = setTimeout(() => {
+                    cacheUrl(link.href, 2);
+                }, 500);
+            }
         }
-        .status-online { background: #22c55e; color: white; }
-        .status-offline { background: #ef4444; color: white; }
-    </style>
-</head>
-<body>
-    <div id="status">Загрузка...</div>
+    });
+
+    window.precacheAllGames = precacheAllGames;
+    window.cacheAll = cacheAllLinks;
+    window.cacheUrl = cacheUrl;
+    window.cacheStatus = async function() {
+        const cache = await caches.open(CACHE_NAME);
+        const keys = await cache.keys();
+        console.log(`📦 В кеше ${keys.length} файлов:`);
+        keys.forEach(req => console.log(`  - ${req.url}`));
+        
+        const gameUrls = GAMES_TO_PRECACHE;
+        let found = 0;
+        for (const url of gameUrls) {
+            const response = await cache.match(url);
+            if (response) {
+                console.log(`  ✅ Страница в кеше: ${url}`);
+                found++;
+            } else {
+                console.log(`  ❌ Страница НЕ в кеше: ${url}`);
+            }
+        }
+        console.log(`📊 Страниц в кеше: ${found}/${gameUrls.length}`);
+    };
+
+    console.log('[APP] ✅ AutoCache инициализирован');
+    console.log('[APP] 💡 Доступные команды:');
+    console.log('  precacheAllGames() - предзагрузить ВСЕ страницы');
+    console.log('  cacheAll() - кешировать все ссылки');
+    console.log('  cacheStatus() - проверить кеш');
+    console.log('  cacheUrl("url") - кешировать конкретный URL');
+
+})();
+</script>
+
 </body>
 </html>
