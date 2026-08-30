@@ -513,7 +513,8 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         </div>
         <div class="btn-group" style="margin-top:0.6rem;">
             <button class="btn btn-success copy-btn" data-target="htmlCodeBlock">📋 Копировать HTML-скрипт</button>
-            <button class="btn btn-outline copy-btn" data-target="headBlock">📋 Копировать блок для &lt;head&gt;</button>
+            <button class="btn btn-outline copy-btn" data-target="headPWABlock">📋 Копировать PWA-метатеги</button>
+            <button class="btn btn-outline copy-btn" data-target="headStylesBlock">📋 Копировать стили оверлея</button>
             <button class="btn btn-outline copy-btn" data-target="scriptBlock">📋 Копировать универсальный скрипт</button>
         </div>
     </div>
@@ -547,20 +548,283 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     </div>
 
     <!-- скрытые блоки для копирования -->
-    <div style="display: none;" id="headBlock">
+    <!-- БЛОК ДЛЯ КОПИРОВАНИЯ #1: PWA-метатеги -->
+    <div style="display: none;" id="headPWABlock">
         <code>&lt;link rel="manifest" href="manifest.json"&gt;
-    
-    &lt;!-- Ваши иконки --&gt;
+
+    &lt;!-- Иконки PWA --&gt;
     &lt;link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"&gt;
-    &lt;link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"&gt;</code>
+    &lt;link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"&gt;
+
+    &lt;!-- Мета-теги для PWA --&gt;
+    &lt;meta name="apple-mobile-web-app-capable" content="yes"&gt;
+    &lt;meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"&gt;
+    &lt;meta name="mobile-web-app-capable" content="yes"&gt;</code>
     </div>
+
+    <!-- БЛОК ДЛЯ КОПИРОВАНИЯ #2: Стили для оверлея -->
+    <div style="display: none;" id="headStylesBlock">
+        <code>&lt;style&gt;
+    /* ============================================================
+    СТИЛИ ДЛЯ ОВЕРЛЕЯ И УВЕДОМЛЕНИЙ
+    ============================================================ */
+    .transition-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #0a0a12;
+        z-index: 999999;
+        display: flex;
+        flex-direction: column;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .transition-topbar {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background: rgba(16, 16, 30, 0.98);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        gap: 12px;
+        flex-shrink: 0;
+        min-height: 56px;
+    }
+
+    .transition-back {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        color: #e2e8f0;
+        padding: 8px 18px;
+        cursor: pointer;
+        font-size: 15px;
+        transition: all 0.2s;
+        font-family: inherit;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .transition-back:hover {
+        background: rgba(255,255,255,0.16);
+        transform: scale(1.02);
+    }
+
+    .transition-title {
+        color: #94a3b8;
+        font-size: 14px;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .transition-iframe {
+        width: 100%;
+        flex: 1;
+        border: none;
+        background: #ffffff;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.98); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    .download-notification {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(16, 16, 30, 0.95);
+        backdrop-filter: blur(12px);
+        color: white;
+        padding: 16px 32px;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.1);
+        z-index: 9999999;
+        font-size: 16px;
+        font-family: inherit;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        animation: slideUp 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .download-notification.success {
+        border-color: #00b894;
+        background: rgba(0, 184, 148, 0.2);
+    }
+
+    .download-notification.error {
+        border-color: #e74c3c;
+        background: rgba(231, 76, 60, 0.2);
+    }
+
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+&lt;/style&gt;</code>
+    </div>
+
     <div style="display: none;" id="scriptBlock">
         <code>&lt;script&gt;
 (function() {
     "use strict";
 
     // ============================================================
-    // УНИВЕРСАЛЬНЫЙ ОФЛАЙН-БЛОК
+    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ОФЛАЙН-ФУНКЦИОНАЛ
     // ============================================================
 
     function registerSW() {
@@ -570,44 +834,43 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         }
 
         navigator.serviceWorker.getRegistration()
-            .then((registration) => {
+            .then(function(registration) {
                 if (registration) {
                     console.log('[SW] ✅ Уже зарегистрирован:', registration);
                     return;
                 }
-
                 navigator.serviceWorker.register('sw.js')
-                    .then((reg) => {
+                    .then(function(reg) {
                         console.log('[SW] ✅ Зарегистрирован:', reg);
                     })
-                    .catch((err) => {
+                    .catch(function(err) {
                         console.error('[SW] ❌ Ошибка:', err);
                     });
             })
-            .catch((err) => {
+            .catch(function(err) {
                 console.error('[SW] ❌ Ошибка проверки:', err);
             });
     }
 
     function checkNetwork() {
         const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
-        console.log(`📡 ${status}`);
+        console.log('📡 ' + status);
     }
 
     function setupNetworkListeners() {
-        window.addEventListener('online', () => {
+        window.addEventListener('online', function() {
             console.log('📡 Сеть восстановлена');
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready
-                    .then((registration) => {
+                    .then(function(registration) {
                         registration.update();
                         console.log('[SW] 🔄 Проверка обновлений...');
                     })
-                    .catch(() => {});
+                    .catch(function() {});
             }
         });
 
-        window.addEventListener('offline', () => {
+        window.addEventListener('offline', function() {
             console.log('📡 Сеть отключена (работаем из кэша)');
         });
     }
@@ -1553,7 +1816,7 @@ console.log('[SW] ✅ Service Worker загружен');`;
         const codeElem = block.querySelector('code');
         let text = codeElem ? codeElem.textContent : block.textContent;
         
-        if (blockId === 'headBlock' || blockId === 'scriptBlock') {
+        if (blockId === 'headPWABlock' || blockId === 'headStylesBlock' || blockId === 'scriptBlock') {
             text = text.trim();
         }
         
