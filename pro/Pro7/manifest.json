@@ -1,7 +1,7 @@
 {
-  "name": "Opus +",
+  "name": "OS Plus",
   "short_name": "OS+",
-  "description": "Записывай звук в супер сжатом виде.",
+  "description": "Сжимаю звук легко!",
   "start_url": "/2d3t/pro/Pro7/index.html",
   "display": "standalone",
   "background_color": "#111111",
