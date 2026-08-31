@@ -3301,239 +3301,8 @@ function toggleQR() {
    ПЕЧАТНЫЙ МАКЕТ
 ========================================================= */
 
-function openPrintLayout() {
-    if (transferQRs.length === 0) {
-        alert('❌ Нет QR-кодов для печати. Сначала создайте их в Генераторе.');
-        return;
-    }
-
-    // Удаляем старый модальный блок
-    const oldModal = document.querySelector('.print-layout-modal');
-    if (oldModal) oldModal.remove();
-
-    // Создаём модальное окно
-    const modal = document.createElement('div');
-    modal.className = 'print-layout-modal';
-    modal.id = 'printModal';
-
-    // Собираем QR-коды в сетку
-    let gridHTML = '';
-    const qrs = transferQRs;
-
-    // Определяем количество колонок в зависимости от количества QR
-    const total = qrs.length;
-    let cols = 3;
-    if (total <= 6) cols = 2;
-    else if (total <= 12) cols = 3;
-    else if (total <= 24) cols = 4;
-    else cols = 5;
-
-    // Создаём грид с динамическим количеством колонок
-    for (let i = 0; i < qrs.length; i++) {
-        const qr = qrs[i];
-        gridHTML += `
-            <div class="qr-cell">
-                <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
-                <div class="label">${qr.part} / ${qr.total}</div>
-            </div>
-        `;
-    }
-
-    // Имя файла для заголовка
-    const fileName = currentFileInfo.name || 'файл';
-
-    modal.innerHTML = `
-        <div class="print-container" id="printContainer">
-            <div class="print-header">
-                <h2>📦 QR-коды для печати</h2>
-                <div class="sub">Файл: ${fileName} • Всего: ${total} QR-кодов • ${cols} колонок</div>
-            </div>
-            <div class="print-grid" style="grid-template-columns: repeat(${cols}, 1fr);">
-                ${gridHTML}
-            </div>
-            <div class="print-actions">
-                <button class="btn-print" onclick="printLayout()">🖨️ Печать / PDF</button>
 
 
-<div class="btn-group" style="margin-top: 10px; background: #0d121c; padding: 12px; border-radius: 14px; border: 1px solid #2a3340; flex-wrap: wrap;">
-    <div class="btn-group" style="margin-top: 10px; background: #0d121c; padding: 12px; border-radius: 14px; border: 1px solid #2a3340; flex-wrap: wrap; gap: 8px;">
-    <button class="info-btn" id="printLayoutBtn" onclick="openPrintLayout()" disabled style="flex: 1; min-width: 120px;">
-        🖨️ Открыть для печати
-    </button>
-    
-    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 150px; flex-wrap: wrap;">
-        <span style="color: #94a3b8; font-size: 12px; font-weight: 600;">📐 Колонок:</span>
-        <input type="range" id="densitySlider" min="2" max="8" step="1" value="4" 
-               style="flex: 1; min-width: 80px; accent-color: #3b4de0; background: transparent; cursor: pointer;">
-        <span id="densityLabel" style="color: #818cf8; font-weight: bold; font-size: 14px; min-width: 30px;">4</span>
-    </div>
-    
-    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 150px; flex-wrap: wrap;">
-        <span style="color: #94a3b8; font-size: 12px; font-weight: 600;">📏 Размер:</span>
-        <input type="range" id="sizeSlider" min="60" max="200" step="5" value="140"
-               style="flex: 1; min-width: 80px; accent-color: #3b4de0; background: transparent; cursor: pointer;">
-        <span id="sizeLabel" style="color: #818cf8; font-weight: bold; font-size: 14px; min-width: 45px;">140px</span>
-    </div>
-</div>
-    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; flex-wrap: wrap;">
-        <label style="color: #94a3b8; font-size: 13px; font-weight: 600;">📐 Плотность:</label>
-        <input type="range" id="densitySlider" min="1" max="8" step="1" value="4" 
-               style="flex: 1; min-width: 100px; accent-color: #3b4de0; background: transparent;">
-        <span id="densityLabel" style="color: #818cf8; font-weight: bold; font-size: 14px; min-width: 80px;">4 колонки</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 8px; flex: 0.5; min-width: 140px;">
-        <label style="color: #94a3b8; font-size: 13px; font-weight: 600;">Размер:</label>
-        <input type="range" id="sizeSlider" min="60" max="200" step="5" value="140"
-               style="flex: 1; min-width: 80px; accent-color: #3b4de0; background: transparent;">
-        <span id="sizeLabel" style="color: #818cf8; font-weight: bold; font-size: 14px; min-width: 50px;">140px</span>
-    </div>
-</div>
-
-
-
-
-                <button class="btn-close" onclick="closePrintLayout()">✕ Закрыть</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Блокируем прокрутку страницы
-    document.body.style.overflow = 'hidden';
-
-    // Закрытие по клику вне контейнера
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) closePrintLayout();
-    });
-
-    // Закрытие по Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closePrintLayout();
-    });
-}
-
-function closePrintLayout() {
-    const modal = document.querySelector('.print-layout-modal');
-    if (modal) modal.remove();
-    document.body.style.overflow = '';
-}
-
-function printLayout() {
-    // Сохраняем текущие стили
-    const modal = document.getElementById('printModal');
-    if (!modal) return;
-
-    // Добавляем класс для печати
-    modal.classList.add('printing');
-
-    // Запускаем печать
-    window.print();
-
-    // Удаляем класс после печати
-    setTimeout(() => {
-        modal.classList.remove('printing');
-    }, 1000);
-}
-
-// Обновляем кнопку "Открыть макет для печати" после создания QR
-function updatePrintButton() {
-    const btn = document.getElementById('printLayoutBtn');
-    if (btn) {
-        btn.disabled = (transferQRs.length === 0);
-    }
-}
-
-// Модифицируем generateQRs, чтобы обновлять кнопку
-const originalGenerateQRs = window.generateQRs;
-window.generateQRs = async function() {
-    await originalGenerateQRs.call(this);
-    updatePrintButton();
-};
-
-// Модифицируем clearGenerator, чтобы обновлять кнопку
-const originalClearGenerator = window.clearGenerator;
-window.clearGenerator = function() {
-    originalClearGenerator.call(this);
-    updatePrintButton();
-};
-
-// Инициализация при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(updatePrintButton, 100);
-});
-
-</script>
-
-
-
-
-<script>
-/* =========================================================
-   РЕГУЛЯТОР ПЛОТНОСТИ
-========================================================= */
-
-let printSettings = {
-    cols: 4,
-    qrSize: 140,
-    gap: 4,
-    padding: 4,
-    fontSize: 9
-};
-
-// Обновляем метки при изменении ползунков
-document.addEventListener('DOMContentLoaded', function() {
-    const densitySlider = document.getElementById('densitySlider');
-    const sizeSlider = document.getElementById('sizeSlider');
-    const densityLabel = document.getElementById('densityLabel');
-    const sizeLabel = document.getElementById('sizeLabel');
-
-    if (densitySlider) {
-        densitySlider.addEventListener('input', function() {
-            const val = parseInt(this.value);
-            densityLabel.textContent = val + ' колонок';
-            printSettings.cols = val;
-            // Автоматически подстраиваем размер под колонки
-            const recommendedSize = Math.min(200, Math.max(80, 140 - (val - 4) * 8));
-            sizeSlider.value = recommendedSize;
-            sizeLabel.textContent = recommendedSize + 'px';
-            printSettings.qrSize = recommendedSize;
-            // Обновляем настройки
-            updatePrintSettings();
-        });
-    }
-
-    if (sizeSlider) {
-        sizeSlider.addEventListener('input', function() {
-            const val = parseInt(this.value);
-            sizeLabel.textContent = val + 'px';
-            printSettings.qrSize = val;
-            updatePrintSettings();
-        });
-    }
-});
-
-function updatePrintSettings() {
-    // Автоматически подстраиваем gap, padding и шрифт под размер
-    const size = printSettings.qrSize;
-    const cols = printSettings.cols;
-    
-    if (size > 160) {
-        printSettings.gap = 8;
-        printSettings.padding = 8;
-        printSettings.fontSize = 11;
-    } else if (size > 120) {
-        printSettings.gap = 6;
-        printSettings.padding = 6;
-        printSettings.fontSize = 10;
-    } else {
-        printSettings.gap = 4;
-        printSettings.padding = 4;
-        printSettings.fontSize = 9;
-    }
-}
-
-// Обновляем функцию openPrintLayout с учётом настроек
 function openPrintLayout() {
     if (transferQRs.length === 0) {
         alert('❌ Нет QR-кодов. Сначала создайте их в Генераторе.');
@@ -3547,9 +3316,16 @@ function openPrintLayout() {
     // Берём настройки из слайдеров
     const cols = printSettings.cols;
     const qrSize = printSettings.qrSize;
-    const gap = printSettings.gap;
-    const padding = printSettings.padding;
-    const fontSize = printSettings.fontSize;
+    
+    // Автоматический зазор и отступы
+    let gap = 6;
+    let padding = 6;
+    let fontSize = 10;
+    
+    if (qrSize > 160) { gap = 10; padding = 10; fontSize = 12; }
+    else if (qrSize > 130) { gap = 8; padding = 8; fontSize = 11; }
+    else if (qrSize > 100) { gap = 6; padding = 6; fontSize = 10; }
+    else { gap = 4; padding = 4; fontSize = 9; }
 
     let gridHTML = '';
     for (let i = 0; i < qrs.length; i++) {
@@ -3663,7 +3439,7 @@ function openPrintLayout() {
     <div class="header">
         <h1>📦 QR-коды для печати</h1>
         <div class="sub">Файл: ${fileName} • Всего: ${total} QR-кодов</div>
-        <div class="settings-info">📐 ${cols} колонок • ${qrSize}px • ${gap}px зазор</div>
+        <div class="settings-info">📐 ${cols} колонок • ${qrSize}px</div>
     </div>
     <div class="grid">
         ${gridHTML}
@@ -3671,10 +3447,6 @@ function openPrintLayout() {
     <div class="actions">
         <button onclick="window.print()">🖨️ Печать / Сохранить PDF</button>
     </div>
-    <script>
-        // Автоматическая печать (раскомментируй если нужно)
-        // setTimeout(() => window.print(), 500);
-    <\/script>
 </body>
 </html>`;
 
@@ -3686,22 +3458,19 @@ function openPrintLayout() {
         alert('❌ Не удалось открыть новую вкладку. Разрешите всплывающие окна.');
     }
 }
-
-// Обновляем кнопку после создания QR
-function updatePrintButton() {
-    const btn = document.getElementById('printLayoutBtn');
-    if (btn) {
-        btn.disabled = (transferQRs.length === 0);
-        if (transferQRs.length > 0) {
-            btn.textContent = '🖨️ Открыть для печати (' + transferQRs.length + ' QR)';
-        } else {
-            btn.textContent = '🖨️ Открыть для печати';
-        }
-    }
 }
 
 
 
+
+
+
+
+
+
+</script>
+
+<script>
 /* =========================================================
    РЕГУЛЯТОР ПЛОТНОСТИ
 ========================================================= */
@@ -3746,7 +3515,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
 </script>
 
 
