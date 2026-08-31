@@ -475,7 +475,7 @@
 
         <div style="margin-top: 0.6rem;">
             <label>Cache Name (версия кэша)</label>
-            <input type="text" id="cacheName" value="prox-pwa-v2" placeholder="cache-name-v1">
+            <input type="text" id="cacheName" value="osp-pwa-v2" placeholder="cache-name-v1">
         </div>
 
         <!-- СТРАНИЦЫ ДЛЯ ПРЕДЗАГРУЗКИ -->
@@ -1104,7 +1104,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         const baseDir = getBaseDir(startPath);
         const icon192src = icon192.value.trim() || (baseDir + 'icon-192.png');
         const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
-        const cache = cacheName.value.trim() || 'pwa-cache-v1';
+        const cache = cacheName.value.trim() || 'osp-pwa-v2';
         
         const precacheList = precacheUrls.value
             .split('\n')
@@ -1694,7 +1694,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         };
         manifestCode.textContent = JSON.stringify(manifest, null, 2);
 
-        // ---- service-worker.js ----
+        // ---- service-worker.js (ОБРАЗЕЦ ИЗ ЗАПРОСА) ----
         const sw = `// sw.js - Универсальный кеш для всех страниц
 const CACHE_NAME = '${cache}';
 
@@ -1709,15 +1709,10 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('[SW] Кэшируем базовые файлы...');
-                return cache.addAll(FILES_TO_CACHE).catch(err => {
-                    console.warn('[SW] Некоторые файлы не закешированы:', err);
-                });
+                console.log('[SW] Кэшируем ProX...');
+                return cache.addAll(FILES_TO_CACHE);
             })
-            .then(() => {
-                console.log('[SW] ✅ Установка завершена');
-                return self.skipWaiting();
-            })
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -1727,48 +1722,31 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map(name => {
                     if (name !== CACHE_NAME) {
-                        console.log('[SW] 🗑️ Удаляем старый кэш:', name);
+                        console.log('[SW] Удаляем старый кэш:', name);
                         return caches.delete(name);
                     }
                 })
             );
-        }).then(() => {
-            console.log('[SW] ✅ Активация завершена');
-            return self.clients.claim();
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
-// ============================================================
-// УНИВЕРСАЛЬНЫЙ FETCH - КЕШИРУЕТ ВСЁ!
-// ============================================================
 self.addEventListener('fetch', (event) => {
-    const url = new URL(event.request.url);
-    
-    if (url.pathname.includes('/api/') || url.pathname.includes('/analytics/')) {
-        return;
-    }
-
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
                 if (cachedResponse) {
-                    console.log('[SW] 📦 Из кеша:', url.pathname);
-                    
-                    if (navigator.onLine) {
-                        fetch(event.request)
-                            .then(response => {
-                                if (response && response.status === 200) {
-                                    const clone = response.clone();
-                                    caches.open(CACHE_NAME).then(cache => {
-                                        cache.put(event.request, clone);
-                                        console.log('[SW] 🔄 Обновлен кеш:', url.pathname);
-                                    });
-                                }
-                            })
-                            .catch(() => {});
-                    }
-                    
+                    // Фоновое обновление кэша
+                    fetch(event.request)
+                        .then(response => {
+                            if (response && response.status === 200) {
+                                const clone = response.clone();
+                                caches.open(CACHE_NAME).then(cache => {
+                                    cache.put(event.request, clone);
+                                });
+                            }
+                        })
+                        .catch(() => {});
                     return cachedResponse;
                 }
                 
@@ -1778,33 +1756,17 @@ self.addEventListener('fetch', (event) => {
                             const clone = response.clone();
                             caches.open(CACHE_NAME).then(cache => {
                                 cache.put(event.request, clone);
-                                console.log('[SW] 💾 Добавлен в кеш:', url.pathname);
                             });
                         }
                         return response;
                     })
                     .catch(() => {
-                        console.log('[SW] ⚠️ Офлайн режим для:', url.pathname);
-                        return caches.match('${startPath}')
-                            .then(fallback => {
-                                if (fallback) return fallback;
-                                return new Response('Страница недоступна офлайн', {
-                                    status: 503,
-                                    statusText: 'Service Unavailable'
-                                });
-                            });
+                        // Fallback на главную страницу при офлайне
+                        return caches.match('${startPath}');
                     });
             })
     );
-});
-
-self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-        self.skipWaiting();
-    }
-});
-
-console.log('[SW] ✅ Service Worker загружен');`;
+});`;
         
         swCode.textContent = sw;
     }
@@ -1919,7 +1881,7 @@ console.log('[SW] ✅ Service Worker загружен');`;
         bgColor.value = '#111111';
         themeColor.value = '#111111';
         basePath.value = '/2d3t/pro/MirrorX/index.html';
-        cacheName.value = 'prox-pwa-v2';
+        cacheName.value = 'osp-pwa-v2';
         precacheUrls.value = 'https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html\nhttps://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html';
         
         if (bgPicker) bgPicker.value = '#111111';
