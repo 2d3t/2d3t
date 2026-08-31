@@ -1,7 +1,11 @@
+// sw.js - Универсальный кеш для всех страниц
 const CACHE_NAME = 'osp-pwa-v2';
+
 const FILES_TO_CACHE = [
     '/2d3t/pro/Pro7/index.html',
-    '/2d3t/pro/Pro7/manifest.json'
+    '/2d3t/pro/Pro7/manifest.json',
+    '/2d3t/pro/Pro7/icon-192.png',
+    '/2d3t/pro/Pro7/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
