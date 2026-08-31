@@ -3356,9 +3356,25 @@ function openPrintLayout() {
 
 
 <div class="btn-group" style="margin-top: 10px; background: #0d121c; padding: 12px; border-radius: 14px; border: 1px solid #2a3340; flex-wrap: wrap;">
+    <div class="btn-group" style="margin-top: 10px; background: #0d121c; padding: 12px; border-radius: 14px; border: 1px solid #2a3340; flex-wrap: wrap; gap: 8px;">
     <button class="info-btn" id="printLayoutBtn" onclick="openPrintLayout()" disabled style="flex: 1; min-width: 120px;">
         🖨️ Открыть для печати
     </button>
+    
+    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 150px; flex-wrap: wrap;">
+        <span style="color: #94a3b8; font-size: 12px; font-weight: 600;">📐 Колонок:</span>
+        <input type="range" id="densitySlider" min="2" max="8" step="1" value="4" 
+               style="flex: 1; min-width: 80px; accent-color: #3b4de0; background: transparent; cursor: pointer;">
+        <span id="densityLabel" style="color: #818cf8; font-weight: bold; font-size: 14px; min-width: 30px;">4</span>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 150px; flex-wrap: wrap;">
+        <span style="color: #94a3b8; font-size: 12px; font-weight: 600;">📏 Размер:</span>
+        <input type="range" id="sizeSlider" min="60" max="200" step="5" value="140"
+               style="flex: 1; min-width: 80px; accent-color: #3b4de0; background: transparent; cursor: pointer;">
+        <span id="sizeLabel" style="color: #818cf8; font-weight: bold; font-size: 14px; min-width: 45px;">140px</span>
+    </div>
+</div>
     <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; flex-wrap: wrap;">
         <label style="color: #94a3b8; font-size: 13px; font-weight: 600;">📐 Плотность:</label>
         <input type="range" id="densitySlider" min="1" max="8" step="1" value="4" 
@@ -3683,6 +3699,54 @@ function updatePrintButton() {
         }
     }
 }
+
+
+
+/* =========================================================
+   РЕГУЛЯТОР ПЛОТНОСТИ
+========================================================= */
+
+let printSettings = {
+    cols: 4,
+    qrSize: 140
+};
+
+// Инициализация ползунков
+document.addEventListener('DOMContentLoaded', function() {
+    const densitySlider = document.getElementById('densitySlider');
+    const sizeSlider = document.getElementById('sizeSlider');
+    const densityLabel = document.getElementById('densityLabel');
+    const sizeLabel = document.getElementById('sizeLabel');
+
+    if (densitySlider) {
+        densitySlider.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            densityLabel.textContent = val;
+            printSettings.cols = val;
+            
+            // Автоматически подстраиваем размер под колонки
+            let recommendedSize = 140;
+            if (val <= 3) recommendedSize = 180;
+            else if (val <= 4) recommendedSize = 140;
+            else if (val <= 5) recommendedSize = 120;
+            else if (val <= 6) recommendedSize = 100;
+            else recommendedSize = 80;
+            
+            sizeSlider.value = recommendedSize;
+            sizeLabel.textContent = recommendedSize + 'px';
+            printSettings.qrSize = recommendedSize;
+        });
+    }
+
+    if (sizeSlider) {
+        sizeSlider.addEventListener('input', function() {
+            const val = parseInt(this.value);
+            sizeLabel.textContent = val + 'px';
+            printSettings.qrSize = val;
+        });
+    }
+});
+
 </script>
 
 
