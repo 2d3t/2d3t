@@ -3340,13 +3340,10 @@ function toggleQR() {
 
 
 <script>
+// ============================================================
+// ПЕЧАТНЫЙ МАКЕТ С QR-КОДОМ ПРИЛОЖЕНИЯ ПЕРВЫМ
+// ============================================================
 
-/* =========================================================
-   ПЕЧАТНЫЙ МАКЕТ С РЕГУЛИРОВКОЙ КОЛИЧЕСТВА QR НА ЛИСТЕ
-   (ПОКАЗЫВАЕТ ВСЕ QR-КОДЫ С РАЗБИВКОЙ ПО СТРАНИЦАМ)
-========================================================= */
-
-// Переменные для хранения настроек печати
 let printSettings = {
     cols: 3,
     rows: 4
@@ -3358,100 +3355,151 @@ function openPrintLayout() {
         return;
     }
 
-    // Удаляем старый модальный блок
     const oldModal = document.querySelector('.print-layout-modal');
     if (oldModal) oldModal.remove();
 
-    // Создаём модальное окно
     const modal = document.createElement('div');
     modal.className = 'print-layout-modal';
     modal.id = 'printModal';
 
-    // Собираем QR-коды
+    // QR-код приложения (ссылка на программу)
+    const APP_URL = 'https://2d3t.github.io/2d3t/pro/Pro6/index.html';
+    
+    // Генерируем QR-код приложения
+    const appQR = qrcode(0, QR_ERROR_LEVEL);
+    appQR.addData(APP_URL);
+    appQR.make();
+    const appQRDataURL = appQR.createDataURL(7, 12);
+
     const qrs = transferQRs;
     const total = qrs.length;
 
-    // Определяем начальные значения для ползунков
     let cols = printSettings.cols || 3;
     let rows = printSettings.rows || 4;
-    // Ограничиваем
     cols = Math.max(1, Math.min(8, cols));
     rows = Math.max(1, Math.min(10, rows));
 
-    // Функция для обновления сетки
     function renderGrid(colsVal, rowsVal) {
         const gridContainer = document.getElementById('printGridContainer');
         if (!gridContainer) return;
 
-        // Показываем ВСЕ QR-коды, а не только первые N
         const itemsPerPage = colsVal * rowsVal;
-        const totalPages = Math.ceil(qrs.length / itemsPerPage);
-        
         let allPagesHTML = '';
+        
+        // Страница 1: QR приложения в первой позиции
+        const page1Items = [];
+        
+        // Добавляем QR приложения
+        page1Items.push({
+            type: 'app',
+            dataURL: appQRDataURL,
+            label: '📱 Открыть программу'
+        });
+        
+        // Добавляем остальные QR-коды на первую страницу
+        const remainingSlots = itemsPerPage - 1;
+        const qrsToShow = qrs.slice(0, remainingSlots);
+        for (const qr of qrsToShow) {
+            page1Items.push({
+                type: 'data',
+                dataURL: qr.dataURL,
+                label: `${qr.part} / ${qr.total}`
+            });
+        }
 
-        // Проходим по всем страницам
-        for (let page = 0; page < totalPages; page++) {
-            const startIdx = page * itemsPerPage;
-            const endIdx = Math.min(startIdx + itemsPerPage, qrs.length);
-            const pageItems = qrs.slice(startIdx, endIdx);
-
-            // Добавляем заголовок страницы (кроме первой)
-            if (page > 0) {
-                allPagesHTML += `<div style="border-top: 2px dashed #ccc; margin: 20px 0; padding-top: 10px; text-align: center; font-size: 14px; color: #999; width: 100%; grid-column: 1 / -1; font-weight: bold;">
-                    📄 Страница ${page + 1}
-                </div>`;
-            }
-
-            // Создаём сетку для текущей страницы
-            let gridHTML = '';
-            for (let i = 0; i < pageItems.length; i++) {
-                const qr = pageItems[i];
-                gridHTML += `
-                    <div class="qr-cell">
-                        <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
-                        <div class="label">${qr.part} / ${qr.total}</div>
-                    </div>
-                `;
-            }
-
-            // Заполняем пустые ячейки, если нужно
-            const emptyCount = itemsPerPage - pageItems.length;
-            for (let i = 0; i < emptyCount; i++) {
-                gridHTML += `
-                    <div class="qr-cell" style="border: 1px dashed #ccc; opacity: 0.3;">
-                        <div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">пусто</div>
-                    </div>
-                `;
-            }
-
-            // Добавляем сетку страницы
-            allPagesHTML += `
-                <div class="print-grid" style="grid-template-columns: repeat(${colsVal}, 1fr); display: grid; gap: 12px; width: 100%;">
-                    ${gridHTML}
+        // Заполняем первую страницу
+        let gridHTML = '';
+        for (const item of page1Items) {
+            const isApp = item.type === 'app';
+            gridHTML += `
+                <div class="qr-cell" style="${isApp ? 'border-color: #3b4de0; background: #f0f4ff;' : ''}">
+                    <img src="${item.dataURL}" alt="${item.label}" loading="lazy">
+                    <div class="label" style="${isApp ? 'color: #3b4de0; font-weight: bold;' : ''}">${item.label}</div>
+                    ${isApp ? '<div style="font-size: 9px; color: #999; margin-top: 2px;">QR File Transfer</div>' : ''}
                 </div>
             `;
         }
 
-        // Вставляем все страницы в контейнер
+        // Заполняем пустые ячейки на первой странице
+        const emptyCount1 = itemsPerPage - page1Items.length;
+        for (let i = 0; i < emptyCount1; i++) {
+            gridHTML += `
+                <div class="qr-cell" style="border: 1px dashed #ccc; opacity: 0.3;">
+                    <div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">пусто</div>
+                </div>
+            `;
+        }
+
+        allPagesHTML += `
+            <div style="text-align: center; font-size: 13px; color: #666; margin-bottom: 8px; font-weight: bold; width: 100%;">
+                📄 Страница 1 — QR-код приложения + данные
+            </div>
+            <div class="print-grid" style="grid-template-columns: repeat(${colsVal}, 1fr); display: grid; gap: 12px; width: 100%;">
+                ${gridHTML}
+            </div>
+        `;
+
+        // Следующие страницы: только данные
+        const startIdx = remainingSlots;
+        if (startIdx < qrs.length) {
+            const remainingQRs = qrs.slice(startIdx);
+            const totalPages = Math.ceil(remainingQRs.length / itemsPerPage);
+            
+            for (let page = 0; page < totalPages; page++) {
+                const pageStart = page * itemsPerPage;
+                const pageEnd = Math.min(pageStart + itemsPerPage, remainingQRs.length);
+                const pageItems = remainingQRs.slice(pageStart, pageEnd);
+
+                if (page > 0 || startIdx > 0) {
+                    allPagesHTML += `<div style="border-top: 2px dashed #ccc; margin: 20px 0; padding-top: 10px; text-align: center; font-size: 14px; color: #999; width: 100%; grid-column: 1 / -1; font-weight: bold;">
+                        📄 Страница ${page + 2}
+                    </div>`;
+                }
+
+                let pageGridHTML = '';
+                for (const qr of pageItems) {
+                    pageGridHTML += `
+                        <div class="qr-cell">
+                            <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
+                            <div class="label">${qr.part} / ${qr.total}</div>
+                        </div>
+                    `;
+                }
+
+                const emptyCount = itemsPerPage - pageItems.length;
+                for (let i = 0; i < emptyCount; i++) {
+                    pageGridHTML += `
+                        <div class="qr-cell" style="border: 1px dashed #ccc; opacity: 0.3;">
+                            <div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">пусто</div>
+                        </div>
+                    `;
+                }
+
+                allPagesHTML += `
+                    <div class="print-grid" style="grid-template-columns: repeat(${colsVal}, 1fr); display: grid; gap: 12px; width: 100%;">
+                        ${pageGridHTML}
+                    </div>
+                `;
+            }
+        }
+
         gridContainer.innerHTML = allPagesHTML;
 
-        // Обновляем информацию о количестве
         const info = document.getElementById('printInfo');
         if (info) {
             const itemsPerPageVal = colsVal * rowsVal;
-            const totalPagesVal = Math.ceil(qrs.length / itemsPerPageVal);
-            info.textContent = `Всего: ${qrs.length} QR-кодов • Колонки: ${colsVal} • Строки: ${rowsVal} • Страниц: ${totalPagesVal}`;
+            const totalPagesVal = Math.ceil(qrs.length / itemsPerPageVal) + 1;
+            info.textContent = `Всего: ${qrs.length + 1} QR-кодов (1 — приложение + ${qrs.length} — данные) • Колонки: ${colsVal} • Строки: ${rowsVal} • Страниц: ${totalPagesVal}`;
         }
     }
 
-    // Имя файла для заголовка
     const fileName = currentFileInfo.name || 'файл';
 
     modal.innerHTML = `
         <div class="print-container" id="printContainer">
             <div class="print-header">
                 <h2>📦 QR-коды для печати</h2>
-                <div class="sub">Файл: ${fileName} • Всего: ${total} QR-кодов</div>
+                <div class="sub">Файл: ${fileName} • Всего: ${total} QR-кодов данных + 1 QR-код приложения</div>
             </div>
             
             <div class="print-layout-controls">
@@ -3466,7 +3514,7 @@ function openPrintLayout() {
                     <span class="value" id="printRowsValue">${rows}</span>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
-                    <span class="hint" id="printInfo">Всего: ${total} QR-кодов</span>
+                    <span class="hint" id="printInfo">Всего: ${total + 1} QR-кодов</span>
                     <span class="hint" style="color: #3b4de0;">На странице: ${cols * rows} QR</span>
                 </div>
             </div>
@@ -3482,24 +3530,18 @@ function openPrintLayout() {
     `;
 
     document.body.appendChild(modal);
-
-    // Блокируем прокрутку страницы
     document.body.style.overflow = 'hidden';
 
-    // Закрытие по клику вне контейнера
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closePrintLayout();
     });
 
-    // Закрытие по Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closePrintLayout();
     });
 
-    // Инициализация сетки
     renderGrid(cols, rows);
 
-    // Настройка обработчиков для ползунков
     const colsSlider = document.getElementById('printCols');
     const rowsSlider = document.getElementById('printRows');
     const colsValue = document.getElementById('printColsValue');
@@ -3544,7 +3586,6 @@ function printLayout() {
     }, 1000);
 }
 
-// Обновляем кнопку "Открыть макет для печати" после создания QR
 function updatePrintButton() {
     const btn = document.getElementById('printLayoutBtn');
     if (btn) {
@@ -3552,21 +3593,19 @@ function updatePrintButton() {
     }
 }
 
-// Модифицируем generateQRs, чтобы обновлять кнопку
+// Патчим функции для обновления кнопки
 const originalGenerateQRs = window.generateQRs;
 window.generateQRs = async function() {
     await originalGenerateQRs.call(this);
     updatePrintButton();
 };
 
-// Модифицируем clearGenerator, чтобы обновлять кнопку
 const originalClearGenerator = window.clearGenerator;
 window.clearGenerator = function() {
     originalClearGenerator.call(this);
     updatePrintButton();
 };
 
-// Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(updatePrintButton, 100);
 });
