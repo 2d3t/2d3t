@@ -533,15 +533,37 @@
     <span>СОЗДАНИЕ GIF...</span>
 </div>
 
-<!-- Загружаем библиотеку локально из той же папки -->
-<script src="gif.js"></script>
-<!-- Если локальная библиотека не загрузилась, пробуем загрузить из CDN -->
+<!-- Сначала пробуем загрузить локальную библиотеку -->
 <script>
-    if (typeof GIF === 'undefined') {
+    // Функция для загрузки скрипта с обработкой ошибок
+    function loadScript(src, callback) {
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js';
+        script.src = src;
+        script.onload = callback;
+        script.onerror = function() {
+            console.warn('Не удалось загрузить:', src);
+            callback(false);
+        };
         document.head.appendChild(script);
     }
+
+    // Пытаемся загрузить локальную версию
+    loadScript('gif.js', function(success) {
+        if (!success || typeof GIF === 'undefined') {
+            // Если локальная не загрузилась, пробуем CDN
+            console.log('Загружаем GIF библиотеку из CDN...');
+            loadScript('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js', function(success2) {
+                if (success2 && typeof GIF !== 'undefined') {
+                    console.log('✅ GIF библиотека загружена из CDN');
+                } else {
+                    console.error('❌ Не удалось загрузить GIF библиотеку');
+                    document.getElementById('statusMsg').innerHTML = '⚠️ Библиотека GIF не загружена. Проверьте интернет.';
+                }
+            });
+        } else {
+            console.log('✅ GIF библиотека загружена локально');
+        }
+    });
 </script>
 
 <script>
@@ -889,178 +911,3 @@
             
             if (!isGifLibraryAvailable()) {
                 statusMsg.innerHTML = '❌ Ошибка: библиотека GIF не загружена';
-                finishRecording(false);
-                return;
-            }
-            
-            modalProgressText.textContent = `🎨 Создание GIF из ${frames.length} кадров...`;
-            
-            // Используем локальную версию worker
-            const gif = new GIF({
-                workers: 2,
-                quality: Math.floor(quality / 10),
-                width: targetWidth,
-                height: targetHeight,
-                workerScript: 'gif.worker.js'  // локальный файл
-            });
-            
-            gif.on('progress', (progress) => {
-                if (!cancelRequested) {
-                    const percent = 50 + Math.floor(progress * 50);
-                    modalProgressFill.style.width = percent + '%';
-                    modalProgressFill.textContent = percent + '%';
-                    modalProgressText.textContent = `🎨 Сборка GIF: ${Math.floor(progress * 100)}%`;
-                }
-            });
-            
-            gif.on('finished', (blob) => {
-                if (cancelRequested) {
-                    finishRecording(false);
-                    return;
-                }
-                
-                const gifUrl = URL.createObjectURL(blob);
-                modalGifPreview.src = gifUrl;
-                modalGifResult.style.display = 'block';
-                modalProgressArea.style.display = 'none';
-                modalProgressFill.style.width = '100%';
-                statusMsg.innerHTML = `✨ GIF создан! Размер: ${(blob.size / 1024).toFixed(1)} KB`;
-                
-                modalDownloadBtn.onclick = () => {
-                    const a = document.createElement('a');
-                    a.href = gifUrl;
-                    a.download = `rainbow_animation_${Date.now()}.gif`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    statusMsg.innerHTML = '📁 GIF сохранён на устройство';
-                };
-                
-                finishRecording(true);
-            });
-            
-            for (let frameData of frames) {
-                gif.addFrame(frameData, { delay: 1000 / fps });
-            }
-            
-            gif.render();
-        }
-        
-        function finishRecording(success) {
-            if (recordingTimer) clearTimeout(recordingTimer);
-            isRecordingGif = false;
-            recordingIndicator.style.display = 'none';
-            
-            if (!success || cancelRequested) {
-                modalProgressArea.style.display = 'none';
-                statusMsg.innerHTML = cancelRequested ? '❌ Создание GIF отменено' : '⚠️ Ошибка при создании GIF';
-                cancelRequested = false;
-            }
-        }
-        
-        modalCancelBtn.addEventListener('click', () => {
-            if (isRecordingGif) {
-                cancelRequested = true;
-                if (gifEncoder) {
-                    try { gifEncoder = null; } catch(e) {}
-                }
-                statusMsg.innerHTML = '⏹️ Отмена создания GIF...';
-                modalProgressText.textContent = '❌ Отменено';
-                finishRecording(false);
-            }
-        });
-        
-        generateGifBtn.addEventListener('click', () => {
-            if (!isRecordingGif) {
-                startGifRecording();
-            }
-        });
-        
-        // ---------- ОБРАБОТЧИКИ СОБЫТИЙ РИСОВАНИЯ ----------
-        function onPointerStart(e) {
-            e.preventDefault();
-            const coords = getCanvasCoords(e);
-            if (!coords) return;
-            startStroke(coords.x, coords.y, performance.now());
-        }
-        
-        function onPointerMove(e) {
-            e.preventDefault();
-            if (!isDrawing || !currentStroke) return;
-            const coords = getCanvasCoords(e);
-            if (!coords) return;
-            addPointToStroke(coords.x, coords.y);
-            redrawAllStrokes();
-        }
-        
-        function onPointerEnd(e) {
-            e.preventDefault();
-            if (currentStroke) finishCurrentStroke();
-            isDrawing = false;
-            redrawAllStrokes();
-        }
-        
-        // ---------- ИНИЦИАЛИЗАЦИЯ ----------
-        function init() {
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-            
-            canvas.addEventListener('touchstart', onPointerStart, { passive: false });
-            canvas.addEventListener('touchmove', onPointerMove, { passive: false });
-            canvas.addEventListener('touchend', onPointerEnd);
-            canvas.addEventListener('touchcancel', onPointerEnd);
-            canvas.addEventListener('mousedown', onPointerStart);
-            window.addEventListener('mousemove', (e) => {
-                if (isDrawing && (e.buttons === 1)) {
-                    e.preventDefault();
-                    const coords = getCanvasCoords(e);
-                    if (coords) addPointToStroke(coords.x, coords.y);
-                    redrawAllStrokes();
-                } else if (isDrawing && e.buttons !== 1) {
-                    if (currentStroke) finishCurrentStroke();
-                    isDrawing = false;
-                    redrawAllStrokes();
-                }
-            });
-            window.addEventListener('mouseup', onPointerEnd);
-            
-            resetBtn.addEventListener('click', resetCanvas);
-            
-            // Проверяем наличие библиотеки при старте
-            if (!isGifLibraryAvailable()) {
-                statusMsg.innerHTML = '⚠️ Библиотека GIF не загружена. Функция GIF будет недоступна.';
-            }
-            
-            function animate() {
-                redrawAllStrokes();
-                requestAnimationFrame(animate);
-            }
-            animate();
-        }
-        
-        init();
-    })();
-</script>
-
-<!-- Встроенный офлайн-блок (безопасно) -->
-<script>
-(function() {
-    "use strict";
-    function registerSW() {
-        if (!('serviceWorker' in navigator)) return;
-        navigator.serviceWorker.getRegistration()
-            .then(reg => { if (!reg) navigator.serviceWorker.register('sw.js').catch(()=>{}); })
-            .catch(()=>{});
-    }
-    function checkNetwork() { console.log('📡 ' + (navigator.onLine ? 'Онлайн' : 'Офлайн (кэш)')); }
-    function setupNetworkListeners() {
-        window.addEventListener('online', () => { if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then(r => r.update()).catch(()=>{}); });
-        window.addEventListener('offline', () => {});
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { registerSW(); checkNetwork(); setupNetworkListeners(); });
-    else { registerSW(); checkNetwork(); setupNetworkListeners(); }
-})();
-</script>
-
-</body>
-</html>
