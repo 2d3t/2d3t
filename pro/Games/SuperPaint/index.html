@@ -42,7 +42,6 @@
             padding: 12px 12px 16px;
         }
 
-        /* Шапка — как в примере, но адаптирована */
         .header {
             padding: 12px 20px 8px 20px;
             display: flex;
@@ -183,7 +182,6 @@
             border: 2px solid #fccfaf;
         }
 
-        /* Холст — занимает всё свободное место */
         .canvas-area {
             flex: 1;
             background: #121212;
@@ -224,7 +222,6 @@
             flex-wrap: wrap;
         }
 
-        /* Модальное окно — стили под общий дизайн */
         .modal {
             display: none;
             position: fixed;
@@ -456,7 +453,6 @@
             button { font-size: 0.8rem; padding: 6px 14px; }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>
 <div class="app-container">
@@ -536,6 +532,17 @@
     <span class="recording-dot"></span>
     <span>СОЗДАНИЕ GIF...</span>
 </div>
+
+<!-- Загружаем библиотеку локально из той же папки -->
+<script src="gif.js"></script>
+<!-- Если локальная библиотека не загрузилась, пробуем загрузить из CDN -->
+<script>
+    if (typeof GIF === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js';
+        document.head.appendChild(script);
+    }
+</script>
 
 <script>
     (function() {
@@ -753,6 +760,11 @@
         let recordingTimer = null;
         let gifEncoder = null;
         
+        // Проверяем доступность библиотеки
+        function isGifLibraryAvailable() {
+            return typeof GIF !== 'undefined';
+        }
+        
         async function startGifRecording() {
             if (isRecordingGif) {
                 statusMsg.innerHTML = '⏳ Уже идёт создание GIF, подождите...';
@@ -761,6 +773,11 @@
             
             if (strokes.length === 0 && (!currentStroke || currentStroke.points.length === 0)) {
                 statusMsg.innerHTML = '🎨 Сначала нарисуйте что-нибудь!';
+                return;
+            }
+            
+            if (!isGifLibraryAvailable()) {
+                statusMsg.innerHTML = '❌ Библиотека GIF не загружена. Проверьте интернет-соединение.';
                 return;
             }
             
@@ -870,23 +887,24 @@
                 return;
             }
             
+            if (!isGifLibraryAvailable()) {
+                statusMsg.innerHTML = '❌ Ошибка: библиотека GIF не загружена';
+                finishRecording(false);
+                return;
+            }
+            
             modalProgressText.textContent = `🎨 Создание GIF из ${frames.length} кадров...`;
             
-            const workerCode = `
-                importScripts('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
-            `;
-            const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
-            const workerUrl = URL.createObjectURL(workerBlob);
-            
-            gifEncoder = new GIF({
+            // Используем локальную версию worker
+            const gif = new GIF({
                 workers: 2,
                 quality: Math.floor(quality / 10),
                 width: targetWidth,
                 height: targetHeight,
-                workerScript: workerUrl
+                workerScript: 'gif.worker.js'  // локальный файл
             });
             
-            gifEncoder.on('progress', (progress) => {
+            gif.on('progress', (progress) => {
                 if (!cancelRequested) {
                     const percent = 50 + Math.floor(progress * 50);
                     modalProgressFill.style.width = percent + '%';
@@ -895,8 +913,7 @@
                 }
             });
             
-            gifEncoder.on('finished', (blob) => {
-                URL.revokeObjectURL(workerUrl);
+            gif.on('finished', (blob) => {
                 if (cancelRequested) {
                     finishRecording(false);
                     return;
@@ -923,10 +940,10 @@
             });
             
             for (let frameData of frames) {
-                gifEncoder.addFrame(frameData, { delay: 1000 / fps });
+                gif.addFrame(frameData, { delay: 1000 / fps });
             }
             
-            gifEncoder.render();
+            gif.render();
         }
         
         function finishRecording(success) {
@@ -1008,6 +1025,11 @@
             window.addEventListener('mouseup', onPointerEnd);
             
             resetBtn.addEventListener('click', resetCanvas);
+            
+            // Проверяем наличие библиотеки при старте
+            if (!isGifLibraryAvailable()) {
+                statusMsg.innerHTML = '⚠️ Библиотека GIF не загружена. Функция GIF будет недоступна.';
+            }
             
             function animate() {
                 redrawAllStrokes();
