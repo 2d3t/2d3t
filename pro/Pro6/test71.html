@@ -3343,6 +3343,7 @@ function toggleQR() {
 
 /* =========================================================
    ПЕЧАТНЫЙ МАКЕТ С РЕГУЛИРОВКОЙ КОЛИЧЕСТВА QR НА ЛИСТЕ
+   (ПОКАЗЫВАЕТ ВСЕ QR-КОДЫ С РАЗБИВКОЙ ПО СТРАНИЦАМ)
 ========================================================= */
 
 // Переменные для хранения настроек печати
@@ -3382,43 +3383,64 @@ function openPrintLayout() {
         const gridContainer = document.getElementById('printGridContainer');
         if (!gridContainer) return;
 
-        const maxItems = colsVal * rowsVal;
-        let displayed = qrs.slice(0, maxItems);
+        // Показываем ВСЕ QR-коды, а не только первые N
+        const itemsPerPage = colsVal * rowsVal;
+        const totalPages = Math.ceil(qrs.length / itemsPerPage);
         
-        // Если QR-кодов меньше, чем ячеек, показываем все
-        if (qrs.length < maxItems) {
-            displayed = qrs.slice(0);
-        }
+        let allPagesHTML = '';
 
-        let gridHTML = '';
-        for (let i = 0; i < displayed.length; i++) {
-            const qr = displayed[i];
-            gridHTML += `
-                <div class="qr-cell">
-                    <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
-                    <div class="label">${qr.part} / ${qr.total}</div>
+        // Проходим по всем страницам
+        for (let page = 0; page < totalPages; page++) {
+            const startIdx = page * itemsPerPage;
+            const endIdx = Math.min(startIdx + itemsPerPage, qrs.length);
+            const pageItems = qrs.slice(startIdx, endIdx);
+
+            // Добавляем заголовок страницы (кроме первой)
+            if (page > 0) {
+                allPagesHTML += `<div style="border-top: 2px dashed #ccc; margin: 20px 0; padding-top: 10px; text-align: center; font-size: 14px; color: #999; width: 100%; grid-column: 1 / -1; font-weight: bold;">
+                    📄 Страница ${page + 1}
+                </div>`;
+            }
+
+            // Создаём сетку для текущей страницы
+            let gridHTML = '';
+            for (let i = 0; i < pageItems.length; i++) {
+                const qr = pageItems[i];
+                gridHTML += `
+                    <div class="qr-cell">
+                        <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
+                        <div class="label">${qr.part} / ${qr.total}</div>
+                    </div>
+                `;
+            }
+
+            // Заполняем пустые ячейки, если нужно
+            const emptyCount = itemsPerPage - pageItems.length;
+            for (let i = 0; i < emptyCount; i++) {
+                gridHTML += `
+                    <div class="qr-cell" style="border: 1px dashed #ccc; opacity: 0.3;">
+                        <div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">пусто</div>
+                    </div>
+                `;
+            }
+
+            // Добавляем сетку страницы
+            allPagesHTML += `
+                <div class="print-grid" style="grid-template-columns: repeat(${colsVal}, 1fr); display: grid; gap: 12px; width: 100%;">
+                    ${gridHTML}
                 </div>
             `;
         }
 
-        // Заполняем пустые ячейки, если нужно
-        const emptyCount = maxItems - displayed.length;
-        for (let i = 0; i < emptyCount; i++) {
-            gridHTML += `
-                <div class="qr-cell" style="border: 1px dashed #ccc; opacity: 0.3;">
-                    <div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">пусто</div>
-                </div>
-            `;
-        }
-
-        gridContainer.innerHTML = gridHTML;
-        gridContainer.style.gridTemplateColumns = `repeat(${colsVal}, 1fr)`;
+        // Вставляем все страницы в контейнер
+        gridContainer.innerHTML = allPagesHTML;
 
         // Обновляем информацию о количестве
         const info = document.getElementById('printInfo');
         if (info) {
-            const shown = Math.min(displayed.length, maxItems);
-            info.textContent = `Показано: ${shown} из ${qrs.length} QR-кодов • Колонки: ${colsVal} • Строки: ${rowsVal}`;
+            const itemsPerPageVal = colsVal * rowsVal;
+            const totalPagesVal = Math.ceil(qrs.length / itemsPerPageVal);
+            info.textContent = `Всего: ${qrs.length} QR-кодов • Колонки: ${colsVal} • Строки: ${rowsVal} • Страниц: ${totalPagesVal}`;
         }
     }
 
@@ -3435,21 +3457,21 @@ function openPrintLayout() {
             <div class="print-layout-controls">
                 <div class="control-row">
                     <label for="printCols">Колонки:</label>
-                    <input type="range" id="printCols" min="1" max="12" value="${cols}" step="1">
+                    <input type="range" id="printCols" min="1" max="8" value="${cols}" step="1">
                     <span class="value" id="printColsValue">${cols}</span>
                 </div>
                 <div class="control-row">
                     <label for="printRows">Строки:</label>
-                    <input type="range" id="printRows" min="1" max="12" value="${rows}" step="1">
+                    <input type="range" id="printRows" min="1" max="10" value="${rows}" step="1">
                     <span class="value" id="printRowsValue">${rows}</span>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
-                    <span class="hint" id="printInfo">Показано: ${Math.min(qrs.length, cols * rows)} из ${qrs.length} QR-кодов</span>
-                    <span class="hint" style="color: #3b4de0;">Всего ячеек: ${cols * rows}</span>
+                    <span class="hint" id="printInfo">Всего: ${total} QR-кодов</span>
+                    <span class="hint" style="color: #3b4de0;">На странице: ${cols * rows} QR</span>
                 </div>
             </div>
             
-            <div class="print-grid" id="printGridContainer" style="grid-template-columns: repeat(${cols}, 1fr);">
+            <div id="printGridContainer" style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
             </div>
             
             <div class="print-actions">
@@ -3511,17 +3533,12 @@ function closePrintLayout() {
 }
 
 function printLayout() {
-    // Сохраняем текущие стили
     const modal = document.getElementById('printModal');
     if (!modal) return;
 
-    // Добавляем класс для печати
     modal.classList.add('printing');
-
-    // Запускаем печать
     window.print();
 
-    // Удаляем класс после печати
     setTimeout(() => {
         modal.classList.remove('printing');
     }, 1000);
