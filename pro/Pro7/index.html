@@ -3,23 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
-<link rel="manifest" href="manifest.json">
-    
-    <!-- Ваши иконки -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-
-    <title>VAD-кодек v11 — стабильная конвертация</title>
+    <title>VAD-кодек v11 — ручное управление</title>
     <style>
         * {
             box-sizing: border-box;
         }
         body {
             font-family: system-ui;
-            max-width: 700px;
+            max-width: 720px;
             margin: 2rem auto;
             padding: 1rem;
             background: #0f0f13;
@@ -185,7 +176,7 @@
             gap: 8px;
         }
         .bitrate-control input[type="range"] {
-            width: 160px;
+            width: 140px;
             height: 4px;
             -webkit-appearance: none;
             background: #2a2a3f;
@@ -215,11 +206,6 @@
             text-align: right;
             font-size: 0.9rem;
         }
-        .bitrate-hint {
-            font-size: 0.7rem;
-            color: #6b7280;
-            margin-left: auto;
-        }
         .toggle-pause-btn {
             background: #2a3a3a;
             border: 1px solid #4a6a6a;
@@ -231,13 +217,81 @@
         .toggle-pause-btn:hover:not(:disabled) {
             background: #3a4a4a;
         }
+        .controls-panel {
+            background: #111118;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin: 10px 0;
+            border: 1px solid #2a2a35;
+        }
+        .controls-panel .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            margin: 4px 0;
+        }
+        .controls-panel label {
+            font-size: 0.8rem;
+            color: #b0b8c8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .controls-panel input[type="range"] {
+            width: 120px;
+            height: 3px;
+            -webkit-appearance: none;
+            background: #2a2a3f;
+            border-radius: 2px;
+            outline: none;
+        }
+        .controls-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4a6cf7;
+            cursor: pointer;
+        }
+        .controls-panel input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4a6cf7;
+            cursor: pointer;
+            border: none;
+        }
+        .control-value {
+            min-width: 40px;
+            font-weight: bold;
+            color: #4ade80;
+            font-size: 0.8rem;
+            text-align: right;
+        }
+        .control-label-text {
+            min-width: 100px;
+        }
+        .divider {
+            border-top: 1px solid #2a2a35;
+            margin: 8px 0;
+        }
+        .reset-btn {
+            background: #3a2a2a;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            margin-left: 8px;
+        }
+        .reset-btn:hover {
+            background: #5a3a3a;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>🎙️ VAD-кодек v11</h2>
-    <p style="font-size:0.9rem;color:#9ca3af;">Стабильная конвертация MP3 → Opus для экспорта</p>
+    <p style="font-size:0.9rem;color:#9ca3af;">Ручное управление параметрами VAD</p>
 
     <!-- РЕГУЛЯТОР БИТРЕЙТА -->
     <div class="bitrate-control">
@@ -247,6 +301,48 @@
             <span class="bitrate-value" id="bitrateDisplay">5.5 kbps</span>
         </label>
         <span class="bitrate-hint">(ниже — компактнее, выше — качественнее)</span>
+    </div>
+
+    <!-- ПАНЕЛЬ РУЧНОГО УПРАВЛЕНИЯ -->
+    <div class="controls-panel">
+        <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:6px;">🎛️ Ручная настройка VAD</div>
+
+        <div class="control-row">
+            <label>
+                <span class="control-label-text">🎚️ Чувствительность</span>
+                <input type="range" id="thresholdSlider" min="0.001" max="0.05" value="0.01" step="0.0005">
+                <span class="control-value" id="thresholdDisplay">0.010</span>
+            </label>
+            <button class="reset-btn" id="resetThreshold">↺</button>
+        </div>
+
+        <div class="control-row">
+            <label>
+                <span class="control-label-text">⏱️ Мин. пауза (мс)</span>
+                <input type="range" id="minSilenceSlider" min="100" max="1500" value="300" step="10">
+                <span class="control-value" id="minSilenceDisplay">300</span>
+            </label>
+            <button class="reset-btn" id="resetMinSilence">↺</button>
+        </div>
+
+        <div class="control-row">
+            <label>
+                <span class="control-label-text">📦 Пре-буфер (мс)</span>
+                <input type="range" id="prebufferSlider" min="100" max="1500" value="500" step="10">
+                <span class="control-value" id="prebufferDisplay">500</span>
+            </label>
+            <button class="reset-btn" id="resetPrebuffer">↺</button>
+        </div>
+
+        <div class="control-row" style="margin-top:4px;">
+            <label>
+                <span class="control-label-text">📊 Интервал VAD (мс)</span>
+                <input type="range" id="vadIntervalSlider" min="200" max="1500" value="700" step="50">
+                <span class="control-value" id="vadIntervalDisplay">700</span>
+            </label>
+            <button class="reset-btn" id="resetVadInterval">↺</button>
+        </div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:4px;">↺ — сброс к значению по умолчанию</div>
     </div>
 
     <div class="row">
@@ -303,16 +399,26 @@
 
 <script>
 // ============================================================
-// КОНФИГ
+// КОНФИГ (значения по умолчанию)
 // ============================================================
-const CFG = {
+const DEFAULTS = {
     threshold: 0.01,
     minSilenceMs: 300,
     bitrate: 5500,
     mimeType: 'audio/webm;codecs=opus',
     prebufferMs: 500,
     vadInterval: 700,
-    splitByPauses: true,   // по умолчанию разделяем по паузам
+    splitByPauses: true,
+};
+
+const CFG = {
+    threshold: DEFAULTS.threshold,
+    minSilenceMs: DEFAULTS.minSilenceMs,
+    bitrate: DEFAULTS.bitrate,
+    mimeType: DEFAULTS.mimeType,
+    prebufferMs: DEFAULTS.prebufferMs,
+    vadInterval: DEFAULTS.vadInterval,
+    splitByPauses: DEFAULTS.splitByPauses,
 };
 
 // ============================================================
@@ -372,9 +478,21 @@ const statusMsg = $('statusMsg');
 const bitrateSlider = $('bitrateSlider');
 const bitrateDisplay = $('bitrateDisplay');
 
+// Слайдеры ручного управления
+const thresholdSlider = $('thresholdSlider');
+const thresholdDisplay = $('thresholdDisplay');
+const minSilenceSlider = $('minSilenceSlider');
+const minSilenceDisplay = $('minSilenceDisplay');
+const prebufferSlider = $('prebufferSlider');
+const prebufferDisplay = $('prebufferDisplay');
+const vadIntervalSlider = $('vadIntervalSlider');
+const vadIntervalDisplay = $('vadIntervalDisplay');
+
 // ============================================================
-// РЕГУЛЯТОР БИТРЕЙТА
+// РЕГУЛЯТОРЫ
 // ============================================================
+
+// Битрейт
 function updateBitrateDisplay() {
     const val = parseInt(bitrateSlider.value, 10);
     if (val >= 1000) {
@@ -384,9 +502,66 @@ function updateBitrateDisplay() {
     }
     CFG.bitrate = val;
 }
-
 bitrateSlider.addEventListener('input', updateBitrateDisplay);
 updateBitrateDisplay();
+
+// Чувствительность (threshold)
+function updateThreshold() {
+    const val = parseFloat(thresholdSlider.value);
+    thresholdDisplay.textContent = val.toFixed(3);
+    CFG.threshold = val;
+    if (state.fullAudioBuffer) {
+        analyzeAudioBuffer(state.fullAudioBuffer);
+    }
+}
+thresholdSlider.addEventListener('input', updateThreshold);
+$('resetThreshold').addEventListener('click', () => {
+    thresholdSlider.value = DEFAULTS.threshold;
+    updateThreshold();
+});
+updateThreshold();
+
+// Мин. пауза
+function updateMinSilence() {
+    const val = parseInt(minSilenceSlider.value, 10);
+    minSilenceDisplay.textContent = val;
+    CFG.minSilenceMs = val;
+    if (state.fullAudioBuffer) {
+        analyzeAudioBuffer(state.fullAudioBuffer);
+    }
+}
+minSilenceSlider.addEventListener('input', updateMinSilence);
+$('resetMinSilence').addEventListener('click', () => {
+    minSilenceSlider.value = DEFAULTS.minSilenceMs;
+    updateMinSilence();
+});
+updateMinSilence();
+
+// Пре-буфер
+function updatePrebuffer() {
+    const val = parseInt(prebufferSlider.value, 10);
+    prebufferDisplay.textContent = val;
+    CFG.prebufferMs = val;
+}
+prebufferSlider.addEventListener('input', updatePrebuffer);
+$('resetPrebuffer').addEventListener('click', () => {
+    prebufferSlider.value = DEFAULTS.prebufferMs;
+    updatePrebuffer();
+});
+updatePrebuffer();
+
+// Интервал VAD
+function updateVadInterval() {
+    const val = parseInt(vadIntervalSlider.value, 10);
+    vadIntervalDisplay.textContent = val;
+    CFG.vadInterval = val;
+}
+vadIntervalSlider.addEventListener('input', updateVadInterval);
+$('resetVadInterval').addEventListener('click', () => {
+    vadIntervalSlider.value = DEFAULTS.vadInterval;
+    updateVadInterval();
+});
+updateVadInterval();
 
 // ============================================================
 // КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ
@@ -404,7 +579,6 @@ btnTogglePause.addEventListener('click', () => {
         btnTogglePause.style.borderColor = '#6a6a6a';
         prebufferInfo.textContent = '⚡ Режим: паузы игнорируются, всё аудио как один сегмент';
     }
-    // Пересобираем сегменты, если есть загруженное аудио
     if (state.fullAudioBuffer) {
         analyzeAudioBuffer(state.fullAudioBuffer);
     }
@@ -584,7 +758,7 @@ async function loadAudioFile(file) {
 }
 
 // ============================================================
-// VAD-АНАЛИЗ (с учётом режима CFG.splitByPauses)
+// VAD-АНАЛИЗ (с учётом ручных настроек)
 // ============================================================
 async function analyzeAudioBuffer(audioBuffer) {
     state.segments = [];
@@ -607,7 +781,6 @@ async function analyzeAudioBuffer(audioBuffer) {
 
     const totalSamples = channelData.length;
     let pos = 0;
-    let speechSegments = [];
 
     function getRMSForWindow(start, length) {
         let sum = 0;
@@ -621,7 +794,7 @@ async function analyzeAudioBuffer(audioBuffer) {
         return Math.sqrt(sum / actualLength);
     }
 
-    // Если разделение по паузам выключено — создаём один большой сегмент
+    // Если разделение по паузам выключено — один большой сегмент
     if (!CFG.splitByPauses) {
         const durationMs = duration * 1000;
         state.segments.push({
@@ -640,7 +813,7 @@ async function analyzeAudioBuffer(audioBuffer) {
         return;
     }
 
-    // --- Разделение по паузам (обычный режим) ---
+    // --- Обычный режим с разделением по паузам ---
     while (pos < totalSamples) {
         const rms = getRMSForWindow(pos, windowSize);
         const currentTime = pos / sampleRate;
@@ -729,7 +902,7 @@ async function analyzeAudioBuffer(audioBuffer) {
 }
 
 // ============================================================
-// ЗАПИСЬ (с учётом режима CFG.splitByPauses)
+// ЗАПИСЬ (с учётом ручных настроек)
 // ============================================================
 function startRecording() {
     if (state.isRecording) return;
@@ -765,7 +938,6 @@ function startRecording() {
             let isCurrentlySpeaking = false;
             let silenceStartTime = 0;
             let lastSpeechEndTime = 0;
-            let speechSegments = [];
 
             recorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
@@ -791,7 +963,7 @@ function startRecording() {
 
                 const isVoice = rms > CFG.threshold;
 
-                // Если разделение по паузам выключено — игнорируем VAD, просто записываем всё
+                // Если разделение по паузам выключено — просто записываем всё
                 if (!CFG.splitByPauses) {
                     debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ⚡ РЕЖИМ БЕЗ ПАУЗ`;
                     updateUI();
@@ -880,9 +1052,8 @@ function startRecording() {
                     state._checkInterval = null;
                 }
 
-                // Если разделение по паузам выключено — создаём один сегмент
+                // Если разделение по паузам выключено — один сегмент
                 if (!CFG.splitByPauses) {
-                    // Собираем всё аудио целиком
                     if (state.allChunks.length > 0) {
                         const fullBlob = new Blob(state.allChunks, { type: options.mimeType });
                         state.fullAudioBlob = fullBlob;
@@ -892,7 +1063,6 @@ function startRecording() {
                                 const ctx = await getAudioContext();
                                 const buffer = await ctx.decodeAudioData(e.target.result);
                                 state.fullAudioBuffer = buffer;
-                                // Создаём один сегмент на всё аудио
                                 const durationMs = buffer.duration * 1000;
                                 state.segments = [{
                                     type: 'speech',
@@ -1378,98 +1548,7 @@ updateStats();
 fileInfo.textContent = '🎙️ Нажми "Запись" или загрузи аудиофайл';
 prebufferInfo.textContent = '⚡ Стабильная конвертация MP3 → Opus для экспорта .vad';
 
-console.log('✅ VAD-кодек v11 загружен (стабильная конвертация)');
+console.log('✅ VAD-кодек v11 загружен (ручное управление)');
 </script>
-
-
-
-<script>
-(function() {
-    "use strict";
-
-    // ============================================================
-    // УНИВЕРСАЛЬНЫЙ ОФЛАЙН-БЛОК
-    // - Работает с любым существующим manifest.json
-    // - Работает с любым существующим sw.js
-    // - Не создаёт конфликтов
-    // - Просто дублирует регистрацию SW (безопасно)
-    // ============================================================
-
-    // ---------- 1. Регистрация Service Worker (если ещё не зарегистрирован) ----------
-    function registerSW() {
-        if (!('serviceWorker' in navigator)) {
-            console.warn('[SW] ❌ Service Worker не поддерживается');
-            return;
-        }
-
-        // Проверяем, не зарегистрирован ли уже SW
-        navigator.serviceWorker.getRegistration()
-            .then((registration) => {
-                if (registration) {
-                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
-                    return;
-                }
-
-                // Если не зарегистрирован — регистрируем
-                navigator.serviceWorker.register('sw.js')
-                    .then((reg) => {
-                        console.log('[SW] ✅ Зарегистрирован:', reg);
-                    })
-                    .catch((err) => {
-                        console.error('[SW] ❌ Ошибка:', err);
-                    });
-            })
-            .catch((err) => {
-                console.error('[SW] ❌ Ошибка проверки:', err);
-            });
-    }
-
-    // ---------- 2. Проверка сети (без индикаторов) ----------
-    function checkNetwork() {
-        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
-        console.log(`📡 ${status}`);
-    }
-
-    // ---------- 3. Обработка событий сети ----------
-    function setupNetworkListeners() {
-        window.addEventListener('online', () => {
-            console.log('📡 Сеть восстановлена');
-            
-            // Обновляем SW при появлении сети
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.ready
-                    .then((registration) => {
-                        registration.update();
-                        console.log('[SW] 🔄 Проверка обновлений...');
-                    })
-                    .catch(() => {});
-            }
-        });
-
-        window.addEventListener('offline', () => {
-            console.log('📡 Сеть отключена (работаем из кэша)');
-        });
-    }
-
-    // ---------- 4. Инициализация ----------
-    function init() {
-        registerSW();
-        checkNetwork();
-        setupNetworkListeners();
-        console.log('[APP] ✅ Офлайн-функционал активирован');
-    }
-
-    // Запускаем
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-
-})();
-</script>
-
-
-
 </body>
 </html>
