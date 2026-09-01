@@ -223,6 +223,10 @@
             padding: 12px 14px;
             margin: 10px 0;
             border: 1px solid #2a2a35;
+            display: none; /* по умолчанию скрыта */
+        }
+        .controls-panel.open {
+            display: block;
         }
         .controls-panel .control-row {
             display: flex;
@@ -285,6 +289,23 @@
         .reset-btn:hover {
             background: #5a3a3a;
         }
+        .toggle-panel-btn {
+            background: #2a3a4a;
+            border: 1px solid #4a6a8a;
+            width: 100%;
+            margin: 6px 0 4px 0;
+            text-align: center;
+        }
+        .toggle-panel-btn:hover {
+            background: #3a4a5a;
+        }
+        .toggle-panel-btn .arrow {
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        .toggle-panel-btn .arrow.open {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body>
@@ -293,18 +314,13 @@
     <h2>🎙️ VAD-кодек v11</h2>
     <p style="font-size:0.9rem;color:#9ca3af;">Ручное управление параметрами VAD</p>
 
-    <!-- РЕГУЛЯТОР БИТРЕЙТА -->
-    <div class="bitrate-control">
-        <label>
-            <span>🎛️ Битрейт</span>
-            <input type="range" id="bitrateSlider" min="4000" max="128000" value="5500" step="100">
-            <span class="bitrate-value" id="bitrateDisplay">5.5 kbps</span>
-        </label>
-        <span class="bitrate-hint">(ниже — компактнее, выше — качественнее)</span>
-    </div>
+    <!-- КНОПКА ОТКРЫТЬ/ЗАКРЫТЬ ПАНЕЛЬ НАСТРОЕК -->
+    <button class="toggle-panel-btn" id="togglePanelBtn">
+        <span class="arrow" id="panelArrow">▼</span> 🎛️ Ручная настройка
+    </button>
 
-    <!-- ПАНЕЛЬ РУЧНОГО УПРАВЛЕНИЯ -->
-    <div class="controls-panel">
+    <!-- ПАНЕЛЬ РУЧНОГО УПРАВЛЕНИЯ (скрыта по умолчанию) -->
+    <div class="controls-panel" id="controlsPanel">
         <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:6px;">🎛️ Ручная настройка VAD</div>
 
         <div class="control-row">
@@ -343,6 +359,16 @@
             <button class="reset-btn" id="resetVadInterval">↺</button>
         </div>
         <div style="font-size:0.7rem;color:#6b7280;margin-top:4px;">↺ — сброс к значению по умолчанию</div>
+    </div>
+
+    <!-- РЕГУЛЯТОР БИТРЕЙТА -->
+    <div class="bitrate-control">
+        <label>
+            <span>🎛️ Битрейт</span>
+            <input type="range" id="bitrateSlider" min="4000" max="128000" value="5500" step="100">
+            <span class="bitrate-value" id="bitrateDisplay">5.5 kbps</span>
+        </label>
+        <span class="bitrate-hint">(ниже — компактнее, выше — качественнее)</span>
     </div>
 
     <div class="row">
@@ -478,6 +504,11 @@ const statusMsg = $('statusMsg');
 const bitrateSlider = $('bitrateSlider');
 const bitrateDisplay = $('bitrateDisplay');
 
+// Панель управления и кнопка переключения
+const controlsPanel = $('controlsPanel');
+const togglePanelBtn = $('togglePanelBtn');
+const panelArrow = $('panelArrow');
+
 // Слайдеры ручного управления
 const thresholdSlider = $('thresholdSlider');
 const thresholdDisplay = $('thresholdDisplay');
@@ -487,6 +518,19 @@ const prebufferSlider = $('prebufferSlider');
 const prebufferDisplay = $('prebufferDisplay');
 const vadIntervalSlider = $('vadIntervalSlider');
 const vadIntervalDisplay = $('vadIntervalDisplay');
+
+// ============================================================
+// ОТКРЫТИЕ/ЗАКРЫТИЕ ПАНЕЛИ НАСТРОЕК
+// ============================================================
+togglePanelBtn.addEventListener('click', () => {
+    controlsPanel.classList.toggle('open');
+    panelArrow.classList.toggle('open');
+    if (controlsPanel.classList.contains('open')) {
+        togglePanelBtn.innerHTML = '<span class="arrow open">▼</span> 🎛️ Ручная настройка (скрыть)';
+    } else {
+        togglePanelBtn.innerHTML = '<span class="arrow">▼</span> 🎛️ Ручная настройка';
+    }
+});
 
 // ============================================================
 // РЕГУЛЯТОРЫ
