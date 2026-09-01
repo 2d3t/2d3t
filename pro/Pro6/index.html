@@ -798,6 +798,224 @@
     .filename-display .name {
         color: #93bbfc;
     }
+
+/* Стили для печатного макета */
+.print-layout-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    z-index: 99999;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.print-layout-modal .print-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 20px auto;
+}
+
+.print-layout-modal .print-header {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #1e293b;
+}
+
+.print-layout-modal .print-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.print-layout-modal .print-header .sub {
+    color: #64748b;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.print-grid {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    align-items: start;
+}
+
+.print-grid .qr-cell {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    width: 100%;
+    max-width: 200px;
+}
+
+.print-grid .qr-cell img {
+    width: 100%;
+    max-width: 160px;
+    height: auto;
+    image-rendering: pixelated;
+    background: white;
+}
+
+.print-grid .qr-cell .label {
+    font-size: 11px;
+    color: #475569;
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.print-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.print-actions button {
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: 600;
+    border: 0;
+    border-radius: 40px;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+.print-actions .btn-print {
+    background: #3b4de0;
+    color: white;
+}
+
+.print-actions .btn-print:hover {
+    background: #5b6cf0;
+}
+
+.print-actions .btn-close {
+    background: #1e2630;
+    color: #e2e8f0;
+    border: 1px solid #2a3340;
+}
+
+/* Стили для печати */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .print-layout-modal,
+    .print-layout-modal * {
+        visibility: visible;
+    }
+    .print-layout-modal {
+        position: absolute;
+        background: white;
+        padding: 0;
+        margin: 0;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+    }
+    .print-layout-modal .print-container {
+        box-shadow: none;
+        border-radius: 0;
+        padding: 15px;
+        margin: 0;
+        max-width: 100%;
+    }
+    .print-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+    }
+    .print-grid .qr-cell {
+        border: 1px solid #ddd;
+        padding: 6px;
+        max-width: 100%;
+    }
+    .print-grid .qr-cell img {
+        max-width: 100%;
+    }
+    .print-actions {
+        display: none !important;
+    }
+    .print-header .sub {
+        display: none;
+    }
+    .print-header h2 {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+}
+
+/* Адаптив для мобильных */
+@media (max-width: 768px) {
+    .print-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .print-layout-modal .print-container {
+        padding: 12px;
+    }
+    .print-grid .qr-cell {
+        padding: 6px;
+    }
+}
+
+/* Стили для контролов печати */
+.print-layout-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f1f5f9;
+    border-radius: 12px;
+}
+
+.print-layout-controls .control-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.print-layout-controls label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1e293b;
+    min-width: 80px;
+}
+
+.print-layout-controls input[type="range"] {
+    flex: 1;
+    min-width: 120px;
+    accent-color: #3b4de0;
+}
+
+.print-layout-controls .value {
+    font-weight: bold;
+    font-size: 14px;
+    color: #3b4de0;
+    min-width: 40px;
+    text-align: center;
+}
+
+.print-layout-controls .hint {
+    font-size: 12px;
+    color: #64748b;
+}
+
 </style>
 
 <script>
@@ -880,6 +1098,16 @@ function toggleQR() {
                     <button class="primary" id="generateBtn" onclick="generateQRs()">⚡ Создать QR-коды</button>
                     <button class="secondary" onclick="clearGenerator()">🗑 Очистить</button>
                 </div>
+
+<div class="btn-group" style="margin-top: 10px;">
+    <button class="info-btn" onclick="openPrintLayout()" id="printLayoutBtn" disabled>
+        📄 Открыть макет для печати
+    </button>
+</div>
+
+
+
+
 
                 <div class="progress-indicator" id="progressIndicator">
                     <div class="spinner"></div>
@@ -1661,6 +1889,19 @@ function toggleQR() {
                 playSuccessBeep();
 
                 if (transferQRs.length > 0) {
+    updateTransferUI();
+    updatePrintButton();
+    document.getElementById("transferStatus").textContent = "Готово к передаче (" + transferQRs.length + " QR)";
+
+    setTimeout(() => {
+        showPage('transfer');
+        setTimeout(() => {
+            startTransfer();
+        }, 500);
+    }, 1000);
+}
+
+ {
                     updateTransferUI();
                     document.getElementById("transferStatus").textContent = "Готово к передаче (" + transferQRs.length + " QR)";
 
@@ -3096,6 +3337,225 @@ function toggleQR() {
         resetTransferTimer();
     };
     </script>
+
+
+<script>
+
+/* =========================================================
+   ПЕЧАТНЫЙ МАКЕТ С РЕГУЛИРОВКОЙ КОЛИЧЕСТВА QR НА ЛИСТЕ
+========================================================= */
+
+// Переменные для хранения настроек печати
+let printSettings = {
+    cols: 3,
+    rows: 4
+};
+
+function openPrintLayout() {
+    if (transferQRs.length === 0) {
+        alert('❌ Нет QR-кодов для печати. Сначала создайте их в Генераторе.');
+        return;
+    }
+
+    // Удаляем старый модальный блок
+    const oldModal = document.querySelector('.print-layout-modal');
+    if (oldModal) oldModal.remove();
+
+    // Создаём модальное окно
+    const modal = document.createElement('div');
+    modal.className = 'print-layout-modal';
+    modal.id = 'printModal';
+
+    // Собираем QR-коды
+    const qrs = transferQRs;
+    const total = qrs.length;
+
+    // Определяем начальные значения для ползунков
+    let cols = printSettings.cols || 3;
+    let rows = printSettings.rows || 4;
+    // Ограничиваем
+    cols = Math.max(1, Math.min(8, cols));
+    rows = Math.max(1, Math.min(10, rows));
+
+    // Функция для обновления сетки
+    function renderGrid(colsVal, rowsVal) {
+        const gridContainer = document.getElementById('printGridContainer');
+        if (!gridContainer) return;
+
+        const maxItems = colsVal * rowsVal;
+        let displayed = qrs.slice(0, maxItems);
+        
+        // Если QR-кодов меньше, чем ячеек, показываем все
+        if (qrs.length < maxItems) {
+            displayed = qrs.slice(0);
+        }
+
+        let gridHTML = '';
+        for (let i = 0; i < displayed.length; i++) {
+            const qr = displayed[i];
+            gridHTML += `
+                <div class="qr-cell">
+                    <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
+                    <div class="label">${qr.part} / ${qr.total}</div>
+                </div>
+            `;
+        }
+
+        // Заполняем пустые ячейки, если нужно
+        const emptyCount = maxItems - displayed.length;
+        for (let i = 0; i < emptyCount; i++) {
+            gridHTML += `
+                <div class="qr-cell" style="border: 1px dashed #ccc; opacity: 0.3;">
+                    <div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">пусто</div>
+                </div>
+            `;
+        }
+
+        gridContainer.innerHTML = gridHTML;
+        gridContainer.style.gridTemplateColumns = `repeat(${colsVal}, 1fr)`;
+
+        // Обновляем информацию о количестве
+        const info = document.getElementById('printInfo');
+        if (info) {
+            const shown = Math.min(displayed.length, maxItems);
+            info.textContent = `Показано: ${shown} из ${qrs.length} QR-кодов • Колонки: ${colsVal} • Строки: ${rowsVal}`;
+        }
+    }
+
+    // Имя файла для заголовка
+    const fileName = currentFileInfo.name || 'файл';
+
+    modal.innerHTML = `
+        <div class="print-container" id="printContainer">
+            <div class="print-header">
+                <h2>📦 QR-коды для печати</h2>
+                <div class="sub">Файл: ${fileName} • Всего: ${total} QR-кодов</div>
+            </div>
+            
+            <div class="print-layout-controls">
+                <div class="control-row">
+                    <label for="printCols">Колонки:</label>
+                    <input type="range" id="printCols" min="1" max="12" value="${cols}" step="1">
+                    <span class="value" id="printColsValue">${cols}</span>
+                </div>
+                <div class="control-row">
+                    <label for="printRows">Строки:</label>
+                    <input type="range" id="printRows" min="1" max="12" value="${rows}" step="1">
+                    <span class="value" id="printRowsValue">${rows}</span>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
+                    <span class="hint" id="printInfo">Показано: ${Math.min(qrs.length, cols * rows)} из ${qrs.length} QR-кодов</span>
+                    <span class="hint" style="color: #3b4de0;">Всего ячеек: ${cols * rows}</span>
+                </div>
+            </div>
+            
+            <div class="print-grid" id="printGridContainer" style="grid-template-columns: repeat(${cols}, 1fr);">
+            </div>
+            
+            <div class="print-actions">
+                <button class="btn-print" onclick="printLayout()">🖨️ Печать / PDF</button>
+                <button class="btn-close" onclick="closePrintLayout()">✕ Закрыть</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Блокируем прокрутку страницы
+    document.body.style.overflow = 'hidden';
+
+    // Закрытие по клику вне контейнера
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closePrintLayout();
+    });
+
+    // Закрытие по Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePrintLayout();
+    });
+
+    // Инициализация сетки
+    renderGrid(cols, rows);
+
+    // Настройка обработчиков для ползунков
+    const colsSlider = document.getElementById('printCols');
+    const rowsSlider = document.getElementById('printRows');
+    const colsValue = document.getElementById('printColsValue');
+    const rowsValue = document.getElementById('printRowsValue');
+
+    if (colsSlider) {
+        colsSlider.addEventListener('input', function() {
+            const val = parseInt(this.value, 10);
+            colsValue.textContent = val;
+            printSettings.cols = val;
+            const rowsVal = parseInt(rowsSlider.value, 10);
+            renderGrid(val, rowsVal);
+        });
+    }
+
+    if (rowsSlider) {
+        rowsSlider.addEventListener('input', function() {
+            const val = parseInt(this.value, 10);
+            rowsValue.textContent = val;
+            printSettings.rows = val;
+            const colsVal = parseInt(colsSlider.value, 10);
+            renderGrid(colsVal, val);
+        });
+    }
+}
+
+function closePrintLayout() {
+    const modal = document.querySelector('.print-layout-modal');
+    if (modal) modal.remove();
+    document.body.style.overflow = '';
+}
+
+function printLayout() {
+    // Сохраняем текущие стили
+    const modal = document.getElementById('printModal');
+    if (!modal) return;
+
+    // Добавляем класс для печати
+    modal.classList.add('printing');
+
+    // Запускаем печать
+    window.print();
+
+    // Удаляем класс после печати
+    setTimeout(() => {
+        modal.classList.remove('printing');
+    }, 1000);
+}
+
+// Обновляем кнопку "Открыть макет для печати" после создания QR
+function updatePrintButton() {
+    const btn = document.getElementById('printLayoutBtn');
+    if (btn) {
+        btn.disabled = (transferQRs.length === 0);
+    }
+}
+
+// Модифицируем generateQRs, чтобы обновлять кнопку
+const originalGenerateQRs = window.generateQRs;
+window.generateQRs = async function() {
+    await originalGenerateQRs.call(this);
+    updatePrintButton();
+};
+
+// Модифицируем clearGenerator, чтобы обновлять кнопку
+const originalClearGenerator = window.clearGenerator;
+window.clearGenerator = function() {
+    originalClearGenerator.call(this);
+    updatePrintButton();
+};
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(updatePrintButton, 100);
+});
+
+</script>
+
 
 </body>
 </html>
