@@ -799,98 +799,112 @@
         color: #93bbfc;
     }
 
-
-/* Стили для контролов печати */
-.print-layout-controls {
+/* Стили для печатного макета */
+.print-layout-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding: 12px;
-    background: #f1f5f9;
-    border-radius: 12px;
+    align-items: center;
+    justify-content: flex-start;
+    z-index: 99999;
+    padding: 20px;
+    overflow-y: auto;
 }
 
-.print-layout-controls .control-row {
-    display: flex;
-    align-items: center;
+.print-layout-modal .print-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 20px auto;
+}
+
+.print-layout-modal .print-header {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #1e293b;
+}
+
+.print-layout-modal .print-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.print-layout-modal .print-header .sub {
+    color: #64748b;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.print-grid {
+    display: grid;
     gap: 12px;
+    justify-items: center;
+    align-items: start;
+}
+
+.print-grid .qr-cell {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    width: 100%;
+    max-width: 200px;
+}
+
+.print-grid .qr-cell img {
+    width: 100%;
+    max-width: 160px;
+    height: auto;
+    image-rendering: pixelated;
+    background: white;
+}
+
+.print-grid .qr-cell .label {
+    font-size: 11px;
+    color: #475569;
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.print-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
     flex-wrap: wrap;
 }
 
-.print-layout-controls label {
+.print-actions button {
+    padding: 12px 30px;
+    font-size: 16px;
     font-weight: 600;
-    font-size: 14px;
-    color: #1e293b;
-    min-width: 80px;
+    border: 0;
+    border-radius: 40px;
+    cursor: pointer;
+    min-width: 150px;
 }
 
-.print-layout-controls input[type="range"] {
-    flex: 1;
-    min-width: 120px;
-    accent-color: #3b4de0;
+.print-actions .btn-print {
+    background: #3b4de0;
+    color: white;
 }
 
-.print-layout-controls .value {
-    font-weight: bold;
-    font-size: 14px;
-    color: #3b4de0;
-    min-width: 40px;
-    text-align: center;
+.print-actions .btn-print:hover {
+    background: #5b6cf0;
 }
 
-.print-layout-controls .hint {
-    font-size: 12px;
-    color: #64748b;
-}
-
-/* Скрываем элементы управления при печати */
-@media print {
-    .print-layout-controls {
-        display: none !important;
-    }
-    .print-actions {
-        display: none !important;
-    }
-    .print-header .sub {
-        display: none !important;
-    }
-    .print-grid .qr-cell {
-        border: 1px solid #ddd !important;
-        padding: 6px !important;
-        max-width: 100% !important;
-    }
-    .print-grid .qr-cell img {
-        max-width: 100% !important;
-    }
-    .print-grid .qr-cell .label {
-        font-size: 10px !important;
-        color: #333 !important;
-    }
-    .print-container {
-        padding: 15px !important;
-        margin: 0 !important;
-        max-width: 100% !important;
-        background: white !important;
-    }
-    .print-layout-modal {
-        background: white !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        overflow: visible !important;
-    }
-    .print-layout-modal .print-container {
-        box-shadow: none !important;
-        border-radius: 0 !important;
-    }
-    .print-grid {
-        gap: 8px !important;
-    }
+.print-actions .btn-close {
+    background: #1e2630;
+    color: #e2e8f0;
+    border: 1px solid #2a3340;
 }
 
 /* Стили для печати */
@@ -3369,42 +3383,60 @@ function openPrintLayout() {
         if (!gridContainer) return;
 
         const maxItems = colsVal * rowsVal;
-        let displayed = qrs.slice(0, maxItems);
         
-        // Если QR-кодов меньше, чем ячеек, показываем все
-        if (qrs.length < maxItems) {
-            displayed = qrs.slice(0);
-        }
-
+        // Получаем все QR-коды, но только те, которые помещаются на текущей странице
+        // Для пагинации мы показываем все QR, разбивая их на страницы
+        // Но для печати мы разбиваем на страницы с помощью CSS page-break
+        
         let gridHTML = '';
-        for (let i = 0; i < displayed.length; i++) {
-            const qr = displayed[i];
-            gridHTML += `
-                <div class="qr-cell">
-                    <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
-                    <div class="label">${qr.part} / ${qr.total}</div>
-                </div>
-            `;
+        const totalQrs = qrs.length;
+        const itemsPerPage = colsVal * rowsVal;
+        const totalPages = Math.ceil(totalQrs / itemsPerPage);
+        
+        for (let page = 0; page < totalPages; page++) {
+            // Добавляем разрыв страницы между страницами (кроме первой)
+            if (page > 0) {
+                gridHTML += `<div style="page-break-before: always; break-before: page;"></div>`;
+            }
+            
+            const startIdx = page * itemsPerPage;
+            const endIdx = Math.min(startIdx + itemsPerPage, totalQrs);
+            
+            // Создаём контейнер для страницы
+            gridHTML += `<div style="display: grid; grid-template-columns: repeat(${colsVal}, 1fr); gap: 12px; margin-bottom: 20px; page-break-after: avoid;">`;
+            
+            for (let i = startIdx; i < endIdx; i++) {
+                const qr = qrs[i];
+                gridHTML += `
+                    <div class="qr-cell">
+                        <img src="${qr.dataURL}" alt="QR ${qr.part}" loading="lazy">
+                        <div class="label">${qr.part} / ${qr.total}</div>
+                    </div>
+                `;
+            }
+            
+            gridHTML += `</div>`;
         }
 
-        // Заполняем пустые ячейки, если нужно
-        const emptyCount = maxItems - displayed.length;
-        for (let i = 0; i < emptyCount; i++) {
-            gridHTML += `
-                <div class="qr-cell" style="border: 1px dashed #ccc; opacity: 0.3;">
-                    <div style="height: 120px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px;">пусто</div>
-                </div>
-            `;
+        // Если QR-кодов нет, показываем сообщение
+        if (totalQrs === 0) {
+            gridHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">Нет QR-кодов для отображения</div>`;
         }
 
         gridContainer.innerHTML = gridHTML;
-        gridContainer.style.gridTemplateColumns = `repeat(${colsVal}, 1fr)`;
 
         // Обновляем информацию о количестве
         const info = document.getElementById('printInfo');
         if (info) {
-            const shown = Math.min(displayed.length, maxItems);
-            info.textContent = `Показано: ${shown} из ${qrs.length} QR-кодов • Колонки: ${colsVal} • Строки: ${rowsVal}`;
+            const itemsPerPage = colsVal * rowsVal;
+            const totalPages = Math.ceil(totalQrs / itemsPerPage);
+            info.textContent = `Всего: ${totalQrs} QR-кодов • Страниц: ${totalPages} • Колонки: ${colsVal} • Строки: ${rowsVal}`;
+        }
+        
+        // Обновляем количество ячеек на страницу
+        const cellsInfo = document.getElementById('printCellsInfo');
+        if (cellsInfo) {
+            cellsInfo.textContent = `QR на страницу: ${colsVal * rowsVal}`;
         }
     }
 
@@ -3430,12 +3462,12 @@ function openPrintLayout() {
                     <span class="value" id="printRowsValue">${rows}</span>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px;">
-                    <span class="hint" id="printInfo">Показано: ${Math.min(qrs.length, cols * rows)} из ${qrs.length} QR-кодов</span>
-                    <span class="hint" style="color: #3b4de0;">Всего ячеек: ${cols * rows}</span>
+                    <span class="hint" id="printInfo">Всего: ${total} QR-кодов</span>
+                    <span class="hint" style="color: #3b4de0;" id="printCellsInfo">QR на страницу: ${cols * rows}</span>
                 </div>
             </div>
             
-            <div class="print-grid" id="printGridContainer" style="grid-template-columns: repeat(${cols}, 1fr);">
+            <div class="print-grid" id="printGridContainer">
             </div>
             
             <div class="print-actions">
