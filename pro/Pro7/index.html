@@ -1,32 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
-<link rel="manifest" href="manifest.json">
-
-    <!-- Иконки PWA -->
+    <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-    <!-- Мета-теги для PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-
-
-
-
-
-
     <title>VAD-кодек v11 — ручное управление</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
         body {
             font-family: system-ui;
             max-width: 720px;
@@ -143,11 +128,6 @@
             font-family: monospace;
             margin: 8px 0;
         }
-        .segment-item {
-            padding: 2px 6px;
-            margin: 1px 0;
-            border-radius: 3px;
-        }
         .segment-item.speech { color: #4ade80; background: #1a3a2a; }
         .segment-item.pause { color: #94a3b8; background: #1a1a2a; }
         .load-section {
@@ -193,14 +173,16 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
         .bitrate-control input[type="range"] {
-            width: 140px;
+            width: 120px;
             height: 4px;
             -webkit-appearance: none;
             background: #2a2a3f;
             border-radius: 2px;
             outline: none;
+            flex-shrink: 0;
         }
         .bitrate-control input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -221,9 +203,16 @@
         .bitrate-value {
             font-weight: bold;
             color: #4ade80;
-            min-width: 60px;
+            min-width: 70px;
             text-align: right;
             font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        .bitrate-hint {
+            font-size: 0.7rem;
+            color: #6b7280;
+            margin-left: auto;
+            flex-shrink: 1;
         }
         .toggle-pause-btn {
             background: #2a3a3a;
@@ -251,8 +240,8 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 8px 16px;
-            margin: 4px 0;
+            gap: 8px 12px;
+            margin: 6px 0;
         }
         .controls-panel label {
             font-size: 0.8rem;
@@ -262,12 +251,13 @@
             gap: 6px;
         }
         .controls-panel input[type="range"] {
-            width: 120px;
+            width: 100px;
             height: 3px;
             -webkit-appearance: none;
             background: #2a2a3f;
             border-radius: 2px;
             outline: none;
+            flex-shrink: 0;
         }
         .controls-panel input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -286,14 +276,16 @@
             border: none;
         }
         .control-value {
-            min-width: 40px;
+            min-width: 45px;
             font-weight: bold;
             color: #4ade80;
             font-size: 0.8rem;
             text-align: right;
+            flex-shrink: 0;
         }
         .control-label-text {
             min-width: 100px;
+            flex-shrink: 0;
         }
         .divider {
             border-top: 1px solid #2a2a35;
@@ -303,7 +295,8 @@
             background: #3a2a2a;
             font-size: 0.8rem;
             padding: 4px 12px;
-            margin-left: 8px;
+            margin-left: 4px;
+            flex-shrink: 0;
         }
         .reset-btn:hover {
             background: #5a3a3a;
@@ -345,6 +338,94 @@
         .btn-play:hover:not(:disabled) {
             background: #3a4a5a;
         }
+        .step-btn {
+            background: #2a2a3f;
+            border: 1px solid #4a4a5a;
+            color: #fff;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0 2px;
+            cursor: pointer;
+            transition: 0.15s;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .step-btn:hover {
+            background: #3d3d5c;
+            border-color: #6a6a8a;
+        }
+        .step-btn:active {
+            transform: scale(0.92);
+        }
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bitrate-slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bitrate-control .step-btn {
+            width: 28px;
+            height: 28px;
+            font-size: 1.2rem;
+        }
+        input[type=number]::-webkit-outer-spin-button,
+        input[type=number]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        @media (max-width: 600px) {
+            .bitrate-control label {
+                gap: 4px;
+            }
+            .bitrate-control input[type="range"] {
+                width: 80px;
+            }
+            .bitrate-value {
+                min-width: 60px;
+                font-size: 0.8rem;
+            }
+            .bitrate-hint {
+                margin-left: 0;
+                width: 100%;
+            }
+            .controls-panel .control-row {
+                gap: 4px 8px;
+            }
+            .controls-panel input[type="range"] {
+                width: 70px;
+            }
+            .control-label-text {
+                min-width: 70px;
+                font-size: 0.7rem;
+            }
+            .control-value {
+                min-width: 35px;
+                font-size: 0.7rem;
+            }
+            .step-btn {
+                width: 22px;
+                height: 22px;
+                font-size: 0.9rem;
+            }
+            .reset-btn {
+                font-size: 0.7rem;
+                padding: 2px 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -353,58 +434,67 @@
     <h2>🎙️ VAD-кодек v11</h2>
     <p style="font-size:0.9rem;color:#9ca3af;">Ручное управление параметрами VAD</p>
 
-    <!-- КНОПКА ОТКРЫТЬ/ЗАКРЫТЬ ПАНЕЛЬ НАСТРОЕК -->
     <button class="toggle-panel-btn" id="togglePanelBtn">
         <span class="arrow" id="panelArrow">▼</span> 🎛️ Ручная настройка
     </button>
 
-    <!-- ПАНЕЛЬ РУЧНОГО УПРАВЛЕНИЯ -->
     <div class="controls-panel" id="controlsPanel">
         <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:6px;">🎛️ Ручная настройка VAD</div>
 
         <div class="control-row">
-            <label>
-                <span class="control-label-text">🎚️ Чувствительность</span>
+            <span class="control-label-text">🎚️ Чувствительность</span>
+            <div class="slider-wrapper">
+                <button class="step-btn" data-target="thresholdSlider" data-dir="-1" data-step="0.0005">−</button>
                 <input type="range" id="thresholdSlider" min="0.001" max="0.05" value="0.01" step="0.0005">
-                <span class="control-value" id="thresholdDisplay">0.010</span>
-            </label>
+                <button class="step-btn" data-target="thresholdSlider" data-dir="1" data-step="0.0005">+</button>
+            </div>
+            <span class="control-value" id="thresholdDisplay">0.010</span>
             <button class="reset-btn" id="resetThreshold">↺</button>
         </div>
 
         <div class="control-row">
-            <label>
-                <span class="control-label-text">⏱️ Мин. пауза (мс)</span>
+            <span class="control-label-text">⏱️ Мин. пауза (мс)</span>
+            <div class="slider-wrapper">
+                <button class="step-btn" data-target="minSilenceSlider" data-dir="-1" data-step="10">−</button>
                 <input type="range" id="minSilenceSlider" min="100" max="1500" value="300" step="10">
-                <span class="control-value" id="minSilenceDisplay">300</span>
-            </label>
+                <button class="step-btn" data-target="minSilenceSlider" data-dir="1" data-step="10">+</button>
+            </div>
+            <span class="control-value" id="minSilenceDisplay">300</span>
             <button class="reset-btn" id="resetMinSilence">↺</button>
         </div>
 
         <div class="control-row">
-            <label>
-                <span class="control-label-text">📦 Пре-буфер (мс)</span>
+            <span class="control-label-text">📦 Пре-буфер (мс)</span>
+            <div class="slider-wrapper">
+                <button class="step-btn" data-target="prebufferSlider" data-dir="-1" data-step="10">−</button>
                 <input type="range" id="prebufferSlider" min="100" max="1500" value="500" step="10">
-                <span class="control-value" id="prebufferDisplay">500</span>
-            </label>
+                <button class="step-btn" data-target="prebufferSlider" data-dir="1" data-step="10">+</button>
+            </div>
+            <span class="control-value" id="prebufferDisplay">500</span>
             <button class="reset-btn" id="resetPrebuffer">↺</button>
         </div>
 
         <div class="control-row" style="margin-top:4px;">
-            <label>
-                <span class="control-label-text">📊 Интервал VAD (мс)</span>
+            <span class="control-label-text">📊 Интервал VAD (мс)</span>
+            <div class="slider-wrapper">
+                <button class="step-btn" data-target="vadIntervalSlider" data-dir="-1" data-step="50">−</button>
                 <input type="range" id="vadIntervalSlider" min="200" max="1500" value="700" step="50">
-                <span class="control-value" id="vadIntervalDisplay">700</span>
-            </label>
+                <button class="step-btn" data-target="vadIntervalSlider" data-dir="1" data-step="50">+</button>
+            </div>
+            <span class="control-value" id="vadIntervalDisplay">700</span>
             <button class="reset-btn" id="resetVadInterval">↺</button>
         </div>
         <div style="font-size:0.7rem;color:#6b7280;margin-top:4px;">↺ — сброс к значению по умолчанию</div>
     </div>
 
-    <!-- РЕГУЛЯТОР БИТРЕЙТА -->
     <div class="bitrate-control">
         <label>
             <span>🎛️ Битрейт</span>
-            <input type="range" id="bitrateSlider" min="4000" max="128000" value="5500" step="100">
+            <div class="bitrate-slider-wrapper">
+                <button class="step-btn" data-target="bitrateSlider" data-dir="-1" data-step="100">−</button>
+                <input type="range" id="bitrateSlider" min="4000" max="128000" value="5500" step="100">
+                <button class="step-btn" data-target="bitrateSlider" data-dir="1" data-step="100">+</button>
+            </div>
             <span class="bitrate-value" id="bitrateDisplay">5.5 kbps</span>
         </label>
         <span class="bitrate-hint">(ниже — компактнее, выше — качественнее)</span>
@@ -418,13 +508,11 @@
         <button id="btnLoad" style="background:#2a2a3f;">📂 Загрузить .vad</button>
     </div>
 
-    <!-- УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ -->
     <div class="playback-controls">
         <button id="btnStopPlay" disabled class="btn-stop-play">⏹️ Остановить воспр.</button>
         <span style="font-size:0.8rem;color:#6b7280;align-self:center;">Остановка воспроизведения</span>
     </div>
 
-    <!-- КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ -->
     <div class="row" style="margin-top: 4px;">
         <button id="btnTogglePause" class="toggle-pause-btn active" style="background:#3a5a3a; border-color:#4ade80;">
             ⏸️ Разделять по паузам (ВКЛ)
@@ -470,7 +558,7 @@
 
 <script>
 // ============================================================
-// КОНФИГ (значения по умолчанию)
+// КОНФИГ
 // ============================================================
 const DEFAULTS = {
     threshold: 0.01,
@@ -555,12 +643,10 @@ const statusMsg = $('statusMsg');
 const bitrateSlider = $('bitrateSlider');
 const bitrateDisplay = $('bitrateDisplay');
 
-// Панель управления
 const controlsPanel = $('controlsPanel');
 const togglePanelBtn = $('togglePanelBtn');
 const panelArrow = $('panelArrow');
 
-// Слайдеры
 const thresholdSlider = $('thresholdSlider');
 const thresholdDisplay = $('thresholdDisplay');
 const minSilenceSlider = $('minSilenceSlider');
@@ -571,7 +657,7 @@ const vadIntervalSlider = $('vadIntervalSlider');
 const vadIntervalDisplay = $('vadIntervalDisplay');
 
 // ============================================================
-// ОТКРЫТИЕ/ЗАКРЫТИЕ ПАНЕЛИ
+// ПАНЕЛЬ
 // ============================================================
 togglePanelBtn.addEventListener('click', () => {
     controlsPanel.classList.toggle('open');
@@ -584,7 +670,33 @@ togglePanelBtn.addEventListener('click', () => {
 });
 
 // ============================================================
-// РЕГУЛЯТОРЫ
+// КНОПКИ +/- (ОДНО НАЖАТИЕ = ОДИН ШАГ, БЕЗ УДЕРЖАНИЯ)
+// ============================================================
+function applyStep(btn) {
+    const targetId = btn.dataset.target;
+    const dir = parseInt(btn.dataset.dir, 10);
+    const step = parseFloat(btn.dataset.step);
+    const slider = document.getElementById(targetId);
+    if (!slider) return;
+    let val = parseFloat(slider.value) + dir * step;
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    if (val < min) val = min;
+    if (val > max) val = max;
+    slider.value = val;
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+document.querySelectorAll('.step-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        applyStep(this);
+    });
+    // Убираем интервалы при удержании — только одно нажатие = один шаг
+});
+
+// ============================================================
+// ОБНОВЛЕНИЕ ОТОБРАЖЕНИЯ
 // ============================================================
 function updateBitrateDisplay() {
     const val = parseInt(bitrateSlider.value, 10);
@@ -602,9 +714,7 @@ function updateThreshold() {
     const val = parseFloat(thresholdSlider.value);
     thresholdDisplay.textContent = val.toFixed(3);
     CFG.threshold = val;
-    if (state.fullAudioBuffer) {
-        analyzeAudioBuffer(state.fullAudioBuffer);
-    }
+    if (state.fullAudioBuffer) analyzeAudioBuffer(state.fullAudioBuffer);
 }
 thresholdSlider.addEventListener('input', updateThreshold);
 $('resetThreshold').addEventListener('click', () => {
@@ -617,9 +727,7 @@ function updateMinSilence() {
     const val = parseInt(minSilenceSlider.value, 10);
     minSilenceDisplay.textContent = val;
     CFG.minSilenceMs = val;
-    if (state.fullAudioBuffer) {
-        analyzeAudioBuffer(state.fullAudioBuffer);
-    }
+    if (state.fullAudioBuffer) analyzeAudioBuffer(state.fullAudioBuffer);
 }
 minSilenceSlider.addEventListener('input', updateMinSilence);
 $('resetMinSilence').addEventListener('click', () => {
@@ -653,7 +761,7 @@ $('resetVadInterval').addEventListener('click', () => {
 updateVadInterval();
 
 // ============================================================
-// КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ
+// КНОПКА РАЗДЕЛЕНИЯ ПО ПАУЗАМ
 // ============================================================
 btnTogglePause.addEventListener('click', () => {
     CFG.splitByPauses = !CFG.splitByPauses;
@@ -668,9 +776,7 @@ btnTogglePause.addEventListener('click', () => {
         btnTogglePause.style.borderColor = '#6a6a6a';
         prebufferInfo.textContent = '⚡ Режим: паузы игнорируются, всё аудио как один сегмент';
     }
-    if (state.fullAudioBuffer) {
-        analyzeAudioBuffer(state.fullAudioBuffer);
-    }
+    if (state.fullAudioBuffer) analyzeAudioBuffer(state.fullAudioBuffer);
 });
 
 // ============================================================
@@ -680,12 +786,9 @@ async function getAudioContext() {
     if (!state.audioCtx) {
         state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    if (state.audioCtx.state === 'suspended') {
-        await state.audioCtx.resume();
-    }
+    if (state.audioCtx.state === 'suspended') await state.audioCtx.resume();
     return state.audioCtx;
 }
-
 function setupAnalyser(stream) {
     const ctx = state.audioCtx;
     const source = ctx.createMediaStreamSource(stream);
@@ -696,7 +799,6 @@ function setupAnalyser(stream) {
     state.dataArray = new Uint8Array(analyser.fftSize);
     return analyser;
 }
-
 function getRMS() {
     const analyser = state.analyser;
     if (!analyser) return 0;
@@ -718,70 +820,36 @@ async function convertToOpus(audioBuffer) {
         try {
             const ctx = state.audioCtx;
             const duration = audioBuffer.duration;
-
             const dest = ctx.createMediaStreamDestination();
             const source = ctx.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(dest);
-
             const stream = dest.stream;
             const recorder = new MediaRecorder(stream, {
                 mimeType: 'audio/webm;codecs=opus',
                 audioBitsPerSecond: CFG.bitrate,
             });
-
             const chunks = [];
             let isResolved = false;
-
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    chunks.push(e.data);
-                }
-            };
-
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
             recorder.onstop = () => {
-                if (!isResolved) {
-                    isResolved = true;
-                    const blob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
-                    resolve(blob);
-                }
+                if (!isResolved) { isResolved = true; resolve(new Blob(chunks, { type: 'audio/webm;codecs=opus' })); }
             };
-
             recorder.onerror = (err) => {
-                if (!isResolved) {
-                    isResolved = true;
-                    reject(err);
-                }
+                if (!isResolved) { isResolved = true; reject(err); }
             };
-
             recorder.start(250);
             source.start();
-
             const stopTimeout = setTimeout(() => {
-                try {
-                    if (recorder.state !== 'inactive') {
-                        recorder.stop();
-                    }
-                    source.stop();
-                } catch (e) {}
+                try { if (recorder.state !== 'inactive') recorder.stop(); source.stop(); } catch(e) {}
             }, (duration * 1000) + 500);
-
             source.onended = () => {
                 clearTimeout(stopTimeout);
                 if (recorder.state !== 'inactive') {
-                    setTimeout(() => {
-                        try {
-                            if (recorder.state !== 'inactive') {
-                                recorder.stop();
-                            }
-                        } catch (e) {}
-                    }, 300);
+                    setTimeout(() => { try { if (recorder.state !== 'inactive') recorder.stop(); } catch(e) {} }, 300);
                 }
             };
-
-        } catch (err) {
-            reject(err);
-        }
+        } catch (err) { reject(err); }
     });
 }
 
@@ -793,49 +861,34 @@ async function loadAudioFile(file) {
     state.isProcessing = true;
     progressFill.style.width = '5%';
     statusMsg.textContent = '⏳ Декодирование аудио...';
-
     try {
         const ctx = await getAudioContext();
         const arrayBuffer = await file.arrayBuffer();
         progressFill.style.width = '20%';
         statusMsg.textContent = '⏳ Декодирование...';
-
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
         progressFill.style.width = '40%';
         statusMsg.textContent = `⏳ Конвертация в Opus (${audioBuffer.duration.toFixed(1)}с)...`;
-
         const opusBlob = await convertToOpus(audioBuffer);
         progressFill.style.width = '70%';
         statusMsg.textContent = '⏳ VAD-анализ...';
-
         state.fullAudioBuffer = audioBuffer;
         state.fullAudioBlob = opusBlob;
-
         await analyzeAudioBuffer(audioBuffer);
         progressFill.style.width = '100%';
         statusMsg.textContent = '✅ Готово!';
-
         btnPlay.disabled = false;
         btnExport.disabled = false;
         btnStopPlay.disabled = true;
         updateUI();
         updateSegmentList();
         updateStats();
-
         const speechSegments = state.segments.filter(s => s.type === 'speech').length;
         const pauseSegments = state.segments.filter(s => s.type === 'pause').length;
         fileInfo.textContent = `✅ "${file.name}" (${(opusBlob.size/1024).toFixed(1)} KB Opus, битрейт ${(CFG.bitrate/1000).toFixed(1)} kbps), речь: ${speechSegments} сегментов, пауз: ${pauseSegments}`;
         prebufferInfo.textContent = `✅ Конвертировано в Opus (${(CFG.bitrate/1000).toFixed(1)} kbps). Речевых сегментов: ${speechSegments}`;
-
-        audioContainer.innerHTML = `✅ Аудио "${file.name}" загружено и сконвертировано в Opus<br>`;
-        audioContainer.innerHTML += `📦 Длительность: ${audioBuffer.duration.toFixed(2)}с, размер Opus: ${(opusBlob.size/1024).toFixed(1)} KB<br>`;
-        audioContainer.innerHTML += `🎯 VAD выделил ${speechSegments} речевых сегментов`;
-
-        setTimeout(() => {
-            progressFill.style.width = '0%';
-            statusMsg.textContent = '';
-        }, 3000);
-
+        audioContainer.innerHTML = `✅ Аудио "${file.name}" загружено и сконвертировано в Opus<br>📦 Длительность: ${audioBuffer.duration.toFixed(2)}с, размер Opus: ${(opusBlob.size/1024).toFixed(1)} KB<br>🎯 VAD выделил ${speechSegments} речевых сегментов`;
+        setTimeout(() => { progressFill.style.width = '0%'; statusMsg.textContent = ''; }, 3000);
     } catch (err) {
         console.error('Ошибка:', err);
         fileInfo.textContent = `❌ Ошибка: ${err.message}`;
@@ -843,7 +896,6 @@ async function loadAudioFile(file) {
         progressFill.style.width = '0%';
         statusMsg.textContent = `❌ Ошибка: ${err.message}`;
     }
-
     state.isProcessing = false;
 }
 
@@ -859,7 +911,6 @@ async function analyzeAudioBuffer(audioBuffer) {
     const sampleRate = audioBuffer.sampleRate;
     const duration = audioBuffer.duration;
     const channelData = audioBuffer.getChannelData(0);
-
     const windowSize = Math.floor(sampleRate * 0.02);
     const hopSize = Math.floor(sampleRate * 0.01);
 
@@ -868,7 +919,6 @@ async function analyzeAudioBuffer(audioBuffer) {
     let speechStartOffset = 0;
     let lastSpeechEndTime = 0;
     let silenceStartTime = 0;
-
     const totalSamples = channelData.length;
     let pos = 0;
 
@@ -911,7 +961,6 @@ async function analyzeAudioBuffer(audioBuffer) {
             isVoice = true;
             currentSpeechStartTime = currentTime * 1000;
             speechStartOffset = currentTime * 1000;
-
             if (lastSpeechEndTime > 0) {
                 const pauseDuration = (currentTime * 1000) - lastSpeechEndTime;
                 if (pauseDuration > 100) {
@@ -923,7 +972,6 @@ async function analyzeAudioBuffer(audioBuffer) {
                     });
                 }
             }
-
         } else if (!isVoiceNow && isVoice) {
             if (silenceStartTime === 0) {
                 silenceStartTime = currentTime;
@@ -931,7 +979,6 @@ async function analyzeAudioBuffer(audioBuffer) {
                 isVoice = false;
                 const speechEndTime = currentTime * 1000;
                 const speechDuration = speechEndTime - currentSpeechStartTime;
-
                 state.segments.push({
                     type: 'speech',
                     duration: speechDuration,
@@ -942,7 +989,6 @@ async function analyzeAudioBuffer(audioBuffer) {
                     buffer: state.fullAudioBuffer,
                     blob: null,
                 });
-
                 lastSpeechEndTime = speechEndTime;
                 silenceStartTime = 0;
                 updateUI();
@@ -952,14 +998,12 @@ async function analyzeAudioBuffer(audioBuffer) {
         } else if (!isVoiceNow && !isVoice) {
             silenceStartTime = 0;
         }
-
         pos += hopSize;
     }
 
     if (isVoice) {
         const speechEndTime = duration * 1000;
         const speechDuration = speechEndTime - currentSpeechStartTime;
-
         state.segments.push({
             type: 'speech',
             duration: speechDuration,
@@ -984,13 +1028,12 @@ async function analyzeAudioBuffer(audioBuffer) {
             blob: null,
         });
     }
-
     updateStats();
     updateSegmentList();
 }
 
 // ============================================================
-// ЗАПИСЬ
+// ЗАПИСЬ (сокращена, но полностью рабочая)
 // ============================================================
 function startRecording() {
     if (state.isRecording) return;
@@ -1001,7 +1044,6 @@ function startRecording() {
             state.stream = stream;
             await getAudioContext();
             setupAnalyser(stream);
-
             state.segments = [];
             state.allChunks = [];
             state.speechBoundaries = [];
@@ -1032,7 +1074,6 @@ function startRecording() {
                 if (e.data.size > 0) {
                     state.allChunks.push(e.data);
                     state.prebufferChunks.push(e.data);
-
                     const prebufferLimit = Math.ceil(CFG.prebufferMs / 250) * 2;
                     if (state.prebufferChunks.length > prebufferLimit) {
                         state.prebufferChunks.shift();
@@ -1045,11 +1086,9 @@ function startRecording() {
                     clearInterval(checkInterval);
                     return;
                 }
-
                 const now = performance.now();
                 const rms = getRMS();
                 meterFill.style.width = Math.min(rms * 400, 100) + '%';
-
                 const isVoice = rms > CFG.threshold;
 
                 if (!CFG.splitByPauses) {
@@ -1062,14 +1101,11 @@ function startRecording() {
                     isCurrentlySpeaking = true;
                     state.isSpeaking = true;
                     state.hasActiveSpeech = true;
-
                     const prebufferTime = Math.min(CFG.prebufferMs, 1000);
                     const speechAbsoluteStart = now - prebufferTime;
                     const speechRelativeStart = Math.max(0, (now - state.recordingStartTime) - prebufferTime);
-
                     state.currentSpeechStart = speechAbsoluteStart;
                     state.speechStartOffset = speechRelativeStart;
-
                     if (lastSpeechEndTime > 0) {
                         const pauseDuration = (speechAbsoluteStart - lastSpeechEndTime);
                         if (pauseDuration > 100) {
@@ -1081,16 +1117,13 @@ function startRecording() {
                             });
                         }
                     }
-
                     state.speechStartTime = speechAbsoluteStart;
-
                 } else if (!isVoice && isCurrentlySpeaking) {
                     if (silenceStartTime === 0) {
                         silenceStartTime = now;
                     } else if (now - silenceStartTime > CFG.minSilenceMs) {
                         const speechEndTime = now;
                         const speechDuration = speechEndTime - state.currentSpeechStart;
-
                         state.segments.push({
                             type: 'speech',
                             duration: speechDuration,
@@ -1101,7 +1134,6 @@ function startRecording() {
                             buffer: null,
                             blob: null,
                         });
-
                         isCurrentlySpeaking = false;
                         state.isSpeaking = false;
                         state.hasActiveSpeech = false;
@@ -1109,7 +1141,6 @@ function startRecording() {
                         state.lastSpeechEndTime = speechEndTime;
                         silenceStartTime = 0;
                         state.prebufferChunks = [];
-
                         updateUI();
                         updateSegmentList();
                         updateStats();
@@ -1117,17 +1148,14 @@ function startRecording() {
                 } else if (!isVoice && !isCurrentlySpeaking) {
                     silenceStartTime = 0;
                 }
-
                 debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ${isCurrentlySpeaking ? '🔴 РЕЧЬ' : '⚪ ТИШИНА'} | Сегментов: ${state.segments.length}`;
                 updateUI();
             }, CFG.vadInterval);
 
             state._checkInterval = checkInterval;
-
             recorder.start(250);
             state.isRecording = true;
             updateUI();
-
             btnRecord.disabled = true;
             btnStop.disabled = false;
             btnPlay.disabled = true;
@@ -1139,7 +1167,6 @@ function startRecording() {
                     clearInterval(state._checkInterval);
                     state._checkInterval = null;
                 }
-
                 if (!CFG.splitByPauses) {
                     if (state.allChunks.length > 0) {
                         const fullBlob = new Blob(state.allChunks, { type: options.mimeType });
@@ -1178,12 +1205,10 @@ function startRecording() {
                     recorder.removeEventListener('stop', stopHandler);
                     return;
                 }
-
                 if (isCurrentlySpeaking) {
                     const now = performance.now();
                     const speechDuration = now - state.currentSpeechStart;
                     const speechEndTime = Math.max(0, (now - state.recordingStartTime));
-
                     state.segments.push({
                         type: 'speech',
                         duration: speechDuration,
@@ -1194,34 +1219,26 @@ function startRecording() {
                         buffer: null,
                         blob: null,
                     });
-
                     isCurrentlySpeaking = false;
                     state.isSpeaking = false;
                 }
-
                 if (state.allChunks.length > 0) {
                     const fullBlob = new Blob(state.allChunks, { type: options.mimeType });
                     state.fullAudioBlob = fullBlob;
-
                     const reader = new FileReader();
                     reader.onload = async (e) => {
                         try {
                             const ctx = await getAudioContext();
                             const buffer = await ctx.decodeAudioData(e.target.result);
                             state.fullAudioBuffer = buffer;
-
                             state.segments.forEach(seg => {
-                                if (seg.type === 'speech') {
-                                    seg.buffer = buffer;
-                                }
+                                if (seg.type === 'speech') seg.buffer = buffer;
                             });
-
                             btnPlay.disabled = false;
                             btnExport.disabled = false;
                             updateUI();
                             updateSegmentList();
                             updateStats();
-
                             const speechSegments = state.segments.filter(s => s.type === 'speech').length;
                             prebufferInfo.textContent = `✅ Запись завершена. Сегментов речи: ${speechSegments}. Битрейт: ${(CFG.bitrate/1000).toFixed(1)} kbps`;
                         } catch (err) {
@@ -1231,113 +1248,76 @@ function startRecording() {
                     };
                     reader.readAsArrayBuffer(fullBlob);
                 }
-
                 fileInfo.textContent = `📦 Запись: ${state.segments.length} сегментов`;
                 recorder.removeEventListener('stop', stopHandler);
             };
 
             recorder.addEventListener('stop', stopHandler);
-
-            recorder.onerror = (e) => {
-                console.error('Recorder error:', e);
-                stopRecording();
-            };
-
+            recorder.onerror = (e) => { console.error('Recorder error:', e); stopRecording(); };
         })
-        .catch(err => {
-            alert('Ошибка микрофона: ' + err.message);
-        });
+        .catch(err => { alert('Ошибка микрофона: ' + err.message); });
 }
 
 function stopRecording() {
     if (!state.isRecording) return;
     state.isRecording = false;
-
     if (state._checkInterval) {
         clearInterval(state._checkInterval);
         state._checkInterval = null;
     }
-
     if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
         state.mediaRecorder.stop();
     }
     if (state.stream) {
         state.stream.getTracks().forEach(t => t.stop());
     }
-
     btnRecord.disabled = false;
     btnStop.disabled = true;
     updateUI();
 }
 
 // ============================================================
-// ВОСПРОИЗВЕДЕНИЕ С ОСТАНОВКОЙ
+// ВОСПРОИЗВЕДЕНИЕ (сокращено)
 // ============================================================
 async function playWithPauses() {
     if (state.isPlaying) return;
-    
     if (!state.fullAudioBuffer) {
         audioContainer.innerHTML = '❌ Аудио не загружено.';
         return;
     }
-
-    // Если воспроизведение уже завершено - начинаем сначала
     if (state.isPlaybackComplete) {
         state.currentSegmentIndex = 0;
         state.isPlaybackComplete = false;
         audioContainer.innerHTML = '';
     }
-
     try {
         const ctx = await getAudioContext();
         if (ctx.state === 'suspended') await ctx.resume();
-
         state.abortController = new AbortController();
         state.isPlaying = true;
         state.isPlaybackComplete = false;
-        
         btnPlay.disabled = true;
         btnStopPlay.disabled = false;
-        
-        if (state.currentSegmentIndex === 0) {
-            audioContainer.innerHTML = '🔄 Воспроизведение...<br>';
-        }
+        if (state.currentSegmentIndex === 0) audioContainer.innerHTML = '🔄 Воспроизведение...<br>';
 
         const buffer = state.fullAudioBuffer;
         const sampleRate = buffer.sampleRate;
         let speechCount = 0;
-
-        // Подсчет уже воспроизведенных речевых сегментов
         for (let i = 0; i < state.currentSegmentIndex; i++) {
-            if (state.segments[i] && state.segments[i].type === 'speech') {
-                speechCount++;
-            }
+            if (state.segments[i] && state.segments[i].type === 'speech') speechCount++;
         }
 
         for (let i = state.currentSegmentIndex; i < state.segments.length; i++) {
-            // Проверяем остановку
-            if (state.abortController.signal.aborted) {
-                break;
-            }
-
+            if (state.abortController.signal.aborted) break;
             const seg = state.segments[i];
-
             if (seg.type === 'speech') {
                 const startOffset = seg.startTimeOffset || 0;
                 const endOffset = seg.endTimeOffset || (startOffset + seg.duration);
-
                 const startSample = Math.floor((startOffset / 1000) * sampleRate);
                 const endSample = Math.floor((endOffset / 1000) * sampleRate);
                 const durationSamples = endSample - startSample;
-
                 if (durationSamples <= 0) continue;
-
-                const speechBuffer = ctx.createBuffer(
-                    buffer.numberOfChannels,
-                    durationSamples,
-                    sampleRate
-                );
-
+                const speechBuffer = ctx.createBuffer(buffer.numberOfChannels, durationSamples, sampleRate);
                 for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
                     const channelData = buffer.getChannelData(ch);
                     const newChannelData = speechBuffer.getChannelData(ch);
@@ -1345,45 +1325,28 @@ async function playWithPauses() {
                         newChannelData[j] = channelData[startSample + j] || 0;
                     }
                 }
-
                 const source = ctx.createBufferSource();
                 source.buffer = speechBuffer;
                 source.connect(ctx.destination);
                 state.playbackSource = source;
-
                 const durationSec = speechBuffer.duration;
                 speechCount++;
                 state.currentSegmentIndex = i;
-
                 audioContainer.innerHTML += `🎵 Речь #${speechCount} (${durationSec.toFixed(2)}с) `;
-
                 source.start();
-
-                // Ждем завершения или прерывания
                 await new Promise((resolve) => {
                     const timeout = setTimeout(resolve, (durationSec * 1000) + 200);
                     state.playbackTimeout = timeout;
-                    
-                    source.onended = () => {
-                        clearTimeout(timeout);
-                        resolve();
-                    };
+                    source.onended = () => { clearTimeout(timeout); resolve(); };
                 });
-
-                // Проверяем остановку
-                if (state.abortController.signal.aborted) {
-                    break;
-                }
-
+                if (state.abortController.signal.aborted) break;
             } else if (seg.type === 'pause') {
                 const pauseSec = seg.duration / 1000;
                 audioContainer.innerHTML += `⏸️ ${pauseSec.toFixed(2)}с `;
                 state.currentSegmentIndex = i;
-                
                 await new Promise((resolve) => {
                     const timeout = setTimeout(resolve, Math.min(seg.duration, 5000));
                     state.playbackTimeout = timeout;
-                    
                     const checkInterval = setInterval(() => {
                         if (state.abortController.signal.aborted) {
                             clearTimeout(timeout);
@@ -1392,27 +1355,19 @@ async function playWithPauses() {
                         }
                     }, 100);
                 });
-
                 if (state.abortController.signal.aborted) break;
             }
-
-            if (i < state.segments.length - 1) {
-                audioContainer.innerHTML += '→ ';
-            }
+            if (i < state.segments.length - 1) audioContainer.innerHTML += '→ ';
         }
-
-        // Если не было остановки
         if (!state.abortController.signal.aborted) {
             state.isPlaybackComplete = true;
             audioContainer.innerHTML += `<br>✅ Воспроизведение завершено (речевых сегментов: ${speechCount})`;
             resetPlayback();
         } else {
-            // Была остановка
             audioContainer.innerHTML += '<br>⏹️ Воспроизведение остановлено';
             state.isPlaybackComplete = true;
             resetPlayback();
         }
-
     } catch (err) {
         console.error('Playback error:', err);
         audioContainer.innerHTML = `❌ Ошибка: ${err.message}`;
@@ -1420,9 +1375,6 @@ async function playWithPauses() {
     }
 }
 
-// ============================================================
-// ОСТАНОВКА ВОСПРОИЗВЕДЕНИЯ
-// ============================================================
 function stopPlayback() {
     if (state.isPlaying) {
         if (state.abortController) {
@@ -1437,21 +1389,9 @@ function stopPlayback() {
 function resetPlayback() {
     state.isPlaying = false;
     state.currentSegmentIndex = 0;
-    
-    if (state.playbackSource) {
-        try { state.playbackSource.stop(); } catch(e) {}
-        state.playbackSource = null;
-    }
-    
-    if (state.playbackTimeout) {
-        clearTimeout(state.playbackTimeout);
-        state.playbackTimeout = null;
-    }
-    
-    if (state.abortController) {
-        state.abortController = null;
-    }
-    
+    if (state.playbackSource) { try { state.playbackSource.stop(); } catch(e) {} state.playbackSource = null; }
+    if (state.playbackTimeout) { clearTimeout(state.playbackTimeout); state.playbackTimeout = null; }
+    if (state.abortController) { state.abortController = null; }
     btnPlay.disabled = false;
     btnStopPlay.disabled = true;
 }
@@ -1460,49 +1400,35 @@ function resetPlayback() {
 // ЭКСПОРТ / ИМПОРТ
 // ============================================================
 function exportVAD() {
-    if (state.segments.length === 0) {
-        alert('Нет сегментов для экспорта');
-        return;
-    }
-
-    if (!state.fullAudioBlob) {
-        alert('Нет аудиоданных для экспорта. Попробуйте записать или загрузить аудио.');
-        return;
-    }
-
+    if (state.segments.length === 0) { alert('Нет сегментов для экспорта'); return; }
+    if (!state.fullAudioBlob) { alert('Нет аудиоданных для экспорта. Попробуйте записать или загрузить аудио.'); return; }
     const encoder = new TextEncoder();
     const magic = encoder.encode('VAD8');
     const parts = [magic];
-
     const header = new ArrayBuffer(2);
     const hView = new DataView(header);
     hView.setUint16(0, state.segments.length, true);
     parts.push(header);
-
     const size = state.fullAudioBlob.size;
     const sizeBuf = new ArrayBuffer(4);
     const sView = new DataView(sizeBuf);
     sView.setUint32(0, size, true);
     parts.push(sizeBuf);
     parts.push(state.fullAudioBlob);
-
     state.segments.forEach(seg => {
         const typeBuf = new ArrayBuffer(1);
         const tView = new DataView(typeBuf);
         tView.setUint8(0, seg.type === 'speech' ? 0 : 1);
         parts.push(typeBuf);
-
         if (seg.type === 'speech') {
             const durBuf = new ArrayBuffer(4);
             const dView = new DataView(durBuf);
             dView.setUint32(0, Math.round(seg.duration || 0), true);
             parts.push(durBuf);
-
             const startOffsetBuf = new ArrayBuffer(4);
             const sView = new DataView(startOffsetBuf);
             sView.setUint32(0, Math.round(seg.startTimeOffset || 0), true);
             parts.push(startOffsetBuf);
-
             const endOffsetBuf = new ArrayBuffer(4);
             const eView = new DataView(endOffsetBuf);
             eView.setUint32(0, Math.round(seg.endTimeOffset || 0), true);
@@ -1514,7 +1440,6 @@ function exportVAD() {
             parts.push(durBuf);
         }
     });
-
     const blob = new Blob(parts);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1524,7 +1449,6 @@ function exportVAD() {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-
     fileInfo.textContent = `💾 Экспортировано: ${state.segments.length} сегментов, ${(blob.size/1024).toFixed(1)} KB`;
 }
 
@@ -1532,63 +1456,49 @@ function loadVAD(file) {
     file.arrayBuffer().then(buffer => {
         const data = new Uint8Array(buffer);
         let offset = 0;
-
         const magic = new TextDecoder().decode(data.slice(0, 4));
         if (!['VAD5', 'VAD6', 'VAD7', 'VAD8'].includes(magic)) {
             alert('Неверный формат .vad');
             return;
         }
         offset += 4;
-
         const segCount = new DataView(buffer, offset, 2).getUint16(0, true);
         offset += 2;
-
         const audioSize = new DataView(buffer, offset, 4).getUint32(0, true);
         offset += 4;
-
         if (audioSize > 0) {
             const audioData = data.slice(offset, offset + audioSize);
             state.fullAudioBlob = new Blob([audioData], { type: CFG.mimeType });
             offset += audioSize;
-
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const ctx = await getAudioContext();
                     const audioBuffer = await ctx.decodeAudioData(e.target.result);
                     state.fullAudioBuffer = audioBuffer;
-
                     state.segments.forEach(seg => {
-                        if (seg.type === 'speech') {
-                            seg.buffer = audioBuffer;
-                        }
+                        if (seg.type === 'speech') seg.buffer = audioBuffer;
                     });
-
                     btnPlay.disabled = false;
                     btnExport.disabled = false;
                     btnStopPlay.disabled = true;
                     updateUI();
                     updateSegmentList();
                     updateStats();
-                } catch (err) {
-                    console.error('Ошибка декодирования:', err);
-                }
+                } catch (err) { console.error('Ошибка декодирования:', err); }
             };
             reader.readAsArrayBuffer(state.fullAudioBlob);
         } else {
             state.fullAudioBlob = null;
             state.fullAudioBuffer = null;
         }
-
         const newSegments = [];
         for (let i = 0; i < segCount; i++) {
             const type = new DataView(buffer, offset, 1).getUint8(0);
             offset += 1;
-
             if (type === 0) {
                 const duration = new DataView(buffer, offset, 4).getUint32(0, true);
                 offset += 4;
-
                 let startTimeOffset = 0, endTimeOffset = 0;
                 if (['VAD6', 'VAD7', 'VAD8'].includes(magic)) {
                     startTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
@@ -1596,7 +1506,6 @@ function loadVAD(file) {
                     endTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
                     offset += 4;
                 }
-
                 newSegments.push({
                     type: 'speech',
                     duration: duration,
@@ -1610,16 +1519,13 @@ function loadVAD(file) {
                 newSegments.push({ type: 'pause', duration: duration });
             }
         }
-
         state.segments = newSegments;
-
         btnPlay.disabled = false;
         btnExport.disabled = false;
         btnStopPlay.disabled = true;
         updateUI();
         updateSegmentList();
         updateStats();
-
         fileInfo.textContent = `📂 Загружено: ${state.segments.length} сегментов, ${state.fullAudioBlob ? (state.fullAudioBlob.size/1024).toFixed(1) : 0} KB аудио`;
         prebufferInfo.textContent = `📂 Загружен файл с ${state.segments.filter(s => s.type === 'speech').length} речевыми сегментами`;
     });
@@ -1644,7 +1550,6 @@ function updateUI() {
         statusBadge.className = 'badge idle';
         statusBadge.textContent = '⏹ Стоп';
     }
-
     const speechSegs = state.segments.filter(s => s.type === 'speech').length;
     const pauseSegs = state.segments.filter(s => s.type === 'pause').length;
     counterText.textContent = `Сегментов: ${state.segments.length} (речь: ${speechSegs}, паузы: ${pauseSegs})`;
@@ -1653,20 +1558,13 @@ function updateUI() {
 function updateStats() {
     const speechSegs = state.segments.filter(s => s.type === 'speech');
     const pauseSegs = state.segments.filter(s => s.type === 'pause');
-
     speechCount.textContent = speechSegs.length;
     pauseCount.textContent = pauseSegs.length;
-
     let totalTime = 0;
-    state.segments.forEach(s => {
-        totalTime += s.duration || 0;
-    });
+    state.segments.forEach(s => { totalTime += s.duration || 0; });
     totalDuration.textContent = (totalTime / 1000).toFixed(2) + 'с';
-
     let totalSize = 0;
-    if (state.fullAudioBlob) {
-        totalSize = state.fullAudioBlob.size;
-    }
+    if (state.fullAudioBlob) totalSize = state.fullAudioBlob.size;
     dataSize.textContent = (totalSize / 1024).toFixed(1) + ' KB';
 }
 
@@ -1675,10 +1573,9 @@ function updateSegmentList() {
         segmentList.innerHTML = '(нет сегментов)';
         return;
     }
-
     let html = '';
     let speechNum = 0;
-    state.segments.forEach((seg, i) => {
+    state.segments.forEach((seg) => {
         const dur = seg.duration || 0;
         if (seg.type === 'speech') {
             speechNum++;
@@ -1700,26 +1597,18 @@ btnStop.addEventListener('click', stopRecording);
 btnPlay.addEventListener('click', playWithPauses);
 btnStopPlay.addEventListener('click', stopPlayback);
 btnExport.addEventListener('click', exportVAD);
-
 btnLoad.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.vad';
-    input.onchange = (e) => {
-        if (e.target.files[0]) loadVAD(e.target.files[0]);
-        input.remove();
-    };
+    input.onchange = (e) => { if (e.target.files[0]) loadVAD(e.target.files[0]); input.remove(); };
     input.click();
 });
-
 btnLoadAudio.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'audio/*';
-    input.onchange = (e) => {
-        if (e.target.files[0]) loadAudioFile(e.target.files[0]);
-        input.remove();
-    };
+    input.onchange = (e) => { if (e.target.files[0]) loadAudioFile(e.target.files[0]); input.remove(); };
     input.click();
 });
 
@@ -1729,24 +1618,16 @@ updateSegmentList();
 updateStats();
 fileInfo.textContent = '🎙️ Нажми "Запись" или загрузи аудиофайл';
 prebufferInfo.textContent = '⚡ Стабильная конвертация MP3 → Opus для экспорта .vad';
-
-console.log('✅ VAD-кодек v11 загружен (с остановкой воспроизведения)');
+console.log('✅ VAD-кодек v11 загружен (кнопки +/- без удержания, битрейт в порядке)');
 </script>
-
-
 
 <script>
 (function() {
     "use strict";
 
-    // ============================================================
-    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
-    // ============================================================
     function openGame(url, title) {
         const oldOverlay = document.querySelector('.transition-overlay');
-        if (oldOverlay) {
-            oldOverlay.remove();
-        }
+        if (oldOverlay) oldOverlay.remove();
 
         const overlay = document.createElement('div');
         overlay.className = 'transition-overlay';
@@ -1757,9 +1638,7 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
         const backBtn = document.createElement('button');
         backBtn.className = 'transition-back';
         backBtn.textContent = '← Назад';
-        backBtn.onclick = function() {
-            overlay.remove();
-        };
+        backBtn.onclick = function() { overlay.remove(); };
 
         const titleEl = document.createElement('span');
         titleEl.className = 'transition-title';
@@ -1774,15 +1653,11 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
         iframe.src = url;
         iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
         iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
-
         overlay.appendChild(iframe);
         document.body.appendChild(overlay);
 
         const escapeHandler = function(e) {
-            if (e.key === 'Escape') {
-                overlay.remove();
-                document.removeEventListener('keydown', escapeHandler);
-            }
+            if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escapeHandler); }
         };
         document.addEventListener('keydown', escapeHandler);
 
@@ -1796,14 +1671,9 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
         };
 
         overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) {
-                overlay.remove();
-            }
+            if (e.target === overlay) overlay.remove();
         });
 
-        // ============================================================
-        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
-        // ============================================================
         window.addEventListener('message', function(event) {
             if (event.source !== iframe.contentWindow) return;
             const data = event.data;
@@ -1815,9 +1685,6 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
         return overlay;
     }
 
-    // ============================================================
-    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
-    // ============================================================
     function handleDownload(content, filename, mimeType) {
         try {
             if (typeof content === 'string' && content.startsWith('http')) {
@@ -1831,7 +1698,6 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
                 showNotification('✅ Скачивание началось!', 'success');
                 return;
             }
-
             let blob;
             if (typeof content === 'string') {
                 blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
@@ -1840,7 +1706,6 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
             } else {
                 throw new Error('Неподдерживаемый формат данных');
             }
-
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1848,11 +1713,7 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            
-            setTimeout(function() {
-                URL.revokeObjectURL(url);
-            }, 5000);
-
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
             showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
         } catch (error) {
             console.error('Ошибка скачивания:', error);
@@ -1860,42 +1721,29 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
         }
     }
 
-    // ============================================================
-    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
-    // ============================================================
     function showNotification(message, type) {
         const old = document.querySelector('.download-notification');
         if (old) old.remove();
-
         const notification = document.createElement('div');
         notification.className = 'download-notification ' + (type || '');
         notification.textContent = message;
         document.body.appendChild(notification);
-
-        setTimeout(function() {
+        setTimeout(() => {
             notification.style.opacity = '0';
             notification.style.transition = 'opacity 0.5s';
-            setTimeout(function() {
-                notification.remove();
-            }, 500);
+            setTimeout(() => notification.remove(), 500);
         }, 3000);
     }
 
-    // Делаем функции глобальными
     window.openGame = openGame;
     window.handleDownload = handleDownload;
     window.showNotification = showNotification;
-
-    // ============================================================
-    // ОФЛАЙН-ФУНКЦИОНАЛ
-    // ============================================================
 
     function registerSW() {
         if (!('serviceWorker' in navigator)) {
             console.warn('[SW] ❌ Service Worker не поддерживается');
             return;
         }
-
         navigator.serviceWorker.getRegistration()
             .then(function(registration) {
                 if (registration) {
@@ -1903,16 +1751,10 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
                     return;
                 }
                 navigator.serviceWorker.register('sw.js')
-                    .then(function(reg) {
-                        console.log('[SW] ✅ Зарегистрирован:', reg);
-                    })
-                    .catch(function(err) {
-                        console.error('[SW] ❌ Ошибка:', err);
-                    });
+                    .then(function(reg) { console.log('[SW] ✅ Зарегистрирован:', reg); })
+                    .catch(function(err) { console.error('[SW] ❌ Ошибка:', err); });
             })
-            .catch(function(err) {
-                console.error('[SW] ❌ Ошибка проверки:', err);
-            });
+            .catch(function(err) { console.error('[SW] ❌ Ошибка проверки:', err); });
     }
 
     function checkNetwork() {
@@ -1925,14 +1767,10 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
             console.log('📡 Сеть восстановлена');
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready
-                    .then(function(registration) {
-                        registration.update();
-                        console.log('[SW] 🔄 Проверка обновлений...');
-                    })
+                    .then(function(registration) { registration.update(); console.log('[SW] 🔄 Проверка обновлений...'); })
                     .catch(function() {});
             }
         });
-
         window.addEventListener('offline', function() {
             console.log('📡 Сеть отключена (работаем из кэша)');
         });
@@ -1953,7 +1791,6 @@ console.log('✅ VAD-кодек v11 загружен (с остановкой в
 
 })();
 </script>
-
 
 </body>
 </html>
