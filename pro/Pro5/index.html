@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<style id="themeStyles">
+<style>
 body{margin:0;font-family:sans-serif;background:#f5f5f5;transition:background .2s ease,color .2s ease}
 .toolbar{display:flex;gap:5px;padding:10px;background:#333;color:white;flex-wrap:wrap;align-items:center;transition:background .2s,color .2s}
 .toolbar input,.toolbar button,.toolbar label{transition:background .2s,border-color .2s,color .2s}
@@ -77,80 +77,18 @@ textarea{flex:1;outline:none;resize:none;padding:5px;font-family:monospace;font-
 .fullscreen-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10000;display:none}
 .fullscreen-overlay.active{display:block}
 
-.fullscreen-exit-btn {
-    position: fixed;
-    top: 30px;
-    right: 20px;
-    z-index: 10001;
-    padding: 0;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    box-shadow: 0 4px 8px rgba(0,0,0,.3);
-    display: flex;
-    align-items: center;
-    background: rgba(0,0,0,0.35);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    transition: background 0.2s, transform 0.2s;
-    overflow: hidden;
-    user-select: none;
-}
-.fullscreen-exit-btn:hover {
-    background: rgba(0,0,0,0.6);
-    transform: scale(1.03);
-}
-.fullscreen-exit-btn .exit-label {
-    padding: 12px 18px 12px 16px;
-    color: white;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-    white-space: nowrap;
-}
-.fullscreen-exit-btn .drag-handle {
-    width: 18px;
-    height: 100%;
-    min-height: 44px;
-    background: rgba(255,255,255,0.15);
-    border-left: 1px solid rgba(255,255,255,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-    transition: background 0.2s;
-    padding: 0 4px;
-}
-.fullscreen-exit-btn .drag-handle:hover {
-    background: rgba(255,255,255,0.25);
-}
-.fullscreen-exit-btn .drag-handle:active {
-    cursor: grabbing;
-}
-.drag-handle-dots {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.drag-handle-dots span {
-    display: block;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.7);
-}
-body.theme-dark .fullscreen-exit-btn {
-    background: rgba(30,30,50,0.5);
-}
-body.theme-dark .fullscreen-exit-btn:hover {
-    background: rgba(30,30,50,0.8);
-}
-body.theme-dark .fullscreen-exit-btn .drag-handle {
-    background: rgba(255,255,255,0.08);
-}
-body.theme-dark .fullscreen-exit-btn .drag-handle:hover {
-    background: rgba(255,255,255,0.18);
-}
+.fullscreen-exit-btn{position:fixed;top:30px;right:20px;z-index:10001;padding:0;border:none;border-radius:8px;cursor:pointer;font-size:16px;font-weight:bold;box-shadow:0 4px 8px rgba(0,0,0,.3);display:flex;align-items:center;background:rgba(0,0,0,0.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:background .2s,transform .2s;overflow:hidden;user-select:none}
+.fullscreen-exit-btn:hover{background:rgba(0,0,0,0.6);transform:scale(1.03)}
+.fullscreen-exit-btn .exit-label{padding:12px 18px 12px 16px;color:white;text-shadow:0 1px 4px rgba(0,0,0,0.5);white-space:nowrap}
+.fullscreen-exit-btn .drag-handle{width:18px;height:100%;min-height:44px;background:rgba(255,255,255,0.15);border-left:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;cursor:grab;transition:background .2s;padding:0 4px}
+.fullscreen-exit-btn .drag-handle:hover{background:rgba(255,255,255,0.25)}
+.fullscreen-exit-btn .drag-handle:active{cursor:grabbing}
+.drag-handle-dots{display:flex;flex-direction:column;gap:2px}
+.drag-handle-dots span{display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,0.7)}
+body.theme-dark .fullscreen-exit-btn{background:rgba(30,30,50,0.5)}
+body.theme-dark .fullscreen-exit-btn:hover{background:rgba(30,30,50,0.8)}
+body.theme-dark .fullscreen-exit-btn .drag-handle{background:rgba(255,255,255,0.08)}
+body.theme-dark .fullscreen-exit-btn .drag-handle:hover{background:rgba(255,255,255,0.18)}
 
 .fetch-loading{background:#f0ad4e!important;cursor:wait!important}
 .editor.hidden{display:none}
@@ -169,7 +107,6 @@ body.theme-ocean .clear-url-btn:hover{background:#2471a3}
 body.theme-graphite .clear-url-btn{background:#666}
 body.theme-graphite .clear-url-btn:hover{background:#555}
 
-/* Стили для библиотеки */
 .library-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .library-overlay.active{display:flex}
 .library-modal{background:#1e1e2f;border-radius:16px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);border:1px solid #2a3340;color:#e2e8f0}
@@ -178,22 +115,88 @@ body.theme-green .library-modal{background:#1f3b2c;color:#d4ecd0;border-color:#2
 body.theme-ocean .library-modal{background:#0a192f;color:#b8e1fc;border-color:#1e3a5f}
 body.theme-graphite .library-modal{background:#2c2c2e;color:#f5f5f7;border-color:#3a3a3c}
 .library-modal h2{margin-top:0;display:flex;justify-content:space-between;align-items:center}
-.library-modal .close-btn{background:transparent;border:none;color:inherit;font-size:24px;cursor:pointer;opacity:0.7;transition:opacity 0.2s}
+.library-modal .close-btn{background:transparent;border:none;color:inherit;font-size:24px;cursor:pointer;opacity:0.7;transition:opacity .2s}
 .library-modal .close-btn:hover{opacity:1}
 .library-file-list{list-style:none;padding:0;margin:0}
-.library-file-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:6px;margin-bottom:4px;transition:background 0.2s}
+.library-file-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:6px;margin-bottom:4px;transition:background .2s}
 .library-file-list li:hover{background:rgba(255,255,255,0.06)}
 body.theme-light .library-file-list li:hover{background:rgba(0,0,0,0.05)}
 .library-file-list .file-name{font-family:monospace;font-size:14px;word-break:break-all;flex:1}
-.library-file-list .copy-btn{background:#3b4de0;border:none;border-radius:4px;color:white;padding:4px 12px;font-size:12px;cursor:pointer;transition:background 0.2s,transform 0.1s;white-space:nowrap;margin-left:12px}
+.library-file-list .copy-btn{background:#3b4de0;border:none;border-radius:4px;color:white;padding:4px 12px;font-size:12px;cursor:pointer;transition:background .2s,transform .1s;white-space:nowrap;margin-left:12px}
 .library-file-list .copy-btn:hover{background:#4f5ff0;transform:scale(1.02)}
 .library-file-list .copy-btn.copied{background:#00b894}
 .library-file-list .copy-btn:disabled{opacity:0.6;cursor:not-allowed}
 .library-file-list .copy-btn.error{background:#e74c3c !important;color:white !important}
 .library-loading{text-align:center;padding:20px;color:#94a3b8}
 .library-empty{text-align:center;padding:20px;color:#94a3b8}
-.library-empty button{background:#3b4de0;border:none;border-radius:4px;color:white;padding:8px 16px;cursor:pointer;margin-top:10px;transition:background 0.2s}
+.library-empty button{background:#3b4de0;border:none;border-radius:4px;color:white;padding:8px 16px;cursor:pointer;margin-top:10px;transition:background .2s}
 .library-empty button:hover{background:#4f5ff0}
+
+.floating-frame-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9998;display:none;background:rgba(0,0,0,0.3);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);animation:fadeIn .3s ease}
+.floating-frame-overlay.active{display:flex;align-items:center;justify-content:center}
+.floating-frame{position:relative;width:90%;max-width:1200px;height:85vh;max-height:800px;background:#0f0f17;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.8);border:1px solid #2a3340;overflow:hidden;animation:slideUp .3s ease}
+.floating-frame-header{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:#1e1e2f;border-bottom:1px solid #2a3340;cursor:move;user-select:none}
+.floating-frame-header .title{color:#e2e8f0;font-size:14px;display:flex;align-items:center;gap:8px}
+.floating-frame-header .title .badge{background:#3b4de0;padding:2px 8px;border-radius:4px;font-size:10px;color:white}
+.floating-frame-header .controls{display:flex;gap:4px}
+.floating-frame-header .controls button{background:transparent;border:none;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:4px;font-size:16px;transition:all .2s;line-height:1}
+.floating-frame-header .controls button:hover{background:#2a3340;color:white}
+.floating-frame-header .controls .close-btn{color:#e74c3c}
+.floating-frame-header .controls .close-btn:hover{background:#e74c3c;color:white}
+.floating-frame-header .controls .minimize-btn{color:#f0c040}
+.floating-frame-header .controls .minimize-btn:hover{background:#2a3340;color:#ffd700}
+.floating-frame-header .controls .mode-btn{color:#4CAF50}
+.floating-frame-header .controls .mode-btn:hover{background:#2a3340;color:#66BB6A}
+.floating-frame-body{height:calc(100% - 45px);transition:height .3s ease;overflow:hidden}
+.floating-frame-body iframe{width:100%;height:100%;border:none;background:white}
+.floating-frame.minimized{height:45px !important;min-height:45px !important}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(30px) scale(0.95);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+.add-frame-btn{background:#3b4de0;border:none;color:white;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:16px;transition:background .2s}
+.add-frame-btn:hover{background:#4f5ff0}
+
+.restore-frame-btn{background:#3b4de0;border:none;color:white;border-radius:4px;padding:6px 12px;cursor:pointer;font-size:14px;transition:all .2s;display:inline-flex;align-items:center;gap:4px;animation:pulseGlow 2s infinite}
+.restore-frame-btn:hover{background:#4f5ff0;transform:scale(1.05)}
+.restore-frame-btn .badge-mini{background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:10px;font-size:10px}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 5px rgba(59,77,224,0.3)}50%{box-shadow:0 0 15px rgba(59,77,224,0.6)}}
+
+.floating-editor{background:#0f0f17;display:flex;flex-direction:column;height:100%}
+.floating-editor-toolbar{display:flex;gap:4px;padding:4px 8px;background:#1e1e2f;border-bottom:1px solid #2a3340;flex-shrink:0}
+.floating-editor-toolbar button{background:transparent;border:none;color:#94a3b8;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all .2s}
+.floating-editor-toolbar button:hover{background:#2a3340;color:white}
+.floating-editor-toolbar .char-count{color:#94a3b8;font-size:12px;margin-left:auto;align-self:center}
+.floating-editor textarea{flex:1;background:#0f0f17;color:#e6e6fa;border:none;padding:10px;font-family:monospace;font-size:14px;resize:none;outline:none;scrollbar-width:thin}
+.floating-editor textarea::-webkit-scrollbar{width:8px}
+.floating-editor textarea::-webkit-scrollbar-track{background:#1e1e2f}
+.floating-editor textarea::-webkit-scrollbar-thumb{background:#3b4de0;border-radius:4px}
+.floating-preview{height:100%;display:none}
+.floating-preview iframe{width:100%;height:100%;border:none;background:white}
+
+body.theme-light .floating-editor textarea{background:#f0f0f4;color:#222}
+body.theme-light .floating-editor-toolbar{background:#f0f0f4;border-bottom-color:#ddd}
+body.theme-light .floating-editor-toolbar button{color:#555}
+body.theme-light .floating-frame{background:#f0f0f4;border-color:#ddd}
+body.theme-light .floating-frame-header{background:#f0f0f4;border-bottom-color:#ddd}
+body.theme-light .floating-frame-header .title{color:#222}
+body.theme-light .floating-frame-overlay{background:rgba(0,0,0,0.2)}
+
+body.theme-green .floating-frame{background:#1f3b2c;border-color:#2c553a}
+body.theme-green .floating-frame-header{background:#1f3b2c;border-bottom-color:#2c553a}
+body.theme-green .floating-frame-header .title{color:#d4ecd0}
+body.theme-green .floating-editor textarea{background:#17261e;color:#cfeec7}
+body.theme-green .floating-editor-toolbar{background:#1f3b2c;border-bottom-color:#2c553a}
+
+body.theme-ocean .floating-frame{background:#0a192f;border-color:#1e3a5f}
+body.theme-ocean .floating-frame-header{background:#0a192f;border-bottom-color:#1e3a5f}
+body.theme-ocean .floating-frame-header .title{color:#b8e1fc}
+body.theme-ocean .floating-editor textarea{background:#05101f;color:#d9efff}
+body.theme-ocean .floating-editor-toolbar{background:#0a192f;border-bottom-color:#1e3a5f}
+
+body.theme-graphite .floating-frame{background:#2c2c2e;border-color:#3a3a3c}
+body.theme-graphite .floating-frame-header{background:#2c2c2e;border-bottom-color:#3a3a3c}
+body.theme-graphite .floating-frame-header .title{color:#f5f5f7}
+body.theme-graphite .floating-editor textarea{background:#1c1c1e;color:#e2e2e6}
+body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-color:#3a3a3c}
 </style>
 </head>
 
@@ -202,20 +205,20 @@ body.theme-light .library-file-list li:hover{background:rgba(0,0,0,0.05)}
 <div class="toolbar">
 <input type="text" id="urlInput" class="url-input" placeholder="HTML (https://example.com)" value="">
 <button id="fetchButton" onclick="fetchWebsiteCode()">👁️‍🗨️</button>
-<button id="clearUrlButton" class="clear-url-btn" onclick="clearUrlInput()" title="Очистить поле ввода">🗑️</button>
+<button id="clearUrlButton" class="clear-url-btn" onclick="clearUrlInput()">🗑️</button>
 
 <input type="number" id="lineNumber" min="1" placeholder="Строка">
 <button onclick="goToLine()">Перейти 🔀</button>
-<button onclick="clearLineNumber()" title="Очистить номер строки">🗑️</button>
+<button onclick="clearLineNumber()">🗑️</button>
 
 <input type="text" id="searchInput" placeholder="Поиск 🔎" style="width:120px;">
 <button onclick="findNext()">Найти ▶️</button>
 <button onclick="findPrev()">Назад ◀️</button>
-<button onclick="clearSearch()" title="Очистить поиск">🗑️</button>
+<button onclick="clearSearch()">🗑️</button>
 <span id="searchCounter" style="font-size:14px;min-width:40px;display:inline-block;text-align:center;font-weight:bold;color:inherit;"></span>
 
-<button onclick="sendToQR()" title="Отправить код в QR-приложение">📤 QR</button>
-<button onclick="openQRScanner()" title="Открыть сканер QR-кодов в Pro6">📷 QR</button>
+<button onclick="sendToQR()">📤 QR</button>
+<button onclick="openQRScanner()">📷 QR</button>
 <button id="copyButton" onclick="copyText()">Скопировать 📃</button>
 <button onclick="clearAll()">Очистить ❌</button>
 <button onclick="window.location.href='https://2d3t.github.io/index.html/'">Выход 🚸</button>
@@ -226,7 +229,7 @@ body.theme-light .library-file-list li:hover{background:rgba(0,0,0,0.05)}
 <button onclick="runCode()">Просмотр 🖥️</button>
 <button id="fullscreenButton" onclick="toggleFullscreen()">Полный экран ⛶</button>
 
-<select id="themeSwitcher" class="theme-select" title="Выбрать тему оформления">
+<select id="themeSwitcher" class="theme-select">
 <option value="dark">🌙 Тёмная</option>
 <option value="light">☀️ Светлая</option>
 <option value="green">🌿 Зелёная</option>
@@ -234,12 +237,14 @@ body.theme-light .library-file-list li:hover{background:rgba(0,0,0,0.05)}
 <option value="graphite">⚙️ Графит</option>
 </select>
 
-<label for="fileUpload" title="Открыть файл">Файлы 📂</label>
+<label for="fileUpload">Файлы 📂</label>
 <input type="file" id="fileUpload" class="file-input"
 accept=".html,.htm,.txt,.py,.js,.css,.json,.xml,.md,.csv,.log,.ini,.cfg,.conf,.sh,.bat,.ps1,.rb,.php,.java,.c,.cpp,.h,.cs,.go,.rs,.swift,.kt,.sql,.yaml,.yml,.toml,.pl,.pm,.r,.lua,.vim,.ts,.jsx,.tsx,.vue,.scss,.less,.sass,.styl"
 onchange="handleFileWithFullscreenRestore(event)">
-<button onclick="shareFile()" title="Поделиться файлом">📤 Поделиться</button>
-<button onclick="openLibrary()" title="Открыть библиотеку скриптов">📚 Библиотека</button>
+<button onclick="shareFile()">📤 Поделиться</button>
+<button onclick="openLibrary()">📚 Библиотека</button>
+<button onclick="openFloatingFrame()" class="add-frame-btn">➕</button>
+<button id="restoreFloatingFrameBtn" class="restore-frame-btn" style="display:none;" onclick="restoreFloatingFrameFromButton()">📝 Редактор <span class="badge-mini">вкладка</span></button>
 </div>
 
 <div class="editor" id="editorContainer">
@@ -261,1036 +266,818 @@ onchange="handleFileWithFullscreenRestore(event)">
   <iframe id="fullscreenFrame" style="width:100%;height:100%;border:none"></iframe>
 </div>
 
-<!-- Оверлей библиотеки -->
+<div class="floating-frame-overlay" id="floatingFrameOverlay" onclick="if(event.target===this) closeFloatingFrame()">
+    <div class="floating-frame" id="floatingFrame">
+        <div class="floating-frame-header" id="floatingFrameHeader">
+            <div class="title">
+                <span>📝 Дополнительный редактор</span>
+                <span class="badge">можно печатать</span>
+            </div>
+            <div class="controls">
+                <button onclick="toggleFloatingEditorMode()" title="Переключить режим" class="mode-btn">👁️</button>
+                <button onclick="minimizeFloatingFrameToButton()" title="Свернуть в кнопку" class="minimize-btn">➖</button>
+                <button onclick="closeFloatingFrame()" title="Закрыть" class="close-btn">✕</button>
+            </div>
+        </div>
+        <div class="floating-frame-body" id="floatingFrameBody">
+            <div class="floating-editor" id="floatingEditor">
+                <div class="floating-editor-toolbar">
+                    <button onclick="copyFloatingText()">📋 Копировать</button>
+                    <button onclick="clearFloatingText()" style="color:#e74c3c;">🗑️ Очистить</button>
+                    <span class="char-count" id="floatingCharCount">0 символов</span>
+                </div>
+                <textarea id="floatingTextArea" placeholder="Введите код здесь..."></textarea>
+            </div>
+            <div class="floating-preview" id="floatingPreview">
+                <iframe id="floatingFrameIframe" src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="library-overlay" id="libraryOverlay">
   <div class="library-modal">
-    <h2>
-      📚 Библиотека скриптов
-      <button class="close-btn" onclick="closeLibrary()">✕</button>
-    </h2>
-    <div id="libraryContent">
-      <div class="library-loading">⏳ Загрузка файлов...</div>
-    </div>
+    <h2>📚 Библиотека скриптов <button class="close-btn" onclick="closeLibrary()">✕</button></h2>
+    <div id="libraryContent"><div class="library-loading">⏳ Загрузка файлов...</div></div>
   </div>
 </div>
 
 <script>
-const textarea=document.getElementById('codeArea'),
-lineNumbersDiv=document.getElementById('lineNumbers'),
-previewFrame=document.getElementById('previewFrame'),
-copyButton=document.getElementById('copyButton'),
-searchInput=document.getElementById('searchInput'),
-fileUpload=document.getElementById('fileUpload'),
-fullscreenButton=document.getElementById('fullscreenButton'),
-fullscreenOverlay=document.getElementById('fullscreenOverlay'),
-fullscreenFrame=document.getElementById('fullscreenFrame'),
-urlInput=document.getElementById('urlInput'),
-fetchButton=document.getElementById('fetchButton'),
-editorContainer=document.getElementById('editorContainer'),
-forceExitFullscreenBtn=document.getElementById('forceExitFullscreenBtn'),
-themeSwitcher=document.getElementById('themeSwitcher'),
-clearUrlButton=document.getElementById('clearUrlButton'),
-body=document.body,
-searchCounter=document.getElementById('searchCounter');
+// ============ ОСНОВНЫЕ ПЕРЕМЕННЫЕ ============
+const textarea=document.getElementById('codeArea');
+const lineNumbersDiv=document.getElementById('lineNumbers');
+const previewFrame=document.getElementById('previewFrame');
+const copyButton=document.getElementById('copyButton');
+const searchInput=document.getElementById('searchInput');
+const fullscreenButton=document.getElementById('fullscreenButton');
+const fullscreenOverlay=document.getElementById('fullscreenOverlay');
+const fullscreenFrame=document.getElementById('fullscreenFrame');
+const urlInput=document.getElementById('urlInput');
+const fetchButton=document.getElementById('fetchButton');
+const editorContainer=document.getElementById('editorContainer');
+const forceExitFullscreenBtn=document.getElementById('forceExitFullscreenBtn');
+const themeSwitcher=document.getElementById('themeSwitcher');
+const body=document.body;
+const searchCounter=document.getElementById('searchCounter');
 
 let history=[],redoStack=[],isFullscreen=false,wasInPreviewBeforeFile=false,fullscreenWasActive=false,lastPreviewUrl=null;
 let searchResults=[],currentResult=-1,lastSearch="";
-let activeLineNumber = null;
+let activeLineNumber=null;
 
-// --- Перетаскивание кнопки выхода ---
-(function setupDrag() {
-  const btn = forceExitFullscreenBtn;
-  const handle = document.getElementById('dragHandle');
-  let isDragging = false, startX, startY, startRight, startTop;
+// ============ ПЛАВАЮЩИЙ ФРЕЙМ ============
+let floatingFrameOpen=false;
+let floatingFrameMinimized=false;
+let floatingEditorMode='editor';
+let floatingTextContent='';
 
-  function onStart(e) {
-    const ev = e.touches ? e.touches[0] : e;
-    isDragging = true;
-    const rect = btn.getBoundingClientRect();
-    startX = ev.clientX;
-    startY = ev.clientY;
-    startRight = window.innerWidth - rect.right;
-    startTop = rect.top;
-    btn.style.transition = 'none';
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd, { passive: false });
-    e.preventDefault && e.preventDefault();
-  }
-
-  function onMove(e) {
-    if (!isDragging) return;
-    const ev = e.touches ? e.touches[0] : e;
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-    let newRight = startRight - dx;
-    let newTop = startTop + dy;
-    newRight = Math.max(10, Math.min(window.innerWidth - btn.offsetWidth - 10, newRight));
-    newTop = Math.max(10, Math.min(window.innerHeight - btn.offsetHeight - 10, newTop));
-    btn.style.right = newRight + 'px';
-    btn.style.top = newTop + 'px';
-    btn.style.left = 'auto';
-    btn.style.bottom = 'auto';
-    e.preventDefault && e.preventDefault();
-  }
-
-  function onEnd(e) {
-    if (isDragging) {
-      isDragging = false;
-      btn.style.transition = '';
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
+function openFloatingFrame(){
+    if(floatingFrameMinimized){restoreFloatingFrameFromButton();return;}
+    const overlay=document.getElementById('floatingFrameOverlay');
+    const frame=document.getElementById('floatingFrame');
+    const iframe=document.getElementById('floatingFrameIframe');
+    const floatingText=document.getElementById('floatingTextArea');
+    frame.style.display='block';
+    overlay.classList.add('active');
+    floatingFrameOpen=true;
+    if(floatingTextContent){
+        floatingText.value=floatingTextContent;
+    } else {
+        floatingText.value=textarea.value;
+        floatingTextContent=textarea.value;
     }
-  }
+    updateFloatingCharCount();
+    if(floatingEditorMode==='preview'){
+        const code=extractHtmlContent(floatingText.value)||floatingText.value;
+        const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+        if(iframe.dataset.url?.startsWith('blob:'))URL.revokeObjectURL(iframe.dataset.url);
+        iframe.src=url;
+        iframe.dataset.url=url;
+    }
+}
 
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, { passive: false });
+function closeFloatingFrame(){
+    const overlay=document.getElementById('floatingFrameOverlay');
+    const iframe=document.getElementById('floatingFrameIframe');
+    const restoreBtn=document.getElementById('restoreFloatingFrameBtn');
+    const floatingText=document.getElementById('floatingTextArea');
+    if(floatingText)floatingTextContent=floatingText.value;
+    overlay.classList.remove('active');
+    floatingFrameOpen=false;
+    floatingFrameMinimized=false;
+    restoreBtn.style.display='none';
+    restoreBtn.style.animation='none';
+    if(iframe.dataset.url?.startsWith('blob:'))URL.revokeObjectURL(iframe.dataset.url);
+    iframe.src='about:blank';
+    iframe.dataset.url='';
+}
+
+function minimizeFloatingFrameToButton(){
+    const overlay=document.getElementById('floatingFrameOverlay');
+    const frame=document.getElementById('floatingFrame');
+    const restoreBtn=document.getElementById('restoreFloatingFrameBtn');
+    const floatingText=document.getElementById('floatingTextArea');
+    if(floatingText)floatingTextContent=floatingText.value;
+    overlay.classList.remove('active');
+    frame.style.display='none';
+    floatingFrameMinimized=true;
+    restoreBtn.style.display='inline-flex';
+    restoreBtn.style.animation='none';
+    setTimeout(()=>{restoreBtn.style.animation='pulseGlow 2s infinite';},10);
+}
+
+function restoreFloatingFrameFromButton(){
+    const overlay=document.getElementById('floatingFrameOverlay');
+    const frame=document.getElementById('floatingFrame');
+    const restoreBtn=document.getElementById('restoreFloatingFrameBtn');
+    const iframe=document.getElementById('floatingFrameIframe');
+    const floatingText=document.getElementById('floatingTextArea');
+    frame.style.display='block';
+    overlay.classList.add('active');
+    floatingFrameMinimized=false;
+    restoreBtn.style.display='none';
+    restoreBtn.style.animation='none';
+    floatingFrameOpen=true;
+    if(floatingText){
+        floatingText.value=floatingTextContent||'';
+        updateFloatingCharCount();
+    }
+    if(floatingEditorMode==='preview'){
+        const code=extractHtmlContent(floatingText.value)||floatingText.value;
+        const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+        if(iframe.dataset.url?.startsWith('blob:'))URL.revokeObjectURL(iframe.dataset.url);
+        iframe.src=url;
+        iframe.dataset.url=url;
+    }
+}
+
+function toggleFloatingEditorMode(){
+    const editor=document.getElementById('floatingEditor');
+    const preview=document.getElementById('floatingPreview');
+    const iframe=document.getElementById('floatingFrameIframe');
+    const btn=document.querySelector('.mode-btn');
+    const floatingText=document.getElementById('floatingTextArea');
+    if(floatingText)floatingTextContent=floatingText.value;
+    if(floatingEditorMode==='editor'){
+        const text=floatingText.value;
+        const code=extractHtmlContent(text)||text;
+        const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+        if(iframe.dataset.url?.startsWith('blob:'))URL.revokeObjectURL(iframe.dataset.url);
+        iframe.src=url;
+        iframe.dataset.url=url;
+        editor.style.display='none';
+        preview.style.display='block';
+        floatingEditorMode='preview';
+        btn.textContent='✏️';
+        btn.title='Режим редактирования';
+    } else {
+        editor.style.display='flex';
+        preview.style.display='none';
+        floatingEditorMode='editor';
+        btn.textContent='👁️';
+        btn.title='Режим просмотра';
+        floatingText.value=floatingTextContent||'';
+        updateFloatingCharCount();
+        iframe.src='about:blank';
+        if(iframe.dataset.url?.startsWith('blob:')){
+            URL.revokeObjectURL(iframe.dataset.url);
+            iframe.dataset.url='';
+        }
+    }
+}
+
+function updateFloatingCharCount(){
+    const text=document.getElementById('floatingTextArea').value;
+    document.getElementById('floatingCharCount').textContent=text.length+' символов';
+    floatingTextContent=text;
+}
+
+function copyFloatingText(){
+    const ta=document.getElementById('floatingTextArea');
+    ta.select();
+    document.execCommand('copy');
+    const btn=document.querySelector('.floating-editor-toolbar button:first-child');
+    const orig=btn.textContent;
+    btn.textContent='✅ Скопировано!';
+    btn.style.color='#4CAF50';
+    setTimeout(()=>{btn.textContent=orig;btn.style.color='';},1000);
+}
+
+function clearFloatingText(){
+    if(confirm('Очистить текст в дополнительном редакторе?')){
+        document.getElementById('floatingTextArea').value='';
+        floatingTextContent='';
+        updateFloatingCharCount();
+    }
+}
+
+// Перетаскивание фрейма
+(function(){
+    const header=document.getElementById('floatingFrameHeader');
+    const frame=document.getElementById('floatingFrame');
+    let isDragging=false,startX,startY,startLeft,startTop;
+    header.addEventListener('mousedown',function(e){
+        if(e.target.closest('.controls'))return;
+        isDragging=true;
+        const rect=frame.getBoundingClientRect();
+        startX=e.clientX;startY=e.clientY;
+        startLeft=rect.left;startTop=rect.top;
+        frame.style.transition='none';
+        document.addEventListener('mousemove',onMove);
+        document.addEventListener('mouseup',onEnd);
+        e.preventDefault();
+    });
+    header.addEventListener('touchstart',function(e){
+        if(e.target.closest('.controls'))return;
+        const touch=e.touches[0];
+        isDragging=true;
+        const rect=frame.getBoundingClientRect();
+        startX=touch.clientX;startY=touch.clientY;
+        startLeft=rect.left;startTop=rect.top;
+        frame.style.transition='none';
+        document.addEventListener('touchmove',onMoveTouch,{passive:false});
+        document.addEventListener('touchend',onEnd);
+        e.preventDefault();
+    });
+    function onMove(e){
+        if(!isDragging)return;
+        const dx=e.clientX-startX,dy=e.clientY-startY;
+        let newLeft=startLeft+dx,newTop=startTop+dy;
+        const maxLeft=window.innerWidth-frame.offsetWidth;
+        const maxTop=window.innerHeight-frame.offsetHeight;
+        newLeft=Math.max(0,Math.min(maxLeft,newLeft));
+        newTop=Math.max(0,Math.min(maxTop,newTop));
+        frame.style.left=newLeft+'px';
+        frame.style.top=newTop+'px';
+        frame.style.right='auto';
+        frame.style.bottom='auto';
+        frame.style.transform='none';
+    }
+    function onMoveTouch(e){
+        if(!isDragging)return;
+        const touch=e.touches[0];
+        const dx=touch.clientX-startX,dy=touch.clientY-startY;
+        let newLeft=startLeft+dx,newTop=startTop+dy;
+        const maxLeft=window.innerWidth-frame.offsetWidth;
+        const maxTop=window.innerHeight-frame.offsetHeight;
+        newLeft=Math.max(0,Math.min(maxLeft,newLeft));
+        newTop=Math.max(0,Math.min(maxTop,newTop));
+        frame.style.left=newLeft+'px';
+        frame.style.top=newTop+'px';
+        frame.style.right='auto';
+        frame.style.bottom='auto';
+        frame.style.transform='none';
+        e.preventDefault();
+    }
+    function onEnd(){
+        if(isDragging){
+            isDragging=false;
+            frame.style.transition='';
+            document.removeEventListener('mousemove',onMove);
+            document.removeEventListener('mouseup',onEnd);
+            document.removeEventListener('touchmove',onMoveTouch);
+            document.removeEventListener('touchend',onEnd);
+        }
+    }
 })();
 
+// ============ ТЕМЫ ============
 function applyTheme(themeName){
-['theme-dark','theme-light','theme-green','theme-ocean','theme-graphite'].forEach(t=>body.classList.remove(t));
-body.classList.add('theme-'+(['dark','light','green','ocean','graphite'].includes(themeName)?themeName:'dark'));
-localStorage.setItem('klikedit_theme',themeName);
-themeSwitcher.value=themeName;
+    ['theme-dark','theme-light','theme-green','theme-ocean','theme-graphite'].forEach(t=>body.classList.remove(t));
+    body.classList.add('theme-'+(['dark','light','green','ocean','graphite'].includes(themeName)?themeName:'dark'));
+    localStorage.setItem('klikedit_theme',themeName);
+    themeSwitcher.value=themeName;
 }
-
 function initTheme(){
-const t=localStorage.getItem('klikedit_theme');
-applyTheme(['dark','light','green','ocean','graphite'].includes(t)?t:'dark');
+    const t=localStorage.getItem('klikedit_theme');
+    applyTheme(['dark','light','green','ocean','graphite'].includes(t)?t:'dark');
 }
-
 themeSwitcher.addEventListener('change',e=>applyTheme(e.target.value));
 
-function clearUrlInput(){
-urlInput.value='';
-urlInput.focus();
-}
-
-function clearLineNumber(){
-const x=document.getElementById('lineNumber');
-x.value='';
-x.focus();
-}
-
-function clearSearch(){
-searchInput.value='';
-lastSearch='';
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-searchInput.focus();
-}
-
-function updateSearchCounter() {
-    if (searchResults.length === 0) {
-        searchCounter.textContent = '';
-    } else {
-        const idx = currentResult === -1 ? 0 : currentResult;
-        searchCounter.textContent = (idx + 1) + '/' + searchResults.length;
-    }
-}
-
-async function sendCodeQR(){
-const code=textarea.value;
-try{
-await navigator.clipboard.writeText(code);
-}catch(e){
-textarea.select();
-document.execCommand('copy');
-}
-window.location.href='https://2d3t.github.io/2d3t/pro/Pro6/index.html';
-}
-
-async function fetchWebsiteCode(){
-let url=urlInput.value.trim();
-if(!url)return;
-if(!/^https?:\/\//i.test(url))url='https://'+url;
-const old=fetchButton.textContent;
-fetchButton.textContent='Загрузка... ⏳';
-fetchButton.classList.add('fetch-loading');
-fetchButton.disabled=true;
-try{
-const r=await fetch(url);
-if(!r.ok)throw new Error('HTTP '+r.status);
-const html=await r.text();
-if(!html)throw new Error('Пустой ответ');
-saveState();
-textarea.value=html;
-updateLineNumbers();
-activeLineNumber = null;
-highlightActiveLine();
-lastSearch='';
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-}catch(e){console.error('Ошибка загрузки:',e)}
-finally{
-fetchButton.textContent=old;
-fetchButton.classList.remove('fetch-loading');
-fetchButton.disabled=false;
-}
-}
-
+// ============ ОСНОВНЫЕ ФУНКЦИИ ============
 function extractHtmlContent(raw){
-if(!raw||!raw.trim())return'';
-let s=raw.toLowerCase().indexOf('<!doctype html');
-if(s<0)s=raw.toLowerCase().indexOf('<html');
-if(s<0)return raw;
-let e=raw.toLowerCase().lastIndexOf('</html>');
-return e<0?raw.substring(s):raw.substring(s,e+7);
+    if(!raw||!raw.trim())return'';
+    let s=raw.toLowerCase().indexOf('<!doctype html');
+    if(s<0)s=raw.toLowerCase().indexOf('<html');
+    if(s<0)return raw;
+    let e=raw.toLowerCase().lastIndexOf('</html>');
+    return e<0?raw.substring(s):raw.substring(s,e+7);
 }
 
 function updateLineNumbers(){
-const lines=textarea.value.split('\n').length;
-const total=lines+Math.ceil(lines*.5);
-lineNumbersDiv.innerHTML='';
-for(let i=1;i<=total;i++){
-const d=document.createElement('div');
-d.textContent=i;
-lineNumbersDiv.appendChild(d);
-}
-syncScroll();
+    const lines=textarea.value.split('\n').length;
+    const total=lines+Math.ceil(lines*.5);
+    lineNumbersDiv.innerHTML='';
+    for(let i=1;i<=total;i++){
+        const d=document.createElement('div');
+        d.textContent=i;
+        lineNumbersDiv.appendChild(d);
+    }
+    syncScroll();
 }
 
-function syncScroll(){
-lineNumbersDiv.scrollTop=textarea.scrollTop;
-}
+function syncScroll(){lineNumbersDiv.scrollTop=textarea.scrollTop;}
 
 function goToLine(){
-const line=parseInt(document.getElementById('lineNumber').value);
-const lines=textarea.value.split('\n');
-const total=lines.length+Math.ceil(lines.length*.5);
-if(!isNaN(line)&&line>0&&line<=total){
-const h=parseFloat(getComputedStyle(textarea).lineHeight);
-textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2+h/2);
-activeLineNumber = line;
-highlightActiveLine(line);
-}
+    const line=parseInt(document.getElementById('lineNumber').value);
+    const lines=textarea.value.split('\n');
+    const total=lines.length+Math.ceil(lines.length*.5);
+    if(!isNaN(line)&&line>0&&line<=total){
+        const h=parseFloat(getComputedStyle(textarea).lineHeight);
+        textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2+h/2);
+        activeLineNumber=line;
+        highlightActiveLine(line);
+    }
 }
 
 function highlightActiveLine(line){
-if (line === undefined) {
-    line = null;
-}
-activeLineNumber = line;
-Array.from(lineNumbersDiv.children).forEach((el, i) => {
-    const shouldHighlight = (line !== null && i === line - 1);
-    el.classList.toggle('active-line', shouldHighlight);
-});
+    if(line===undefined)line=null;
+    activeLineNumber=line;
+    Array.from(lineNumbersDiv.children).forEach((el,i)=>{
+        const shouldHighlight=(line!==null&&i===line-1);
+        el.classList.toggle('active-line',shouldHighlight);
+    });
 }
 
 function copyText(){
-textarea.select();
-document.execCommand('copy');
-copyButton.classList.add('copied');
-copyButton.textContent='Скопировано';
-setTimeout(()=>{
-copyButton.classList.remove('copied');
-copyButton.textContent='Скопировать 📃';
-},1000);
+    textarea.select();
+    document.execCommand('copy');
+    copyButton.classList.add('copied');
+    copyButton.textContent='Скопировано';
+    setTimeout(()=>{copyButton.classList.remove('copied');copyButton.textContent='Скопировать 📃';},1000);
 }
 
 function clearAll(){
-saveState();
-textarea.value='';
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
+    saveState();
+    textarea.value='';
+    activeLineNumber=null;
+    updateLineNumbers();
+    highlightActiveLine();
+    searchResults=[];
+    currentResult=-1;
+    updateSearchCounter();
 }
 
-function runCode(){
-const code=extractHtmlContent(textarea.value)||textarea.value;
-const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=url;
-previewFrame.src=url;
-fullscreenFrame.src=url;
-previewFrame.style.display='block';
-previewFrame.style.visibility='visible';
-previewFrame.style.opacity='1';
-previewFrame.classList.add('active');
-editorContainer.classList.add('hidden');
-editorContainer.style.display='none';
-window.scrollTo(0,0);
-}
+function clearUrlInput(){urlInput.value='';urlInput.focus();}
+function clearLineNumber(){document.getElementById('lineNumber').value='';document.getElementById('lineNumber').focus();}
+function clearSearch(){searchInput.value='';lastSearch='';searchResults=[];currentResult=-1;updateSearchCounter();searchInput.focus();}
 
-function showEditor(){
-if(isFullscreen)forceExitFullscreen();
-previewFrame.classList.remove('active');
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-previewFrame.src='about:blank';
-editorContainer.classList.remove('hidden');
-editorContainer.style.display='flex';
-updateLineNumbers();
-window.scrollTo(0,0);
-}
-
-function shareCode(){
-const a=document.createElement('a');
-a.href=URL.createObjectURL(new Blob([textarea.value],{type:'text/plain'}));
-a.download='code.html';
-a.click();
-setTimeout(()=>URL.revokeObjectURL(a.href),100);
+function updateSearchCounter(){
+    if(searchResults.length===0){searchCounter.textContent='';}
+    else{const idx=currentResult===-1?0:currentResult;searchCounter.textContent=(idx+1)+'/'+searchResults.length;}
 }
 
 function saveState(){
-history.push(textarea.value);
-redoStack=[];
-if(history.length>100)history.shift();
+    history.push(textarea.value);
+    redoStack=[];
+    if(history.length>100)history.shift();
 }
 
 function undo(){
-if(history.length){
-redoStack.push(textarea.value);
-textarea.value=history.pop();
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-}
+    if(history.length){
+        redoStack.push(textarea.value);
+        textarea.value=history.pop();
+        activeLineNumber=null;
+        updateLineNumbers();
+        highlightActiveLine();
+        searchResults=[];
+        currentResult=-1;
+        updateSearchCounter();
+    }
 }
 
 function redo(){
-if(redoStack.length){
-history.push(textarea.value);
-textarea.value=redoStack.pop();
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-}
-}
-
-function handleFileWithFullscreenRestore(event){
-const file=event.target.files[0];
-if(!file)return;
-const ext=file.name.split('.').pop().toLowerCase();
-const supported=['html','htm','txt','py','js','css','json','xml','md','csv','log','ini','cfg','conf','sh','bat','ps1','rb','php','java','c','cpp','h','cs','go','rs','swift','kt','sql','yaml','yml','toml','pl','pm','r','lua','vim','ts','jsx','tsx','vue','scss','less','sass','styl'];
-if(!supported.includes(ext)){
-event.target.value='';
-return;
-}
-wasInPreviewBeforeFile=previewFrame.classList.contains('active');
-fullscreenWasActive=isFullscreen;
-const reader=new FileReader();
-reader.onload=e=>{
-const content=e.target.result;
-saveState();
-textarea.value=content;
-activeLineNumber = null;
-updateLineNumbers();
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-if(wasInPreviewBeforeFile){
-const code=extractHtmlContent(content)||content;
-const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=url;
-previewFrame.src=url;
-fullscreenFrame.src=url;
-previewFrame.style.display='block';
-previewFrame.style.visibility='visible';
-previewFrame.style.opacity='1';
-if(fullscreenWasActive&&!isFullscreen)setTimeout(()=>{
-if(previewFrame.classList.contains('active')&&!isFullscreen)enterFullscreenInternal();
-},150);
-}
-event.target.value='';
-};
-reader.onerror=()=>event.target.value='';
-reader.readAsText(file,'UTF-8');
-}
-
-function toggleFullscreen(){
-if(!previewFrame.classList.contains('active'))return;
-isFullscreen?forceExitFullscreen():enterFullscreenInternal();
-}
-
-function enterFullscreenInternal(){
-if(!previewFrame.classList.contains('active'))return;
-const code=extractHtmlContent(textarea.value)||textarea.value;
-const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=url;
-fullscreenFrame.src=url;
-previewFrame.src=url;
-fullscreenOverlay.classList.add('active');
-isFullscreen=true;
-fullscreenButton.textContent='Обычный экран ⛶';
-fullscreenButton.style.background='#4CAF50';
-previewFrame.classList.remove('active');
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-document.querySelector('.toolbar').style.display='none';
-editorContainer.style.display='none';
-if(fullscreenOverlay.requestFullscreen)fullscreenOverlay.requestFullscreen().catch(()=>{});
-document.addEventListener('keydown',handleEscapeKey);
-document.addEventListener('fullscreenchange',handleFullscreenChange);
-}
-
-function forceExitFullscreen(){
-if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
-fullscreenOverlay.classList.remove('active');
-isFullscreen=false;
-fullscreenButton.textContent='Полный экран ⛶';
-fullscreenButton.style.background='';
-document.querySelector('.toolbar').style.display='flex';
-editorContainer.style.display='flex';
-editorContainer.classList.remove('hidden');
-previewFrame.classList.remove('active');
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
-lastPreviewUrl=null;
-previewFrame.src='about:blank';
-fullscreenFrame.src='about:blank';
-document.removeEventListener('keydown',handleEscapeKey);
-document.removeEventListener('fullscreenchange',handleFullscreenChange);
-window.scrollTo(0,0);
-updateLineNumbers();
-}
-
-function handleEscapeKey(e){
-if(e.key==='Escape'&&isFullscreen)forceExitFullscreen();
-}
-
-function handleFullscreenChange(){
-if(!document.fullscreenElement&&isFullscreen&&fullscreenOverlay.classList.contains('active')){
-setTimeout(()=>{
-if(isFullscreen&&!document.fullscreenElement)fullscreenOverlay.requestFullscreen().catch(()=>{});
-},200);
-}
+    if(redoStack.length){
+        history.push(textarea.value);
+        textarea.value=redoStack.pop();
+        activeLineNumber=null;
+        updateLineNumbers();
+        highlightActiveLine();
+        searchResults=[];
+        currentResult=-1;
+        updateSearchCounter();
+    }
 }
 
 function findAll(term){
-searchResults=[];
-currentResult=-1;
-if(!term)return;
-let i=textarea.value.indexOf(term);
-while(i!==-1){
-searchResults.push(i);
-i=textarea.value.indexOf(term,i+term.length);
-}
-updateSearchCounter();
+    searchResults=[];
+    currentResult=-1;
+    if(!term)return;
+    let i=textarea.value.indexOf(term);
+    while(i!==-1){searchResults.push(i);i=textarea.value.indexOf(term,i+term.length);}
+    updateSearchCounter();
 }
 
 function highlightMatch(){
-if(!searchResults.length)return;
-const pos=searchResults[currentResult],term=searchInput.value;
-textarea.focus();
-textarea.setSelectionRange(pos,pos+term.length);
-const h=parseFloat(getComputedStyle(textarea).lineHeight);
-const line=textarea.value.substring(0,pos).split('\n').length;
-textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2);
-updateSearchCounter();
+    if(!searchResults.length)return;
+    const pos=searchResults[currentResult],term=searchInput.value;
+    textarea.focus();
+    textarea.setSelectionRange(pos,pos+term.length);
+    const h=parseFloat(getComputedStyle(textarea).lineHeight);
+    const line=textarea.value.substring(0,pos).split('\n').length;
+    textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2);
+    updateSearchCounter();
 }
 
 function findNext(){
-const term=searchInput.value;
-if(!term)return;
-if(term!==lastSearch){
-findAll(term);
-lastSearch=term;
-}
-if(!searchResults.length)return;
-currentResult=(currentResult+1)%searchResults.length;
-highlightMatch();
+    const term=searchInput.value;
+    if(!term)return;
+    if(term!==lastSearch){findAll(term);lastSearch=term;}
+    if(!searchResults.length)return;
+    currentResult=(currentResult+1)%searchResults.length;
+    highlightMatch();
 }
 
 function findPrev(){
-const term=searchInput.value;
-if(!term)return;
-if(term!==lastSearch){
-findAll(term);
-lastSearch=term;
-}
-if(!searchResults.length)return;
-currentResult=(currentResult-1+searchResults.length)%searchResults.length;
-highlightMatch();
+    const term=searchInput.value;
+    if(!term)return;
+    if(term!==lastSearch){findAll(term);lastSearch=term;}
+    if(!searchResults.length)return;
+    currentResult=(currentResult-1+searchResults.length)%searchResults.length;
+    highlightMatch();
 }
 
-textarea.addEventListener('input',saveState);
-
-searchInput.addEventListener('input',()=>{
-lastSearch='';
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-});
-
-urlInput.addEventListener('keypress',e=>{
-if(e.key==='Enter'){
-e.preventDefault();
-fetchWebsiteCode();
-}
-});
-
-document.getElementById('lineNumber').addEventListener('keydown',e=>{
-if(e.key==='Enter'){
-e.preventDefault();
-goToLine();
-}
-});
-
-forceExitFullscreenBtn.addEventListener('click', (e) => {
-  if (!e.target.closest('.drag-handle')) {
-    forceExitFullscreen();
-  }
-});
-
-window.addEventListener('pageshow',()=>{
-updateLineNumbers();
-syncScroll();
-activeLineNumber = null;
-highlightActiveLine();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-});
-
-// Инициализация
-updateLineNumbers();
-textarea.value='';
-activeLineNumber = null;
-highlightActiveLine();
-updateLineNumbers();
-searchResults=[];
-currentResult=-1;
-updateSearchCounter();
-
-previewFrame.style.display='none';
-previewFrame.style.visibility='hidden';
-previewFrame.style.opacity='0';
-
-initTheme();
-
-// Service Worker
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('[SW] ✅ Зарегистрирован'))
-        .catch(err => console.log('[SW] ❌ Ошибка:', err));
+// ============ ЗАГРУЗКА ============
+async function fetchWebsiteCode(){
+    let url=urlInput.value.trim();
+    if(!url)return;
+    if(!/^https?:\/\//i.test(url))url='https://'+url;
+    const old=fetchButton.textContent;
+    fetchButton.textContent='Загрузка... ⏳';
+    fetchButton.classList.add('fetch-loading');
+    fetchButton.disabled=true;
+    try{
+        const r=await fetch(url);
+        if(!r.ok)throw new Error('HTTP '+r.status);
+        const html=await r.text();
+        if(!html)throw new Error('Пустой ответ');
+        saveState();
+        textarea.value=html;
+        updateLineNumbers();
+        activeLineNumber=null;
+        highlightActiveLine();
+        lastSearch='';
+        searchResults=[];
+        currentResult=-1;
+        updateSearchCounter();
+    }catch(e){console.error('Ошибка загрузки:',e);}
+    finally{fetchButton.textContent=old;fetchButton.classList.remove('fetch-loading');fetchButton.disabled=false;}
 }
 
-// ============ ОТПРАВКА КОДА В QR (Pro6) ============
-function sendToQR() {
-    const code = document.getElementById('codeArea').value;
-    if (!code.trim()) {
-        alert('Код пуст!');
-        return;
-    }
-
-    try {
-        navigator.clipboard.writeText(code);
-    } catch (e) {
-        const textarea = document.getElementById('codeArea');
-        textarea.select();
-        document.execCommand('copy');
-        textarea.setSelectionRange(0, 0);
-    }
-
-    localStorage.setItem('sharedCode', JSON.stringify({
-        code: code,
-        timestamp: Date.now(),
-        from: 'Pro5'
-    }));
-
-    const btn = document.querySelector('[onclick="sendToQR()"]');
-    const originalText = btn.textContent;
-    btn.textContent = '✅ Отправлено!';
-    btn.style.background = '#00b894';
-    btn.style.color = 'white';
-    btn.disabled = true;
-
-    setTimeout(() => {
-        btn.textContent = '📤 QR';
-        btn.style.background = '';
-        btn.style.color = '';
-        btn.disabled = false;
-    }, 2000);
-
-    window.open('/2d3t/pro/Pro6/', '_blank');
+// ============ ПРОСМОТР ============
+function runCode(){
+    const code=extractHtmlContent(textarea.value)||textarea.value;
+    const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+    if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+    lastPreviewUrl=url;
+    previewFrame.src=url;
+    fullscreenFrame.src=url;
+    previewFrame.style.display='block';
+    previewFrame.style.visibility='visible';
+    previewFrame.style.opacity='1';
+    previewFrame.classList.add('active');
+    editorContainer.classList.add('hidden');
+    editorContainer.style.display='none';
+    window.scrollTo(0,0);
 }
 
-// ============ ОТКРЫТЬ СКАНЕР В PRO6 ============
-function openQRScanner() {
-    localStorage.setItem('qrCommand', JSON.stringify({
-        action: 'openScanner',
-        from: 'Pro5',
-        timestamp: Date.now()
-    }));
-    window.open('/2d3t/pro/Pro6/', '_blank');
+function showEditor(){
+    if(isFullscreen)forceExitFullscreen();
+    previewFrame.classList.remove('active');
+    previewFrame.style.display='none';
+    previewFrame.style.visibility='hidden';
+    previewFrame.style.opacity='0';
+    previewFrame.src='about:blank';
+    editorContainer.classList.remove('hidden');
+    editorContainer.style.display='flex';
+    updateLineNumbers();
+    window.scrollTo(0,0);
 }
 
-// ============ БЛОКИРОВКА СНА ============
-async function keepScreenAwake() {
-    try {
-        const wakeLock = await navigator.wakeLock.request('screen');
-        console.log('[WakeLock] Экран не уснёт');
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                navigator.wakeLock.request('screen').then(wl => {
-                    console.log('[WakeLock] Возобновлён');
-                }).catch(() => {});
-            }
-        });
-    } catch (e) {
-        console.log('[WakeLock] Не поддерживается:', e);
+// ============ ПОЛНЫЙ ЭКРАН ============
+function toggleFullscreen(){
+    if(!previewFrame.classList.contains('active'))return;
+    isFullscreen?forceExitFullscreen():enterFullscreenInternal();
+}
+
+function enterFullscreenInternal(){
+    if(!previewFrame.classList.contains('active'))return;
+    const code=extractHtmlContent(textarea.value)||textarea.value;
+    const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+    if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+    lastPreviewUrl=url;
+    fullscreenFrame.src=url;
+    previewFrame.src=url;
+    fullscreenOverlay.classList.add('active');
+    isFullscreen=true;
+    fullscreenButton.textContent='Обычный экран ⛶';
+    fullscreenButton.style.background='#4CAF50';
+    previewFrame.classList.remove('active');
+    previewFrame.style.display='none';
+    previewFrame.style.visibility='hidden';
+    previewFrame.style.opacity='0';
+    document.querySelector('.toolbar').style.display='none';
+    editorContainer.style.display='none';
+    if(fullscreenOverlay.requestFullscreen)fullscreenOverlay.requestFullscreen().catch(()=>{});
+    document.addEventListener('keydown',handleEscapeKey);
+    document.addEventListener('fullscreenchange',handleFullscreenChange);
+}
+
+function forceExitFullscreen(){
+    if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+    fullscreenOverlay.classList.remove('active');
+    isFullscreen=false;
+    fullscreenButton.textContent='Полный экран ⛶';
+    fullscreenButton.style.background='';
+    document.querySelector('.toolbar').style.display='flex';
+    editorContainer.style.display='flex';
+    editorContainer.classList.remove('hidden');
+    previewFrame.classList.remove('active');
+    previewFrame.style.display='none';
+    previewFrame.style.visibility='hidden';
+    previewFrame.style.opacity='0';
+    if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+    lastPreviewUrl=null;
+    previewFrame.src='about:blank';
+    fullscreenFrame.src='about:blank';
+    document.removeEventListener('keydown',handleEscapeKey);
+    document.removeEventListener('fullscreenchange',handleFullscreenChange);
+    window.scrollTo(0,0);
+    updateLineNumbers();
+}
+
+function handleEscapeKey(e){if(e.key==='Escape'&&isFullscreen)forceExitFullscreen();}
+function handleFullscreenChange(){
+    if(!document.fullscreenElement&&isFullscreen&&fullscreenOverlay.classList.contains('active')){
+        setTimeout(()=>{if(isFullscreen&&!document.fullscreenElement)fullscreenOverlay.requestFullscreen().catch(()=>{});},200);
     }
 }
-document.addEventListener('DOMContentLoaded', keepScreenAwake);
+forceExitFullscreenBtn.addEventListener('click',(e)=>{if(!e.target.closest('.drag-handle'))forceExitFullscreen();});
 
-// ============ КНОПКА "ПОДЕЛИТЬСЯ ФАЙЛОМ" ============
-function shareFile() {
-    const code = document.getElementById('codeArea').value;
-    if (!code.trim()) {
-        alert('⚠️ Нет текста для отправки!');
-        return;
-    }
+// ============ ФАЙЛЫ ============
+function handleFileWithFullscreenRestore(event){
+    const file=event.target.files[0];
+    if(!file)return;
+    const ext=file.name.split('.').pop().toLowerCase();
+    const supported=['html','htm','txt','py','js','css','json','xml','md','csv','log','ini','cfg','conf','sh','bat','ps1','rb','php','java','c','cpp','h','cs','go','rs','swift','kt','sql','yaml','yml','toml','pl','pm','r','lua','vim','ts','jsx','tsx','vue','scss','less','sass','styl'];
+    if(!supported.includes(ext)){event.target.value='';return;}
+    wasInPreviewBeforeFile=previewFrame.classList.contains('active');
+    fullscreenWasActive=isFullscreen;
+    const reader=new FileReader();
+    reader.onload=e=>{
+        const content=e.target.result;
+        saveState();
+        textarea.value=content;
+        activeLineNumber=null;
+        updateLineNumbers();
+        highlightActiveLine();
+        searchResults=[];
+        currentResult=-1;
+        updateSearchCounter();
+        if(wasInPreviewBeforeFile){
+            const code=extractHtmlContent(content)||content;
+            const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+            if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+            lastPreviewUrl=url;
+            previewFrame.src=url;
+            fullscreenFrame.src=url;
+            previewFrame.style.display='block';
+            previewFrame.style.visibility='visible';
+            previewFrame.style.opacity='1';
+            if(fullscreenWasActive&&!isFullscreen)setTimeout(()=>{
+                if(previewFrame.classList.contains('active')&&!isFullscreen)enterFullscreenInternal();
+            },150);
+        }
+        event.target.value='';
+    };
+    reader.onerror=()=>event.target.value='';
+    reader.readAsText(file,'UTF-8');
+}
 
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        animation: fadeIn 0.25s ease;
-        padding: 20px;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-    `;
+function shareCode(){
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([textarea.value],{type:'text/plain'}));
+    a.download='code.html';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),100);
+}
 
-    const card = document.createElement('div');
-    card.style.cssText = `
-        background: #141a24;
-        border-radius: 24px;
-        padding: 24px;
-        max-width: 400px;
-        width: 100%;
-        border: 1px solid #2a3340;
-        text-align: center;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-    `;
+// ============ QR ============
+function sendToQR(){
+    const code=textarea.value;
+    if(!code.trim()){alert('Код пуст!');return;}
+    try{navigator.clipboard.writeText(code);}catch(e){textarea.select();document.execCommand('copy');textarea.setSelectionRange(0,0);}
+    localStorage.setItem('sharedCode',JSON.stringify({code:code,timestamp:Date.now(),from:'Pro5'}));
+    const btn=document.querySelector('[onclick="sendToQR()"]');
+    const originalText=btn.textContent;
+    btn.textContent='✅ Отправлено!';
+    btn.style.background='#00b894';
+    btn.style.color='white';
+    btn.disabled=true;
+    setTimeout(()=>{btn.textContent='📤 QR';btn.style.background='';btn.style.color='';btn.disabled=false;},2000);
+    window.open('/2d3t/pro/Pro6/','_blank');
+}
 
-    let defaultExt = 'txt';
-    const trimmed = code.trim();
-    if (trimmed.toLowerCase().startsWith('<!doctype') || 
-        trimmed.toLowerCase().startsWith('<html') ||
-        trimmed.includes('<body') ||
-        trimmed.includes('<div')) {
-        defaultExt = 'html';
-    }
+function openQRScanner(){
+    localStorage.setItem('qrCommand',JSON.stringify({action:'openScanner',from:'Pro5',timestamp:Date.now()}));
+    window.open('/2d3t/pro/Pro6/','_blank');
+}
 
-    card.innerHTML = `
-        <h3 style="color: #e2e8f0; margin: 0 0 8px 0;">📤 Поделиться файлом</h3>
-        <p style="color: #94a3b8; font-size: 14px; margin: 0 0 16px 0;">
-            Введите имя файла
-        </p>
-        <div style="margin-bottom: 16px;">
-            <input type="text" id="fileNameInput" value="code" 
-                   style="width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid #2a3340; 
-                          background: #0d1117; color: #e2e8f0; font-size: 16px; box-sizing: border-box;
-                          outline: none; transition: border-color 0.2s;"
-                   placeholder="Имя файла" 
-                   onfocus="this.style.borderColor='#3b4de0'"
-                   onblur="this.style.borderColor='#2a3340'">
-        </div>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
-            <button onclick="doShare('txt')" 
-                    style="flex:1; min-width:100px; background:#3b4de0; color:white; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; transition: transform 0.1s;"
-                    onmouseover="this.style.transform='scale(1.02)'"
-                    onmouseout="this.style.transform='scale(1)'">
-                📄 TXT
-            </button>
-            <button onclick="doShare('html')" 
-                    style="flex:1; min-width:100px; background:#7c5a00; color:#fcd34d; border:0; border-radius:40px; padding:12px 20px; font-size:16px; font-weight:600; cursor:pointer; transition: transform 0.1s;"
-                    onmouseover="this.style.transform='scale(1.02)'"
-                    onmouseout="this.style.transform='scale(1)'">
-                🌐 HTML
-            </button>
-        </div>
-        <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
-                style="margin-top:14px; background:#1e2630; color:#94a3b8; border:1px solid #2a3340; border-radius:40px; padding:8px 24px; font-size:14px; cursor:pointer; width:auto; transition: background 0.2s;"
-                onmouseover="this.style.background='#2a3340'"
-                onmouseout="this.style.background='#1e2630'">
-            ✕ Отмена
-        </button>
-    `;
-
+// ============ ПОДЕЛИТЬСЯ ФАЙЛОМ ============
+function shareFile(){
+    const code=textarea.value;
+    if(!code.trim()){alert('⚠️ Нет текста для отправки!');return;}
+    const modal=document.createElement('div');
+    modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .25s ease;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);';
+    const card=document.createElement('div');
+    card.style.cssText='background:#141a24;border-radius:24px;padding:24px;max-width:400px;width:100%;border:1px solid #2a3340;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);';
+    let defaultExt='txt';
+    const trimmed=code.trim();
+    if(trimmed.toLowerCase().startsWith('<!doctype')||trimmed.toLowerCase().startsWith('<html')||trimmed.includes('<body')||trimmed.includes('<div')){defaultExt='html';}
+    card.innerHTML='<h3 style="color:#e2e8f0;margin:0 0 8px 0;">📤 Поделиться файлом</h3><p style="color:#94a3b8;font-size:14px;margin:0 0 16px 0;">Введите имя файла</p><div style="margin-bottom:16px;"><input type="text" id="fileNameInput" value="code" style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid #2a3340;background:#0d1117;color:#e2e8f0;font-size:16px;box-sizing:border-box;outline:none;transition:border-color .2s;" placeholder="Имя файла" onfocus="this.style.borderColor=\'#3b4de0\'" onblur="this.style.borderColor=\'#2a3340\'"></div><div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;"><button onclick="doShare(\'txt\')" style="flex:1;min-width:100px;background:#3b4de0;color:white;border:0;border-radius:40px;padding:12px 20px;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'">📄 TXT</button><button onclick="doShare(\'html\')" style="flex:1;min-width:100px;background:#7c5a00;color:#fcd34d;border:0;border-radius:40px;padding:12px 20px;font-size:16px;font-weight:600;cursor:pointer;transition:transform .1s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'">🌐 HTML</button></div><button onclick="this.closest(\'div[style*=\\"position: fixed\\"]\').remove()" style="margin-top:14px;background:#1e2630;color:#94a3b8;border:1px solid #2a3340;border-radius:40px;padding:8px 24px;font-size:14px;cursor:pointer;width:auto;transition:background .2s;" onmouseover="this.style.background=\'#2a3340\'" onmouseout="this.style.background=\'#1e2630\'">✕ Отмена</button>';
     modal.appendChild(card);
     document.body.appendChild(modal);
-
-    setTimeout(() => {
-        const input = document.getElementById('fileNameInput');
-        if (input) {
-            input.focus();
-            input.select();
-        }
-    }, 100);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.remove();
-    });
-
-    document.addEventListener('keydown', function escapeHandler(e) {
-        if (e.key === 'Escape') {
-            modal.remove();
-            document.removeEventListener('keydown', escapeHandler);
-        }
-    });
+    setTimeout(()=>{const input=document.getElementById('fileNameInput');if(input){input.focus();input.select();}},100);
+    modal.addEventListener('click',(e)=>{if(e.target===modal)modal.remove();});
+    document.addEventListener('keydown',function escapeHandler(e){if(e.key==='Escape'){modal.remove();document.removeEventListener('keydown',escapeHandler);}});
 }
 
-function doShare(format) {
-    const code = document.getElementById('codeArea').value;
-    if (!code.trim()) {
-        alert('⚠️ Нет данных!');
-        return;
-    }
-
-    const fileNameInput = document.getElementById('fileNameInput');
-    let fileName = fileNameInput ? fileNameInput.value.trim() : 'code';
-    if (!fileName) fileName = 'code';
-
-    const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
-    if (modal) modal.remove();
-
-    let blob, fullFilename, mimeType;
-
-    if (format === 'txt') {
-        blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-        fullFilename = fileName + '.txt';
-        mimeType = 'text/plain';
-    } else {
-        let htmlContent = code.trim();
-        if (!htmlContent.toLowerCase().startsWith('<!doctype') && 
-            !htmlContent.toLowerCase().startsWith('<html')) {
-            htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${fileName}</title>
-<style>
-    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
-</style>
-</head>
-<body>
-${code}
-</body>
-</html>`;
+function doShare(format){
+    const code=textarea.value;
+    if(!code.trim()){alert('⚠️ Нет данных!');return;}
+    const fileNameInput=document.getElementById('fileNameInput');
+    let fileName=fileNameInput?fileNameInput.value.trim():'code';
+    if(!fileName)fileName='code';
+    const modal=document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
+    if(modal)modal.remove();
+    let blob,fullFilename,mimeType;
+    if(format==='txt'){
+        blob=new Blob([code],{type:'text/plain;charset=utf-8'});
+        fullFilename=fileName+'.txt';
+        mimeType='text/plain';
+    }else{
+        let htmlContent=code.trim();
+        if(!htmlContent.toLowerCase().startsWith('<!doctype')&&!htmlContent.toLowerCase().startsWith('<html')){
+            htmlContent='<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>'+fileName+'</title>\n<style>\n    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }\n</style>\n</head>\n<body>\n'+code+'\n</body>\n</html>';
         }
-        blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        fullFilename = fileName + '.html';
-        mimeType = 'text/html';
+        blob=new Blob([htmlContent],{type:'text/html;charset=utf-8'});
+        fullFilename=fileName+'.html';
+        mimeType='text/html';
     }
-
-    const file = new File([blob], fullFilename, { 
-        type: mimeType,
-        lastModified: Date.now()
-    });
-
-    if (navigator.share) {
-        const shareData = {
-            files: [file]
-        };
-        if (navigator.canShare && navigator.canShare(shareData)) {
-            navigator.share(shareData)
-                .then(() => {
-                    console.log('✅ Файл успешно отправлен');
-                })
-                .catch((err) => {
-                    if (err.name !== 'AbortError') {
-                        console.error('Ошибка отправки:', err);
-                        fallbackDownload(blob, fullFilename);
-                    }
-                });
-            return;
-        } else {
-            navigator.share(shareData)
-                .catch((err) => {
-                    if (err.name !== 'AbortError') {
-                        fallbackDownload(blob, fullFilename);
-                    }
-                });
+    const file=new File([blob],fullFilename,{type:mimeType,lastModified:Date.now()});
+    if(navigator.share){
+        const shareData={files:[file]};
+        if(navigator.canShare&&navigator.canShare(shareData)){
+            navigator.share(shareData).catch((err)=>{if(err.name!=='AbortError'){console.error('Ошибка отправки:',err);fallbackDownload(blob,fullFilename);}});
             return;
         }
     }
-    fallbackDownload(blob, fullFilename);
+    fallbackDownload(blob,fullFilename);
 }
 
-function fallbackDownload(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
+function fallbackDownload(blob,filename){
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-if (!document.querySelector('style[data-share-style]')) {
-    const style = document.createElement('style');
-    style.setAttribute('data-share-style', '');
-    style.textContent = `
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-    `;
-    document.head.appendChild(style);
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
 
 // ============ БИБЛИОТЕКА ============
-const LIBRARY_PATH = 'Biblio/';
-
-function openLibrary() {
-  const overlay = document.getElementById('libraryOverlay');
-  const content = document.getElementById('libraryContent');
-  overlay.classList.add('active');
-  content.innerHTML = '<div class="library-loading">⏳ Загрузка файлов...</div>';
-  fetchLibraryFiles();
+const LIBRARY_PATH='Biblio/';
+function openLibrary(){
+    const overlay=document.getElementById('libraryOverlay');
+    const content=document.getElementById('libraryContent');
+    overlay.classList.add('active');
+    content.innerHTML='<div class="library-loading">⏳ Загрузка файлов...</div>';
+    fetchLibraryFiles();
 }
+function closeLibrary(){document.getElementById('libraryOverlay').classList.remove('active');}
+document.getElementById('libraryOverlay').addEventListener('click',function(e){if(e.target===this)closeLibrary();});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){const overlay=document.getElementById('libraryOverlay');if(overlay.classList.contains('active'))closeLibrary();}});
 
-function closeLibrary() {
-  document.getElementById('libraryOverlay').classList.remove('active');
-}
-
-document.getElementById('libraryOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeLibrary();
-});
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    const overlay = document.getElementById('libraryOverlay');
-    if (overlay.classList.contains('active')) closeLibrary();
-  }
-});
-
-async function fetchLibraryFiles() {
-  const content = document.getElementById('libraryContent');
-  
-  try {
-    const response = await fetch(LIBRARY_PATH + 'index.json');
-    if (!response.ok) {
-      content.innerHTML = `
-        <div class="library-empty">
-          📂 Файлы не найдены.<br>
-          Создайте папку <code>Biblio</code> рядом с программой.<br>
-          <small>Создайте файл <code>Biblio/index.json</code> со списком файлов.</small>
-          <br><br>
-          <button onclick="createSampleLibrary()">📁 Создать пример библиотеки</button>
-        </div>
-      `;
-      return;
-    }
-    
-    const files = await response.json();
-    renderLibraryFiles(files);
-  } catch (error) {
-    content.innerHTML = `
-      <div class="library-empty">
-        ⚠️ Не удалось загрузить список файлов.<br>
-        <small>Убедитесь, что папка <code>Biblio</code> существует.</small>
-        <br><br>
-        <button onclick="createSampleLibrary()">📁 Создать пример библиотеки</button>
-      </div>
-    `;
-    console.error('Ошибка загрузки библиотеки:', error);
-  }
-}
-
-function renderLibraryFiles(files) {
-  const content = document.getElementById('libraryContent');
-  
-  if (!files || files.length === 0) {
-    content.innerHTML = '<div class="library-empty">📭 В библиотеке нет файлов</div>';
-    return;
-  }
-  
-  const jsFiles = files.filter(f => f.endsWith('.js'));
-  if (jsFiles.length === 0) {
-    content.innerHTML = '<div class="library-empty">📭 Нет .js файлов в библиотеке</div>';
-    return;
-  }
-  
-  let html = '<ul class="library-file-list">';
-  jsFiles.forEach(file => {
-    const safeName = file.replace(/['"\\]/g, '');
-    html += `
-      <li>
-        <span class="file-name">📄 ${safeName}</span>
-        <button class="copy-btn" data-file="${safeName}" onclick="copyLibraryFile('${safeName}', this)">
-          📋 Копировать
-        </button>
-      </li>
-    `;
-  });
-  html += '</ul>';
-  content.innerHTML = html;
-}
-
-async function copyLibraryFile(filename, button) {
-  try {
-    const originalText = button.textContent;
-    button.textContent = '⏳ Загрузка...';
-    button.disabled = true;
-    
-    const response = await fetch(LIBRARY_PATH + filename);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const content = await response.text();
-    
-    if (!content || content.trim() === '') {
-      throw new Error('Файл пустой');
-    }
-    
-    try {
-      await navigator.clipboard.writeText(content);
-    } catch (clipboardError) {
-      const textarea = document.createElement('textarea');
-      textarea.value = content;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
-    
-    button.textContent = '✅ Скопировано!';
-    button.classList.add('copied');
-    button.disabled = false;
-    
-    setTimeout(() => {
-      button.textContent = '📋 Копировать';
-      button.classList.remove('copied');
-    }, 2000);
-    
-    console.log(`✅ Файл ${filename} скопирован в буфер (${content.length} символов)`);
-    
-  } catch (error) {
-    console.error('Ошибка копирования:', error);
-    button.textContent = '❌ Ошибка';
-    button.disabled = false;
-    
-    let errorMessage = `Не удалось скопировать файл "${filename}"`;
-    if (error.message.includes('HTTP 404')) {
-      errorMessage += '\n\n❌ Файл не найден в папке Biblio';
-    } else if (error.message.includes('HTTP 403')) {
-      errorMessage += '\n\n🚫 Нет доступа к файлу';
-    } else if (error.message.includes('NetworkError')) {
-      errorMessage += '\n\n🌐 Ошибка сети. Проверьте подключение';
-    } else {
-      errorMessage += `\n\n${error.message}`;
-    }
-    alert(errorMessage);
-    
-    setTimeout(() => {
-      button.textContent = '📋 Копировать';
-    }, 2000);
-  }
-}
-
-async function createSampleLibrary() {
-  try {
-    if ('showDirectoryPicker' in window) {
-      try {
-        const dirHandle = await window.showDirectoryPicker();
-        const biblioHandle = await dirHandle.getDirectoryHandle('Biblio', { create: true });
-        
-        const indexFile = await biblioHandle.getFileHandle('index.json', { create: true });
-        const writable = await indexFile.createWritable();
-        await writable.write(JSON.stringify(['example.js', 'helper.js'], null, 2));
-        await writable.close();
-        
-        const exampleFile = await biblioHandle.getFileHandle('example.js', { create: true });
-        const writable2 = await exampleFile.createWritable();
-        await writable2.write(`// Пример скрипта из библиотеки
-function sayHello() {
-    console.log('👋 Привет из библиотеки!');
-}
-
-function calculateSum(a, b) {
-    return a + b;
-}
-
-window.myLibrary = {
-    sayHello,
-    calculateSum
-};`);
-        await writable2.close();
-        
-        const helperFile = await biblioHandle.getFileHandle('helper.js', { create: true });
-        const writable3 = await helperFile.createWritable();
-        await writable3.write(`// Вспомогательные функции
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
-}
-
-function throttle(func, limit) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
+async function fetchLibraryFiles(){
+    const content=document.getElementById('libraryContent');
+    try{
+        const response=await fetch(LIBRARY_PATH+'index.json');
+        if(!response.ok){
+            content.innerHTML='<div class="library-empty">📂 Файлы не найдены.<br>Создайте папку <code>Biblio</code> рядом с программой.<br><small>Создайте файл <code>Biblio/index.json</code> со списком файлов.</small><br><br><button onclick="createSampleLibrary()">📁 Создать пример библиотеки</button></div>';
+            return;
         }
-    };
-}`);
-        await writable3.close();
-        
-        alert('✅ Библиотека создана!\n\n' +
-              '📁 Папка: Biblio\n' +
-              '📄 Файлы: index.json, example.js, helper.js\n\n' +
-              'Теперь нажмите "📚 Библиотека" снова');
-        
-        fetchLibraryFiles();
-        
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          alert('❌ Не удалось создать библиотеку: ' + err.message);
-        }
-      }
-    } else {
-      alert('📁 Создайте папку "Biblio" рядом с index.html\n\n' +
-            '1. Создайте папку Biblio\n' +
-            '2. Создайте файл index.json с содержимым:\n' +
-            '   ["example.js", "helper.js"]\n' +
-            '3. Добавьте .js файлы в папку\n\n' +
-            'После создания нажмите "📚 Библиотека"');
+        const files=await response.json();
+        renderLibraryFiles(files);
+    }catch(error){
+        content.innerHTML='<div class="library-empty">⚠️ Не удалось загрузить список файлов.<br><small>Убедитесь, что папка <code>Biblio</code> существует.</small><br><br><button onclick="createSampleLibrary()">📁 Создать пример библиотеки</button></div>';
+        console.error('Ошибка загрузки библиотеки:',error);
     }
-  } catch (error) {
-    console.error('Ошибка:', error);
-    alert('❌ Ошибка: ' + error.message);
-  }
 }
+
+function renderLibraryFiles(files){
+    const content=document.getElementById('libraryContent');
+    if(!files||files.length===0){content.innerHTML='<div class="library-empty">📭 В библиотеке нет файлов</div>';return;}
+    const jsFiles=files.filter(f=>f.endsWith('.js'));
+    if(jsFiles.length===0){content.innerHTML='<div class="library-empty">📭 Нет .js файлов в библиотеке</div>';return;}
+    let html='<ul class="library-file-list">';
+    jsFiles.forEach(file=>{
+        const safeName=file.replace(/['"\\]/g,'');
+        html+='<li><span class="file-name">📄 '+safeName+'</span><button class="copy-btn" data-file="'+safeName+'" onclick="copyLibraryFile(\''+safeName+'\', this)">📋 Копировать</button></li>';
+    });
+    html+='</ul>';
+    content.innerHTML=html;
+}
+
+async function copyLibraryFile(filename,button){
+    try{
+        const originalText=button.textContent;
+        button.textContent='⏳ Загрузка...';
+        button.disabled=true;
+        const response=await fetch(LIBRARY_PATH+filename);
+        if(!response.ok)throw new Error('HTTP '+response.status+': '+response.statusText);
+        const content=await response.text();
+        if(!content||content.trim()==='')throw new Error('Файл пустой');
+        try{await navigator.clipboard.writeText(content);}catch(clipboardError){const ta=document.createElement('textarea');ta.value=content;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}
+        button.textContent='✅ Скопировано!';
+        button.classList.add('copied');
+        button.disabled=false;
+        setTimeout(()=>{button.textContent='📋 Копировать';button.classList.remove('copied');},2000);
+    }catch(error){
+        console.error('Ошибка копирования:',error);
+        button.textContent='❌ Ошибка';
+        button.disabled=false;
+        let errorMessage='Не удалось скопировать файл "'+filename+'"';
+        if(error.message.includes('HTTP 404'))errorMessage+='\n\n❌ Файл не найден в папке Biblio';
+        else if(error.message.includes('HTTP 403'))errorMessage+='\n\n🚫 Нет доступа к файлу';
+        else if(error.message.includes('NetworkError'))errorMessage+='\n\n🌐 Ошибка сети. Проверьте подключение';
+        else errorMessage+='\n\n'+error.message;
+        alert(errorMessage);
+        setTimeout(()=>{button.textContent='📋 Копировать';},2000);
+    }
+}
+
+async function createSampleLibrary(){
+    try{
+        if('showDirectoryPicker' in window){
+            try{
+                const dirHandle=await window.showDirectoryPicker();
+                const biblioHandle=await dirHandle.getDirectoryHandle('Biblio',{create:true});
+                const indexFile=await biblioHandle.getFileHandle('index.json',{create:true});
+                const writable=await indexFile.createWritable();
+                await writable.write(JSON.stringify(['example.js','helper.js'],null,2));
+                await writable.close();
+                const exampleFile=await biblioHandle.getFileHandle('example.js',{create:true});
+                const writable2=await exampleFile.createWritable();
+                await writable2.write('// Пример скрипта из библиотеки\nfunction sayHello(){\n    console.log(\'👋 Привет из библиотеки!\');\n}\nfunction calculateSum(a,b){\n    return a+b;\n}\nwindow.myLibrary={\n    sayHello,\n    calculateSum\n};');
+                await writable2.close();
+                const helperFile=await biblioHandle.getFileHandle('helper.js',{create:true});
+                const writable3=await helperFile.createWritable();
+                await writable3.write('// Вспомогательные функции\nfunction debounce(func,delay){\n    let timeout;\n    return function(...args){\n        clearTimeout(timeout);\n        timeout=setTimeout(()=>func.apply(this,args),delay);\n    };\n}\nfunction throttle(func,limit){\n    let inThrottle;\n    return function(...args){\n        if(!inThrottle){\n            func.apply(this,args);\n            inThrottle=true;\n            setTimeout(()=>inThrottle=false,limit);\n        }\n    };\n}');
+                await writable3.close();
+                alert('✅ Библиотека создана!\n\n📁 Папка: Biblio\n📄 Файлы: index.json, example.js, helper.js\n\nТеперь нажмите "📚 Библиотека" снова');
+                fetchLibraryFiles();
+            }catch(err){if(err.name!=='AbortError'){alert('❌ Не удалось создать библиотеку: '+err.message);}}
+        }else{
+            alert('📁 Создайте папку "Biblio" рядом с index.html\n\n1. Создайте папку Biblio\n2. Создайте файл index.json с содержимым:\n   ["example.js", "helper.js"]\n3. Добавьте .js файлы в папку\n\nПосле создания нажмите "📚 Библиотека"');
+        }
+    }catch(error){console.error('Ошибка:',error);alert('❌ Ошибка: '+error.message);}
+}
+
+// ============ БЛОКИРОВКА СНА ============
+async function keepScreenAwake(){
+    try{
+        const wakeLock=await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Экран не уснёт');
+        document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){navigator.wakeLock.request('screen').then(wl=>{console.log('[WakeLock] Возобновлён');}).catch(()=>{});}});
+    }catch(e){console.log('[WakeLock] Не поддерживается:',e);}
+}
+document.addEventListener('DOMContentLoaded',keepScreenAwake);
+
+// ============ ИНИЦИАЛИЗАЦИЯ ============
+document.addEventListener('input',function(e){if(e.target.id==='floatingTextArea'){floatingTextContent=e.target.value;updateFloatingCharCount();}});
+
+searchInput.addEventListener('input',()=>{lastSearch='';searchResults=[];currentResult=-1;updateSearchCounter();});
+urlInput.addEventListener('keypress',e=>{if(e.key==='Enter'){e.preventDefault();fetchWebsiteCode();}});
+document.getElementById('lineNumber').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goToLine();}});
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(floatingFrameMinimized){restoreFloatingFrameFromButton();}else if(floatingFrameOpen){closeFloatingFrame();}}});
+
+window.addEventListener('pageshow',()=>{updateLineNumbers();syncScroll();activeLineNumber=null;highlightActiveLine();searchResults=[];currentResult=-1;updateSearchCounter();});
+
+updateLineNumbers();
+textarea.value='';
+activeLineNumber=null;
+highlightActiveLine();
+updateLineNumbers();
+searchResults=[];
+currentResult=-1;
+updateSearchCounter();
+previewFrame.style.display='none';
+previewFrame.style.visibility='hidden';
+previewFrame.style.opacity='0';
+initTheme();
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').then(()=>console.log('[SW] ✅ Зарегистрирован')).catch(err=>console.log('[SW] ❌ Ошибка:',err));}
 </script>
 </body>
 </html>
