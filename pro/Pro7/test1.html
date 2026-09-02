@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAD-кодек v11 — ручное управление</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui;
+            max-width: 720px;
+            margin: 2rem auto;
+            padding: 1rem;
+            background: #0f0f13;
+            color: #e0e0e0;
+        }
+        .container {
+            background: #1a1a22;
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid #2a2a35;
+        }
+        button {
+            background: #2a2a3f;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            transition: 0.2s;
+        }
+        button:hover:not(:disabled) {
+            background: #3d3d5c;
+            transform: scale(1.02);
+        }
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .status-box {
+            margin: 15px 0;
+            padding: 12px;
+            background: #111118;
+            border-radius: 8px;
+            border-left: 3px solid #4a6cf7;
+            min-height: 70px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .speaking { background: #22c55e; color: #000; }
+        .silence { background: #6b7280; color: #fff; }
+        .idle { background: #4a6cf7; color: #fff; }
+        .meter {
+            height: 4px;
+            background: #2a2a3f;
+            border-radius: 2px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .meter-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4a6cf7, #22c55e);
+            transition: width 0.05s;
+        }
+        .file-info {
+            background: #111118;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin: 8px 0;
+            word-break: break-all;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        #audioContainer {
+            margin: 10px 0;
+            padding: 10px;
+            background: #0a0a0f;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            min-height: 30px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: auto auto;
+            gap: 4px 20px;
+            margin: 8px 0;
+            font-size: 0.85rem;
+        }
+        .stats-grid .label { color: #94a3b8; }
+        .stats-grid .value { color: #e2e8f0; text-align: right; }
+        .prebuffer-info {
+            background: #1a2a3a;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin: 5px 0;
+            border-left: 3px solid #4a6cf7;
+        }
+        .segment-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0a0a0f;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-family: monospace;
+            margin: 8px 0;
+        }
+        .segment-item {
+            padding: 2px 6px;
+            margin: 1px 0;
+            border-radius: 3px;
+        }
+        .segment-item.speech { color: #4ade80; background: #1a3a2a; }
+        .segment-item.pause { color: #94a3b8; background: #1a1a2a; }
+        .load-section {
+            border-top: 1px solid #2a2a35;
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+        .btn-load-audio { background: #2a3a4a; }
+        .btn-load-audio:hover { background: #3a4a5a; }
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #2a2a3f;
+            border-radius: 2px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #4a6cf7;
+            transition: width 0.3s;
+        }
+        .status-msg {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin: 4px 0;
+        }
+        .bitrate-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #111118;
+            padding: 8px 14px;
+            border-radius: 8px;
+            margin: 6px 0 12px 0;
+            flex-wrap: wrap;
+            border: 1px solid #2a2a35;
+        }
+        .bitrate-control label {
+            font-size: 0.85rem;
+            color: #c0c8d4;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .bitrate-control input[type="range"] {
+            width: 140px;
+            height: 4px;
+            -webkit-appearance: none;
+            background: #2a2a3f;
+            border-radius: 2px;
+            outline: none;
+        }
+        .bitrate-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4a6cf7;
+            cursor: pointer;
+        }
+        .bitrate-control input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4a6cf7;
+            cursor: pointer;
+            border: none;
+        }
+        .bitrate-value {
+            font-weight: bold;
+            color: #4ade80;
+            min-width: 60px;
+            text-align: right;
+            font-size: 0.9rem;
+        }
+        .toggle-pause-btn {
+            background: #2a3a3a;
+            border: 1px solid #4a6a6a;
+        }
+        .toggle-pause-btn.active {
+            background: #3a5a3a;
+            border-color: #4ade80;
+        }
+        .toggle-pause-btn:hover:not(:disabled) {
+            background: #3a4a4a;
+        }
+        .controls-panel {
+            background: #111118;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin: 10px 0;
+            border: 1px solid #2a2a35;
+            display: none;
+        }
+        .controls-panel.open {
+            display: block;
+        }
+        .controls-panel .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            margin: 4px 0;
+        }
+        .controls-panel label {
+            font-size: 0.8rem;
+            color: #b0b8c8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .controls-panel input[type="range"] {
+            width: 120px;
+            height: 3px;
+            -webkit-appearance: none;
+            background: #2a2a3f;
+            border-radius: 2px;
+            outline: none;
+        }
+        .controls-panel input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4a6cf7;
+            cursor: pointer;
+        }
+        .controls-panel input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4a6cf7;
+            cursor: pointer;
+            border: none;
+        }
+        .control-value {
+            min-width: 40px;
+            font-weight: bold;
+            color: #4ade80;
+            font-size: 0.8rem;
+            text-align: right;
+        }
+        .control-label-text {
+            min-width: 100px;
+        }
+        .divider {
+            border-top: 1px solid #2a2a35;
+            margin: 8px 0;
+        }
+        .reset-btn {
+            background: #3a2a2a;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            margin-left: 8px;
+        }
+        .reset-btn:hover {
+            background: #5a3a3a;
+        }
+        .toggle-panel-btn {
+            background: #2a3a4a;
+            border: 1px solid #4a6a8a;
+            width: 100%;
+            margin: 6px 0 4px 0;
+            text-align: center;
+        }
+        .toggle-panel-btn:hover {
+            background: #3a4a5a;
+        }
+        .toggle-panel-btn .arrow {
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        .toggle-panel-btn .arrow.open {
+            transform: rotate(180deg);
+        }
+        .playback-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        .btn-pause {
+            background: #2a3a3a;
+            border: 1px solid #4a6a6a;
+        }
+        .btn-pause.active {
+            background: #3a5a3a;
+            border-color: #4ade80;
+        }
+        .btn-stop-play {
+            background: #3a2a2a;
+            border: 1px solid #6a4a4a;
+        }
+        .btn-stop-play:hover:not(:disabled) {
+            background: #5a3a3a;
+        }
+        .btn-play {
+            background: #2a3a4a;
+            border: 1px solid #4a6a8a;
+        }
+        .btn-play:hover:not(:disabled) {
+            background: #3a4a5a;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🎙️ VAD-кодек v11</h2>
+    <p style="font-size:0.9rem;color:#9ca3af;">Ручное управление параметрами VAD</p>
+
+    <!-- КНОПКА ОТКРЫТЬ/ЗАКРЫТЬ ПАНЕЛЬ НАСТРОЕК -->
+    <button class="toggle-panel-btn" id="togglePanelBtn">
+        <span class="arrow" id="panelArrow">▼</span> 🎛️ Ручная настройка
+    </button>
+
+    <!-- ПАНЕЛЬ РУЧНОГО УПРАВЛЕНИЯ -->
+    <div class="controls-panel" id="controlsPanel">
+        <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:6px;">🎛️ Ручная настройка VAD</div>
+
+        <div class="control-row">
+            <label>
+                <span class="control-label-text">🎚️ Чувствительность</span>
+                <input type="range" id="thresholdSlider" min="0.001" max="0.05" value="0.01" step="0.0005">
+                <span class="control-value" id="thresholdDisplay">0.010</span>
+            </label>
+            <button class="reset-btn" id="resetThreshold">↺</button>
+        </div>
+
+        <div class="control-row">
+            <label>
+                <span class="control-label-text">⏱️ Мин. пауза (мс)</span>
+                <input type="range" id="minSilenceSlider" min="100" max="1500" value="300" step="10">
+                <span class="control-value" id="minSilenceDisplay">300</span>
+            </label>
+            <button class="reset-btn" id="resetMinSilence">↺</button>
+        </div>
+
+        <div class="control-row">
+            <label>
+                <span class="control-label-text">📦 Пре-буфер (мс)</span>
+                <input type="range" id="prebufferSlider" min="100" max="1500" value="500" step="10">
+                <span class="control-value" id="prebufferDisplay">500</span>
+            </label>
+            <button class="reset-btn" id="resetPrebuffer">↺</button>
+        </div>
+
+        <div class="control-row" style="margin-top:4px;">
+            <label>
+                <span class="control-label-text">📊 Интервал VAD (мс)</span>
+                <input type="range" id="vadIntervalSlider" min="200" max="1500" value="700" step="50">
+                <span class="control-value" id="vadIntervalDisplay">700</span>
+            </label>
+            <button class="reset-btn" id="resetVadInterval">↺</button>
+        </div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:4px;">↺ — сброс к значению по умолчанию</div>
+    </div>
+
+    <!-- РЕГУЛЯТОР БИТРЕЙТА -->
+    <div class="bitrate-control">
+        <label>
+            <span>🎛️ Битрейт</span>
+            <input type="range" id="bitrateSlider" min="4000" max="128000" value="5500" step="100">
+            <span class="bitrate-value" id="bitrateDisplay">5.5 kbps</span>
+        </label>
+        <span class="bitrate-hint">(ниже — компактнее, выше — качественнее)</span>
+    </div>
+
+    <div class="row">
+        <button id="btnRecord">🔴 Запись</button>
+        <button id="btnStop" disabled>⏹ Стоп</button>
+        <button id="btnPlay" disabled class="btn-play">▶️ Воспр.</button>
+        <button id="btnExport" disabled>💾 Экспорт .vad</button>
+        <button id="btnLoad" style="background:#2a2a3f;">📂 Загрузить .vad</button>
+    </div>
+
+    <!-- УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ -->
+    <div class="playback-controls">
+        <button id="btnPause" disabled class="btn-pause">⏸️ Пауза</button>
+        <button id="btnStopPlay" disabled class="btn-stop-play">⏹️ Остановить</button>
+        <span style="font-size:0.8rem;color:#6b7280;align-self:center;">Пауза/продолжение и остановка воспроизведения</span>
+    </div>
+
+    <!-- КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ -->
+    <div class="row" style="margin-top: 4px;">
+        <button id="btnTogglePause" class="toggle-pause-btn active" style="background:#3a5a3a; border-color:#4ade80;">
+            ⏸️ Разделять по паузам (ВКЛ)
+        </button>
+        <span style="font-size:0.8rem;color:#6b7280;align-self:center;">При выкл. — всё аудио как один сегмент</span>
+    </div>
+
+    <div class="load-section">
+        <button id="btnLoadAudio" class="btn-load-audio">📁 Загрузить аудио (MP3/WAV/OGG/WebM)</button>
+        <span style="font-size:0.8rem;color:#6b7280;margin-left:8px;">→ стабильная конвертация</span>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div id="statusMsg" class="status-msg"></div>
+    </div>
+
+    <div class="status-box" id="statusBox">
+        <div>
+            <span class="badge idle" id="statusBadge">⏸ Ожидание</span>
+            <span id="counterText">Сегментов: 0</span>
+        </div>
+        <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+        <div id="debugInfo" style="font-size:0.75rem;color:#6b7280;margin-top:4px;"></div>
+    </div>
+
+    <div class="prebuffer-info" id="prebufferInfo">⚡ Пре-буфер: записываем всё целиком, потом обрезаем по меткам</div>
+
+    <div class="stats-grid">
+        <span class="label">Речевых сегментов:</span>
+        <span class="value" id="speechCount">0</span>
+        <span class="label">Пауз:</span>
+        <span class="value" id="pauseCount">0</span>
+        <span class="label">Общая длительность:</span>
+        <span class="value" id="totalDuration">0с</span>
+        <span class="label">Размер данных:</span>
+        <span class="value" id="dataSize">0 KB</span>
+    </div>
+
+    <div class="segment-list" id="segmentList"></div>
+
+    <div id="audioContainer"></div>
+
+    <div class="file-info" id="fileInfo">Готов к работе</div>
+</div>
+
+<script>
+// ============================================================
+// КОНФИГ (значения по умолчанию)
+// ============================================================
+const DEFAULTS = {
+    threshold: 0.01,
+    minSilenceMs: 300,
+    bitrate: 5500,
+    mimeType: 'audio/webm;codecs=opus',
+    prebufferMs: 500,
+    vadInterval: 700,
+    splitByPauses: true,
+};
+
+const CFG = {
+    threshold: DEFAULTS.threshold,
+    minSilenceMs: DEFAULTS.minSilenceMs,
+    bitrate: DEFAULTS.bitrate,
+    mimeType: DEFAULTS.mimeType,
+    prebufferMs: DEFAULTS.prebufferMs,
+    vadInterval: DEFAULTS.vadInterval,
+    splitByPauses: DEFAULTS.splitByPauses,
+};
+
+// ============================================================
+// СОСТОЯНИЕ
+// ============================================================
+let state = {
+    isRecording: false,
+    isSpeaking: false,
+    segments: [],
+    silenceStart: 0,
+    mediaRecorder: null,
+    audioCtx: null,
+    analyser: null,
+    dataArray: null,
+    stream: null,
+    isPlaying: false,
+    isPaused: false,
+    _checkInterval: null,
+    speechStartTime: 0,
+    lastSegmentTime: 0,
+    allChunks: [],
+    speechBoundaries: [],
+    fullAudioBlob: null,
+    fullAudioBuffer: null,
+    recordingStartTime: 0,
+    prebufferChunks: [],
+    isPrebuffering: false,
+    currentSpeechStart: 0,
+    speechStartOffset: 0,
+    hasActiveSpeech: false,
+    lastSpeechEndTime: 0,
+    isProcessing: false,
+    playbackSource: null,
+    playbackTimeout: null,
+    currentSegmentIndex: 0,
+    abortController: null,
+    isPlaybackComplete: false,
+};
+
+// DOM
+const $ = id => document.getElementById(id);
+const btnRecord = $('btnRecord');
+const btnStop = $('btnStop');
+const btnPlay = $('btnPlay');
+const btnPause = $('btnPause');
+const btnStopPlay = $('btnStopPlay');
+const btnExport = $('btnExport');
+const btnLoad = $('btnLoad');
+const btnLoadAudio = $('btnLoadAudio');
+const btnTogglePause = $('btnTogglePause');
+const statusBadge = $('statusBadge');
+const counterText = $('counterText');
+const meterFill = $('meterFill');
+const debugInfo = $('debugInfo');
+const audioContainer = $('audioContainer');
+const fileInfo = $('fileInfo');
+const speechCount = $('speechCount');
+const pauseCount = $('pauseCount');
+const totalDuration = $('totalDuration');
+const dataSize = $('dataSize');
+const prebufferInfo = $('prebufferInfo');
+const segmentList = $('segmentList');
+const progressFill = $('progressFill');
+const statusMsg = $('statusMsg');
+const bitrateSlider = $('bitrateSlider');
+const bitrateDisplay = $('bitrateDisplay');
+
+// Панель управления
+const controlsPanel = $('controlsPanel');
+const togglePanelBtn = $('togglePanelBtn');
+const panelArrow = $('panelArrow');
+
+// Слайдеры
+const thresholdSlider = $('thresholdSlider');
+const thresholdDisplay = $('thresholdDisplay');
+const minSilenceSlider = $('minSilenceSlider');
+const minSilenceDisplay = $('minSilenceDisplay');
+const prebufferSlider = $('prebufferSlider');
+const prebufferDisplay = $('prebufferDisplay');
+const vadIntervalSlider = $('vadIntervalSlider');
+const vadIntervalDisplay = $('vadIntervalDisplay');
+
+// ============================================================
+// ОТКРЫТИЕ/ЗАКРЫТИЕ ПАНЕЛИ
+// ============================================================
+togglePanelBtn.addEventListener('click', () => {
+    controlsPanel.classList.toggle('open');
+    panelArrow.classList.toggle('open');
+    if (controlsPanel.classList.contains('open')) {
+        togglePanelBtn.innerHTML = '<span class="arrow open">▼</span> 🎛️ Ручная настройка (скрыть)';
+    } else {
+        togglePanelBtn.innerHTML = '<span class="arrow">▼</span> 🎛️ Ручная настройка';
+    }
+});
+
+// ============================================================
+// РЕГУЛЯТОРЫ
+// ============================================================
+function updateBitrateDisplay() {
+    const val = parseInt(bitrateSlider.value, 10);
+    if (val >= 1000) {
+        bitrateDisplay.textContent = (val / 1000).toFixed(1) + ' kbps';
+    } else {
+        bitrateDisplay.textContent = val + ' bps';
+    }
+    CFG.bitrate = val;
+}
+bitrateSlider.addEventListener('input', updateBitrateDisplay);
+updateBitrateDisplay();
+
+function updateThreshold() {
+    const val = parseFloat(thresholdSlider.value);
+    thresholdDisplay.textContent = val.toFixed(3);
+    CFG.threshold = val;
+    if (state.fullAudioBuffer) {
+        analyzeAudioBuffer(state.fullAudioBuffer);
+    }
+}
+thresholdSlider.addEventListener('input', updateThreshold);
+$('resetThreshold').addEventListener('click', () => {
+    thresholdSlider.value = DEFAULTS.threshold;
+    updateThreshold();
+});
+updateThreshold();
+
+function updateMinSilence() {
+    const val = parseInt(minSilenceSlider.value, 10);
+    minSilenceDisplay.textContent = val;
+    CFG.minSilenceMs = val;
+    if (state.fullAudioBuffer) {
+        analyzeAudioBuffer(state.fullAudioBuffer);
+    }
+}
+minSilenceSlider.addEventListener('input', updateMinSilence);
+$('resetMinSilence').addEventListener('click', () => {
+    minSilenceSlider.value = DEFAULTS.minSilenceMs;
+    updateMinSilence();
+});
+updateMinSilence();
+
+function updatePrebuffer() {
+    const val = parseInt(prebufferSlider.value, 10);
+    prebufferDisplay.textContent = val;
+    CFG.prebufferMs = val;
+}
+prebufferSlider.addEventListener('input', updatePrebuffer);
+$('resetPrebuffer').addEventListener('click', () => {
+    prebufferSlider.value = DEFAULTS.prebufferMs;
+    updatePrebuffer();
+});
+updatePrebuffer();
+
+function updateVadInterval() {
+    const val = parseInt(vadIntervalSlider.value, 10);
+    vadIntervalDisplay.textContent = val;
+    CFG.vadInterval = val;
+}
+vadIntervalSlider.addEventListener('input', updateVadInterval);
+$('resetVadInterval').addEventListener('click', () => {
+    vadIntervalSlider.value = DEFAULTS.vadInterval;
+    updateVadInterval();
+});
+updateVadInterval();
+
+// ============================================================
+// КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ
+// ============================================================
+btnTogglePause.addEventListener('click', () => {
+    CFG.splitByPauses = !CFG.splitByPauses;
+    if (CFG.splitByPauses) {
+        btnTogglePause.textContent = '⏸️ Разделять по паузам (ВКЛ)';
+        btnTogglePause.style.background = '#3a5a3a';
+        btnTogglePause.style.borderColor = '#4ade80';
+        prebufferInfo.textContent = '⚡ Режим: разделение по паузам включено';
+    } else {
+        btnTogglePause.textContent = '⏸️ Разделять по паузам (ВЫКЛ)';
+        btnTogglePause.style.background = '#3a3a3a';
+        btnTogglePause.style.borderColor = '#6a6a6a';
+        prebufferInfo.textContent = '⚡ Режим: паузы игнорируются, всё аудио как один сегмент';
+    }
+    if (state.fullAudioBuffer) {
+        analyzeAudioBuffer(state.fullAudioBuffer);
+    }
+});
+
+// ============================================================
+// АУДИО-ДЕТЕКТОР
+// ============================================================
+async function getAudioContext() {
+    if (!state.audioCtx) {
+        state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (state.audioCtx.state === 'suspended') {
+        await state.audioCtx.resume();
+    }
+    return state.audioCtx;
+}
+
+function setupAnalyser(stream) {
+    const ctx = state.audioCtx;
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    state.analyser = analyser;
+    state.dataArray = new Uint8Array(analyser.fftSize);
+    return analyser;
+}
+
+function getRMS() {
+    const analyser = state.analyser;
+    if (!analyser) return 0;
+    const data = state.dataArray;
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128;
+        sum += v * v;
+    }
+    return Math.sqrt(sum / data.length);
+}
+
+// ============================================================
+// КОНВЕРТАЦИЯ В OPUS
+// ============================================================
+async function convertToOpus(audioBuffer) {
+    return new Promise((resolve, reject) => {
+        try {
+            const ctx = state.audioCtx;
+            const duration = audioBuffer.duration;
+
+            const dest = ctx.createMediaStreamDestination();
+            const source = ctx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(dest);
+
+            const stream = dest.stream;
+            const recorder = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus',
+                audioBitsPerSecond: CFG.bitrate,
+            });
+
+            const chunks = [];
+            let isResolved = false;
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                }
+            };
+
+            recorder.onstop = () => {
+                if (!isResolved) {
+                    isResolved = true;
+                    const blob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+                    resolve(blob);
+                }
+            };
+
+            recorder.onerror = (err) => {
+                if (!isResolved) {
+                    isResolved = true;
+                    reject(err);
+                }
+            };
+
+            recorder.start(250);
+            source.start();
+
+            const stopTimeout = setTimeout(() => {
+                try {
+                    if (recorder.state !== 'inactive') {
+                        recorder.stop();
+                    }
+                    source.stop();
+                } catch (e) {}
+            }, (duration * 1000) + 500);
+
+            source.onended = () => {
+                clearTimeout(stopTimeout);
+                if (recorder.state !== 'inactive') {
+                    setTimeout(() => {
+                        try {
+                            if (recorder.state !== 'inactive') {
+                                recorder.stop();
+                            }
+                        } catch (e) {}
+                    }, 300);
+                }
+            };
+
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+
+// ============================================================
+// ЗАГРУЗКА АУДИО
+// ============================================================
+async function loadAudioFile(file) {
+    if (state.isProcessing) return;
+    state.isProcessing = true;
+    progressFill.style.width = '5%';
+    statusMsg.textContent = '⏳ Декодирование аудио...';
+
+    try {
+        const ctx = await getAudioContext();
+        const arrayBuffer = await file.arrayBuffer();
+        progressFill.style.width = '20%';
+        statusMsg.textContent = '⏳ Декодирование...';
+
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        progressFill.style.width = '40%';
+        statusMsg.textContent = `⏳ Конвертация в Opus (${audioBuffer.duration.toFixed(1)}с)...`;
+
+        const opusBlob = await convertToOpus(audioBuffer);
+        progressFill.style.width = '70%';
+        statusMsg.textContent = '⏳ VAD-анализ...';
+
+        state.fullAudioBuffer = audioBuffer;
+        state.fullAudioBlob = opusBlob;
+
+        await analyzeAudioBuffer(audioBuffer);
+        progressFill.style.width = '100%';
+        statusMsg.textContent = '✅ Готово!';
+
+        btnPlay.disabled = false;
+        btnExport.disabled = false;
+        btnPause.disabled = true;
+        btnStopPlay.disabled = true;
+        updateUI();
+        updateSegmentList();
+        updateStats();
+
+        const speechSegments = state.segments.filter(s => s.type === 'speech').length;
+        const pauseSegments = state.segments.filter(s => s.type === 'pause').length;
+        fileInfo.textContent = `✅ "${file.name}" (${(opusBlob.size/1024).toFixed(1)} KB Opus, битрейт ${(CFG.bitrate/1000).toFixed(1)} kbps), речь: ${speechSegments} сегментов, пауз: ${pauseSegments}`;
+        prebufferInfo.textContent = `✅ Конвертировано в Opus (${(CFG.bitrate/1000).toFixed(1)} kbps). Речевых сегментов: ${speechSegments}`;
+
+        audioContainer.innerHTML = `✅ Аудио "${file.name}" загружено и сконвертировано в Opus<br>`;
+        audioContainer.innerHTML += `📦 Длительность: ${audioBuffer.duration.toFixed(2)}с, размер Opus: ${(opusBlob.size/1024).toFixed(1)} KB<br>`;
+        audioContainer.innerHTML += `🎯 VAD выделил ${speechSegments} речевых сегментов`;
+
+        setTimeout(() => {
+            progressFill.style.width = '0%';
+            statusMsg.textContent = '';
+        }, 3000);
+
+    } catch (err) {
+        console.error('Ошибка:', err);
+        fileInfo.textContent = `❌ Ошибка: ${err.message}`;
+        prebufferInfo.textContent = '❌ Не удалось обработать аудио';
+        progressFill.style.width = '0%';
+        statusMsg.textContent = `❌ Ошибка: ${err.message}`;
+    }
+
+    state.isProcessing = false;
+}
+
+// ============================================================
+// VAD-АНАЛИЗ
+// ============================================================
+async function analyzeAudioBuffer(audioBuffer) {
+    state.segments = [];
+    state.speechBoundaries = [];
+    state.isSpeaking = false;
+    state.hasActiveSpeech = false;
+
+    const sampleRate = audioBuffer.sampleRate;
+    const duration = audioBuffer.duration;
+    const channelData = audioBuffer.getChannelData(0);
+
+    const windowSize = Math.floor(sampleRate * 0.02);
+    const hopSize = Math.floor(sampleRate * 0.01);
+
+    let isVoice = false;
+    let currentSpeechStartTime = 0;
+    let speechStartOffset = 0;
+    let lastSpeechEndTime = 0;
+    let silenceStartTime = 0;
+
+    const totalSamples = channelData.length;
+    let pos = 0;
+
+    function getRMSForWindow(start, length) {
+        let sum = 0;
+        const end = Math.min(start + length, totalSamples);
+        const actualLength = end - start;
+        if (actualLength <= 0) return 0;
+        for (let i = start; i < end; i++) {
+            const v = channelData[i];
+            sum += v * v;
+        }
+        return Math.sqrt(sum / actualLength);
+    }
+
+    if (!CFG.splitByPauses) {
+        const durationMs = duration * 1000;
+        state.segments.push({
+            type: 'speech',
+            duration: durationMs,
+            startTime: 0,
+            endTime: durationMs,
+            startTimeOffset: 0,
+            endTimeOffset: durationMs,
+            buffer: state.fullAudioBuffer,
+            blob: null,
+        });
+        updateUI();
+        updateSegmentList();
+        updateStats();
+        return;
+    }
+
+    while (pos < totalSamples) {
+        const rms = getRMSForWindow(pos, windowSize);
+        const currentTime = pos / sampleRate;
+        const isVoiceNow = rms > CFG.threshold;
+
+        if (isVoiceNow && !isVoice) {
+            isVoice = true;
+            currentSpeechStartTime = currentTime * 1000;
+            speechStartOffset = currentTime * 1000;
+
+            if (lastSpeechEndTime > 0) {
+                const pauseDuration = (currentTime * 1000) - lastSpeechEndTime;
+                if (pauseDuration > 100) {
+                    state.segments.push({
+                        type: 'pause',
+                        duration: pauseDuration,
+                        startTime: lastSpeechEndTime,
+                        endTime: currentTime * 1000,
+                    });
+                }
+            }
+
+        } else if (!isVoiceNow && isVoice) {
+            if (silenceStartTime === 0) {
+                silenceStartTime = currentTime;
+            } else if ((currentTime - silenceStartTime) > CFG.minSilenceMs / 1000) {
+                isVoice = false;
+                const speechEndTime = currentTime * 1000;
+                const speechDuration = speechEndTime - currentSpeechStartTime;
+
+                state.segments.push({
+                    type: 'speech',
+                    duration: speechDuration,
+                    startTime: currentSpeechStartTime,
+                    endTime: speechEndTime,
+                    startTimeOffset: speechStartOffset,
+                    endTimeOffset: currentTime * 1000,
+                    buffer: state.fullAudioBuffer,
+                    blob: null,
+                });
+
+                lastSpeechEndTime = speechEndTime;
+                silenceStartTime = 0;
+                updateUI();
+                updateSegmentList();
+                updateStats();
+            }
+        } else if (!isVoiceNow && !isVoice) {
+            silenceStartTime = 0;
+        }
+
+        pos += hopSize;
+    }
+
+    if (isVoice) {
+        const speechEndTime = duration * 1000;
+        const speechDuration = speechEndTime - currentSpeechStartTime;
+
+        state.segments.push({
+            type: 'speech',
+            duration: speechDuration,
+            startTime: currentSpeechStartTime,
+            endTime: speechEndTime,
+            startTimeOffset: speechStartOffset,
+            endTimeOffset: duration * 1000,
+            buffer: state.fullAudioBuffer,
+            blob: null,
+        });
+    }
+
+    if (state.segments.length === 0 && duration > 0.1) {
+        state.segments.push({
+            type: 'speech',
+            duration: duration * 1000,
+            startTime: 0,
+            endTime: duration * 1000,
+            startTimeOffset: 0,
+            endTimeOffset: duration * 1000,
+            buffer: state.fullAudioBuffer,
+            blob: null,
+        });
+    }
+
+    updateStats();
+    updateSegmentList();
+}
+
+// ============================================================
+// ЗАПИСЬ
+// ============================================================
+function startRecording() {
+    if (state.isRecording) return;
+    if (state.isPlaying) stopPlayback();
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(async stream => {
+            state.stream = stream;
+            await getAudioContext();
+            setupAnalyser(stream);
+
+            state.segments = [];
+            state.allChunks = [];
+            state.speechBoundaries = [];
+            state.isSpeaking = false;
+            state.silenceStart = 0;
+            state.speechStartTime = 0;
+            state.lastSegmentTime = 0;
+            state.recordingStartTime = performance.now();
+            state.prebufferChunks = [];
+            state.hasActiveSpeech = false;
+            state.currentSpeechStart = 0;
+            state.speechStartOffset = 0;
+            state.lastSpeechEndTime = 0;
+
+            const options = {
+                mimeType: CFG.mimeType,
+                audioBitsPerSecond: CFG.bitrate,
+            };
+
+            const recorder = new MediaRecorder(stream, options);
+            state.mediaRecorder = recorder;
+
+            let isCurrentlySpeaking = false;
+            let silenceStartTime = 0;
+            let lastSpeechEndTime = 0;
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    state.allChunks.push(e.data);
+                    state.prebufferChunks.push(e.data);
+
+                    const prebufferLimit = Math.ceil(CFG.prebufferMs / 250) * 2;
+                    if (state.prebufferChunks.length > prebufferLimit) {
+                        state.prebufferChunks.shift();
+                    }
+                }
+            };
+
+            const checkInterval = setInterval(() => {
+                if (!state.isRecording) {
+                    clearInterval(checkInterval);
+                    return;
+                }
+
+                const now = performance.now();
+                const rms = getRMS();
+                meterFill.style.width = Math.min(rms * 400, 100) + '%';
+
+                const isVoice = rms > CFG.threshold;
+
+                if (!CFG.splitByPauses) {
+                    debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ⚡ РЕЖИМ БЕЗ ПАУЗ`;
+                    updateUI();
+                    return;
+                }
+
+                if (isVoice && !isCurrentlySpeaking) {
+                    isCurrentlySpeaking = true;
+                    state.isSpeaking = true;
+                    state.hasActiveSpeech = true;
+
+                    const prebufferTime = Math.min(CFG.prebufferMs, 1000);
+                    const speechAbsoluteStart = now - prebufferTime;
+                    const speechRelativeStart = Math.max(0, (now - state.recordingStartTime) - prebufferTime);
+
+                    state.currentSpeechStart = speechAbsoluteStart;
+                    state.speechStartOffset = speechRelativeStart;
+
+                    if (lastSpeechEndTime > 0) {
+                        const pauseDuration = (speechAbsoluteStart - lastSpeechEndTime);
+                        if (pauseDuration > 100) {
+                            state.segments.push({
+                                type: 'pause',
+                                duration: pauseDuration,
+                                startTime: lastSpeechEndTime,
+                                endTime: speechAbsoluteStart,
+                            });
+                        }
+                    }
+
+                    state.speechStartTime = speechAbsoluteStart;
+
+                } else if (!isVoice && isCurrentlySpeaking) {
+                    if (silenceStartTime === 0) {
+                        silenceStartTime = now;
+                    } else if (now - silenceStartTime > CFG.minSilenceMs) {
+                        const speechEndTime = now;
+                        const speechDuration = speechEndTime - state.currentSpeechStart;
+
+                        state.segments.push({
+                            type: 'speech',
+                            duration: speechDuration,
+                            startTime: state.currentSpeechStart,
+                            endTime: speechEndTime,
+                            startTimeOffset: state.speechStartOffset,
+                            endTimeOffset: Math.max(0, (now - state.recordingStartTime)),
+                            buffer: null,
+                            blob: null,
+                        });
+
+                        isCurrentlySpeaking = false;
+                        state.isSpeaking = false;
+                        state.hasActiveSpeech = false;
+                        lastSpeechEndTime = speechEndTime;
+                        state.lastSpeechEndTime = speechEndTime;
+                        silenceStartTime = 0;
+                        state.prebufferChunks = [];
+
+                        updateUI();
+                        updateSegmentList();
+                        updateStats();
+                    }
+                } else if (!isVoice && !isCurrentlySpeaking) {
+                    silenceStartTime = 0;
+                }
+
+                debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ${isCurrentlySpeaking ? '🔴 РЕЧЬ' : '⚪ ТИШИНА'} | Сегментов: ${state.segments.length}`;
+                updateUI();
+            }, CFG.vadInterval);
+
+            state._checkInterval = checkInterval;
+
+            recorder.start(250);
+            state.isRecording = true;
+            updateUI();
+
+            btnRecord.disabled = true;
+            btnStop.disabled = false;
+            btnPlay.disabled = true;
+            btnExport.disabled = true;
+            btnPause.disabled = true;
+            btnStopPlay.disabled = true;
+
+            const stopHandler = () => {
+                if (state._checkInterval) {
+                    clearInterval(state._checkInterval);
+                    state._checkInterval = null;
+                }
+
+                if (!CFG.splitByPauses) {
+                    if (state.allChunks.length > 0) {
+                        const fullBlob = new Blob(state.allChunks, { type: options.mimeType });
+                        state.fullAudioBlob = fullBlob;
+                        const reader = new FileReader();
+                        reader.onload = async (e) => {
+                            try {
+                                const ctx = await getAudioContext();
+                                const buffer = await ctx.decodeAudioData(e.target.result);
+                                state.fullAudioBuffer = buffer;
+                                const durationMs = buffer.duration * 1000;
+                                state.segments = [{
+                                    type: 'speech',
+                                    duration: durationMs,
+                                    startTime: 0,
+                                    endTime: durationMs,
+                                    startTimeOffset: 0,
+                                    endTimeOffset: durationMs,
+                                    buffer: buffer,
+                                    blob: null,
+                                }];
+                                btnPlay.disabled = false;
+                                btnExport.disabled = false;
+                                updateUI();
+                                updateSegmentList();
+                                updateStats();
+                                prebufferInfo.textContent = `✅ Запись завершена (режим без пауз). Один цельный сегмент.`;
+                            } catch (err) {
+                                console.error('Ошибка декодирования:', err);
+                                fileInfo.textContent = '❌ Ошибка декодирования аудио';
+                            }
+                        };
+                        reader.readAsArrayBuffer(fullBlob);
+                    }
+                    fileInfo.textContent = `📦 Запись завершена (режим без пауз)`;
+                    recorder.removeEventListener('stop', stopHandler);
+                    return;
+                }
+
+                if (isCurrentlySpeaking) {
+                    const now = performance.now();
+                    const speechDuration = now - state.currentSpeechStart;
+                    const speechEndTime = Math.max(0, (now - state.recordingStartTime));
+
+                    state.segments.push({
+                        type: 'speech',
+                        duration: speechDuration,
+                        startTime: state.currentSpeechStart,
+                        endTime: now,
+                        startTimeOffset: state.speechStartOffset,
+                        endTimeOffset: speechEndTime,
+                        buffer: null,
+                        blob: null,
+                    });
+
+                    isCurrentlySpeaking = false;
+                    state.isSpeaking = false;
+                }
+
+                if (state.allChunks.length > 0) {
+                    const fullBlob = new Blob(state.allChunks, { type: options.mimeType });
+                    state.fullAudioBlob = fullBlob;
+
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const ctx = await getAudioContext();
+                            const buffer = await ctx.decodeAudioData(e.target.result);
+                            state.fullAudioBuffer = buffer;
+
+                            state.segments.forEach(seg => {
+                                if (seg.type === 'speech') {
+                                    seg.buffer = buffer;
+                                }
+                            });
+
+                            btnPlay.disabled = false;
+                            btnExport.disabled = false;
+                            updateUI();
+                            updateSegmentList();
+                            updateStats();
+
+                            const speechSegments = state.segments.filter(s => s.type === 'speech').length;
+                            prebufferInfo.textContent = `✅ Запись завершена. Сегментов речи: ${speechSegments}. Битрейт: ${(CFG.bitrate/1000).toFixed(1)} kbps`;
+                        } catch (err) {
+                            console.error('Ошибка декодирования:', err);
+                            fileInfo.textContent = '❌ Ошибка декодирования аудио';
+                        }
+                    };
+                    reader.readAsArrayBuffer(fullBlob);
+                }
+
+                fileInfo.textContent = `📦 Запись: ${state.segments.length} сегментов`;
+                recorder.removeEventListener('stop', stopHandler);
+            };
+
+            recorder.addEventListener('stop', stopHandler);
+
+            recorder.onerror = (e) => {
+                console.error('Recorder error:', e);
+                stopRecording();
+            };
+
+        })
+        .catch(err => {
+            alert('Ошибка микрофона: ' + err.message);
+        });
+}
+
+function stopRecording() {
+    if (!state.isRecording) return;
+    state.isRecording = false;
+
+    if (state._checkInterval) {
+        clearInterval(state._checkInterval);
+        state._checkInterval = null;
+    }
+
+    if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+        state.mediaRecorder.stop();
+    }
+    if (state.stream) {
+        state.stream.getTracks().forEach(t => t.stop());
+    }
+
+    btnRecord.disabled = false;
+    btnStop.disabled = true;
+    updateUI();
+}
+
+// ============================================================
+// ВОСПРОИЗВЕДЕНИЕ С ПАУЗОЙ И ОСТАНОВКОЙ
+// ============================================================
+async function playWithPauses() {
+    if (state.isPlaying && !state.isPaused) return;
+    
+    if (!state.fullAudioBuffer) {
+        audioContainer.innerHTML = '❌ Аудио не загружено.';
+        return;
+    }
+
+    // Если воспроизведение уже завершено и нажимают снова - начинаем сначала
+    if (state.isPlaybackComplete) {
+        state.currentSegmentIndex = 0;
+        state.isPlaybackComplete = false;
+        audioContainer.innerHTML = '';
+    }
+
+    try {
+        const ctx = await getAudioContext();
+        if (ctx.state === 'suspended') await ctx.resume();
+
+        if (!state.abortController) {
+            state.abortController = new AbortController();
+        }
+
+        state.isPlaying = true;
+        state.isPaused = false;
+        state.isPlaybackComplete = false;
+        
+        btnPlay.disabled = true;
+        btnPause.disabled = false;
+        btnPause.textContent = '⏸️ Пауза';
+        btnStopPlay.disabled = false;
+        
+        if (!state.isPaused && state.currentSegmentIndex === 0) {
+            audioContainer.innerHTML = '🔄 Воспроизведение...<br>';
+        }
+
+        const buffer = state.fullAudioBuffer;
+        const sampleRate = buffer.sampleRate;
+        let speechCount = 0;
+
+        // Подсчитываем сколько уже было воспроизведено речевых сегментов
+        for (let i = 0; i < state.currentSegmentIndex; i++) {
+            if (state.segments[i] && state.segments[i].type === 'speech') {
+                speechCount++;
+            }
+        }
+
+        for (let i = state.currentSegmentIndex; i < state.segments.length; i++) {
+            // Проверяем остановку
+            if (state.abortController.signal.aborted) {
+                break;
+            }
+
+            // Проверяем паузу
+            while (state.isPaused) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                if (state.abortController.signal.aborted) break;
+            }
+            
+            if (state.abortController.signal.aborted) break;
+
+            const seg = state.segments[i];
+
+            if (seg.type === 'speech') {
+                const startOffset = seg.startTimeOffset || 0;
+                const endOffset = seg.endTimeOffset || (startOffset + seg.duration);
+
+                const startSample = Math.floor((startOffset / 1000) * sampleRate);
+                const endSample = Math.floor((endOffset / 1000) * sampleRate);
+                const durationSamples = endSample - startSample;
+
+                if (durationSamples <= 0) continue;
+
+                const speechBuffer = ctx.createBuffer(
+                    buffer.numberOfChannels,
+                    durationSamples,
+                    sampleRate
+                );
+
+                for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+                    const channelData = buffer.getChannelData(ch);
+                    const newChannelData = speechBuffer.getChannelData(ch);
+                    for (let j = 0; j < durationSamples; j++) {
+                        newChannelData[j] = channelData[startSample + j] || 0;
+                    }
+                }
+
+                const source = ctx.createBufferSource();
+                source.buffer = speechBuffer;
+                source.connect(ctx.destination);
+                state.playbackSource = source;
+
+                const durationSec = speechBuffer.duration;
+                speechCount++;
+                state.currentSegmentIndex = i;
+
+                audioContainer.innerHTML += `🎵 Речь #${speechCount} (${durationSec.toFixed(2)}с) `;
+
+                source.start();
+
+                // Ждем завершения или прерывания
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(resolve, (durationSec * 1000) + 200);
+                    state.playbackTimeout = timeout;
+                    
+                    source.onended = () => {
+                        clearTimeout(timeout);
+                        resolve();
+                    };
+                });
+
+                // Проверяем паузу после завершения сегмента
+                if (state.isPaused) {
+                    state.currentSegmentIndex = i;
+                    break;
+                }
+
+            } else if (seg.type === 'pause') {
+                const pauseSec = seg.duration / 1000;
+                audioContainer.innerHTML += `⏸️ ${pauseSec.toFixed(2)}с `;
+                state.currentSegmentIndex = i;
+                
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(resolve, Math.min(seg.duration, 5000));
+                    state.playbackTimeout = timeout;
+                    
+                    const checkInterval = setInterval(() => {
+                        if (state.isPaused || state.abortController.signal.aborted) {
+                            clearTimeout(timeout);
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                });
+
+                if (state.isPaused || state.abortController.signal.aborted) break;
+            }
+
+            if (i < state.segments.length - 1) {
+                audioContainer.innerHTML += '→ ';
+            }
+        }
+
+        // Если не было остановки и не пауза
+        if (!state.isPaused && !state.abortController.signal.aborted) {
+            state.isPlaybackComplete = true;
+            audioContainer.innerHTML += `<br>✅ Воспроизведение завершено (речевых сегментов: ${speechCount})`;
+            resetPlayback();
+        }
+
+    } catch (err) {
+        console.error('Playback error:', err);
+        audioContainer.innerHTML = `❌ Ошибка: ${err.message}`;
+        resetPlayback();
+    }
+}
+
+// ============================================================
+// УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ
+// ============================================================
+function togglePause() {
+    if (!state.isPlaying) return;
+    
+    state.isPaused = !state.isPaused;
+    btnPause.textContent = state.isPaused ? '▶️ Продолжить' : '⏸️ Пауза';
+    
+    if (state.isPaused && state.playbackSource) {
+        try {
+            state.playbackSource.stop();
+        } catch(e) {}
+        audioContainer.innerHTML += ' ⏸️ (пауза)';
+    } else if (!state.isPaused) {
+        audioContainer.innerHTML += ' ▶️ (продолжение)';
+        // Продолжаем воспроизведение
+        playWithPauses();
+    }
+}
+
+function stopPlayback() {
+    if (state.isPlaying) {
+        if (state.abortController) {
+            state.abortController.abort();
+            state.abortController = null;
+        }
+        resetPlayback();
+        audioContainer.innerHTML += '<br>⏹️ Воспроизведение остановлено';
+        state.isPlaybackComplete = true;
+    }
+}
+
+function resetPlayback() {
+    state.isPlaying = false;
+    state.isPaused = false;
+    state.currentSegmentIndex = 0;
+    
+    if (state.playbackSource) {
+        try { state.playbackSource.stop(); } catch(e) {}
+        state.playbackSource = null;
+    }
+    
+    if (state.playbackTimeout) {
+        clearTimeout(state.playbackTimeout);
+        state.playbackTimeout = null;
+    }
+    
+    if (state.abortController) {
+        state.abortController = null;
+    }
+    
+    btnPlay.disabled = false;
+    btnPause.disabled = true;
+    btnStopPlay.disabled = true;
+    btnPause.textContent = '⏸️ Пауза';
+}
+
+// ============================================================
+// ЭКСПОРТ / ИМПОРТ
+// ============================================================
+function exportVAD() {
+    if (state.segments.length === 0) {
+        alert('Нет сегментов для экспорта');
+        return;
+    }
+
+    if (!state.fullAudioBlob) {
+        alert('Нет аудиоданных для экспорта. Попробуйте записать или загрузить аудио.');
+        return;
+    }
+
+    const encoder = new TextEncoder();
+    const magic = encoder.encode('VAD8');
+    const parts = [magic];
+
+    const header = new ArrayBuffer(2);
+    const hView = new DataView(header);
+    hView.setUint16(0, state.segments.length, true);
+    parts.push(header);
+
+    const size = state.fullAudioBlob.size;
+    const sizeBuf = new ArrayBuffer(4);
+    const sView = new DataView(sizeBuf);
+    sView.setUint32(0, size, true);
+    parts.push(sizeBuf);
+    parts.push(state.fullAudioBlob);
+
+    state.segments.forEach(seg => {
+        const typeBuf = new ArrayBuffer(1);
+        const tView = new DataView(typeBuf);
+        tView.setUint8(0, seg.type === 'speech' ? 0 : 1);
+        parts.push(typeBuf);
+
+        if (seg.type === 'speech') {
+            const durBuf = new ArrayBuffer(4);
+            const dView = new DataView(durBuf);
+            dView.setUint32(0, Math.round(seg.duration || 0), true);
+            parts.push(durBuf);
+
+            const startOffsetBuf = new ArrayBuffer(4);
+            const sView = new DataView(startOffsetBuf);
+            sView.setUint32(0, Math.round(seg.startTimeOffset || 0), true);
+            parts.push(startOffsetBuf);
+
+            const endOffsetBuf = new ArrayBuffer(4);
+            const eView = new DataView(endOffsetBuf);
+            eView.setUint32(0, Math.round(seg.endTimeOffset || 0), true);
+            parts.push(endOffsetBuf);
+        } else {
+            const durBuf = new ArrayBuffer(4);
+            const dView = new DataView(durBuf);
+            dView.setUint32(0, Math.round(seg.duration), true);
+            parts.push(durBuf);
+        }
+    });
+
+    const blob = new Blob(parts);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vad_${Date.now()}.vad`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    fileInfo.textContent = `💾 Экспортировано: ${state.segments.length} сегментов, ${(blob.size/1024).toFixed(1)} KB`;
+}
+
+function loadVAD(file) {
+    file.arrayBuffer().then(buffer => {
+        const data = new Uint8Array(buffer);
+        let offset = 0;
+
+        const magic = new TextDecoder().decode(data.slice(0, 4));
+        if (!['VAD5', 'VAD6', 'VAD7', 'VAD8'].includes(magic)) {
+            alert('Неверный формат .vad');
+            return;
+        }
+        offset += 4;
+
+        const segCount = new DataView(buffer, offset, 2).getUint16(0, true);
+        offset += 2;
+
+        const audioSize = new DataView(buffer, offset, 4).getUint32(0, true);
+        offset += 4;
+
+        if (audioSize > 0) {
+            const audioData = data.slice(offset, offset + audioSize);
+            state.fullAudioBlob = new Blob([audioData], { type: CFG.mimeType });
+            offset += audioSize;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const ctx = await getAudioContext();
+                    const audioBuffer = await ctx.decodeAudioData(e.target.result);
+                    state.fullAudioBuffer = audioBuffer;
+
+                    state.segments.forEach(seg => {
+                        if (seg.type === 'speech') {
+                            seg.buffer = audioBuffer;
+                        }
+                    });
+
+                    btnPlay.disabled = false;
+                    btnExport.disabled = false;
+                    btnPause.disabled = true;
+                    btnStopPlay.disabled = true;
+                    updateUI();
+                    updateSegmentList();
+                    updateStats();
+                } catch (err) {
+                    console.error('Ошибка декодирования:', err);
+                }
+            };
+            reader.readAsArrayBuffer(state.fullAudioBlob);
+        } else {
+            state.fullAudioBlob = null;
+            state.fullAudioBuffer = null;
+        }
+
+        const newSegments = [];
+        for (let i = 0; i < segCount; i++) {
+            const type = new DataView(buffer, offset, 1).getUint8(0);
+            offset += 1;
+
+            if (type === 0) {
+                const duration = new DataView(buffer, offset, 4).getUint32(0, true);
+                offset += 4;
+
+                let startTimeOffset = 0, endTimeOffset = 0;
+                if (['VAD6', 'VAD7', 'VAD8'].includes(magic)) {
+                    startTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
+                    offset += 4;
+                    endTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
+                    offset += 4;
+                }
+
+                newSegments.push({
+                    type: 'speech',
+                    duration: duration,
+                    startTimeOffset: startTimeOffset,
+                    endTimeOffset: endTimeOffset || (startTimeOffset + duration),
+                    buffer: state.fullAudioBuffer
+                });
+            } else {
+                const duration = new DataView(buffer, offset, 4).getUint32(0, true);
+                offset += 4;
+                newSegments.push({ type: 'pause', duration: duration });
+            }
+        }
+
+        state.segments = newSegments;
+
+        btnPlay.disabled = false;
+        btnExport.disabled = false;
+        btnPause.disabled = true;
+        btnStopPlay.disabled = true;
+        updateUI();
+        updateSegmentList();
+        updateStats();
+
+        fileInfo.textContent = `📂 Загружено: ${state.segments.length} сегментов, ${state.fullAudioBlob ? (state.fullAudioBlob.size/1024).toFixed(1) : 0} KB аудио`;
+        prebufferInfo.textContent = `📂 Загружен файл с ${state.segments.filter(s => s.type === 'speech').length} речевыми сегментами`;
+    });
+}
+
+// ============================================================
+// UI ОБНОВЛЕНИЯ
+// ============================================================
+function updateUI() {
+    if (state.isRecording) {
+        if (state.isSpeaking && CFG.splitByPauses) {
+            statusBadge.className = 'badge speaking';
+            statusBadge.textContent = '🔴 ГОВОРИТ';
+        } else if (state.isRecording && !CFG.splitByPauses) {
+            statusBadge.className = 'badge speaking';
+            statusBadge.textContent = '⚡ БЕЗ ПАУЗ (запись)';
+        } else {
+            statusBadge.className = 'badge silence';
+            statusBadge.textContent = '⏸️ Тишина';
+        }
+    } else {
+        statusBadge.className = 'badge idle';
+        statusBadge.textContent = '⏹ Стоп';
+    }
+
+    const speechSegs = state.segments.filter(s => s.type === 'speech').length;
+    const pauseSegs = state.segments.filter(s => s.type === 'pause').length;
+    counterText.textContent = `Сегментов: ${state.segments.length} (речь: ${speechSegs}, паузы: ${pauseSegs})`;
+}
+
+function updateStats() {
+    const speechSegs = state.segments.filter(s => s.type === 'speech');
+    const pauseSegs = state.segments.filter(s => s.type === 'pause');
+
+    speechCount.textContent = speechSegs.length;
+    pauseCount.textContent = pauseSegs.length;
+
+    let totalTime = 0;
+    state.segments.forEach(s => {
+        totalTime += s.duration || 0;
+    });
+    totalDuration.textContent = (totalTime / 1000).toFixed(2) + 'с';
+
+    let totalSize = 0;
+    if (state.fullAudioBlob) {
+        totalSize = state.fullAudioBlob.size;
+    }
+    dataSize.textContent = (totalSize / 1024).toFixed(1) + ' KB';
+}
+
+function updateSegmentList() {
+    if (state.segments.length === 0) {
+        segmentList.innerHTML = '(нет сегментов)';
+        return;
+    }
+
+    let html = '';
+    let speechNum = 0;
+    state.segments.forEach((seg, i) => {
+        const dur = seg.duration || 0;
+        if (seg.type === 'speech') {
+            speechNum++;
+            const start = seg.startTimeOffset || 0;
+            const end = seg.endTimeOffset || (start + dur);
+            html += `<div class="segment-item speech">🎤 #${speechNum} ${(dur/1000).toFixed(2)}с (${(start/1000).toFixed(2)}с-${(end/1000).toFixed(2)}с)</div>`;
+        } else {
+            html += `<div class="segment-item pause">⏸️ Пауза ${(dur/1000).toFixed(2)}с</div>`;
+        }
+    });
+    segmentList.innerHTML = html;
+}
+
+// ============================================================
+// ОБРАБОТЧИКИ
+// ============================================================
+btnRecord.addEventListener('click', startRecording);
+btnStop.addEventListener('click', stopRecording);
+btnPlay.addEventListener('click', playWithPauses);
+btnPause.addEventListener('click', togglePause);
+btnStopPlay.addEventListener('click', stopPlayback);
+btnExport.addEventListener('click', exportVAD);
+
+btnLoad.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.vad';
+    input.onchange = (e) => {
+        if (e.target.files[0]) loadVAD(e.target.files[0]);
+        input.remove();
+    };
+    input.click();
+});
+
+btnLoadAudio.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/*';
+    input.onchange = (e) => {
+        if (e.target.files[0]) loadAudioFile(e.target.files[0]);
+        input.remove();
+    };
+    input.click();
+});
+
+// Инициализация
+updateUI();
+updateSegmentList();
+updateStats();
+fileInfo.textContent = '🎙️ Нажми "Запись" или загрузи аудиофайл';
+prebufferInfo.textContent = '⚡ Стабильная конвертация MP3 → Opus для экспорта .vad';
+
+console.log('✅ VAD-кодек v11 загружен (с управлением воспроизведением)');
+</script>
+</body>
+</html>
