@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>VAD-кодек v11 — ручное управление</title>
+    <title>VAD-кодек v11 — непрерывный шум</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -243,13 +243,6 @@
             gap: 8px 12px;
             margin: 6px 0;
         }
-        .controls-panel label {
-            font-size: 0.8rem;
-            color: #b0b8c8;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
         .controls-panel input[type="range"] {
             width: 100px;
             height: 3px;
@@ -387,44 +380,62 @@
         input[type=number] {
             -moz-appearance: textfield;
         }
+        .noise-controls {
+            background: #111118;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin: 8px 0;
+            border: 1px solid #2a3a3a;
+        }
+        .noise-controls .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 14px;
+            margin: 4px 0;
+        }
+        .noise-controls select {
+            background: #2a2a3f;
+            color: #e0e0e0;
+            border: 1px solid #4a4a5a;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .noise-controls select:hover {
+            background: #3d3d5c;
+        }
+        .noise-toggle-btn {
+            background: #2a3a3a;
+            border: 1px solid #4a6a6a;
+            font-size: 0.8rem;
+            padding: 4px 14px;
+        }
+        .noise-toggle-btn.active {
+            background: #3a5a3a;
+            border-color: #4ade80;
+        }
+        .noise-toggle-btn:hover:not(:disabled) {
+            background: #3a4a4a;
+        }
+        .noise-status {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-left: 6px;
+        }
         @media (max-width: 600px) {
-            .bitrate-control label {
-                gap: 4px;
-            }
-            .bitrate-control input[type="range"] {
-                width: 80px;
-            }
-            .bitrate-value {
-                min-width: 60px;
-                font-size: 0.8rem;
-            }
-            .bitrate-hint {
-                margin-left: 0;
-                width: 100%;
-            }
-            .controls-panel .control-row {
-                gap: 4px 8px;
-            }
-            .controls-panel input[type="range"] {
-                width: 70px;
-            }
-            .control-label-text {
-                min-width: 70px;
-                font-size: 0.7rem;
-            }
-            .control-value {
-                min-width: 35px;
-                font-size: 0.7rem;
-            }
-            .step-btn {
-                width: 22px;
-                height: 22px;
-                font-size: 0.9rem;
-            }
-            .reset-btn {
-                font-size: 0.7rem;
-                padding: 2px 8px;
-            }
+            .bitrate-control label { gap: 4px; }
+            .bitrate-control input[type="range"] { width: 80px; }
+            .bitrate-value { min-width: 60px; font-size: 0.8rem; }
+            .bitrate-hint { margin-left: 0; width: 100%; }
+            .controls-panel .control-row { gap: 4px 8px; }
+            .controls-panel input[type="range"] { width: 70px; }
+            .control-label-text { min-width: 70px; font-size: 0.7rem; }
+            .control-value { min-width: 35px; font-size: 0.7rem; }
+            .step-btn { width: 22px; height: 22px; font-size: 0.9rem; }
+            .reset-btn { font-size: 0.7rem; padding: 2px 8px; }
+            .noise-controls .control-row { gap: 4px 10px; }
         }
     </style>
 </head>
@@ -485,6 +496,26 @@
             <button class="reset-btn" id="resetVadInterval">↺</button>
         </div>
         <div style="font-size:0.7rem;color:#6b7280;margin-top:4px;">↺ — сброс к значению по умолчанию</div>
+    </div>
+
+    <!-- УПРАВЛЕНИЕ КОМФОРТНЫМ ШУМОМ -->
+    <div class="noise-controls">
+        <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:4px;">🔊 Комфортный шум (непрерывный фон)</div>
+        <div class="control-row">
+            <button class="noise-toggle-btn active" id="btnToggleNoise">🔊 Шум ВКЛ</button>
+            <select id="noiseTypeSelect">
+                <option value="white">⬜ Белый</option>
+                <option value="pink" selected>🩷 Розовый</option>
+                <option value="brown">🟫 Коричневый</option>
+            </select>
+            <label style="font-size:0.8rem;color:#c0c8d4;display:flex;align-items:center;gap:6px;">
+                Громкость
+                <input type="range" id="noiseVolumeSlider" min="0.005" max="0.3" value="0.04" step="0.005">
+                <span class="control-value" id="noiseVolumeDisplay" style="min-width:35px;">0.04</span>
+            </label>
+            <span class="noise-status" id="noiseStatus">🩷 Розовый шум (фон)</span>
+        </div>
+        <div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">Шум звучит на протяжении всего трека, речь накладывается поверх</div>
     </div>
 
     <div class="bitrate-control">
@@ -568,6 +599,9 @@ const DEFAULTS = {
     prebufferMs: 500,
     vadInterval: 700,
     splitByPauses: true,
+    noiseEnabled: true,
+    noiseType: 'pink',
+    noiseVolume: 0.04,
 };
 
 const CFG = {
@@ -578,6 +612,9 @@ const CFG = {
     prebufferMs: DEFAULTS.prebufferMs,
     vadInterval: DEFAULTS.vadInterval,
     splitByPauses: DEFAULTS.splitByPauses,
+    noiseEnabled: DEFAULTS.noiseEnabled,
+    noiseType: DEFAULTS.noiseType,
+    noiseVolume: DEFAULTS.noiseVolume,
 };
 
 // ============================================================
@@ -614,6 +651,10 @@ let state = {
     currentSegmentIndex: 0,
     abortController: null,
     isPlaybackComplete: false,
+    noiseNodes: [],
+    noiseGainNode: null,
+    noiseSource: null,
+    noiseStarted: false,
 };
 
 // DOM
@@ -656,6 +697,12 @@ const prebufferDisplay = $('prebufferDisplay');
 const vadIntervalSlider = $('vadIntervalSlider');
 const vadIntervalDisplay = $('vadIntervalDisplay');
 
+const btnToggleNoise = $('btnToggleNoise');
+const noiseTypeSelect = $('noiseTypeSelect');
+const noiseVolumeSlider = $('noiseVolumeSlider');
+const noiseVolumeDisplay = $('noiseVolumeDisplay');
+const noiseStatus = $('noiseStatus');
+
 // ============================================================
 // ПАНЕЛЬ
 // ============================================================
@@ -670,7 +717,7 @@ togglePanelBtn.addEventListener('click', () => {
 });
 
 // ============================================================
-// КНОПКИ +/- (ОДНО НАЖАТИЕ = ОДИН ШАГ, БЕЗ УДЕРЖАНИЯ)
+// КНОПКИ +/-
 // ============================================================
 function applyStep(btn) {
     const targetId = btn.dataset.target;
@@ -692,7 +739,6 @@ document.querySelectorAll('.step-btn').forEach(btn => {
         e.preventDefault();
         applyStep(this);
     });
-    // Убираем интервалы при удержании — только одно нажатие = один шаг
 });
 
 // ============================================================
@@ -761,6 +807,45 @@ $('resetVadInterval').addEventListener('click', () => {
 updateVadInterval();
 
 // ============================================================
+// УПРАВЛЕНИЕ КОМФОРТНЫМ ШУМОМ
+// ============================================================
+btnToggleNoise.addEventListener('click', () => {
+    CFG.noiseEnabled = !CFG.noiseEnabled;
+    if (CFG.noiseEnabled) {
+        btnToggleNoise.textContent = '🔊 Шум ВКЛ';
+        btnToggleNoise.classList.add('active');
+        noiseStatus.textContent = '🟢 ' + getNoiseTypeLabel(CFG.noiseType) + ' шум (фон)';
+    } else {
+        btnToggleNoise.textContent = '🔇 Шум ВЫКЛ';
+        btnToggleNoise.classList.remove('active');
+        noiseStatus.textContent = '🔇 Без шума';
+    }
+});
+
+noiseTypeSelect.addEventListener('change', () => {
+    CFG.noiseType = noiseTypeSelect.value;
+    if (CFG.noiseEnabled) {
+        noiseStatus.textContent = '🟢 ' + getNoiseTypeLabel(CFG.noiseType) + ' шум (фон)';
+    }
+});
+
+function getNoiseTypeLabel(type) {
+    const map = { white: '⬜ Белый', pink: '🩷 Розовый', brown: '🟫 Коричневый' };
+    return map[type] || 'Розовый';
+}
+
+noiseVolumeSlider.addEventListener('input', () => {
+    const val = parseFloat(noiseVolumeSlider.value);
+    noiseVolumeDisplay.textContent = val.toFixed(2);
+    CFG.noiseVolume = val;
+    if (state.noiseGainNode) {
+        state.noiseGainNode.gain.setTargetAtTime(val, state.audioCtx.currentTime, 0.05);
+    }
+});
+noiseVolumeSlider.value = DEFAULTS.noiseVolume;
+noiseVolumeDisplay.textContent = DEFAULTS.noiseVolume.toFixed(2);
+
+// ============================================================
 // КНОПКА РАЗДЕЛЕНИЯ ПО ПАУЗАМ
 // ============================================================
 btnTogglePause.addEventListener('click', () => {
@@ -810,6 +895,48 @@ function getRMS() {
         sum += v * v;
     }
     return Math.sqrt(sum / data.length);
+}
+
+// ============================================================
+// ГЕНЕРАЦИЯ НЕПРЕРЫВНОГО ШУМА
+// ============================================================
+function generateNoiseBuffer(ctx, duration, type, volume) {
+    const sampleRate = ctx.sampleRate;
+    const length = Math.floor(sampleRate * duration);
+    const buffer = ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+
+    if (type === 'white') {
+        for (let i = 0; i < length; i++) {
+            data[i] = (Math.random() * 2 - 1) * volume;
+        }
+    } else if (type === 'pink') {
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < length; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856;
+            b4 = 0.55000 * b4 + white * 0.5329522;
+            b5 = -0.7616 * b5 - white * 0.0168980;
+            const pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+            b6 = white * 0.115926;
+            data[i] = pink * 0.11 * volume;
+        }
+    } else if (type === 'brown') {
+        let last = 0;
+        for (let i = 0; i < length; i++) {
+            const white = Math.random() * 2 - 1;
+            last = (last + white * 0.02) / 1.02;
+            data[i] = last * volume * 0.8;
+        }
+    } else {
+        for (let i = 0; i < length; i++) {
+            data[i] = (Math.random() * 2 - 1) * volume;
+        }
+    }
+    return buffer;
 }
 
 // ============================================================
@@ -1033,7 +1160,7 @@ async function analyzeAudioBuffer(audioBuffer) {
 }
 
 // ============================================================
-// ЗАПИСЬ (сокращена, но полностью рабочая)
+// ЗАПИСЬ
 // ============================================================
 function startRecording() {
     if (state.isRecording) return;
@@ -1277,7 +1404,7 @@ function stopRecording() {
 }
 
 // ============================================================
-// ВОСПРОИЗВЕДЕНИЕ (сокращено)
+// ВОСПРОИЗВЕДЕНИЕ С НЕПРЕРЫВНЫМ ШУМОМ
 // ============================================================
 async function playWithPauses() {
     if (state.isPlaying) return;
@@ -1290,6 +1417,7 @@ async function playWithPauses() {
         state.isPlaybackComplete = false;
         audioContainer.innerHTML = '';
     }
+
     try {
         const ctx = await getAudioContext();
         if (ctx.state === 'suspended') await ctx.resume();
@@ -1302,14 +1430,52 @@ async function playWithPauses() {
 
         const buffer = state.fullAudioBuffer;
         const sampleRate = buffer.sampleRate;
+        const totalDuration = buffer.duration;
         let speechCount = 0;
         for (let i = 0; i < state.currentSegmentIndex; i++) {
             if (state.segments[i] && state.segments[i].type === 'speech') speechCount++;
         }
 
+        // Очищаем старые ноды шума
+        stopNoise();
+
+        // === ЗАПУСКАЕМ НЕПРЕРЫВНЫЙ ШУМ ===
+        let noiseGain = null;
+        let noiseSource = null;
+        if (CFG.noiseEnabled) {
+            try {
+                // Генерируем шум на всю длительность трека + 2 секунды запаса
+                const noiseBuffer = generateNoiseBuffer(
+                    ctx,
+                    totalDuration + 2,
+                    CFG.noiseType,
+                    CFG.noiseVolume
+                );
+                noiseSource = ctx.createBufferSource();
+                noiseSource.buffer = noiseBuffer;
+                noiseSource.loop = true; // зацикливаем на всякий случай
+
+                noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(CFG.noiseVolume, ctx.currentTime);
+
+                noiseSource.connect(noiseGain);
+                noiseGain.connect(ctx.destination);
+                noiseSource.start();
+
+                state.noiseSource = noiseSource;
+                state.noiseGainNode = noiseGain;
+                state.noiseNodes.push(noiseSource);
+                audioContainer.innerHTML += `🔊 Фоновый шум `;
+            } catch (e) {
+                console.warn('Ошибка запуска шума:', e);
+            }
+        }
+
+        // === ВОСПРОИЗВОДИМ РЕЧЕВЫЕ СЕГМЕНТЫ ПОВЕРХ ШУМА ===
         for (let i = state.currentSegmentIndex; i < state.segments.length; i++) {
             if (state.abortController.signal.aborted) break;
             const seg = state.segments[i];
+
             if (seg.type === 'speech') {
                 const startOffset = seg.startTimeOffset || 0;
                 const endOffset = seg.endTimeOffset || (startOffset + seg.duration);
@@ -1317,6 +1483,7 @@ async function playWithPauses() {
                 const endSample = Math.floor((endOffset / 1000) * sampleRate);
                 const durationSamples = endSample - startSample;
                 if (durationSamples <= 0) continue;
+
                 const speechBuffer = ctx.createBuffer(buffer.numberOfChannels, durationSamples, sampleRate);
                 for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
                     const channelData = buffer.getChannelData(ch);
@@ -1325,6 +1492,7 @@ async function playWithPauses() {
                         newChannelData[j] = channelData[startSample + j] || 0;
                     }
                 }
+
                 const source = ctx.createBufferSource();
                 source.buffer = speechBuffer;
                 source.connect(ctx.destination);
@@ -1333,19 +1501,25 @@ async function playWithPauses() {
                 speechCount++;
                 state.currentSegmentIndex = i;
                 audioContainer.innerHTML += `🎵 Речь #${speechCount} (${durationSec.toFixed(2)}с) `;
+
                 source.start();
+
                 await new Promise((resolve) => {
                     const timeout = setTimeout(resolve, (durationSec * 1000) + 200);
                     state.playbackTimeout = timeout;
                     source.onended = () => { clearTimeout(timeout); resolve(); };
                 });
+
                 if (state.abortController.signal.aborted) break;
+
             } else if (seg.type === 'pause') {
-                const pauseSec = seg.duration / 1000;
+                const pauseSec = Math.min(seg.duration / 1000, 10);
                 audioContainer.innerHTML += `⏸️ ${pauseSec.toFixed(2)}с `;
                 state.currentSegmentIndex = i;
+
+                // Шум уже играет фоном, просто ждём паузу
                 await new Promise((resolve) => {
-                    const timeout = setTimeout(resolve, Math.min(seg.duration, 5000));
+                    const timeout = setTimeout(resolve, pauseSec * 1000 + 50);
                     state.playbackTimeout = timeout;
                     const checkInterval = setInterval(() => {
                         if (state.abortController.signal.aborted) {
@@ -1355,10 +1529,16 @@ async function playWithPauses() {
                         }
                     }, 100);
                 });
+
                 if (state.abortController.signal.aborted) break;
             }
+
             if (i < state.segments.length - 1) audioContainer.innerHTML += '→ ';
         }
+
+        // Останавливаем шум
+        stopNoise();
+
         if (!state.abortController.signal.aborted) {
             state.isPlaybackComplete = true;
             audioContainer.innerHTML += `<br>✅ Воспроизведение завершено (речевых сегментов: ${speechCount})`;
@@ -1368,11 +1548,30 @@ async function playWithPauses() {
             state.isPlaybackComplete = true;
             resetPlayback();
         }
+
     } catch (err) {
         console.error('Playback error:', err);
         audioContainer.innerHTML = `❌ Ошибка: ${err.message}`;
+        stopNoise();
         resetPlayback();
     }
+}
+
+function stopNoise() {
+    if (state.noiseSource) {
+        try { state.noiseSource.stop(); } catch(e) {}
+        try { state.noiseSource.disconnect(); } catch(e) {}
+        state.noiseSource = null;
+    }
+    if (state.noiseGainNode) {
+        try { state.noiseGainNode.disconnect(); } catch(e) {}
+        state.noiseGainNode = null;
+    }
+    state.noiseNodes.forEach(n => {
+        try { n.stop(); } catch(e) {}
+        try { n.disconnect(); } catch(e) {}
+    });
+    state.noiseNodes = [];
 }
 
 function stopPlayback() {
@@ -1382,6 +1581,7 @@ function stopPlayback() {
             state.abortController = null;
         }
         state.isPlaybackComplete = true;
+        stopNoise();
         resetPlayback();
     }
 }
@@ -1392,6 +1592,7 @@ function resetPlayback() {
     if (state.playbackSource) { try { state.playbackSource.stop(); } catch(e) {} state.playbackSource = null; }
     if (state.playbackTimeout) { clearTimeout(state.playbackTimeout); state.playbackTimeout = null; }
     if (state.abortController) { state.abortController = null; }
+    stopNoise();
     btnPlay.disabled = false;
     btnStopPlay.disabled = true;
 }
@@ -1618,7 +1819,7 @@ updateSegmentList();
 updateStats();
 fileInfo.textContent = '🎙️ Нажми "Запись" или загрузи аудиофайл';
 prebufferInfo.textContent = '⚡ Стабильная конвертация MP3 → Opus для экспорта .vad';
-console.log('✅ VAD-кодек v11 загружен (кнопки +/- без удержания, битрейт в порядке)');
+console.log('✅ VAD-кодек v11 загружен (непрерывный фоновый шум)');
 </script>
 
 <script>
