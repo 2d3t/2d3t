@@ -3,6 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<link rel="manifest" href="manifest.json">
+
+    <!-- Иконки PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
+
+
+
+
+
     <title>VAD-кодек v11 — ручное управление</title>
     <style>
         * {
@@ -312,14 +330,6 @@
             gap: 6px;
             margin: 8px 0;
         }
-        .btn-pause {
-            background: #2a3a3a;
-            border: 1px solid #4a6a6a;
-        }
-        .btn-pause.active {
-            background: #3a5a3a;
-            border-color: #4ade80;
-        }
         .btn-stop-play {
             background: #3a2a2a;
             border: 1px solid #6a4a4a;
@@ -409,9 +419,8 @@
 
     <!-- УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ -->
     <div class="playback-controls">
-        <button id="btnPause" disabled class="btn-pause">⏸️ Пауза</button>
-        <button id="btnStopPlay" disabled class="btn-stop-play">⏹️ Остановить</button>
-        <span style="font-size:0.8rem;color:#6b7280;align-self:center;">Пауза/продолжение и остановка воспроизведения</span>
+        <button id="btnStopPlay" disabled class="btn-stop-play">⏹️ Остановить воспр.</button>
+        <span style="font-size:0.8rem;color:#6b7280;align-self:center;">Остановка воспроизведения</span>
     </div>
 
     <!-- КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ -->
@@ -496,7 +505,6 @@ let state = {
     dataArray: null,
     stream: null,
     isPlaying: false,
-    isPaused: false,
     _checkInterval: null,
     speechStartTime: 0,
     lastSegmentTime: 0,
@@ -524,7 +532,6 @@ const $ = id => document.getElementById(id);
 const btnRecord = $('btnRecord');
 const btnStop = $('btnStop');
 const btnPlay = $('btnPlay');
-const btnPause = $('btnPause');
 const btnStopPlay = $('btnStopPlay');
 const btnExport = $('btnExport');
 const btnLoad = $('btnLoad');
@@ -809,7 +816,6 @@ async function loadAudioFile(file) {
 
         btnPlay.disabled = false;
         btnExport.disabled = false;
-        btnPause.disabled = true;
         btnStopPlay.disabled = true;
         updateUI();
         updateSegmentList();
@@ -1125,7 +1131,6 @@ function startRecording() {
             btnStop.disabled = false;
             btnPlay.disabled = true;
             btnExport.disabled = true;
-            btnPause.disabled = true;
             btnStopPlay.disabled = true;
 
             const stopHandler = () => {
@@ -1265,17 +1270,17 @@ function stopRecording() {
 }
 
 // ============================================================
-// ВОСПРОИЗВЕДЕНИЕ С ПАУЗОЙ И ОСТАНОВКОЙ
+// ВОСПРОИЗВЕДЕНИЕ С ОСТАНОВКОЙ
 // ============================================================
 async function playWithPauses() {
-    if (state.isPlaying && !state.isPaused) return;
+    if (state.isPlaying) return;
     
     if (!state.fullAudioBuffer) {
         audioContainer.innerHTML = '❌ Аудио не загружено.';
         return;
     }
 
-    // Если воспроизведение уже завершено и нажимают снова - начинаем сначала
+    // Если воспроизведение уже завершено - начинаем сначала
     if (state.isPlaybackComplete) {
         state.currentSegmentIndex = 0;
         state.isPlaybackComplete = false;
@@ -1286,20 +1291,14 @@ async function playWithPauses() {
         const ctx = await getAudioContext();
         if (ctx.state === 'suspended') await ctx.resume();
 
-        if (!state.abortController) {
-            state.abortController = new AbortController();
-        }
-
+        state.abortController = new AbortController();
         state.isPlaying = true;
-        state.isPaused = false;
         state.isPlaybackComplete = false;
         
         btnPlay.disabled = true;
-        btnPause.disabled = false;
-        btnPause.textContent = '⏸️ Пауза';
         btnStopPlay.disabled = false;
         
-        if (!state.isPaused && state.currentSegmentIndex === 0) {
+        if (state.currentSegmentIndex === 0) {
             audioContainer.innerHTML = '🔄 Воспроизведение...<br>';
         }
 
@@ -1307,7 +1306,7 @@ async function playWithPauses() {
         const sampleRate = buffer.sampleRate;
         let speechCount = 0;
 
-        // Подсчитываем сколько уже было воспроизведено речевых сегментов
+        // Подсчет уже воспроизведенных речевых сегментов
         for (let i = 0; i < state.currentSegmentIndex; i++) {
             if (state.segments[i] && state.segments[i].type === 'speech') {
                 speechCount++;
@@ -1319,14 +1318,6 @@ async function playWithPauses() {
             if (state.abortController.signal.aborted) {
                 break;
             }
-
-            // Проверяем паузу
-            while (state.isPaused) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                if (state.abortController.signal.aborted) break;
-            }
-            
-            if (state.abortController.signal.aborted) break;
 
             const seg = state.segments[i];
 
@@ -1378,9 +1369,8 @@ async function playWithPauses() {
                     };
                 });
 
-                // Проверяем паузу после завершения сегмента
-                if (state.isPaused) {
-                    state.currentSegmentIndex = i;
+                // Проверяем остановку
+                if (state.abortController.signal.aborted) {
                     break;
                 }
 
@@ -1394,7 +1384,7 @@ async function playWithPauses() {
                     state.playbackTimeout = timeout;
                     
                     const checkInterval = setInterval(() => {
-                        if (state.isPaused || state.abortController.signal.aborted) {
+                        if (state.abortController.signal.aborted) {
                             clearTimeout(timeout);
                             clearInterval(checkInterval);
                             resolve();
@@ -1402,7 +1392,7 @@ async function playWithPauses() {
                     }, 100);
                 });
 
-                if (state.isPaused || state.abortController.signal.aborted) break;
+                if (state.abortController.signal.aborted) break;
             }
 
             if (i < state.segments.length - 1) {
@@ -1410,10 +1400,15 @@ async function playWithPauses() {
             }
         }
 
-        // Если не было остановки и не пауза
-        if (!state.isPaused && !state.abortController.signal.aborted) {
+        // Если не было остановки
+        if (!state.abortController.signal.aborted) {
             state.isPlaybackComplete = true;
             audioContainer.innerHTML += `<br>✅ Воспроизведение завершено (речевых сегментов: ${speechCount})`;
+            resetPlayback();
+        } else {
+            // Была остановка
+            audioContainer.innerHTML += '<br>⏹️ Воспроизведение остановлено';
+            state.isPlaybackComplete = true;
             resetPlayback();
         }
 
@@ -1425,41 +1420,21 @@ async function playWithPauses() {
 }
 
 // ============================================================
-// УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ
+// ОСТАНОВКА ВОСПРОИЗВЕДЕНИЯ
 // ============================================================
-function togglePause() {
-    if (!state.isPlaying) return;
-    
-    state.isPaused = !state.isPaused;
-    btnPause.textContent = state.isPaused ? '▶️ Продолжить' : '⏸️ Пауза';
-    
-    if (state.isPaused && state.playbackSource) {
-        try {
-            state.playbackSource.stop();
-        } catch(e) {}
-        audioContainer.innerHTML += ' ⏸️ (пауза)';
-    } else if (!state.isPaused) {
-        audioContainer.innerHTML += ' ▶️ (продолжение)';
-        // Продолжаем воспроизведение
-        playWithPauses();
-    }
-}
-
 function stopPlayback() {
     if (state.isPlaying) {
         if (state.abortController) {
             state.abortController.abort();
             state.abortController = null;
         }
-        resetPlayback();
-        audioContainer.innerHTML += '<br>⏹️ Воспроизведение остановлено';
         state.isPlaybackComplete = true;
+        resetPlayback();
     }
 }
 
 function resetPlayback() {
     state.isPlaying = false;
-    state.isPaused = false;
     state.currentSegmentIndex = 0;
     
     if (state.playbackSource) {
@@ -1477,9 +1452,7 @@ function resetPlayback() {
     }
     
     btnPlay.disabled = false;
-    btnPause.disabled = true;
     btnStopPlay.disabled = true;
-    btnPause.textContent = '⏸️ Пауза';
 }
 
 // ============================================================
@@ -1592,7 +1565,6 @@ function loadVAD(file) {
 
                     btnPlay.disabled = false;
                     btnExport.disabled = false;
-                    btnPause.disabled = true;
                     btnStopPlay.disabled = true;
                     updateUI();
                     updateSegmentList();
@@ -1642,7 +1614,6 @@ function loadVAD(file) {
 
         btnPlay.disabled = false;
         btnExport.disabled = false;
-        btnPause.disabled = true;
         btnStopPlay.disabled = true;
         updateUI();
         updateSegmentList();
@@ -1726,7 +1697,6 @@ function updateSegmentList() {
 btnRecord.addEventListener('click', startRecording);
 btnStop.addEventListener('click', stopRecording);
 btnPlay.addEventListener('click', playWithPauses);
-btnPause.addEventListener('click', togglePause);
 btnStopPlay.addEventListener('click', stopPlayback);
 btnExport.addEventListener('click', exportVAD);
 
@@ -1759,7 +1729,230 @@ updateStats();
 fileInfo.textContent = '🎙️ Нажми "Запись" или загрузи аудиофайл';
 prebufferInfo.textContent = '⚡ Стабильная конвертация MP3 → Opus для экспорта .vad';
 
-console.log('✅ VAD-кодек v11 загружен (с управлением воспроизведением)');
+console.log('✅ VAD-кодек v11 загружен (с остановкой воспроизведения)');
 </script>
+
+
+
+<script>
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ОФЛАЙН-ФУНКЦИОНАЛ
+    // ============================================================
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        navigator.serviceWorker.getRegistration()
+            .then(function(registration) {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch(function(err) {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log('📡 ' + status);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', function() {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then(function(registration) {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(function() {});
+            }
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+
 </body>
 </html>
