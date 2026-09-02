@@ -2,10 +2,10 @@
 const CACHE_NAME = 'Ююqrs-pwa-v1';
 
 const FILES_TO_CACHE = [
-    '/2d3t/pro/MirrorX/index.html',
-    '/2d3t/pro/MirrorX/manifest.json',
-    '/2d3t/pro/MirrorX/icon-192.png',
-    '/2d3t/pro/MirrorX/icon-512.png'
+    '/2d3t/pro/Easy/QRS/index.html',
+    '/2d3t/pro/Easy/QRS/manifest.json',
+    '/2d3t/pro/Easy/QRS/icon-192.png',
+    '/2d3t/pro/Easy/QRS/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -65,7 +65,7 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(() => {
                         // Fallback на главную страницу при офлайне
-                        return caches.match('/2d3t/pro/MirrorX/index.html');
+                        return caches.match('/2d3t/pro/Easy/QRS/index.html');
                     });
             })
     );
