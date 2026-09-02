@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>VAD-lite — битрейт + шум</title>
+    <title>VAD-кодек lite — запись с шумом</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -290,7 +290,7 @@
         }
         .btn-load-audio { background: #2a3a4a; }
         .btn-load-audio:hover { background: #3a4a5a; }
-        .saved-badge {
+        .noise-saved-badge {
             display: inline-block;
             font-size: 0.65rem;
             background: #2a3a2a;
@@ -299,10 +299,6 @@
             border-radius: 10px;
             margin-left: 6px;
             border: 1px solid #3a5a3a;
-        }
-        .saved-badge.active {
-            color: #4ade80;
-            border-color: #4ade80;
         }
         #audioContainer {
             margin: 10px 0;
@@ -326,7 +322,7 @@
 
 <div class="container">
     <h2>🎙️ VAD-lite</h2>
-    <p style="font-size:0.85rem;color:#9ca3af;">Запись + коричневый шум + битрейт</p>
+    <p style="font-size:0.85rem;color:#9ca3af;">Запись + коричневый шум</p>
 
     <!-- БИТРЕЙТ -->
     <div class="bitrate-control">
@@ -346,8 +342,7 @@
     <div class="noise-controls">
         <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:4px;">
             🟫 Коричневый шум (фон)
-            <span class="saved-badge" id="noiseSavedBadge">💾 сохраняется</span>
-            <span class="saved-badge" id="bitrateSavedBadge">💾 битрейт</span>
+            <span class="noise-saved-badge" id="noiseSavedBadge">💾 сохраняется в .vad</span>
         </div>
         <div class="control-row">
             <button class="noise-toggle-btn active" id="btnToggleNoise">🔊 Шум ВКЛ</button>
@@ -394,8 +389,6 @@
         <span class="value" id="dataSize">0 KB</span>
         <span class="label">Битрейт:</span>
         <span class="value" id="bitrateInfo">8.0 kbps</span>
-        <span class="label">Шум:</span>
-        <span class="value" id="noiseInfo">0.05</span>
     </div>
 
     <div id="audioContainer"></div>
@@ -464,7 +457,6 @@ const fileInfo = $('fileInfo');
 const totalDuration = $('totalDuration');
 const dataSize = $('dataSize');
 const bitrateInfo = $('bitrateInfo');
-const noiseInfo = $('noiseInfo');
 const progressFill = $('progressFill');
 const statusMsg = $('statusMsg');
 
@@ -476,7 +468,6 @@ const noiseVolumeDisplay = $('noiseVolumeDisplay');
 const btnToggleNoise = $('btnToggleNoise');
 const noiseStatus = $('noiseStatus');
 const noiseSavedBadge = $('noiseSavedBadge');
-const bitrateSavedBadge = $('bitrateSavedBadge');
 
 // ============================================================
 // КНОПКИ +/-
@@ -523,14 +514,12 @@ noiseVolumeSlider.addEventListener('input', () => {
     const val = parseFloat(noiseVolumeSlider.value);
     noiseVolumeDisplay.textContent = val.toFixed(2);
     CFG.noiseVolume = val;
-    noiseInfo.textContent = val.toFixed(2);
     if (state.noiseGainNode) {
         state.noiseGainNode.gain.setTargetAtTime(val, state.audioCtx.currentTime, 0.05);
     }
 });
 noiseVolumeSlider.value = DEFAULTS.noiseVolume;
 noiseVolumeDisplay.textContent = DEFAULTS.noiseVolume.toFixed(2);
-noiseInfo.textContent = DEFAULTS.noiseVolume.toFixed(2);
 
 btnToggleNoise.addEventListener('click', () => {
     CFG.noiseEnabled = !CFG.noiseEnabled;
@@ -626,6 +615,7 @@ function startRecording() {
                 }
             };
 
+            // Индикатор громкости
             const meterInterval = setInterval(() => {
                 if (!state.isRecording) {
                     clearInterval(meterInterval);
@@ -662,7 +652,7 @@ function startRecording() {
                             updateUI();
                             updateStats();
                             const duration = buffer.duration;
-                            fileInfo.textContent = `✅ Запись: ${duration.toFixed(1)}с, ${(fullBlob.size/1024).toFixed(1)} KB, битрейт ${(CFG.bitrate/1000).toFixed(1)} kbps, шум ${CFG.noiseVolume.toFixed(2)}`;
+                            fileInfo.textContent = `✅ Запись завершена. Длительность: ${duration.toFixed(1)}с, ${(fullBlob.size/1024).toFixed(1)} KB, битрейт ${(CFG.bitrate/1000).toFixed(1)} kbps`;
                             audioContainer.innerHTML = `✅ Запись: ${duration.toFixed(2)}с, ${(fullBlob.size/1024).toFixed(1)} KB`;
                         } catch (err) {
                             console.error('Ошибка декодирования:', err);
@@ -696,7 +686,7 @@ function stopRecording() {
 }
 
 // ============================================================
-// ВОСПРОИЗВЕДЕНИЕ С КОРИЧНЕВЫМ ШУМОМ
+// ВОСПРОИЗВЕДЕНИЕ С КОРИЧНЕВЫМ ШУМОМ (НЕПРЕРЫВНЫЙ ФОН)
 // ============================================================
 async function playWithNoise() {
     if (state.isPlaying) return;
@@ -758,6 +748,7 @@ async function playWithNoise() {
             source.onended = () => { clearTimeout(timeout); resolve(); };
         });
 
+        // Останавливаем шум
         if (noiseSource) {
             try { noiseSource.stop(); noiseSource.disconnect(); } catch(e) {}
             state.noiseSource = null;
@@ -791,6 +782,7 @@ function stopPlayback() {
             state.abortController = null;
         }
         state.isPlaybackComplete = true;
+        // Останавливаем шум
         if (state.noiseSource) {
             try { state.noiseSource.stop(); state.noiseSource.disconnect(); } catch(e) {}
             state.noiseSource = null;
@@ -813,7 +805,7 @@ function resetPlayback() {
 }
 
 // ============================================================
-// ЭКСПОРТ / ИМПОРТ (VAD10 — битрейт + шум)
+// ЭКСПОРТ / ИМПОРТ (VAD9 с настройками шума)
 // ============================================================
 function exportVAD() {
     if (!state.fullAudioBlob) {
@@ -822,16 +814,10 @@ function exportVAD() {
     }
 
     const encoder = new TextEncoder();
-    const magic = encoder.encode('VAD10');
+    const magic = encoder.encode('VAD9');
     const parts = [magic];
 
-    // === СОХРАНЯЕМ БИТРЕЙТ (4 байта, uint32) ===
-    const bitrateBuf = new ArrayBuffer(4);
-    const brView = new DataView(bitrateBuf);
-    brView.setUint32(0, CFG.bitrate, true);
-    parts.push(bitrateBuf);
-
-    // === СОХРАНЯЕМ НАСТРОЙКИ ШУМА ===
+    // Сохраняем настройки шума (всегда коричневый, сохраняем только громкость)
     const noiseTypeByte = 2; // 2 = коричневый
     const noiseTypeBuf = new ArrayBuffer(1);
     const ntView = new DataView(noiseTypeBuf);
@@ -843,12 +829,13 @@ function exportVAD() {
     nvView.setFloat32(0, CFG.noiseVolume, true);
     parts.push(noiseVolBuf);
 
-    // === ЗАГОЛОВОК ===
+    // Заголовок: кол-во сегментов = 1 (целый трек)
     const header = new ArrayBuffer(2);
     const hView = new DataView(header);
     hView.setUint16(0, 1, true);
     parts.push(header);
 
+    // Размер аудио
     const size = state.fullAudioBlob.size;
     const sizeBuf = new ArrayBuffer(4);
     const sView = new DataView(sizeBuf);
@@ -888,7 +875,7 @@ function exportVAD() {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-    fileInfo.textContent = `💾 Экспортировано: ${(blob.size/1024).toFixed(1)} KB, битрейт ${(CFG.bitrate/1000).toFixed(1)} kbps, шум ${CFG.noiseVolume.toFixed(2)}`;
+    fileInfo.textContent = `💾 Экспортировано: ${(blob.size/1024).toFixed(1)} KB, шум: коричневый (${CFG.noiseVolume.toFixed(2)})`;
 }
 
 function loadVAD(file) {
@@ -897,33 +884,21 @@ function loadVAD(file) {
         let offset = 0;
 
         const magic = new TextDecoder().decode(data.slice(0, 4));
-        if (!['VAD5', 'VAD6', 'VAD7', 'VAD8', 'VAD9', 'VAD10'].includes(magic)) {
+        if (!['VAD5', 'VAD6', 'VAD7', 'VAD8', 'VAD9'].includes(magic)) {
             alert('Неверный формат .vad');
             return;
         }
         offset += 4;
 
-        let loadedBitrate = null;
         let loadedNoiseVolume = null;
 
-        if (magic === 'VAD10') {
-            // === ЧИТАЕМ БИТРЕЙТ ===
-            loadedBitrate = new DataView(buffer, offset, 4).getUint32(0, true);
-            offset += 4;
-
-            // === ЧИТАЕМ НАСТРОЙКИ ШУМА ===
+        if (magic === 'VAD9') {
             const noiseTypeByte = new DataView(buffer, offset, 1).getUint8(0);
             offset += 1;
             const vol = new DataView(buffer, offset, 4).getFloat32(0, true);
             offset += 4;
             loadedNoiseVolume = Math.min(Math.max(vol, 0.005), 0.3);
-        } else if (magic === 'VAD9') {
-            // VAD9 — только шум
-            const noiseTypeByte = new DataView(buffer, offset, 1).getUint8(0);
-            offset += 1;
-            const vol = new DataView(buffer, offset, 4).getFloat32(0, true);
-            offset += 4;
-            loadedNoiseVolume = Math.min(Math.max(vol, 0.005), 0.3);
+            // Всегда коричневый, игнорируем тип из файла
         }
 
         const segCount = new DataView(buffer, offset, 2).getUint16(0, true);
@@ -949,46 +924,24 @@ function loadVAD(file) {
                     updateUI();
                     updateStats();
 
-                    // === ВОССТАНАВЛИВАЕМ НАСТРОЙКИ ===
-                    let restored = [];
-
-                    if (loadedBitrate !== null && loadedBitrate >= 4000 && loadedBitrate <= 128000) {
-                        CFG.bitrate = loadedBitrate;
-                        bitrateSlider.value = loadedBitrate;
-                        updateBitrateDisplay();
-                        bitrateSavedBadge.textContent = `💾 битрейт ${(loadedBitrate/1000).toFixed(1)} kbps`;
-                        bitrateSavedBadge.classList.add('active');
-                        restored.push(`битрейт ${(loadedBitrate/1000).toFixed(1)} kbps`);
-                    }
-
                     if (loadedNoiseVolume !== null) {
                         CFG.noiseVolume = loadedNoiseVolume;
                         noiseVolumeSlider.value = loadedNoiseVolume;
                         noiseVolumeDisplay.textContent = loadedNoiseVolume.toFixed(2);
-                        noiseInfo.textContent = loadedNoiseVolume.toFixed(2);
                         CFG.noiseEnabled = true;
                         btnToggleNoise.textContent = '🔊 Шум ВКЛ';
                         btnToggleNoise.classList.add('active');
                         noiseStatus.textContent = '🟫 Коричневый шум';
-                        noiseSavedBadge.textContent = `💾 шум ${loadedNoiseVolume.toFixed(2)}`;
-                        noiseSavedBadge.classList.add('active');
-                        restored.push(`шум ${loadedNoiseVolume.toFixed(2)}`);
+                        noiseSavedBadge.textContent = '💾 восстановлено из .vad';
+                        noiseSavedBadge.style.color = '#4ade80';
+                        noiseSavedBadge.style.borderColor = '#4ade80';
+                        setTimeout(() => {
+                            noiseSavedBadge.textContent = '💾 сохраняется в .vad';
+                            noiseSavedBadge.style.color = '#6b8a6b';
+                            noiseSavedBadge.style.borderColor = '#3a5a3a';
+                        }, 4000);
+                        fileInfo.textContent += ` | 🎛️ Шум: ${loadedNoiseVolume.toFixed(2)}`;
                     }
-
-                    if (restored.length > 0) {
-                        fileInfo.textContent = `✅ Загружено: ${(state.fullAudioBlob.size/1024).toFixed(1)} KB | Восстановлено: ${restored.join(', ')}`;
-                        prebufferInfo.textContent = `📂 Загружен файл с настройками: ${restored.join(', ')}`;
-                    } else {
-                        fileInfo.textContent = `✅ Загружено: ${(state.fullAudioBlob.size/1024).toFixed(1)} KB`;
-                    }
-
-                    setTimeout(() => {
-                        bitrateSavedBadge.textContent = '💾 битрейт';
-                        bitrateSavedBadge.classList.remove('active');
-                        noiseSavedBadge.textContent = '💾 шум';
-                        noiseSavedBadge.classList.remove('active');
-                    }, 5000);
-
                 } catch (err) { console.error('Ошибка декодирования:', err); }
             };
             reader.readAsArrayBuffer(state.fullAudioBlob);
@@ -997,7 +950,7 @@ function loadVAD(file) {
             state.fullAudioBuffer = null;
         }
 
-        // Пропускаем сегменты
+        // Пропускаем сегменты (нам не нужны)
         for (let i = 0; i < segCount; i++) {
             const type = new DataView(buffer, offset, 1).getUint8(0);
             offset += 1;
@@ -1005,7 +958,7 @@ function loadVAD(file) {
                 const duration = new DataView(buffer, offset, 4).getUint32(0, true);
                 offset += 4;
                 let startTimeOffset = 0, endTimeOffset = 0;
-                if (['VAD6', 'VAD7', 'VAD8', 'VAD9', 'VAD10'].includes(magic)) {
+                if (['VAD6', 'VAD7', 'VAD8', 'VAD9'].includes(magic)) {
                     startTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
                     offset += 4;
                     endTimeOffset = new DataView(buffer, offset, 4).getUint32(0, true);
@@ -1023,8 +976,9 @@ function loadVAD(file) {
         updateUI();
         updateStats();
 
-        if (!fileInfo.textContent.includes('Восстановлено')) {
-            fileInfo.textContent = `📂 Загружено: ${state.fullAudioBlob ? (state.fullAudioBlob.size/1024).toFixed(1) : 0} KB аудио`;
+        fileInfo.textContent = `📂 Загружено: ${state.fullAudioBlob ? (state.fullAudioBlob.size/1024).toFixed(1) : 0} KB аудио`;
+        if (loadedNoiseVolume !== null) {
+            fileInfo.textContent += ` | 🎛️ Шум: ${loadedNoiseVolume.toFixed(2)}`;
         }
     });
 }
@@ -1046,6 +1000,7 @@ async function loadAudioFile(file) {
 
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
 
+        // Конвертируем в Opus
         const dest = ctx.createMediaStreamDestination();
         const source = ctx.createBufferSource();
         source.buffer = audioBuffer;
@@ -1081,7 +1036,7 @@ async function loadAudioFile(file) {
         updateUI();
         updateStats();
 
-        fileInfo.textContent = `✅ "${file.name}" (${(opusBlob.size/1024).toFixed(1)} KB, ${(CFG.bitrate/1000).toFixed(1)} kbps, шум ${CFG.noiseVolume.toFixed(2)})`;
+        fileInfo.textContent = `✅ "${file.name}" (${(opusBlob.size/1024).toFixed(1)} KB, ${(CFG.bitrate/1000).toFixed(1)} kbps)`;
         audioContainer.innerHTML = `✅ "${file.name}" загружен<br>📦 ${audioBuffer.duration.toFixed(2)}с, ${(opusBlob.size/1024).toFixed(1)} KB`;
 
         setTimeout(() => { progressFill.style.width = '0%'; statusMsg.textContent = ''; }, 3000);
@@ -1155,7 +1110,7 @@ btnLoadAudio.addEventListener('click', () => {
 updateUI();
 updateStats();
 fileInfo.textContent = '🎙️ Нажми "Запись" или загрузи аудиофайл';
-console.log('✅ VAD-lite загружен (VAD10: битрейт + коричневый шум)');
+console.log('✅ VAD-lite загружен (коричневый шум, без вырезания пауз)');
 </script>
 
 <script>
