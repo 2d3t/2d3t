@@ -1,8 +1,27 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<link rel="manifest" href="manifest.json">
+
+    <!-- Иконки PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
+
+
+
+
+
     <title>VAD-кодек v11 — ручное управление</title>
     <style>
         * {
@@ -223,7 +242,7 @@
             padding: 12px 14px;
             margin: 10px 0;
             border: 1px solid #2a2a35;
-            display: none; /* по умолчанию скрыта */
+            display: none;
         }
         .controls-panel.open {
             display: block;
@@ -306,6 +325,26 @@
         .toggle-panel-btn .arrow.open {
             transform: rotate(180deg);
         }
+        .playback-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 8px 0;
+        }
+        .btn-stop-play {
+            background: #3a2a2a;
+            border: 1px solid #6a4a4a;
+        }
+        .btn-stop-play:hover:not(:disabled) {
+            background: #5a3a3a;
+        }
+        .btn-play {
+            background: #2a3a4a;
+            border: 1px solid #4a6a8a;
+        }
+        .btn-play:hover:not(:disabled) {
+            background: #3a4a5a;
+        }
     </style>
 </head>
 <body>
@@ -319,7 +358,7 @@
         <span class="arrow" id="panelArrow">▼</span> 🎛️ Ручная настройка
     </button>
 
-    <!-- ПАНЕЛЬ РУЧНОГО УПРАВЛЕНИЯ (скрыта по умолчанию) -->
+    <!-- ПАНЕЛЬ РУЧНОГО УПРАВЛЕНИЯ -->
     <div class="controls-panel" id="controlsPanel">
         <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:6px;">🎛️ Ручная настройка VAD</div>
 
@@ -374,9 +413,15 @@
     <div class="row">
         <button id="btnRecord">🔴 Запись</button>
         <button id="btnStop" disabled>⏹ Стоп</button>
-        <button id="btnPlay" disabled>▶️ Воспр.</button>
+        <button id="btnPlay" disabled class="btn-play">▶️ Воспр.</button>
         <button id="btnExport" disabled>💾 Экспорт .vad</button>
         <button id="btnLoad" style="background:#2a2a3f;">📂 Загрузить .vad</button>
+    </div>
+
+    <!-- УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ -->
+    <div class="playback-controls">
+        <button id="btnStopPlay" disabled class="btn-stop-play">⏹️ Остановить воспр.</button>
+        <span style="font-size:0.8rem;color:#6b7280;align-self:center;">Остановка воспроизведения</span>
     </div>
 
     <!-- КНОПКА ВКЛ/ОТКЛ РАЗДЕЛЕНИЯ ПО ПАУЗАМ -->
@@ -476,6 +521,11 @@ let state = {
     hasActiveSpeech: false,
     lastSpeechEndTime: 0,
     isProcessing: false,
+    playbackSource: null,
+    playbackTimeout: null,
+    currentSegmentIndex: 0,
+    abortController: null,
+    isPlaybackComplete: false,
 };
 
 // DOM
@@ -483,6 +533,7 @@ const $ = id => document.getElementById(id);
 const btnRecord = $('btnRecord');
 const btnStop = $('btnStop');
 const btnPlay = $('btnPlay');
+const btnStopPlay = $('btnStopPlay');
 const btnExport = $('btnExport');
 const btnLoad = $('btnLoad');
 const btnLoadAudio = $('btnLoadAudio');
@@ -504,12 +555,12 @@ const statusMsg = $('statusMsg');
 const bitrateSlider = $('bitrateSlider');
 const bitrateDisplay = $('bitrateDisplay');
 
-// Панель управления и кнопка переключения
+// Панель управления
 const controlsPanel = $('controlsPanel');
 const togglePanelBtn = $('togglePanelBtn');
 const panelArrow = $('panelArrow');
 
-// Слайдеры ручного управления
+// Слайдеры
 const thresholdSlider = $('thresholdSlider');
 const thresholdDisplay = $('thresholdDisplay');
 const minSilenceSlider = $('minSilenceSlider');
@@ -520,7 +571,7 @@ const vadIntervalSlider = $('vadIntervalSlider');
 const vadIntervalDisplay = $('vadIntervalDisplay');
 
 // ============================================================
-// ОТКРЫТИЕ/ЗАКРЫТИЕ ПАНЕЛИ НАСТРОЕК
+// ОТКРЫТИЕ/ЗАКРЫТИЕ ПАНЕЛИ
 // ============================================================
 togglePanelBtn.addEventListener('click', () => {
     controlsPanel.classList.toggle('open');
@@ -535,8 +586,6 @@ togglePanelBtn.addEventListener('click', () => {
 // ============================================================
 // РЕГУЛЯТОРЫ
 // ============================================================
-
-// Битрейт
 function updateBitrateDisplay() {
     const val = parseInt(bitrateSlider.value, 10);
     if (val >= 1000) {
@@ -549,7 +598,6 @@ function updateBitrateDisplay() {
 bitrateSlider.addEventListener('input', updateBitrateDisplay);
 updateBitrateDisplay();
 
-// Чувствительность (threshold)
 function updateThreshold() {
     const val = parseFloat(thresholdSlider.value);
     thresholdDisplay.textContent = val.toFixed(3);
@@ -565,7 +613,6 @@ $('resetThreshold').addEventListener('click', () => {
 });
 updateThreshold();
 
-// Мин. пауза
 function updateMinSilence() {
     const val = parseInt(minSilenceSlider.value, 10);
     minSilenceDisplay.textContent = val;
@@ -581,7 +628,6 @@ $('resetMinSilence').addEventListener('click', () => {
 });
 updateMinSilence();
 
-// Пре-буфер
 function updatePrebuffer() {
     const val = parseInt(prebufferSlider.value, 10);
     prebufferDisplay.textContent = val;
@@ -594,7 +640,6 @@ $('resetPrebuffer').addEventListener('click', () => {
 });
 updatePrebuffer();
 
-// Интервал VAD
 function updateVadInterval() {
     const val = parseInt(vadIntervalSlider.value, 10);
     vadIntervalDisplay.textContent = val;
@@ -772,6 +817,7 @@ async function loadAudioFile(file) {
 
         btnPlay.disabled = false;
         btnExport.disabled = false;
+        btnStopPlay.disabled = true;
         updateUI();
         updateSegmentList();
         updateStats();
@@ -802,7 +848,7 @@ async function loadAudioFile(file) {
 }
 
 // ============================================================
-// VAD-АНАЛИЗ (с учётом ручных настроек)
+// VAD-АНАЛИЗ
 // ============================================================
 async function analyzeAudioBuffer(audioBuffer) {
     state.segments = [];
@@ -838,7 +884,6 @@ async function analyzeAudioBuffer(audioBuffer) {
         return Math.sqrt(sum / actualLength);
     }
 
-    // Если разделение по паузам выключено — один большой сегмент
     if (!CFG.splitByPauses) {
         const durationMs = duration * 1000;
         state.segments.push({
@@ -857,7 +902,6 @@ async function analyzeAudioBuffer(audioBuffer) {
         return;
     }
 
-    // --- Обычный режим с разделением по паузам ---
     while (pos < totalSamples) {
         const rms = getRMSForWindow(pos, windowSize);
         const currentTime = pos / sampleRate;
@@ -946,10 +990,11 @@ async function analyzeAudioBuffer(audioBuffer) {
 }
 
 // ============================================================
-// ЗАПИСЬ (с учётом ручных настроек)
+// ЗАПИСЬ
 // ============================================================
 function startRecording() {
     if (state.isRecording) return;
+    if (state.isPlaying) stopPlayback();
 
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(async stream => {
@@ -1007,14 +1052,12 @@ function startRecording() {
 
                 const isVoice = rms > CFG.threshold;
 
-                // Если разделение по паузам выключено — просто записываем всё
                 if (!CFG.splitByPauses) {
                     debugInfo.textContent = `RMS: ${rms.toFixed(4)} | ⚡ РЕЖИМ БЕЗ ПАУЗ`;
                     updateUI();
                     return;
                 }
 
-                // --- Обычный режим с разделением по паузам ---
                 if (isVoice && !isCurrentlySpeaking) {
                     isCurrentlySpeaking = true;
                     state.isSpeaking = true;
@@ -1089,6 +1132,7 @@ function startRecording() {
             btnStop.disabled = false;
             btnPlay.disabled = true;
             btnExport.disabled = true;
+            btnStopPlay.disabled = true;
 
             const stopHandler = () => {
                 if (state._checkInterval) {
@@ -1096,7 +1140,6 @@ function startRecording() {
                     state._checkInterval = null;
                 }
 
-                // Если разделение по паузам выключено — один сегмент
                 if (!CFG.splitByPauses) {
                     if (state.allChunks.length > 0) {
                         const fullBlob = new Blob(state.allChunks, { type: options.mimeType });
@@ -1136,7 +1179,6 @@ function startRecording() {
                     return;
                 }
 
-                // --- Обычный режим с разделением по паузам ---
                 if (isCurrentlySpeaking) {
                     const now = performance.now();
                     const speechDuration = now - state.currentSpeechStart;
@@ -1229,29 +1271,55 @@ function stopRecording() {
 }
 
 // ============================================================
-// ВОСПРОИЗВЕДЕНИЕ
+// ВОСПРОИЗВЕДЕНИЕ С ОСТАНОВКОЙ
 // ============================================================
 async function playWithPauses() {
-    if (state.isPlaying || state.segments.length === 0) return;
+    if (state.isPlaying) return;
+    
     if (!state.fullAudioBuffer) {
         audioContainer.innerHTML = '❌ Аудио не загружено.';
         return;
     }
 
-    state.isPlaying = true;
-    btnPlay.disabled = true;
-    audioContainer.innerHTML = '🔄 Воспроизведение...<br>';
+    // Если воспроизведение уже завершено - начинаем сначала
+    if (state.isPlaybackComplete) {
+        state.currentSegmentIndex = 0;
+        state.isPlaybackComplete = false;
+        audioContainer.innerHTML = '';
+    }
 
     try {
         const ctx = await getAudioContext();
         if (ctx.state === 'suspended') await ctx.resume();
 
+        state.abortController = new AbortController();
+        state.isPlaying = true;
+        state.isPlaybackComplete = false;
+        
+        btnPlay.disabled = true;
+        btnStopPlay.disabled = false;
+        
+        if (state.currentSegmentIndex === 0) {
+            audioContainer.innerHTML = '🔄 Воспроизведение...<br>';
+        }
+
         const buffer = state.fullAudioBuffer;
         const sampleRate = buffer.sampleRate;
-        let totalTime = 0;
         let speechCount = 0;
 
-        for (let i = 0; i < state.segments.length; i++) {
+        // Подсчет уже воспроизведенных речевых сегментов
+        for (let i = 0; i < state.currentSegmentIndex; i++) {
+            if (state.segments[i] && state.segments[i].type === 'speech') {
+                speechCount++;
+            }
+        }
+
+        for (let i = state.currentSegmentIndex; i < state.segments.length; i++) {
+            // Проверяем остановку
+            if (state.abortController.signal.aborted) {
+                break;
+            }
+
             const seg = state.segments[i];
 
             if (seg.type === 'speech') {
@@ -1281,28 +1349,51 @@ async function playWithPauses() {
                 const source = ctx.createBufferSource();
                 source.buffer = speechBuffer;
                 source.connect(ctx.destination);
+                state.playbackSource = source;
 
                 const durationSec = speechBuffer.duration;
-                totalTime += durationSec;
                 speechCount++;
+                state.currentSegmentIndex = i;
 
                 audioContainer.innerHTML += `🎵 Речь #${speechCount} (${durationSec.toFixed(2)}с) `;
 
                 source.start();
 
+                // Ждем завершения или прерывания
                 await new Promise((resolve) => {
                     const timeout = setTimeout(resolve, (durationSec * 1000) + 200);
+                    state.playbackTimeout = timeout;
+                    
                     source.onended = () => {
                         clearTimeout(timeout);
                         resolve();
                     };
                 });
 
+                // Проверяем остановку
+                if (state.abortController.signal.aborted) {
+                    break;
+                }
+
             } else if (seg.type === 'pause') {
                 const pauseSec = seg.duration / 1000;
-                totalTime += pauseSec;
                 audioContainer.innerHTML += `⏸️ ${pauseSec.toFixed(2)}с `;
-                await new Promise(resolve => setTimeout(resolve, Math.min(seg.duration, 5000)));
+                state.currentSegmentIndex = i;
+                
+                await new Promise((resolve) => {
+                    const timeout = setTimeout(resolve, Math.min(seg.duration, 5000));
+                    state.playbackTimeout = timeout;
+                    
+                    const checkInterval = setInterval(() => {
+                        if (state.abortController.signal.aborted) {
+                            clearTimeout(timeout);
+                            clearInterval(checkInterval);
+                            resolve();
+                        }
+                    }, 100);
+                });
+
+                if (state.abortController.signal.aborted) break;
             }
 
             if (i < state.segments.length - 1) {
@@ -1310,15 +1401,59 @@ async function playWithPauses() {
             }
         }
 
-        audioContainer.innerHTML += `<br>✅ Воспроизведение завершено (${totalTime.toFixed(2)}с, речевых сегментов: ${speechCount})`;
+        // Если не было остановки
+        if (!state.abortController.signal.aborted) {
+            state.isPlaybackComplete = true;
+            audioContainer.innerHTML += `<br>✅ Воспроизведение завершено (речевых сегментов: ${speechCount})`;
+            resetPlayback();
+        } else {
+            // Была остановка
+            audioContainer.innerHTML += '<br>⏹️ Воспроизведение остановлено';
+            state.isPlaybackComplete = true;
+            resetPlayback();
+        }
 
     } catch (err) {
         console.error('Playback error:', err);
         audioContainer.innerHTML = `❌ Ошибка: ${err.message}`;
+        resetPlayback();
     }
+}
 
+// ============================================================
+// ОСТАНОВКА ВОСПРОИЗВЕДЕНИЯ
+// ============================================================
+function stopPlayback() {
+    if (state.isPlaying) {
+        if (state.abortController) {
+            state.abortController.abort();
+            state.abortController = null;
+        }
+        state.isPlaybackComplete = true;
+        resetPlayback();
+    }
+}
+
+function resetPlayback() {
     state.isPlaying = false;
+    state.currentSegmentIndex = 0;
+    
+    if (state.playbackSource) {
+        try { state.playbackSource.stop(); } catch(e) {}
+        state.playbackSource = null;
+    }
+    
+    if (state.playbackTimeout) {
+        clearTimeout(state.playbackTimeout);
+        state.playbackTimeout = null;
+    }
+    
+    if (state.abortController) {
+        state.abortController = null;
+    }
+    
     btnPlay.disabled = false;
+    btnStopPlay.disabled = true;
 }
 
 // ============================================================
@@ -1431,6 +1566,7 @@ function loadVAD(file) {
 
                     btnPlay.disabled = false;
                     btnExport.disabled = false;
+                    btnStopPlay.disabled = true;
                     updateUI();
                     updateSegmentList();
                     updateStats();
@@ -1479,6 +1615,7 @@ function loadVAD(file) {
 
         btnPlay.disabled = false;
         btnExport.disabled = false;
+        btnStopPlay.disabled = true;
         updateUI();
         updateSegmentList();
         updateStats();
@@ -1561,6 +1698,7 @@ function updateSegmentList() {
 btnRecord.addEventListener('click', startRecording);
 btnStop.addEventListener('click', stopRecording);
 btnPlay.addEventListener('click', playWithPauses);
+btnStopPlay.addEventListener('click', stopPlayback);
 btnExport.addEventListener('click', exportVAD);
 
 btnLoad.addEventListener('click', () => {
@@ -1592,7 +1730,230 @@ updateStats();
 fileInfo.textContent = '🎙️ Нажми "Запись" или загрузи аудиофайл';
 prebufferInfo.textContent = '⚡ Стабильная конвертация MP3 → Opus для экспорта .vad';
 
-console.log('✅ VAD-кодек v11 загружен (ручное управление)');
+console.log('✅ VAD-кодек v11 загружен (с остановкой воспроизведения)');
 </script>
+
+
+
+<script>
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ОФЛАЙН-ФУНКЦИОНАЛ
+    // ============================================================
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        navigator.serviceWorker.getRegistration()
+            .then(function(registration) {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch(function(err) {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log('📡 ' + status);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', function() {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then(function(registration) {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(function() {});
+            }
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+
 </body>
 </html>
