@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+
+
+<link rel="manifest" href="manifest.json">
+
+    <!-- Иконки PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
+
+
+  <title>QR → Текст</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .app {
+      width: 100%;
+      max-width: 420px;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+    }
+    .card {
+      background: rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    input[type=file] {
+      width: 100%;
+      margin-bottom: 12px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 12px;
+      background: #00c6ff;
+      background: linear-gradient(135deg, #00c6ff, #0072ff);
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    button:active {
+      transform: scale(0.98);
+    }
+    .btn-visit {
+      background: linear-gradient(135deg, #00b09b, #96c93d);
+    }
+    .btn-copy {
+      background: linear-gradient(135deg, #8a2be2, #4b0082);
+    }
+    .btn-camera {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    }
+    .btn-stop-camera {
+      background: linear-gradient(135deg, #636e72, #2d3436);
+      display: none; /* Скрыта по умолчанию */
+    }
+    .btn-stop-camera.visible {
+      display: block; /* Показывается когда камера активна */
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 12px;
+      border: none;
+      resize: vertical;
+      font-size: 0.95rem;
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+    .link-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(0, 200, 83, 0.15);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 200, 83, 0.3);
+    }
+    .link-box h3 {
+      margin: 0 0 8px 0;
+      font-size: 1rem;
+      color: #81c784;
+    }
+    .link-box a {
+      color: #4fc3f7;
+      text-decoration: none;
+      word-break: break-all;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .link-box a:hover {
+      text-decoration: underline;
+    }
+    .hint {
+      font-size: 0.8rem;
+      opacity: 0.8;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .camera-container {
+      position: relative;
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+    }
+    .camera-container.active {
+      display: block;
+    }
+    #video {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      background: #000;
+    }
+    .camera-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 80%;
+      border: 3px solid #00c6ff;
+      border-radius: 12px;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      animation: pulse 2s infinite;
+    }
+    .camera-overlay.scanning {
+      border-color: #00c6ff;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    }
+    .camera-overlay.success {
+      border-color: #00ff00;
+      box-shadow: 0 0 0 9999px rgba(0, 255, 0, 0.3);
+      animation: successPulse 0.5s ease 3;
+    }
+    @keyframes pulse {
+      0%, 100% {
+        border-color: #00c6ff;
+      }
+      50% {
+        border-color: #4fc3f7;
+      }
+    }
+    @keyframes successPulse {
+      0%, 100% {
+        border-color: #00ff00;
+        box-shadow: 0 0 0 9999px rgba(0, 255, 0, 0.3);
+      }
+      50% {
+        border-color: #00ff00;
+        box-shadow: 0 0 0 9999px rgba(0, 255, 0, 0.5);
+      }
+    }
+    .status {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      display: none;
+      padding: 8px;
+      border-radius: 8px;
+    }
+    .status.active {
+      display: block;
+    }
+    .status.scanning {
+      background: rgba(0, 198, 255, 0.2);
+      color: #81d4fa;
+    }
+    .status.success {
+      background: rgba(0, 255, 0, 0.2);
+      color: #81c784;
+    }
+    .status.error {
+      background: rgba(255, 0, 0, 0.2);
+      color: #ef9a9a;
+    }
+    .scan-hint {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #ffd54f;
+      margin-top: 4px;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      margin-top: 8px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-bar.active {
+      display: block;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+      border-radius: 2px;
+      animation: progress 2s infinite;
+    }
+    @keyframes progress {
+      0% {
+        width: 0%;
+      }
+      50% {
+        width: 100%;
+      }
+      100% {
+        width: 0%;
+      }
+    }
+    canvas {
+      display: none;
+    }
+    .hidden {
+      display: none;
+    }
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      z-index: 1000;
+      animation: slideDown 0.3s ease;
+    }
+    .toast.success {
+      background: #4caf50;
+    }
+    .toast.error {
+      background: #f44336;
+    }
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>📷 QR → Текст</h1>
+    <div class="card">
+      <button class="btn-camera" id="btnStartCamera" onclick="startCamera()">📷 Сканировать с камеры</button>
+      <button class="btn-stop-camera" id="btnStopCamera" onclick="stopCamera()">⏹ Остановить камеру</button>
+      
+      <div class="camera-container" id="cameraContainer">
+        <video id="video" autoplay playsinline></video>
+        <div class="camera-overlay scanning" id="cameraOverlay"></div>
+      </div>
+      
+      <div class="status scanning active" id="status" style="display: none;">🔍 Сканирование...</div>
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-bar-fill"></div>
+      </div>
+      <div class="scan-hint" id="scanHint" style="display: none;">Наведите камеру на QR-код. Он может быть не по центру и на расстоянии</div>
+      
+      <input type="file" accept="image/*" id="fileInput" />
+      <button onclick="decodeQRFromFile()">🔍 Расшифровать из файла</button>
+      
+      <textarea id="result" placeholder="Здесь появится расшифрованный текст"></textarea>
+      
+      <div class="link-box hidden" id="linkBox">
+        <h3>🔗 Найдена ссылка:</h3>
+        <a id="detectedLink" href="#" target="_blank"></a>
+        <button class="btn-visit" onclick="visitLink()">🌐 Посетить сайт</button>
+      </div>
+      
+      <button class="btn-copy" onclick="copyText()">📋 Копировать текст</button>
+    </div>
+    <div class="hint">Работает полностью локально, без интернета</div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <!-- jsQR библиотека -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
+  <script>
+    let detectedUrl = '';
+    let streaming = false;
+    let videoStream = null;
+    let animationId = null;
+    let lastScanTime = 0;
+    const SCAN_INTERVAL = 100;
+    let scanAttempts = 0;
+    let lastResult = null;
+    let isProcessing = false;
+
+    // Функция для показа всплывающего уведомления
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 2000);
+    }
+
+    // Функция для обновления статуса
+    function updateStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${type} active`;
+      status.style.display = 'block';
+    }
+
+    // Функция для обновления оверлея
+    function updateOverlay(type) {
+      const overlay = document.getElementById('cameraOverlay');
+      overlay.className = `camera-overlay ${type}`;
+    }
+
+    // Функция для показа/скрытия прогресс-бара
+    function toggleProgressBar(show) {
+      const progressBar = document.getElementById('progressBar');
+      if (show) {
+        progressBar.classList.add('active');
+        progressBar.style.display = 'block';
+      } else {
+        progressBar.classList.remove('active');
+        progressBar.style.display = 'none';
+      }
+    }
+
+    // Запуск камеры
+    async function startCamera() {
+      const video = document.getElementById('video');
+      const cameraContainer = document.getElementById('cameraContainer');
+      const btnStart = document.getElementById('btnStartCamera');
+      const btnStop = document.getElementById('btnStopCamera');
+      const scanHint = document.getElementById('scanHint');
+      
+      try {
+        // Запрашиваем доступ к камере с максимальным качеством
+        videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+        
+        video.srcObject = videoStream;
+        await video.play();
+        
+        // Показываем контейнер с камерой
+        cameraContainer.classList.add('active');
+        
+        // Показываем статус сканирования
+        updateStatus('🔍 Сканирование...', 'scanning');
+        toggleProgressBar(true);
+        updateOverlay('scanning');
+        
+        // Показываем подсказку
+        scanHint.style.display = 'block';
+        
+        // Переключаем кнопки
+        btnStart.style.display = 'none';
+        btnStop.style.display = 'block';
+        
+        streaming = true;
+        scanAttempts = 0;
+        lastResult = null;
+        
+        // Запускаем сканирование
+        scanFromCamera();
+        
+        showToast('Камера запущена', 'success');
+        
+      } catch (error) {
+        console.error('Ошибка доступа к камере:', error);
+        showToast('Не удалось получить доступ к камере', 'error');
+        updateStatus('❌ Ошибка доступа к камере', 'error');
+        
+        // Возвращаем кнопки в исходное состояние
+        btnStart.style.display = 'block';
+        btnStop.style.display = 'none';
+      }
+    }
+
+    // Остановка камеры
+    function stopCamera() {
+      streaming = false;
+      
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+      }
+      
+      const video = document.getElementById('video');
+      video.srcObject = null;
+      
+      // Скрываем контейнер с камерой
+      document.getElementById('cameraContainer').classList.remove('active');
+      document.getElementById('status').style.display = 'none';
+      document.getElementById('scanHint').style.display = 'none';
+      toggleProgressBar(false);
+      
+      // Переключаем кнопки
+      document.getElementById('btnStartCamera').style.display = 'block';
+      document.getElementById('btnStopCamera').style.display = 'none';
+      
+      if (!isProcessing) {
+        showToast('Камера остановлена', 'error');
+      }
+    }
+
+    // Улучшенное сканирование с камеры
+    function scanFromCamera() {
+      if (!streaming || isProcessing) return;
+      
+      const now = Date.now();
+      if (now - lastScanTime < SCAN_INTERVAL) {
+        animationId = requestAnimationFrame(scanFromCamera);
+        return;
+      }
+      lastScanTime = now;
+      scanAttempts++;
+      
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        // Обновляем статус каждые 30 попыток
+        if (scanAttempts % 30 === 0) {
+          updateStatus(`🔍 Сканирование... (попытка ${scanAttempts})`, 'scanning');
+        }
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        let code = null;
+        
+        // Попытка 1
+        code = jsQR(imageData.data, canvas.width, canvas.height, {
+          inversionAttempts: "dontInvert",
+        });
+        
+        // Попытка 2
+        if (!code) {
+          code = jsQR(imageData.data, canvas.width, canvas.height, {
+            inversionAttempts: "attemptBoth",
+          });
+        }
+        
+        // Попытка 3
+        if (!code) {
+          const scaledCanvas = document.createElement('canvas');
+          const scaleFactor = 0.75;
+          scaledCanvas.width = canvas.width * scaleFactor;
+          scaledCanvas.height = canvas.height * scaleFactor;
+          const scaledCtx = scaledCanvas.getContext('2d');
+          scaledCtx.drawImage(canvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
+          
+          const scaledImageData = scaledCtx.getImageData(0, 0, scaledCanvas.width, scaledCanvas.height);
+          code = jsQR(scaledImageData.data, scaledCanvas.width, scaledCanvas.height, {
+            inversionAttempts: "attemptBoth",
+          });
+        }
+        
+        // Если найден QR-код
+        if (code && code.data) {
+          if (code.data !== lastResult) {
+            isProcessing = true;
+            lastResult = code.data;
+            
+            updateOverlay('success');
+            updateStatus('✅ QR-код распознан!', 'success');
+            toggleProgressBar(false);
+            
+            if (navigator.vibrate) {
+              navigator.vibrate(200);
+            }
+            
+            handleQRResult(code.data);
+            showToast('QR-код успешно распознан!', 'success');
+            
+            setTimeout(() => {
+              stopCamera();
+              isProcessing = false;
+            }, 1500);
+            
+            return;
+          }
+        }
+      }
+      
+      animationId = requestAnimationFrame(scanFromCamera);
+    }
+
+    // Обработка результата сканирования
+    function handleQRResult(data) {
+      const resultEl = document.getElementById('result');
+      const linkBox = document.getElementById('linkBox');
+      
+      resultEl.value = data;
+      detectedUrl = '';
+      
+      if (isValidUrl(data)) {
+        try {
+          let url = data;
+          if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+          }
+          detectedUrl = url;
+          
+          const linkElement = document.getElementById('detectedLink');
+          linkElement.textContent = url;
+          linkElement.href = url;
+          linkBox.classList.remove('hidden');
+          
+          showToast('Найдена ссылка!', 'success');
+        } catch (e) {
+          linkBox.classList.add('hidden');
+        }
+      } else {
+        linkBox.classList.add('hidden');
+      }
+    }
+
+    // Расшифровка из файла
+    function decodeQRFromFile() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      if (!file) {
+        showToast('Выберите изображение с QR-кодом', 'error');
+        return;
+      }
+
+      updateStatus('📁 Обработка файла...', 'scanning');
+      toggleProgressBar(true);
+
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        img.src = e.target.result;
+      };
+
+      img.onload = function() {
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        let code = jsQR(imageData.data, canvas.width, canvas.height, {
+          inversionAttempts: "dontInvert",
+        });
+        
+        if (!code) {
+          code = jsQR(imageData.data, canvas.width, canvas.height, {
+            inversionAttempts: "attemptBoth",
+          });
+        }
+
+        toggleProgressBar(false);
+        
+        if (code) {
+          handleQRResult(code.data);
+          updateStatus('✅ QR-код распознан!', 'success');
+          showToast('QR-код успешно распознан!', 'success');
+          
+          if (navigator.vibrate) {
+            navigator.vibrate(200);
+          }
+        } else {
+          document.getElementById('result').value = 'QR-код не распознан 😕\nПопробуйте изображение с более высоким разрешением';
+          document.getElementById('linkBox').classList.add('hidden');
+          updateStatus('❌ QR-код не распознан', 'error');
+          showToast('Не удалось распознать QR-код', 'error');
+          
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+          }
+        }
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function isValidUrl(string) {
+      try {
+        const urlPattern = new RegExp(
+          '^(https?:\\/\\/)?' + 
+          '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + 
+          '((\\d{1,3}\\.){3}\\d{1,3}))' + 
+          '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + 
+          '(\\?[;&a-z\\d%_.~+=-]*)?' + 
+          '(\\#[-a-z\\d_]*)?$', 'i'
+        );
+        
+        if (string.includes('.') && 
+            (string.includes('http://') || 
+             string.includes('https://') || 
+             string.includes('www.') || 
+             /^[a-zA-Z0-9]+\.[a-zA-Z]{2,}/.test(string))) {
+          return urlPattern.test(string);
+        }
+        
+        return false;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function visitLink() {
+      if (detectedUrl) {
+        window.open(detectedUrl, '_blank');
+      } else {
+        showToast('Ссылка не найдена', 'error');
+      }
+    }
+
+    function copyText() {
+      const textarea = document.getElementById('result');
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      showToast('Текст скопирован!', 'success');
+    }
+    
+    // Автоматический запуск при выборе файла
+    document.getElementById('fileInput').addEventListener('change', decodeQRFromFile);
+  </script>
+<script>
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ОФЛАЙН-ФУНКЦИОНАЛ
+    // ============================================================
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        navigator.serviceWorker.getRegistration()
+            .then(function(registration) {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch(function(err) {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log('📡 ' + status);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', function() {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then(function(registration) {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(function() {});
+            }
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+</body>
+</html>
