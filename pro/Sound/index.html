@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запись системного звука</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #0f0f1a;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #a78bfa;
+        }
+        .btn {
+            background: #6c63ff;
+            color: #fff;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            width: 100%;
+            margin: 10px 0;
+            touch-action: manipulation;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        .btn-record {
+            background: #ff4757;
+        }
+        .btn-record.active {
+            background: #ff6b81;
+            animation: pulse 1s infinite;
+        }
+        .btn-stop {
+            background: #2ed573;
+        }
+        .btn-download {
+            background: #3742fa;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .status {
+            margin: 15px 0;
+            padding: 10px;
+            background: #252540;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #b0b0d0;
+            min-height: 40px;
+            word-break: break-all;
+        }
+        .info {
+            font-size: 12px;
+            color: #8888aa;
+            margin-top: 15px;
+            line-height: 1.6;
+            text-align: left;
+            padding: 10px;
+            background: #14142a;
+            border-radius: 10px;
+        }
+        .format-badge {
+            display: inline-block;
+            background: #2d2d5e;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #c4b5fd;
+            margin: 5px 0;
+        }
+        select {
+            background: #252540;
+            color: #fff;
+            border: 1px solid #3d3d6a;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            width: 100%;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Запись системного звука</h1>
+        
+        <div class="format-badge">Сохраняется в .webm (Opus)</div>
+        
+        <div class="status" id="status">⏸️ Ожидание начала записи</div>
+        
+        <button class="btn btn-record" id="btnRecord">🔴 Начать запись</button>
+        <button class="btn btn-stop" id="btnStop" disabled>⏹️ Остановить</button>
+        <button class="btn btn-download" id="btnDownload" disabled>💾 Скачать запись</button>
+        
+        <div class="info">
+            <strong>Как работает:</strong><br>
+            1. Нажмите "Начать запись"<br>
+            2. Выберите вкладку/экран с источником звука<br>
+            3. Включите галочку <strong>"Поделиться звуком"</strong><br>
+            4. Нажмите "Остановить" когда закончите<br><br>
+            <span style="color: #ff6b81;">⚠️ Работает только в Chrome/Edge/Opera на Android и ПК</span>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            // DOM элементы
+            const btnRecord = document.getElementById('btnRecord');
+            const btnStop = document.getElementById('btnStop');
+            const btnDownload = document.getElementById('btnDownload');
+            const statusDiv = document.getElementById('status');
+
+            // Переменные состояния
+            let mediaRecorder = null;
+            let recordedChunks = [];
+            let stream = null;
+            let isRecording = false;
+
+            // Обновление статуса
+            function setStatus(text, isError = false) {
+                statusDiv.textContent = text;
+                statusDiv.style.color = isError ? '#ff6b81' : '#b0b0d0';
+            }
+
+            // Очистка ресурсов
+            function cleanupStream() {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+                if (mediaRecorder) {
+                    mediaRecorder = null;
+                }
+            }
+
+            // Кнопка "Начать запись"
+            btnRecord.addEventListener('click', async function() {
+                // Проверка поддержки API
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                    setStatus('❌ Ваш браузер не поддерживает захват экрана', true);
+                    return;
+                }
+
+                try {
+                    setStatus('🔄 Запрашиваем разрешение...');
+
+                    // Захват экрана со звуком
+                    stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: true,   // Видео обязательно для захвата аудио
+                        audio: true    // Захват системного звука
+                    });
+
+                    // Проверка наличия аудиодорожки
+                    const audioTracks = stream.getAudioTracks();
+                    if (audioTracks.length === 0) {
+                        setStatus('❌ Нет аудиопотока. Убедитесь, что включили "Поделиться звуком"', true);
+                        cleanupStream();
+                        return;
+                    }
+
+                    // Настройка MediaRecorder
+                    // Формат WebM с кодеком Opus (лучшее качество для голоса и музыки)
+                    const mimeTypes = [
+                        'audio/webm;codecs=opus',
+                        'audio/webm',
+                        'audio/mp4'
+                    ];
+                    let mimeType = '';
+                    for (const type of mimeTypes) {
+                        if (MediaRecorder.isTypeSupported(type)) {
+                            mimeType = type;
+                            break;
+                        }
+                    }
+
+                    if (!mimeType) {
+                        setStatus('❌ Браузер не поддерживает запись аудио', true);
+                        cleanupStream();
+                        return;
+                    }
+
+                    // Создание MediaRecorder с высоким битрейтом для качества
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: mimeType,
+                        audioBitsPerSecond: 256000  // высокий битрейт для стерео
+                    });
+
+                    recordedChunks = [];
+
+                    // Событие: получение данных
+                    mediaRecorder.ondataavailable = function(e) {
+                        if (e.data.size > 0) {
+                            recordedChunks.push(e.data);
+                        }
+                    };
+
+                    // Событие: остановка записи
+                    mediaRecorder.onstop = function() {
+                        setStatus('✅ Запись завершена! Можно скачать');
+                        btnDownload.disabled = false;
+                        isRecording = false;
+                        btnRecord.textContent = '🔴 Начать запись';
+                        btnRecord.classList.remove('active');
+                        btnStop.disabled = true;
+                        cleanupStream();
+                    };
+
+                    // Событие: ошибка
+                    mediaRecorder.onerror = function(e) {
+                        setStatus('❌ Ошибка записи: ' + e.message, true);
+                        cleanupStream();
+                        resetUI();
+                    };
+
+                    // Запуск записи
+                    mediaRecorder.start(1000); // собираем данные каждую секунду
+
+                    isRecording = true;
+                    setStatus('🔴 Идёт запись системного звука...');
+                    btnRecord.textContent = '⏳ Идёт запись...';
+                    btnRecord.classList.add('active');
+                    btnStop.disabled = false;
+                    btnDownload.disabled = true;
+
+                    // Автоматическая остановка, если пользователь закрыл окно выбора
+                    stream.getVideoTracks()[0].onended = function() {
+                        if (isRecording) {
+                            stopRecording();
+                        }
+                    };
+
+                } catch (err) {
+                    console.error('Ошибка:', err);
+                    if (err.name === 'NotAllowedError') {
+                        setStatus('❌ Доступ запрещён пользователем', true);
+                    } else if (err.name === 'NotFoundError') {
+                        setStatus('❌ Не найден источник звука', true);
+                    } else {
+                        setStatus('❌ Ошибка: ' + err.message, true);
+                    }
+                    cleanupStream();
+                    resetUI();
+                }
+            });
+
+            // Кнопка "Остановить"
+            btnStop.addEventListener('click', function() {
+                stopRecording();
+            });
+
+            function stopRecording() {
+                if (mediaRecorder && isRecording) {
+                    try {
+                        mediaRecorder.stop();
+                        isRecording = false;
+                        btnRecord.textContent = '🔴 Начать запись';
+                        btnRecord.classList.remove('active');
+                        btnStop.disabled = true;
+                        setStatus('⏳ Обработка записи...');
+                    } catch (e) {
+                        console.error('Ошибка остановки:', e);
+                        cleanupStream();
+                        resetUI();
+                    }
+                }
+            }
+
+            // Кнопка "Скачать"
+            btnDownload.addEventListener('click', function() {
+                if (recordedChunks.length === 0) {
+                    setStatus('❌ Нет данных для скачивания', true);
+                    return;
+                }
+
+                try {
+                    // Создаём Blob из записанных данных
+                    const blob = new Blob(recordedChunks, {
+                        type: 'audio/webm'
+                    });
+
+                    if (blob.size === 0) {
+                        setStatus('❌ Файл пустой. Попробуйте ещё раз', true);
+                        return;
+                    }
+
+                    // Создаём ссылку для скачивания
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    a.download = `запись_${timestamp}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    setTimeout(() => URL.revokeObjectURL(url), 5000);
+                    
+                    setStatus(`✅ Скачивание: ${(blob.size / 1024).toFixed(1)} KB`);
+                } catch (e) {
+                    console.error('Ошибка скачивания:', e);
+                    setStatus('❌ Ошибка создания файла: ' + e.message, true);
+                }
+            });
+
+            // Сброс UI
+            function resetUI() {
+                btnRecord.textContent = '🔴 Начать запись';
+                btnRecord.classList.remove('active');
+                btnStop.disabled = true;
+                btnDownload.disabled = true;
+                isRecording = false;
+                cleanupStream();
+            }
+
+            // Очистка при закрытии страницы
+            window.addEventListener('beforeunload', function() {
+                if (isRecording) {
+                    stopRecording();
+                }
+                cleanupStream();
+            });
+
+            // Обработчик ошибок в консоль
+            window.addEventListener('unhandledrejection', function(e) {
+                console.error('Unhandled rejection:', e.reason);
+            });
+
+            console.log('📱 Приложение готово. Поддерживается в Chrome/Edge на Android');
+        })();
+    </script>
+</body>
+</html>
