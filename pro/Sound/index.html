@@ -3,365 +3,668 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Запись системного звука</title>
+    <title>Захват звука + конвертер в MP3</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, sans-serif;
-            background: #0f0f1a;
-            color: #fff;
+            background: #0a0e1a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            font-family: -apple-system, system-ui, sans-serif;
+            padding: 20px;
+            color: #e8edff;
         }
-        .container {
-            background: #1a1a2e;
-            padding: 30px;
+        .card {
+            background: #141c2b;
+            max-width: 600px;
+            width: 100%;
+            padding: 28px 22px 24px;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+            border: 1px solid #263040;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7c9aff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sub {
+            font-size: 0.85rem;
+            opacity: 0.5;
+            margin-bottom: 16px;
+            padding-left: 14px;
+            border-left: 3px solid #4f7aff;
+        }
+        .status-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #0f1625;
+            padding: 8px 16px;
+            border-radius: 40px;
+            margin-bottom: 14px;
+            border: 1px solid #253040;
+            flex-wrap: wrap;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4a5568;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .dot.active { background: #48bb78; box-shadow: 0 0 20px #48bb7855; animation: pulse 1s infinite; }
+        .dot.error { background: #fc8181; box-shadow: 0 0 20px #fc818155; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        .timer {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #7c9aff;
+            margin-left: auto;
+            letter-spacing: 1px;
+        }
+        .meter-wrap {
+            background: #0b111f;
+            height: 8px;
             border-radius: 20px;
-            max-width: 400px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            text-align: center;
+            margin: 10px 0 18px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
         }
-        h1 {
-            font-size: 20px;
-            margin-bottom: 20px;
-            color: #a78bfa;
+        .meter-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6);
+            border-radius: 20px;
+            transition: width 0.06s ease;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
         .btn {
-            background: #6c63ff;
-            color: #fff;
+            flex: 1;
+            min-width: 90px;
+            padding: 12px 10px;
             border: none;
-            padding: 14px 30px;
-            border-radius: 50px;
-            font-size: 18px;
-            font-weight: bold;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: white;
+            background: #26304a;
+            box-shadow: 0 4px 0 #0d1320;
+            transition: all 0.07s linear;
             cursor: pointer;
-            transition: 0.3s;
-            width: 100%;
-            margin: 10px 0;
-            touch-action: manipulation;
+            border: 1px solid #3f4a66;
         }
-        .btn:active {
-            transform: scale(0.95);
-        }
-        .btn-record {
-            background: #ff4757;
-        }
-        .btn-record.active {
-            background: #ff6b81;
-            animation: pulse 1s infinite;
-        }
-        .btn-stop {
-            background: #2ed573;
-        }
-        .btn-download {
-            background: #3742fa;
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        .status {
-            margin: 15px 0;
-            padding: 10px;
-            background: #252540;
-            border-radius: 10px;
-            font-size: 14px;
-            color: #b0b0d0;
-            min-height: 40px;
-            word-break: break-all;
-        }
-        .info {
-            font-size: 12px;
-            color: #8888aa;
-            margin-top: 15px;
-            line-height: 1.6;
-            text-align: left;
-            padding: 10px;
-            background: #14142a;
-            border-radius: 10px;
-        }
-        .format-badge {
-            display: inline-block;
-            background: #2d2d5e;
-            padding: 4px 12px;
+        .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #0d1320; }
+        .btn-primary { background: #3b5bdb; border-color: #5f7dfa; box-shadow: 0 4px 0 #1f2e7a; }
+        .btn-danger { background: #b53b4a; border-color: #d95a6a; box-shadow: 0 4px 0 #6e1f2b; }
+        .btn-success { background: #2d8f5c; border-color: #4aad7a; box-shadow: 0 4px 0 #1a5a3a; }
+        .btn-warning { background: #c47a2a; border-color: #e89a40; box-shadow: 0 4px 0 #7a4a1a; }
+        .btn:disabled { opacity: 0.3; transform: translateY(2px); box-shadow: 0 2px 0 #0d1320; pointer-events: none; }
+        
+        .player-section {
+            margin-top: 16px;
+            padding: 14px 16px;
+            background: #0f1625;
             border-radius: 20px;
-            font-size: 12px;
-            color: #c4b5fd;
-            margin: 5px 0;
+            border: 1px solid #1f2a4a;
+            display: none;
         }
-        select {
-            background: #252540;
-            color: #fff;
-            border: 1px solid #3d3d6a;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 14px;
+        .player-section.show { display: block; }
+        .player-section audio {
             width: 100%;
-            margin: 10px 0;
+            border-radius: 30px;
+            height: 40px;
+            background: #1a2235;
+        }
+        .player-section audio::-webkit-media-controls-panel {
+            background: #1a2235;
+        }
+        .download-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .download-row .btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px 8px;
+            font-size: 0.85rem;
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 0.8rem;
+            color: #8892b0;
+            margin-bottom: 8px;
+        }
+        .file-info .size { color: #7c9aff; font-weight: 600; }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 16px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #1f2840;
+            font-size: 0.75rem;
+            color: #7a88b0;
+        }
+        .info-grid .label { opacity: 0.6; }
+        .info-grid .value { 
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            background: #0e1424;
+            padding: 1px 10px;
+            border-radius: 30px;
+            color: #b0c0f0;
+            text-align: right;
+        }
+        .info-grid .value.stereo { color: #7c9aff; font-weight: 600; }
+        
+        .warning {
+            background: #1a1528;
+            padding: 10px 14px;
+            border-radius: 14px;
+            margin: 12px 0 2px;
+            font-size: 0.75rem;
+            border-left: 4px solid #fbbf24;
+            color: #c8d0f0;
+            line-height: 1.5;
+        }
+        .warning strong { color: #fcd34d; }
+        .converting {
+            color: #fbbf24;
+            animation: blink 0.8s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎙️ Запись системного звука</h1>
-        
-        <div class="format-badge">Сохраняется в .webm (Opus)</div>
-        
-        <div class="status" id="status">⏸️ Ожидание начала записи</div>
-        
-        <button class="btn btn-record" id="btnRecord">🔴 Начать запись</button>
-        <button class="btn btn-stop" id="btnStop" disabled>⏹️ Остановить</button>
-        <button class="btn btn-download" id="btnDownload" disabled>💾 Скачать запись</button>
-        
-        <div class="info">
-            <strong>Как работает:</strong><br>
-            1. Нажмите "Начать запись"<br>
-            2. Выберите вкладку/экран с источником звука<br>
-            3. Включите галочку <strong>"Поделиться звуком"</strong><br>
-            4. Нажмите "Остановить" когда закончите<br><br>
-            <span style="color: #ff6b81;">⚠️ Работает только в Chrome/Edge/Opera на Android и ПК</span>
+<div class="card">
+    <div class="header">
+        <h1>🎧 Захват + MP3</h1>
+    </div>
+    <div class="sub">системный звук · конвертер WebM → MP3</div>
+
+    <div class="status-box">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Остановлен</span>
+        <span class="timer" id="timerDisplay">00:00</span>
+    </div>
+
+    <div class="meter-wrap">
+        <div class="meter-bar" id="meterBar"></div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-primary" id="startBtn">▶ Захват</button>
+        <button class="btn btn-danger" id="stopBtn" disabled>⏹ Стоп</button>
+        <button class="btn btn-warning" id="convertBtn" disabled>🔄 MP3</button>
+    </div>
+
+    <div class="player-section" id="playerSection">
+        <div class="file-info">
+            <span id="fileNameInfo">audio.mp3</span>
+            <span class="size" id="fileSizeInfo">0 KB</span>
+        </div>
+        <audio id="audioPlayer" controls></audio>
+        <div class="download-row">
+            <button class="btn btn-success" id="downloadMp3Btn">⬇ Скачать MP3</button>
+            <button class="btn btn-primary" id="downloadWebmBtn">⬇ Скачать WebM</button>
         </div>
     </div>
 
-    <script>
-        (function() {
-            'use strict';
+    <div class="info-grid">
+        <span class="label">Частота</span>
+        <span class="value" id="sampleInfo">— Гц</span>
+        <span class="label">Каналы</span>
+        <span class="value stereo" id="channelsInfo">—</span>
+        <span class="label">Пик</span>
+        <span class="value" id="peakInfo">0.0%</span>
+        <span class="label">Длительность</span>
+        <span class="value" id="durationInfo">00:00</span>
+    </div>
 
-            // DOM элементы
-            const btnRecord = document.getElementById('btnRecord');
-            const btnStop = document.getElementById('btnStop');
-            const btnDownload = document.getElementById('btnDownload');
-            const statusDiv = document.getElementById('status');
+    <div class="warning">
+        <strong>💡 Инструкция:</strong> Захватите звук → остановите → нажмите <strong>«MP3»</strong> для конвертации. 
+        После конвертации появится плеер и кнопка скачивания.
+    </div>
+</div>
 
-            // Переменные состояния
-            let mediaRecorder = null;
-            let recordedChunks = [];
-            let stream = null;
-            let isRecording = false;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js">
+</script>
+<script>
+    (function() {
+        'use strict';
 
-            // Обновление статуса
-            function setStatus(text, isError = false) {
-                statusDiv.textContent = text;
-                statusDiv.style.color = isError ? '#ff6b81' : '#b0b0d0';
+        // DOM элементы
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const convertBtn = document.getElementById('convertBtn');
+        const downloadMp3Btn = document.getElementById('downloadMp3Btn');
+        const downloadWebmBtn = document.getElementById('downloadWebmBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const meterBar = document.getElementById('meterBar');
+        const sampleInfo = document.getElementById('sampleInfo');
+        const channelsInfo = document.getElementById('channelsInfo');
+        const peakInfo = document.getElementById('peakInfo');
+        const durationInfo = document.getElementById('durationInfo');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const playerSection = document.getElementById('playerSection');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const fileNameInfo = document.getElementById('fileNameInfo');
+        const fileSizeInfo = document.getElementById('fileSizeInfo');
+
+        // Аудио-переменные
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationId = null;
+        let mediaStream = null;
+        let source = null;
+
+        // Для записи
+        let recorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let startTime = 0;
+        let timerInterval = null;
+        let webmBlob = null;
+        let mp3Blob = null;
+        let isConverting = false;
+
+        function updateStatus(text, state) {
+            statusText.textContent = text;
+            statusDot.className = 'dot';
+            if (state === 'active') statusDot.classList.add('active');
+            else if (state === 'error') statusDot.classList.add('error');
+        }
+
+        function formatTime(seconds) {
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(Math.floor(seconds % 60)).padStart(2, '0');
+            return m + ':' + s;
+        }
+
+        function updateTimer() {
+            if (!isRecording) return;
+            const elapsed = (Date.now() - startTime) / 1000;
+            timerDisplay.textContent = formatTime(elapsed);
+            durationInfo.textContent = formatTime(elapsed);
+        }
+
+        function resetUI() {
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            meterBar.style.width = '0%';
+            peakInfo.textContent = '0.0%';
+            timerDisplay.textContent = '00:00';
+            durationInfo.textContent = '00:00';
+            
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+            audioContext = null;
+            analyser = null;
+            dataArray = null;
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+            source = null;
+            isRecording = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            convertBtn.disabled = true;
+            updateStatus('Остановлен', '');
+            channelsInfo.textContent = '—';
+            recordedChunks = [];
+            webmBlob = null;
+            mp3Blob = null;
+            playerSection.classList.remove('show');
+            audioPlayer.src = '';
+            isConverting = false;
+        }
+
+        function updateMeter() {
+            if (!analyser || !isRecording) {
+                if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+                return;
             }
 
-            // Очистка ресурсов
-            function cleanupStream() {
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
-                    stream = null;
+            analyser.getByteTimeDomainData(dataArray);
+            let max = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const val = (dataArray[i] - 128) / 128;
+                const abs = Math.abs(val);
+                if (abs > max) max = abs;
+            }
+            const percent = Math.min(max * 100, 100);
+            meterBar.style.width = percent + '%';
+            peakInfo.textContent = (max * 100).toFixed(1) + '%';
+
+            animationId = requestAnimationFrame(updateMeter);
+        }
+
+        async function startCapture() {
+            if (isRecording) return;
+
+            try {
+                mediaStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        sampleRate: 48000,
+                        channelCount: 2,
+                    }
+                });
+
+                const audioTracks = mediaStream.getAudioTracks();
+                if (audioTracks.length === 0) {
+                    throw new Error('Нет аудио-дорожки');
                 }
-                if (mediaRecorder) {
-                    mediaRecorder = null;
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 48000,
+                });
+
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+
+                source = audioContext.createMediaStreamSource(mediaStream);
+                
+                const channelCount = source.channelCount || 2;
+                channelsInfo.textContent = channelCount >= 2 ? '🔊 Стерео (2)' : 'Моно (1)';
+                
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                source.connect(analyser);
+
+                // Настройка записи
+                const dest = audioContext.createMediaStreamDestination();
+                source.connect(dest);
+                
+                recorder = new MediaRecorder(dest.stream, {
+                    mimeType: 'audio/webm;codecs=opus',
+                });
+
+                recordedChunks = [];
+                recorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                    if (recordedChunks.length > 0) {
+                        webmBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                        convertBtn.disabled = false;
+                        // Показываем WebM в плеере
+                        showPlayer(webmBlob, 'webm');
+                    }
+                };
+
+                recorder.start(1000);
+
+                isRecording = true;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 500);
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                convertBtn.disabled = true;
+                updateStatus('Запись...', 'active');
+                sampleInfo.textContent = (audioContext.sampleRate / 1000).toFixed(1) + ' кГц';
+
+                if (animationId) cancelAnimationFrame(animationId);
+                updateMeter();
+
+                mediaStream.getVideoTracks()[0]?.addEventListener('ended', () => {
+                    if (isRecording) stopCapture();
+                });
+
+            } catch (err) {
+                console.error('Ошибка:', err);
+                let msg = err.message || 'Ошибка захвата';
+                if (msg.includes('Permission') || msg.includes('denied')) {
+                    msg = '❌ Разрешение отклонено';
+                } else if (msg.includes('not supported')) {
+                    msg = '❌ Браузер не поддерживает захват';
+                }
+                updateStatus(msg, 'error');
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(t => t.stop());
+                    mediaStream = null;
                 }
             }
+        }
 
-            // Кнопка "Начать запись"
-            btnRecord.addEventListener('click', async function() {
-                // Проверка поддержки API
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-                    setStatus('❌ Ваш браузер не поддерживает захват экрана', true);
-                    return;
-                }
+        function stopCapture() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            
+            if (recorder && recorder.state === 'recording') {
+                recorder.stop();
+            }
+            
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+            if (source) { try { source.disconnect(); } catch (_) {} source = null; }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+                audioContext = null;
+            }
+            analyser = null;
+            dataArray = null;
+            
+            meterBar.style.width = '0%';
+            peakInfo.textContent = '0.0%';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('Остановлено', '');
+        }
 
+        function showPlayer(blob, format) {
+            const url = URL.createObjectURL(blob);
+            audioPlayer.src = url;
+            const sizeKB = (blob.size / 1024).toFixed(1);
+            fileSizeInfo.textContent = sizeKB + ' KB';
+            fileNameInfo.textContent = format === 'mp3' ? 'audio.mp3' : 'audio.webm';
+            playerSection.classList.add('show');
+            
+            // Обновляем кнопки скачивания
+            if (format === 'mp3') {
+                downloadMp3Btn.style.display = 'inline-block';
+                downloadWebmBtn.style.display = 'inline-block';
+            } else {
+                downloadMp3Btn.style.display = 'none';
+                downloadWebmBtn.style.display = 'inline-block';
+            }
+        }
+
+        // Конвертер WebM → MP3 с помощью lamejs
+        function convertToMp3() {
+            if (!webmBlob || isConverting) return;
+            
+            isConverting = true;
+            convertBtn.disabled = true;
+            convertBtn.textContent = '⏳ Конвертация...';
+            updateStatus('Конвертация в MP3...', 'active');
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
                 try {
-                    setStatus('🔄 Запрашиваем разрешение...');
-
-                    // Захват экрана со звуком
-                    stream = await navigator.mediaDevices.getDisplayMedia({
-                        video: true,   // Видео обязательно для захвата аудио
-                        audio: true    // Захват системного звука
-                    });
-
-                    // Проверка наличия аудиодорожки
-                    const audioTracks = stream.getAudioTracks();
-                    if (audioTracks.length === 0) {
-                        setStatus('❌ Нет аудиопотока. Убедитесь, что включили "Поделиться звуком"', true);
-                        cleanupStream();
-                        return;
+                    const arrayBuffer = e.target.result;
+                    const audioData = await audioContext.decodeAudioData(arrayBuffer);
+                    
+                    // Получаем PCM данные
+                    const channels = audioData.numberOfChannels;
+                    const sampleRate = audioData.sampleRate;
+                    const length = audioData.length;
+                    
+                    // Извлекаем PCM для всех каналов
+                    const pcmData = [];
+                    for (let ch = 0; ch < channels; ch++) {
+                        const channelData = audioData.getChannelData(ch);
+                        pcmData.push(channelData);
                     }
-
-                    // Настройка MediaRecorder
-                    // Формат WebM с кодеком Opus (лучшее качество для голоса и музыки)
-                    const mimeTypes = [
-                        'audio/webm;codecs=opus',
-                        'audio/webm',
-                        'audio/mp4'
-                    ];
-                    let mimeType = '';
-                    for (const type of mimeTypes) {
-                        if (MediaRecorder.isTypeSupported(type)) {
-                            mimeType = type;
-                            break;
+                    
+                    // Создаём буфер для MP3
+                    const mp3Encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128);
+                    const mp3Data = [];
+                    
+                    // Размер блока для кодирования
+                    const blockSize = 1152;
+                    const samplesPerChannel = pcmData[0].length;
+                    
+                    for (let i = 0; i < samplesPerChannel; i += blockSize) {
+                        const end = Math.min(i + blockSize, samplesPerChannel);
+                        const sampleCount = end - i;
+                        
+                        // Собираем буферы для каждого канала
+                        const left = new Int16Array(sampleCount);
+                        const right = channels > 1 ? new Int16Array(sampleCount) : null;
+                        
+                        for (let j = 0; j < sampleCount; j++) {
+                            const idx = i + j;
+                            left[j] = Math.max(-32768, Math.min(32767, Math.round(pcmData[0][idx] * 32767)));
+                            if (channels > 1) {
+                                right[j] = Math.max(-32768, Math.min(32767, Math.round(pcmData[1][idx] * 32767)));
+                            }
+                        }
+                        
+                        let mp3buf;
+                        if (channels > 1) {
+                            mp3buf = mp3Encoder.encodeBuffer(left, right);
+                        } else {
+                            mp3buf = mp3Encoder.encodeBuffer(left);
+                        }
+                        
+                        if (mp3buf.length > 0) {
+                            mp3Data.push(mp3buf);
                         }
                     }
-
-                    if (!mimeType) {
-                        setStatus('❌ Браузер не поддерживает запись аудио', true);
-                        cleanupStream();
-                        return;
+                    
+                    // Завершаем кодирование
+                    const finalBuf = mp3Encoder.flush();
+                    if (finalBuf.length > 0) {
+                        mp3Data.push(finalBuf);
                     }
-
-                    // Создание MediaRecorder с высоким битрейтом для качества
-                    mediaRecorder = new MediaRecorder(stream, {
-                        mimeType: mimeType,
-                        audioBitsPerSecond: 256000  // высокий битрейт для стерео
-                    });
-
-                    recordedChunks = [];
-
-                    // Событие: получение данных
-                    mediaRecorder.ondataavailable = function(e) {
-                        if (e.data.size > 0) {
-                            recordedChunks.push(e.data);
-                        }
-                    };
-
-                    // Событие: остановка записи
-                    mediaRecorder.onstop = function() {
-                        setStatus('✅ Запись завершена! Можно скачать');
-                        btnDownload.disabled = false;
-                        isRecording = false;
-                        btnRecord.textContent = '🔴 Начать запись';
-                        btnRecord.classList.remove('active');
-                        btnStop.disabled = true;
-                        cleanupStream();
-                    };
-
-                    // Событие: ошибка
-                    mediaRecorder.onerror = function(e) {
-                        setStatus('❌ Ошибка записи: ' + e.message, true);
-                        cleanupStream();
-                        resetUI();
-                    };
-
-                    // Запуск записи
-                    mediaRecorder.start(1000); // собираем данные каждую секунду
-
-                    isRecording = true;
-                    setStatus('🔴 Идёт запись системного звука...');
-                    btnRecord.textContent = '⏳ Идёт запись...';
-                    btnRecord.classList.add('active');
-                    btnStop.disabled = false;
-                    btnDownload.disabled = true;
-
-                    // Автоматическая остановка, если пользователь закрыл окно выбора
-                    stream.getVideoTracks()[0].onended = function() {
-                        if (isRecording) {
-                            stopRecording();
-                        }
-                    };
-
+                    
+                    // Собираем MP3 в Blob
+                    const mp3BlobData = new Blob(mp3Data, { type: 'audio/mp3' });
+                    mp3Blob = mp3BlobData;
+                    
+                    // Показываем в плеере
+                    showPlayer(mp3Blob, 'mp3');
+                    
+                    convertBtn.textContent = '✅ MP3 готов';
+                    convertBtn.disabled = false;
+                    updateStatus('MP3 готов', 'active');
+                    isConverting = false;
+                    
+                    // Обновляем размер
+                    const sizeKB = (mp3Blob.size / 1024).toFixed(1);
+                    fileSizeInfo.textContent = sizeKB + ' KB';
+                    
                 } catch (err) {
-                    console.error('Ошибка:', err);
-                    if (err.name === 'NotAllowedError') {
-                        setStatus('❌ Доступ запрещён пользователем', true);
-                    } else if (err.name === 'NotFoundError') {
-                        setStatus('❌ Не найден источник звука', true);
-                    } else {
-                        setStatus('❌ Ошибка: ' + err.message, true);
-                    }
-                    cleanupStream();
-                    resetUI();
+                    console.error('Ошибка конвертации:', err);
+                    updateStatus('❌ Ошибка конвертации', 'error');
+                    convertBtn.textContent = '❌ Ошибка';
+                    convertBtn.disabled = false;
+                    isConverting = false;
                 }
-            });
+            };
+            
+            reader.readAsArrayBuffer(webmBlob);
+        }
 
-            // Кнопка "Остановить"
-            btnStop.addEventListener('click', function() {
-                stopRecording();
-            });
+        // Скачивание MP3
+        function downloadMp3() {
+            if (!mp3Blob) return;
+            const url = URL.createObjectURL(mp3Blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '') + '.mp3';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
 
-            function stopRecording() {
-                if (mediaRecorder && isRecording) {
-                    try {
-                        mediaRecorder.stop();
-                        isRecording = false;
-                        btnRecord.textContent = '🔴 Начать запись';
-                        btnRecord.classList.remove('active');
-                        btnStop.disabled = true;
-                        setStatus('⏳ Обработка записи...');
-                    } catch (e) {
-                        console.error('Ошибка остановки:', e);
-                        cleanupStream();
-                        resetUI();
-                    }
-                }
-            }
+        // Скачивание WebM
+        function downloadWebm() {
+            if (!webmBlob) return;
+            const url = URL.createObjectURL(webmBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '') + '.webm';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
 
-            // Кнопка "Скачать"
-            btnDownload.addEventListener('click', function() {
-                if (recordedChunks.length === 0) {
-                    setStatus('❌ Нет данных для скачивания', true);
-                    return;
-                }
+        // Обработчики
+        startBtn.addEventListener('click', startCapture);
+        stopBtn.addEventListener('click', stopCapture);
+        convertBtn.addEventListener('click', convertToMp3);
+        downloadMp3Btn.addEventListener('click', downloadMp3);
+        downloadWebmBtn.addEventListener('click', downloadWebm);
 
-                try {
-                    // Создаём Blob из записанных данных
-                    const blob = new Blob(recordedChunks, {
-                        type: 'audio/webm'
-                    });
+        window.addEventListener('beforeunload', () => {
+            if (isRecording) stopCapture();
+        });
 
-                    if (blob.size === 0) {
-                        setStatus('❌ Файл пустой. Попробуйте ещё раз', true);
-                        return;
-                    }
+        // Начальное состояние
+        updateStatus('Остановлен', '');
+        stopBtn.disabled = true;
+        convertBtn.disabled = true;
+        sampleInfo.textContent = '— Гц';
+        channelsInfo.textContent = '—';
+        peakInfo.textContent = '0.0%';
+        durationInfo.textContent = '00:00';
+        timerDisplay.textContent = '00:00';
+        downloadMp3Btn.style.display = 'none';
+        downloadWebmBtn.style.display = 'none';
 
-                    // Создаём ссылку для скачивания
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                    a.download = `запись_${timestamp}.webm`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    
-                    setTimeout(() => URL.revokeObjectURL(url), 5000);
-                    
-                    setStatus(`✅ Скачивание: ${(blob.size / 1024).toFixed(1)} KB`);
-                } catch (e) {
-                    console.error('Ошибка скачивания:', e);
-                    setStatus('❌ Ошибка создания файла: ' + e.message, true);
-                }
-            });
-
-            // Сброс UI
-            function resetUI() {
-                btnRecord.textContent = '🔴 Начать запись';
-                btnRecord.classList.remove('active');
-                btnStop.disabled = true;
-                btnDownload.disabled = true;
-                isRecording = false;
-                cleanupStream();
-            }
-
-            // Очистка при закрытии страницы
-            window.addEventListener('beforeunload', function() {
-                if (isRecording) {
-                    stopRecording();
-                }
-                cleanupStream();
-            });
-
-            // Обработчик ошибок в консоль
-            window.addEventListener('unhandledrejection', function(e) {
-                console.error('Unhandled rejection:', e.reason);
-            });
-
-            console.log('📱 Приложение готово. Поддерживается в Chrome/Edge на Android');
-        })();
-    </script>
+    })();
+</script>
 </body>
 </html>
