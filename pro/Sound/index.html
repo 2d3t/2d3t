@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Захват звука + MP3 конвертер</title>
+    <title>Захват звука → MP3 конвертер</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -17,13 +17,12 @@
             color: #e8edff;
         }
         .app-wrapper {
-            max-width: 600px;
+            max-width: 640px;
             width: 100%;
             display: flex;
             flex-direction: column;
             gap: 24px;
         }
-        /* Карточки */
         .card {
             background: #141c2b;
             width: 100%;
@@ -64,7 +63,6 @@
             border: 1px solid #3b5bdb55;
             margin-left: auto;
         }
-        /* Общие элементы */
         .status-box {
             display: flex;
             align-items: center;
@@ -182,7 +180,6 @@
         .file-info.show { display: flex; }
         .file-info .size { color: #7c9aff; font-weight: 600; }
 
-        /* Стили для конвертера */
         .drop-zone {
             background: #1f2537;
             border: 2px dashed #404a62;
@@ -256,6 +253,23 @@
         .reset-btn:hover { background: #2d3650; border-color: #6b7da3; color: #d6def5; }
         .footnote { font-size: 0.7rem; color: #5a6785; text-align: center; margin-top: 18px; border-top: 1px solid #2e364b; padding-top: 14px; }
         .divider { border: none; border-top: 1px solid #1f2840; margin: 10px 0 16px; }
+        .highlight-flash {
+            animation: flash-border 1s ease 2;
+        }
+        @keyframes flash-border {
+            0%, 100% { border-color: #404a62; }
+            50% { border-color: #a78bfa; box-shadow: 0 0 20px rgba(167, 139, 250, 0.3); }
+        }
+        /* небольшая анимация для обратной связи */
+        .toast-message {
+            background: #2a334a;
+            border-left: 4px solid #7c9aff;
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #e8edff;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -267,7 +281,7 @@
             <h2>🎧 Системный звук</h2>
             <span class="badge">⬇ СТЕРЕО</span>
         </div>
-        <div class="card-sub">захват + автоматическая подготовка к конвертации</div>
+        <div class="card-sub">захват → автоматическая передача в конвертер</div>
 
         <div class="status-box">
             <span class="dot" id="statusDot"></span>
@@ -304,12 +318,12 @@
 
         <div class="warning">
             <strong>💡 Инструкция:</strong> Нажмите «Захват», выберите экран или вкладку, отметьте <strong>«Поделиться звуком»</strong>.
-            После остановки нажмите «Сохранить WebM» → файл появится ниже.
+            После остановки файл автоматически появится в конвертере.
         </div>
     </div>
 
     <!-- ======== КАРТОЧКА КОНВЕРТЕРА ======== -->
-    <div class="card">
+    <div class="card" id="converterCard">
         <div class="card-header">
             <h2>🔄 WebM → MP3</h2>
             <span class="badge">конвертер</span>
@@ -361,7 +375,7 @@
         'use strict';
 
         // ============================================================
-        // 1. ЗАХВАТ СИСТЕМНОГО ЗВУКА (оригинальный код, слегка адаптирован)
+        // 1. ЗАХВАТ СИСТЕМНОГО ЗВУКА
         // ============================================================
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
@@ -438,7 +452,6 @@
             updateStatus('Остановлен', '');
             channelsInfo.textContent = '—';
             recordedChunks = [];
-            // finalBlob не сбрасываем, чтобы можно было сохранить
         }
 
         function updateMeter() {
@@ -506,12 +519,19 @@
                         saveBtn.disabled = false;
                         const sizeKB = (finalBlob.size / 1024).toFixed(1);
                         fileSize.textContent = sizeKB + ' KB';
-                        fileName.textContent = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '') + '.webm';
+                        const name = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '') + '.webm';
+                        fileName.textContent = name;
                         fileInfo.classList.add('show');
-                        // Автоматически подставляем файл в конвертер
+                        // АВТОМАТИЧЕСКАЯ ПЕРЕДАЧА В КОНВЕРТЕР
                         if (finalBlob) {
-                            const file = new File([finalBlob], fileName.textContent, { type: 'audio/webm' });
+                            const file = new File([finalBlob], name, { type: 'audio/webm' });
                             handleConverterFile(file);
+                            // Подсветка карточки конвертера
+                            const card = document.getElementById('converterCard');
+                            card.classList.remove('highlight-flash');
+                            // форсируем reflow
+                            void card.offsetWidth;
+                            card.classList.add('highlight-flash');
                         }
                     }
                 };
@@ -606,7 +626,7 @@
         });
 
         // ============================================================
-        // 2. КОНВЕРТЕР WebM → MP3 (адаптированный код)
+        // 2. КОНВЕРТЕР WebM → MP3
         // ============================================================
         const fileInput = document.getElementById('fileInput');
         const dropZone = document.getElementById('dropZone');
@@ -703,7 +723,6 @@
             setConvStatus('📁 Файл загружен. Выберите битрейт и нажмите "Конвертировать"');
         }
 
-        // Загрузка lamejs
         function loadLameJs() {
             return new Promise((resolve, reject) => {
                 if (typeof lamejs !== 'undefined') { resolve(); return; }
@@ -836,9 +855,10 @@
                 const baseName = currentFile.name.replace(/\.[^.]+$/, '') || 'audio';
                 convertedFileName = baseName + '.mp3';
 
+                // Сохраняем ссылку но не активируем скачивание сразу
                 const url = URL.createObjectURL(mp3Blob);
                 mp3DownloadBtn.href = url;
-                mp3DownloadBtn.download = convertedFileName;
+                mp3DownloadBtn.download = convertedFileName; // default
                 mp3DownloadBtn.disabled = false;
 
                 setProgress(100);
@@ -864,6 +884,56 @@
                 }
             }
         }
+
+        // ----------------------------------------------
+        // НОВАЯ ФУНКЦИЯ: запрос имени перед скачиванием MP3
+        // ----------------------------------------------
+        function handleMp3Download(e) {
+            e.preventDefault(); // отменяем переход по ссылке
+
+            if (!convertedBlob) {
+                setConvStatus('❌ Сначала сконвертируйте файл', 'error');
+                return;
+            }
+
+            // Предлагаем имя по умолчанию
+            const defaultName = convertedFileName || 'audio.mp3';
+            // Запрашиваем имя у пользователя
+            const userFileName = prompt('Введите имя для MP3 файла (без расширения):', defaultName.replace(/\.mp3$/, ''));
+
+            // Если пользователь нажал "Отмена" или ввел пустую строку — используем имя по умолчанию
+            let finalName;
+            if (userFileName === null) {
+                // Отмена — ничего не делаем
+                return;
+            } else if (userFileName.trim() === '') {
+                finalName = defaultName;
+            } else {
+                // Добавляем расширение .mp3 если его нет
+                finalName = userFileName.trim();
+                if (!finalName.toLowerCase().endsWith('.mp3')) {
+                    finalName += '.mp3';
+                }
+            }
+
+            // Создаём ссылку для скачивания с новым именем
+            const url = URL.createObjectURL(convertedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            // Обновляем кнопку, чтобы при повторном клике использовалось новое имя (опционально)
+            mp3DownloadBtn.download = finalName;
+            mp3DownloadBtn.href = url; // обновляем ссылку, чтобы и при прямом клике работало
+            // но мы перехватили событие, поэтому основная ссылка не будет использована напрямую
+        }
+
+        // Подписываемся на клик по кнопке скачивания MP3
+        mp3DownloadBtn.addEventListener('click', handleMp3Download);
 
         // События конвертера
         dropZone.addEventListener('click', (e) => {
