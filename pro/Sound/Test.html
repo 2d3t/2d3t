@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Захват системного звука (стерео)</title>
+    <title>Захват системного звука + сохранение</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -18,7 +18,7 @@
         }
         .card {
             background: #141c2b;
-            max-width: 520px;
+            max-width: 560px;
             width: 100%;
             padding: 32px 24px 28px;
             border-radius: 40px;
@@ -42,19 +42,20 @@
         .sub {
             font-size: 0.9rem;
             opacity: 0.5;
-            margin-bottom: 22px;
+            margin-bottom: 18px;
             padding-left: 14px;
             border-left: 3px solid #4f7aff;
         }
         .status-box {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             background: #0f1625;
             padding: 10px 18px;
             border-radius: 40px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             border: 1px solid #253040;
+            flex-wrap: wrap;
         }
         .dot {
             width: 12px;
@@ -64,13 +65,25 @@
             transition: all 0.3s;
             flex-shrink: 0;
         }
-        .dot.active { background: #48bb78; box-shadow: 0 0 20px #48bb7855; }
+        .dot.active { background: #48bb78; box-shadow: 0 0 20px #48bb7855; animation: pulse 1s infinite; }
         .dot.error { background: #fc8181; box-shadow: 0 0 20px #fc818155; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        .timer {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #7c9aff;
+            margin-left: auto;
+            letter-spacing: 1px;
+        }
         .meter-wrap {
             background: #0b111f;
             height: 10px;
             border-radius: 20px;
-            margin: 16px 0 22px;
+            margin: 12px 0 20px;
             overflow: hidden;
             box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
         }
@@ -83,16 +96,16 @@
         }
         .btn-group {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
         }
         .btn {
             flex: 1;
-            min-width: 130px;
-            padding: 16px 14px;
+            min-width: 110px;
+            padding: 14px 12px;
             border: none;
             border-radius: 40px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             color: white;
             background: #26304a;
@@ -104,13 +117,14 @@
         .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #0d1320; }
         .btn-primary { background: #3b5bdb; border-color: #5f7dfa; box-shadow: 0 5px 0 #1f2e7a; }
         .btn-danger { background: #b53b4a; border-color: #d95a6a; box-shadow: 0 5px 0 #6e1f2b; }
+        .btn-success { background: #2d8f5c; border-color: #4aad7a; box-shadow: 0 5px 0 #1a5a3a; }
         .btn:disabled { opacity: 0.3; transform: translateY(3px); box-shadow: 0 2px 0 #0d1320; pointer-events: none; }
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px 16px;
-            margin-top: 20px;
-            padding-top: 16px;
+            gap: 6px 16px;
+            margin-top: 16px;
+            padding-top: 14px;
             border-top: 1px solid #1f2840;
             font-size: 0.8rem;
             color: #7a88b0;
@@ -127,15 +141,29 @@
         .info-grid .value.stereo { color: #7c9aff; font-weight: 600; }
         .warning {
             background: #1a1528;
-            padding: 12px 16px;
+            padding: 10px 16px;
             border-radius: 16px;
-            margin: 16px 0 6px;
-            font-size: 0.85rem;
+            margin: 14px 0 4px;
+            font-size: 0.8rem;
             border-left: 4px solid #fbbf24;
             color: #c8d0f0;
             line-height: 1.5;
         }
         .warning strong { color: #fcd34d; }
+        .file-info {
+            background: #0f1625;
+            padding: 10px 16px;
+            border-radius: 16px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            border: 1px solid #1f2a4a;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .file-info.show { display: flex; }
+        .file-info .size { color: #7c9aff; font-weight: 600; }
         .stereo-badge {
             display: inline-block;
             background: #1f2a4a;
@@ -147,6 +175,20 @@
             border: 1px solid #3b5bdb55;
             margin-left: 8px;
         }
+        .download-btn {
+            background: #2d8f5c;
+            border: none;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-left: auto;
+            transition: background 0.2s;
+        }
+        .download-btn:hover { background: #3aad72; }
+        .download-btn:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -155,11 +197,12 @@
         <h1>🎧 Системный звук</h1>
         <span class="stereo-badge">⬇ СТЕРЕО</span>
     </div>
-    <div class="sub">захват с экрана · ноутбук / десктоп</div>
+    <div class="sub">захват + сохранение в WAV</div>
 
     <div class="status-box">
         <span class="dot" id="statusDot"></span>
         <span id="statusText">Остановлен</span>
+        <span class="timer" id="timerDisplay">00:00</span>
     </div>
 
     <div class="meter-wrap">
@@ -169,6 +212,13 @@
     <div class="btn-group">
         <button class="btn btn-primary" id="startBtn">▶ Захват</button>
         <button class="btn btn-danger" id="stopBtn" disabled>⏹ Стоп</button>
+        <button class="btn btn-success" id="saveBtn" disabled>💾 Сохранить</button>
+    </div>
+
+    <div class="file-info" id="fileInfo">
+        <span>📁 <span id="fileName">audio.wav</span></span>
+        <span class="size" id="fileSize">0 KB</span>
+        <button class="download-btn" id="downloadBtn">⬇ Скачать</button>
     </div>
 
     <div class="info-grid">
@@ -178,13 +228,13 @@
         <span class="value stereo" id="channelsInfo">—</span>
         <span class="label">Пик</span>
         <span class="value" id="peakInfo">0.0%</span>
-        <span class="label">Состояние</span>
-        <span class="value" id="stateInfo">—</span>
+        <span class="label">Длительность</span>
+        <span class="value" id="durationInfo">00:00</span>
     </div>
 
     <div class="warning">
-        <strong>💡 Для ноутбука:</strong> При запросе выберите <strong>«Весь экран»</strong> или вкладку с нужным звуком. 
-        Захватывается <strong>стерео</strong> звук со всей системы.
+        <strong>💡 Инструкция:</strong> Нажмите «Захват», выберите экран или вкладку, отметьте <strong>«Поделиться звуком»</strong>. 
+        После остановки нажмите «Сохранить» → скачаете WAV-файл.
     </div>
 </div>
 
@@ -192,36 +242,67 @@
     (function() {
         'use strict';
 
+        // DOM элементы
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const meterBar = document.getElementById('meterBar');
         const sampleInfo = document.getElementById('sampleInfo');
         const channelsInfo = document.getElementById('channelsInfo');
         const peakInfo = document.getElementById('peakInfo');
-        const stateInfo = document.getElementById('stateInfo');
+        const durationInfo = document.getElementById('durationInfo');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
 
+        // Аудио-переменные
         let audioContext = null;
         let analyser = null;
         let dataArray = null;
         let animationId = null;
         let mediaStream = null;
         let source = null;
+
+        // Для записи
+        let recorder = null;
+        let recordedChunks = [];
         let isRecording = false;
+        let startTime = 0;
+        let timerInterval = null;
+        let finalBlob = null;
 
         function updateStatus(text, state) {
             statusText.textContent = text;
             statusDot.className = 'dot';
             if (state === 'active') statusDot.classList.add('active');
             else if (state === 'error') statusDot.classList.add('error');
-            stateInfo.textContent = text;
+        }
+
+        function formatTime(seconds) {
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(Math.floor(seconds % 60)).padStart(2, '0');
+            return m + ':' + s;
+        }
+
+        function updateTimer() {
+            if (!isRecording) return;
+            const elapsed = (Date.now() - startTime) / 1000;
+            timerDisplay.textContent = formatTime(elapsed);
+            durationInfo.textContent = formatTime(elapsed);
         }
 
         function resetUI() {
             if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             meterBar.style.width = '0%';
             peakInfo.textContent = '0.0%';
+            timerDisplay.textContent = '00:00';
+            durationInfo.textContent = '00:00';
+            
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close().catch(() => {});
             }
@@ -236,8 +317,12 @@
             isRecording = false;
             startBtn.disabled = false;
             stopBtn.disabled = true;
+            saveBtn.disabled = true;
             updateStatus('Остановлен', '');
             channelsInfo.textContent = '—';
+            recordedChunks = [];
+            finalBlob = null;
+            fileInfo.classList.remove('show');
         }
 
         function updateMeter() {
@@ -264,7 +349,7 @@
             if (isRecording) return;
 
             try {
-                // Захват экрана со звуком (стерео на десктопе)
+                // Захват экрана со звуком
                 mediaStream = await navigator.mediaDevices.getDisplayMedia({
                     video: true,
                     audio: {
@@ -272,7 +357,7 @@
                         noiseSuppression: false,
                         autoGainControl: false,
                         sampleRate: 48000,
-                        channelCount: 2, // стерео
+                        channelCount: 2,
                     }
                 });
 
@@ -280,11 +365,6 @@
                 if (audioTracks.length === 0) {
                     throw new Error('Нет аудио-дорожки');
                 }
-
-                // Показываем информацию о дорожке
-                const track = audioTracks[0];
-                const settings = track.getSettings();
-                console.log('Audio settings:', settings);
 
                 audioContext = new (window.AudioContext || window.webkitAudioContext)({
                     sampleRate: 48000,
@@ -296,7 +376,6 @@
 
                 source = audioContext.createMediaStreamSource(mediaStream);
                 
-                // Проверяем количество каналов
                 const channelCount = source.channelCount || 2;
                 channelsInfo.textContent = channelCount >= 2 ? '🔊 Стерео (2)' : 'Моно (1)';
                 
@@ -307,10 +386,40 @@
 
                 source.connect(analyser);
 
+                // Настройка записи
+                const dest = audioContext.createMediaStreamDestination();
+                source.connect(dest);
+                
+                recorder = new MediaRecorder(dest.stream, {
+                    mimeType: 'audio/webm;codecs=opus',
+                });
+
+                recordedChunks = [];
+                recorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                    if (recordedChunks.length > 0) {
+                        finalBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+                        saveBtn.disabled = false;
+                        const sizeKB = (finalBlob.size / 1024).toFixed(1);
+                        fileSize.textContent = sizeKB + ' KB';
+                        fileName.textContent = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '') + '.webm';
+                        fileInfo.classList.add('show');
+                    }
+                };
+
+                recorder.start(1000); // запись кусками по 1 секунде
+
                 isRecording = true;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 500);
+                
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
-                updateStatus('Запись стерео звука...', 'active');
+                saveBtn.disabled = true;
+                updateStatus('Запись...', 'active');
                 sampleInfo.textContent = (audioContext.sampleRate / 1000).toFixed(1) + ' кГц';
 
                 if (animationId) cancelAnimationFrame(animationId);
@@ -341,9 +450,19 @@
 
         function stopCapture() {
             if (!isRecording) return;
+            
             isRecording = false;
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            
+            if (recorder && recorder.state === 'recording') {
+                recorder.stop();
+            }
+            
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
             if (source) { try { source.disconnect(); } catch (_) {} source = null; }
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close().catch(() => {});
@@ -351,23 +470,51 @@
             }
             analyser = null;
             dataArray = null;
+            
             meterBar.style.width = '0%';
             peakInfo.textContent = '0.0%';
             startBtn.disabled = false;
             stopBtn.disabled = true;
-            updateStatus('Остановлен', '');
+            updateStatus('Остановлено', '');
+            
+            // Если есть данные — активируем сохранение
+            if (finalBlob) {
+                saveBtn.disabled = false;
+            }
         }
 
+        function saveAudio() {
+            if (!finalBlob) return;
+            
+            const url = URL.createObjectURL(finalBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName.textContent || 'audio_recording.webm';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        // Обработчики
         startBtn.addEventListener('click', startCapture);
         stopBtn.addEventListener('click', stopCapture);
-        window.addEventListener('beforeunload', () => { if (isRecording) stopCapture(); });
+        saveBtn.addEventListener('click', saveAudio);
+        downloadBtn.addEventListener('click', saveAudio);
 
+        window.addEventListener('beforeunload', () => {
+            if (isRecording) stopCapture();
+        });
+
+        // Начальное состояние
         updateStatus('Остановлен', '');
         stopBtn.disabled = true;
+        saveBtn.disabled = true;
         sampleInfo.textContent = '— Гц';
         channelsInfo.textContent = '—';
         peakInfo.textContent = '0.0%';
-        stateInfo.textContent = 'Остановлен';
+        durationInfo.textContent = '00:00';
+        timerDisplay.textContent = '00:00';
 
     })();
 </script>
