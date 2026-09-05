@@ -36,6 +36,7 @@
             align-items: center;
             gap: 12px;
             margin-bottom: 4px;
+            flex-wrap: wrap;
         }
         .card-header h2 {
             font-size: 1.5rem;
@@ -232,11 +233,37 @@
         .conv-status.success { color: #a1d6a8; }
         .conv-status.error { color: #f7a9a9; }
         .progress-wrap {
-            background: #1a1f2e; border-radius: 30px; height: 6px; margin: 6px 0 12px;
-            overflow: hidden; opacity: 0; transition: opacity 0.25s;
+            background: #1a1f2e;
+            border-radius: 30px;
+            height: 8px;
+            margin: 6px 0 4px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            position: relative;
         }
-        .progress-wrap.active { opacity: 1; }
-        .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #7b9bd6, #b8cbf5); border-radius: 30px; transition: width 0.1s linear; }
+        .progress-wrap.active {
+            opacity: 1;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6);
+            border-radius: 30px;
+            transition: width 0.15s ease-out;
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #7a88b0;
+            padding: 0 2px;
+            margin-top: 2px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .progress-label.active { opacity: 1; }
+        .progress-label .percent { font-weight: 600; color: #b0c0f0; }
         .footer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
         .download-btn {
             background: #2b3650; border: 1px solid #47587a; color: #d3def5;
@@ -260,6 +287,52 @@
             0%, 100% { border-color: #404a62; }
             50% { border-color: #a78bfa; box-shadow: 0 0 20px rgba(167, 139, 250, 0.3); }
         }
+        .conv-progress-text {
+            font-family: 'SF Mono', monospace;
+            font-size: 0.85rem;
+            color: #a8b9e6;
+            margin-left: 6px;
+        }
+        .auto-mode-badge {
+            background: #2d3748;
+            border-radius: 30px;
+            padding: 2px 14px;
+            font-size: 0.7rem;
+            color: #a0b4e0;
+            border: 1px solid #4a5a7a;
+            margin-left: 12px;
+        }
+        .record-bitrate-select {
+            background: #2f384f;
+            border: 1px solid #3e4864;
+            color: #f0f3fc;
+            padding: 4px 12px 4px 8px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            outline: none;
+            margin-left: 8px;
+        }
+        .record-bitrate-select:hover { border-color: #617197; }
+        .record-bitrate-select:focus { border-color: #7b8fc7; box-shadow: 0 0 0 2px #3a4a70; }
+        .record-settings {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            background: #0f1625;
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid #1f2a4a;
+            flex-wrap: wrap;
+        }
+        .record-settings label {
+            font-size: 0.85rem;
+            color: #b3bddb;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
     </style>
 </head>
 <body>
@@ -272,6 +345,21 @@
             <span class="badge">⬇ СТЕРЕО</span>
         </div>
         <div class="card-sub">захват → автоматическая передача в конвертер</div>
+
+        <div class="record-settings">
+            <label>
+                📊 Битрейт записи:
+                <select class="record-bitrate-select" id="recordBitrate">
+                    <option value="64000">64 kbps</option>
+                    <option value="96000">96 kbps</option>
+                    <option value="128000">128 kbps</option>
+                    <option value="192000">192 kbps</option>
+                    <option value="256000">256 kbps</option>
+                    <option value="320000" selected>320 kbps</option>
+                </select>
+            </label>
+            <span style="font-size: 0.7rem; color: #6a7a9a;">качество записи WebM</span>
+        </div>
 
         <div class="status-box">
             <span class="dot" id="statusDot"></span>
@@ -308,7 +396,7 @@
 
         <div class="warning">
             <strong>💡 Инструкция:</strong> Нажмите «Захват», выберите экран или вкладку, отметьте <strong>«Поделиться звуком»</strong>.
-            После остановки файл автоматически появится в конвертере.
+            После остановки файл автоматически передаётся в конвертер с битрейтом 320 kbps.
         </div>
     </div>
 
@@ -317,6 +405,7 @@
         <div class="card-header">
             <h2>🔄 WebM → MP3</h2>
             <span class="badge">конвертер</span>
+            <span class="auto-mode-badge">⚡ авто-режим 320 kbps</span>
         </div>
         <div class="card-sub">загрузите WebM или используйте запись сверху</div>
 
@@ -334,22 +423,28 @@
 
         <div class="controls-row">
             <div class="bitrate-group">
-                <label for="bitrateSelect">📊 Битрейт</label>
+                <label for="bitrateSelect">📊 Битрейт MP3:</label>
                 <select id="bitrateSelect">
                     <option value="64">64 kbps</option>
                     <option value="96">96 kbps</option>
-                    <option value="128" selected>128 kbps</option>
+                    <option value="128">128 kbps</option>
                     <option value="192">192 kbps</option>
                     <option value="256">256 kbps</option>
-                    <option value="320">320 kbps</option>
+                    <option value="320" selected>320 kbps</option>
                 </select>
             </div>
             <button class="btn btn-secondary" id="convertBtn" disabled style="flex:0; min-width:140px;">🔄 Конвертировать</button>
         </div>
 
         <div class="conv-status" id="convStatus">⏳ Готов к работе</div>
+        
+        <!-- Улучшенный прогресс-бар с метками -->
         <div class="progress-wrap" id="progressWrap">
             <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">
+            <span class="status-text" id="progressStatusText">Инициализация...</span>
+            <span class="percent" id="progressPercent">0%</span>
         </div>
 
         <div class="footer-actions">
@@ -382,6 +477,7 @@
         const fileInfo = document.getElementById('fileInfo');
         const fileName = document.getElementById('fileName');
         const fileSize = document.getElementById('fileSize');
+        const recordBitrateSelect = document.getElementById('recordBitrate');
 
         let audioContext = null;
         let analyser = null;
@@ -496,9 +592,14 @@
                 const dest = audioContext.createMediaStreamDestination();
                 source.connect(dest);
 
+                const recordBitrate = parseInt(recordBitrateSelect.value, 10);
                 recorder = new MediaRecorder(dest.stream, {
                     mimeType: 'audio/webm;codecs=opus',
+                    audioBitsPerSecond: recordBitrate,
                 });
+                
+                console.log(`📊 Запись начата с битрейтом: ${recordBitrate/1000} kbps`);
+
                 recordedChunks = [];
                 recorder.ondataavailable = (e) => {
                     if (e.data.size > 0) recordedChunks.push(e.data);
@@ -512,16 +613,19 @@
                         const name = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '') + '.webm';
                         fileName.textContent = name;
                         fileInfo.classList.add('show');
-                        // АВТОМАТИЧЕСКАЯ ПЕРЕДАЧА В КОНВЕРТЕР
+                        // АВТОМАТИЧЕСКАЯ ПЕРЕДАЧА В КОНВЕРТЕР + ЗАПУСК КОНВЕРТАЦИИ
                         if (finalBlob) {
                             const file = new File([finalBlob], name, { type: 'audio/webm' });
-                            handleConverterFile(file);
-                            // Подсветка карточки конвертера
+                            document.getElementById('bitrateSelect').value = '320';
+                            handleConverterFile(file, true);
                             const card = document.getElementById('converterCard');
                             card.classList.remove('highlight-flash');
-                            // форсируем reflow
                             void card.offsetWidth;
                             card.classList.add('highlight-flash');
+                            // Прокрутка к конвертеру
+                            setTimeout(() => {
+                                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }, 400);
                         }
                     }
                 };
@@ -628,24 +732,37 @@
         const convStatus = document.getElementById('convStatus');
         const progressWrap = document.getElementById('progressWrap');
         const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressStatusText = document.getElementById('progressStatusText');
+        const progressLabel = document.getElementById('progressLabel');
         const bitrateSelect = document.getElementById('bitrateSelect');
 
         let currentFile = null;
         let convertedBlob = null;
         let convertedFileName = '';
+        let isConverting = false;
 
         function setConvStatus(text, type = '') {
             convStatus.textContent = text;
             convStatus.className = 'conv-status' + (type ? ' ' + type : '');
         }
 
-        function setProgress(value) {
-            if (value >= 0 && value <= 100) {
+        function setProgress(value, statusText = null) {
+            const clamped = Math.max(0, Math.min(100, value));
+            if (clamped >= 0) {
                 progressWrap.classList.add('active');
-                progressBar.style.width = value + '%';
+                progressLabel.classList.add('active');
+                progressBar.style.width = clamped + '%';
+                progressPercent.textContent = Math.round(clamped) + '%';
+                if (statusText !== null) {
+                    progressStatusText.textContent = statusText;
+                }
             } else {
                 progressWrap.classList.remove('active');
+                progressLabel.classList.remove('active');
                 progressBar.style.width = '0%';
+                progressPercent.textContent = '0%';
+                progressStatusText.textContent = 'Готово';
             }
         }
 
@@ -689,7 +806,7 @@
             setConvStatus('📁 Файл загружен. Выберите битрейт и нажмите "Конвертировать"');
         }
 
-        function handleConverterFile(file) {
+        function handleConverterFile(file, autoConvert = false) {
             if (!file) return;
             const validType = file.type === 'video/webm' || file.type === 'audio/webm' ||
                               file.name.toLowerCase().endsWith('.webm');
@@ -711,6 +828,12 @@
             mp3DownloadBtn.download = '';
             setProgress(-1);
             setConvStatus('📁 Файл загружен. Выберите битрейт и нажмите "Конвертировать"');
+            
+            if (autoConvert) {
+                setTimeout(() => {
+                    convertToMp3();
+                }, 400);
+            }
         }
 
         function loadLameJs() {
@@ -724,7 +847,7 @@
             });
         }
 
-        function encodeAudioBufferToMp3(audioBuffer, bitrate) {
+        function encodeAudioBufferToMp3(audioBuffer, bitrate, onProgress) {
             return new Promise((resolve, reject) => {
                 try {
                     const channels = audioBuffer.numberOfChannels;
@@ -747,9 +870,10 @@
                     const mp3Data = [];
                     const blockSize = 1152;
                     let sampleIndex = 0;
+                    const totalSamples = samples;
 
-                    while (sampleIndex < samples) {
-                        const chunkSize = Math.min(blockSize, samples - sampleIndex);
+                    while (sampleIndex < totalSamples) {
+                        const chunkSize = Math.min(blockSize, totalSamples - sampleIndex);
                         const leftChunk = new Int16Array(chunkSize);
                         const rightChunk = channels > 1 ? new Int16Array(chunkSize) : null;
                         for (let i = 0; i < chunkSize; i++) {
@@ -769,6 +893,8 @@
                             mp3Data.push(new Uint8Array(mp3buf));
                         }
                         sampleIndex += chunkSize;
+                        const progress = Math.min(70 + (sampleIndex / totalSamples) * 25, 95);
+                        if (onProgress) onProgress(progress, 'Кодирование MP3...');
                     }
 
                     const tail = encoder.flush();
@@ -796,15 +922,20 @@
                 setConvStatus('❌ Нет файла для конвертации', 'error');
                 return;
             }
+            if (isConverting) {
+                setConvStatus('⏳ Конвертация уже выполняется...', '');
+                return;
+            }
 
+            isConverting = true;
             convertBtn.disabled = true;
             convertBtn.textContent = '⏳ Конвертация...';
             setConvStatus('⏳ Декодирование аудио...');
-            setProgress(10);
+            setProgress(5, 'Декодирование аудио...');
 
             try {
                 const arrayBuffer = await currentFile.arrayBuffer();
-                setProgress(25);
+                setProgress(15, 'Декодирование аудио...');
 
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 let audioBuffer;
@@ -812,17 +943,19 @@
                     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                 } catch (decodeError) {
                     setConvStatus('❌ Ошибка декодирования: возможно, файл не содержит аудиодорожку', 'error');
+                    isConverting = false;
                     convertBtn.disabled = false;
                     convertBtn.textContent = '🔄 Конвертировать';
                     setProgress(-1);
                     audioCtx.close();
                     return;
                 }
-                setProgress(45);
+                setProgress(30, 'Подготовка к кодированию...');
 
                 const bitrate = parseInt(bitrateSelect.value, 10);
                 if (isNaN(bitrate) || bitrate < 8) {
                     setConvStatus('❌ Некорректный битрейт', 'error');
+                    isConverting = false;
                     convertBtn.disabled = false;
                     convertBtn.textContent = '🔄 Конвертировать';
                     setProgress(-1);
@@ -832,14 +965,18 @@
 
                 if (typeof lamejs === 'undefined') {
                     setConvStatus('⏳ Загрузка аудиокодека...');
+                    setProgress(35, 'Загрузка аудиокодека...');
                     await loadLameJs();
+                    setProgress(38, 'Кодек загружен');
                 }
 
                 setConvStatus('⏳ Кодирование MP3 (битрейт ' + bitrate + ' kbps)...');
-                setProgress(60);
+                setProgress(40, 'Кодирование MP3...');
 
-                const mp3Blob = await encodeAudioBufferToMp3(audioBuffer, bitrate);
-                setProgress(90);
+                const mp3Blob = await encodeAudioBufferToMp3(audioBuffer, bitrate, (p, status) => {
+                    setProgress(p, status);
+                });
+                setProgress(98, 'Финальная обработка...');
 
                 convertedBlob = mp3Blob;
                 const baseName = currentFile.name.replace(/\.[^.]+$/, '') || 'audio';
@@ -850,7 +987,7 @@
                 mp3DownloadBtn.download = convertedFileName;
                 mp3DownloadBtn.disabled = false;
 
-                setProgress(100);
+                setProgress(100, '✅ Готово!');
                 setConvStatus('✅ Готово! MP3 с битрейтом ' + bitrate + ' kbps', 'success');
                 convertBtn.textContent = '✅ Конвертировано';
 
@@ -861,9 +998,9 @@
                 setConvStatus('❌ Ошибка: ' + (err.message || 'неизвестная ошибка'), 'error');
                 setProgress(-1);
                 convertBtn.textContent = '🔄 Конвертировать';
-                convertBtn.disabled = false;
             } finally {
-                if (convertBtn.disabled && convertBtn.textContent !== '✅ Конвертировано') {
+                isConverting = false;
+                if (convertBtn.textContent !== '✅ Конвертировано') {
                     convertBtn.disabled = false;
                     convertBtn.textContent = '🔄 Конвертировать';
                 }
@@ -872,6 +1009,36 @@
                     convertBtn.textContent = '🔄 Конвертировать';
                 }
             }
+        }
+
+        function handleMp3Download(e) {
+            e.preventDefault();
+            if (!convertedBlob) {
+                setConvStatus('❌ Сначала сконвертируйте файл', 'error');
+                return;
+            }
+            const defaultName = convertedFileName || 'audio.mp3';
+            const userFileName = prompt('Введите имя для MP3 файла (без расширения):', defaultName.replace(/\.mp3$/, ''));
+            if (userFileName === null) return;
+            let finalName;
+            if (userFileName.trim() === '') {
+                finalName = defaultName;
+            } else {
+                finalName = userFileName.trim();
+                if (!finalName.toLowerCase().endsWith('.mp3')) {
+                    finalName += '.mp3';
+                }
+            }
+            const url = URL.createObjectURL(convertedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            mp3DownloadBtn.download = finalName;
+            mp3DownloadBtn.href = url;
         }
 
         // События конвертера
@@ -889,18 +1056,19 @@
             e.preventDefault();
             dropZone.classList.remove('dragover');
             if (e.dataTransfer.files.length > 0) {
-                handleConverterFile(e.dataTransfer.files[0]);
+                handleConverterFile(e.dataTransfer.files[0], false);
             }
         });
         fileInput.addEventListener('change', (e) => {
             if (fileInput.files.length > 0) {
-                handleConverterFile(fileInput.files[0]);
+                handleConverterFile(fileInput.files[0], false);
             } else {
                 resetConverterUI(false);
             }
         });
 
         convertBtn.addEventListener('click', convertToMp3);
+        mp3DownloadBtn.addEventListener('click', handleMp3Download);
 
         resetBtn.addEventListener('click', () => {
             resetConverterUI(false);
@@ -917,10 +1085,7 @@
             fileInput.value = '';
         });
 
-        // Инициализация конвертера
         resetConverterUI(false);
-
-        // Экспортируем функцию для вызова из захвата
         window.handleConverterFile = handleConverterFile;
 
     })();
