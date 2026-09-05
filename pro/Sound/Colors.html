@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 Цветомузыка как Winamp</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0f1e;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .container {
+            background: #141a2b;
+            padding: 2rem 2rem 1.8rem;
+            border-radius: 2.5rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.06);
+            border: 1px solid #2f3b5a;
+            transition: box-shadow 0.2s;
+            width: 700px;
+            max-width: 94vw;
+        }
+
+        /* холст с «эквалайзером» */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 220px;
+            border-radius: 24px;
+            background: #0b101f;
+            box-shadow: inset 0 8px 12px rgba(0,0,0,0.6), 0 0 0 1px #2a3452;
+            margin-bottom: 1.6rem;
+            image-rendering: crisp-edges; /* ретро-пикселизация */
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px 10px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            background: #1f2842;
+            border: none;
+            border-radius: 60px;
+            padding: 12px 28px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #b7c9f0;
+            cursor: pointer;
+            box-shadow: inset 0 -4px 0 #0d1322, 0 4px 12px rgba(0,0,0,0.5);
+            transition: all 0.08s ease;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #3d4b70;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            box-shadow: inset 0 -2px 0 #0d1322;
+        }
+
+        .btn-primary {
+            background: #4a5f9e;
+            color: white;
+            border-color: #7b92d4;
+            box-shadow: inset 0 -4px 0 #25345a, 0 4px 16px #1a264a;
+        }
+
+        .btn-primary:active {
+            background: #3d5090;
+        }
+
+        .btn-secondary {
+            background: #2d385a;
+            border-color: #4b5a82;
+        }
+
+        .status {
+            color: #95a9d9;
+            background: #10172b;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            border: 1px solid #2b3857;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        .indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #3a4a6a;
+            transition: 0.15s;
+        }
+
+        .indicator.active {
+            background: #7effb7;
+            box-shadow: 0 0 16px #6effa0;
+        }
+
+        .credit {
+            text-align: right;
+            font-size: 0.75rem;
+            color: #3f507a;
+            margin-top: 12px;
+            letter-spacing: 0.3px;
+            opacity: 0.6;
+        }
+
+        @media (max-width: 550px) {
+            .container { padding: 1.2rem; }
+            .btn { padding: 10px 18px; font-size: 0.85rem; }
+            .status { font-size: 0.75rem; padding: 6px 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="visualizer" width="600" height="200"></canvas>
+
+        <div class="controls">
+            <div class="btn-group">
+                <button class="btn btn-primary" id="startBtn">▶ Включить</button>
+                <button class="btn btn-secondary" id="stopBtn">⏹ Остановить</button>
+            </div>
+            <div class="status">
+                <span class="indicator" id="liveIndicator"></span>
+                <span id="statusText">Ожидание</span>
+            </div>
+        </div>
+        <div class="credit">🎛️ колонки ПК · визуализация как Winamp</div>
+    </div>
+
+    <script>
+        (function() {
+            "use strict";
+
+            // ----- элементы -----
+            const canvas = document.getElementById('visualizer');
+            const ctx = canvas.getContext('2d');
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const statusText = document.getElementById('statusText');
+            const indicator = document.getElementById('liveIndicator');
+
+            // ----- настройки визуализации -----
+            const BARS_COUNT = 40;          // количество полос (как в старом Winamp)
+            const SMOOTHING = 0.65;          // сглаживание амплитуды (0..1)
+            const MIN_BAR_HEIGHT = 6;        // минимальная высота для "искрения"
+            const BAR_WIDTH_RATIO = 0.7;     // ширина полосы относительно свободного места
+
+            let audioContext = null;
+            let analyser = null;
+            let source = null;
+            let stream = null;
+            let animationFrame = null;
+            let isActive = false;
+
+            // массив для хранения предыдущих значений (сглаживание)
+            let smoothedValues = new Float32Array(BARS_COUNT).fill(0.2);
+
+            // ----- подготовка canvas -----
+            function resizeCanvas() {
+                const rect = canvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                // Сохраняем пропорции: ширина 600px, высота 200px (задано в атрибутах)
+                // но чтобы не было растяжения, просто используем заданные размеры
+                // canvas.width = 600; canvas.height = 200; уже заданы в html
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
+            // ----- получение звука с динамиков (системный звук) -----
+            async function getSystemAudioStream() {
+                // Запрашиваем аудио с рабочего стола (системный звук)
+                // Используем getDisplayMedia с аудио, но в некоторых браузерах это может захватывать только видео.
+                // Альтернатива: getUserMedia с 'audio' без видео, но это захватывает микрофон.
+                // Для захвата именно системного звука (колонки) используем getDisplayMedia с audio: true
+                // Это работает в Chrome/Edge, Firefox поддерживает audio в getDisplayMedia с флагом.
+                try {
+                    // Запрашиваем видео+аудио с экрана, но видео отбрасываем (только аудио)
+                    const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: true,   // обязательно, но мы будем использовать только аудио
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            suppressLocalAudioPlayback: false,
+                        }
+                    });
+                    // получаем аудиодорожку
+                    const audioTracks = mediaStream.getAudioTracks();
+                    if (audioTracks.length === 0) {
+                        throw new Error('Аудио дорожка не найдена. Разрешите захват звука системы.');
+                    }
+                    // создаём поток только из аудио (чтобы не тащить видео)
+                    const audioStream = new MediaStream(audioTracks);
+                    return audioStream;
+                } catch (err) {
+                    console.warn('getDisplayMedia не сработал, пробуем getUserMedia (микрофон):', err);
+                    // Запасной вариант: используем микрофон (если нет доступа к системному звуку)
+                    try {
+                        const micStream = await navigator.mediaDevices.getUserMedia({
+                            audio: {
+                                echoCancellation: false,
+                                noiseSuppression: false,
+                                autoGainControl: false,
+                            }
+                        });
+                        return micStream;
+                    } catch (micErr) {
+                        throw new Error('Не удалось получить доступ к звуку. Проверьте разрешения.');
+                    }
+                }
+            }
+
+            // ----- инициализация аудио-цепи -----
+            async function initAudio() {
+                try {
+                    // Получаем поток с динамиков (системный звук)
+                    stream = await getSystemAudioStream();
+
+                    // Создаём AudioContext
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                    // Создаём анализатор
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 512;          // 256 байт частотных данных
+                    analyser.smoothingTimeConstant = 0.75;
+
+                    // Источник из потока
+                    source = audioContext.createMediaStreamSource(stream);
+                    source.connect(analyser);
+
+                    // resume контекста (если он на паузе)
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('Ошибка инициализации аудио:', error);
+                    statusText.innerText = 'Ошибка доступа к звуку';
+                    indicator.className = 'indicator';
+                    return false;
+                }
+            }
+
+            // ----- визуализация (как Winamp) -----
+            function drawBars() {
+                if (!analyser) return;
+
+                const bufferLength = analyser.frequencyBinCount; // = fftSize/2 = 256
+                const dataArray = new Uint8Array(bufferLength);
+
+                analyser.getByteFrequencyData(dataArray);
+
+                // ширина и высота canvas
+                const w = canvas.width;   // 600
+                const h = canvas.height;  // 200
+
+                // очистка
+                ctx.clearRect(0, 0, w, h);
+
+                // количество полос (берём только первые BARS_COUNT)
+                const count = Math.min(BARS_COUNT, bufferLength);
+                const step = Math.floor(bufferLength / count);
+                // ширина полосы с учётом промежутков (как Winamp)
+                const gap = 3;
+                const barWidth = (w - gap * (count + 1)) / count * BAR_WIDTH_RATIO + 2;
+
+                // накопление значений для сглаживания
+                const currentValues = new Float32Array(count);
+
+                for (let i = 0; i < count; i++) {
+                    // берём среднее значение по группе частот (для более плавной картинки)
+                    let sum = 0;
+                    for (let j = 0; j < step; j++) {
+                        const idx = i * step + j;
+                        if (idx < bufferLength) {
+                            sum += dataArray[idx];
+                        }
+                    }
+                    let avg = sum / step;
+                    // нормализация 0..1 (макс 255)
+                    let raw = avg / 255.0;
+                    // корректировка: делаем более живой (нелинейно)
+                    raw = Math.pow(raw, 0.7);  // легкое усиление низких
+                    // ограничение
+                    raw = Math.min(1, raw);
+
+                    // сглаживание (экспоненциальное)
+                    const prev = smoothedValues[i] || 0.2;
+                    const smoothed = prev * SMOOTHING + raw * (1 - SMOOTHING);
+                    smoothedValues[i] = Math.max(0.08, smoothed);
+                    currentValues[i] = smoothed;
+                }
+
+                // ----- рисуем полосы (как в Winamp: цветные, с пиками) -----
+                for (let i = 0; i < count; i++) {
+                    const val = currentValues[i];
+                    // высота полосы (макс 90% высоты canvas)
+                    const maxHeight = h * 0.85;
+                    const height = Math.max(MIN_BAR_HEIGHT, val * maxHeight);
+
+                    const x = gap + i * (barWidth + gap);
+
+                    // ----- цветовая схема как в старом Winamp (градиент от зелёного к синему/фиолетовому) -----
+                    // чем выше значение — тем ярче и теплее
+                    const hue = 220 - val * 140; // от 220 (синий) до 80 (зелёный/жёлтый)
+                    const saturation = 80 + val * 20;
+                    const lightness = 35 + val * 45;
+                    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+
+                    // рисуем полосу с закруглёнными краями (как в Winamp 2.x)
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = `hsla(${hue}, 90%, 60%, 0.5)`;
+                    ctx.shadowBlur = 8;
+
+                    // прямоугольник с закруглением сверху
+                    const radius = 4;
+                    const y = h - height;
+                    const ww = barWidth;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, y);
+                    ctx.quadraticCurveTo(x, y, x, y + radius);
+                    ctx.lineTo(x, h);
+                    ctx.lineTo(x + ww, h);
+                    ctx.lineTo(x + ww, y + radius);
+                    ctx.quadraticCurveTo(x + ww, y, x + ww - radius, y);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // эффект "блика" сверху
+                    if (height > 10) {
+                        ctx.shadowBlur = 0;
+                        const grad = ctx.createLinearGradient(x, y, x, y + 8);
+                        grad.addColorStop(0, 'rgba(255,255,255,0.3)');
+                        grad.addColorStop(1, 'rgba(255,255,255,0)');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.rect(x, y, ww, 6);
+                        ctx.fill();
+                    }
+
+                    // небольшая белая точка сверху (как пик)
+                    if (val > 0.35) {
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = `rgba(255,255,255,${Math.min(0.8, val*0.6)})`;
+                        ctx.beginPath();
+                        ctx.arc(x + ww/2, y - 2, 2.5, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+
+                // сбросим тени
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent';
+
+                // индикатор активности
+                const avgVal = currentValues.reduce((a,b) => a + b, 0) / count;
+                if (avgVal > 0.08) {
+                    indicator.className = 'indicator active';
+                } else {
+                    indicator.className = 'indicator';
+                }
+            }
+
+            // ----- цикл анимации -----
+            function animate() {
+                if (!isActive) return;
+                drawBars();
+                animationFrame = requestAnimationFrame(animate);
+            }
+
+            // ----- старт -----
+            async function startVisualizer() {
+                if (isActive) {
+                    // уже запущен
+                    return;
+                }
+
+                statusText.innerText = 'Запуск...';
+                indicator.className = 'indicator';
+
+                const ok = await initAudio();
+                if (!ok) {
+                    statusText.innerText = '❌ Ошибка';
+                    return;
+                }
+
+                isActive = true;
+                statusText.innerText = '▶ Активен (системный звук)';
+                indicator.className = 'indicator active';
+
+                // сбрасываем сглаживание для яркого старта
+                smoothedValues.fill(0.2);
+
+                // запускаем анимацию
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                animate();
+
+                // обновляем состояние кнопок
+                startBtn.disabled = true;
+                startBtn.style.opacity = '0.6';
+                stopBtn.disabled = false;
+                stopBtn.style.opacity = '1';
+            }
+
+            // ----- стоп -----
+            function stopVisualizer() {
+                if (!isActive) return;
+
+                isActive = false;
+                if (animationFrame) {
+                    cancelAnimationFrame(animationFrame);
+                    animationFrame = null;
+                }
+
+                // очищаем canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // рисуем заглушку (полоски на минимуме)
+                ctx.fillStyle = '#151e32';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < BARS_COUNT; i++) {
+                    const x = 4 + i * 14;
+                    ctx.fillStyle = '#283457';
+                    ctx.fillRect(x, canvas.height - 6, 10, 6);
+                }
+
+                indicator.className = 'indicator';
+                statusText.innerText = '⏹ Остановлен';
+
+                // закрываем аудио контекст и освобождаем ресурсы
+                if (source) {
+                    try { source.disconnect(); } catch(e) {}
+                    source = null;
+                }
+                if (analyser) {
+                    try { analyser.disconnect(); } catch(e) {}
+                    analyser = null;
+                }
+                if (audioContext && audioContext.state !== 'closed') {
+                    audioContext.close().catch(() => {});
+                }
+                audioContext = null;
+
+                // останавливаем треки
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+
+                startBtn.disabled = false;
+                startBtn.style.opacity = '1';
+                stopBtn.disabled = true;
+                stopBtn.style.opacity = '0.6';
+            }
+
+            // ----- обработчики кнопок -----
+            startBtn.addEventListener('click', startVisualizer);
+            stopBtn.addEventListener('click', stopVisualizer);
+
+            // начальное состояние: стоп
+            stopBtn.disabled = true;
+            stopBtn.style.opacity = '0.6';
+
+            // рисуем заглушку на старте
+            (function drawIdle() {
+                ctx.fillStyle = '#0b101f';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                for (let i = 0; i < BARS_COUNT; i++) {
+                    const x = 4 + i * 14;
+                    ctx.fillStyle = '#1b2642';
+                    ctx.fillRect(x, canvas.height - 8, 10, 8);
+                }
+            })();
+
+            // поддержка переключения вкладок (пауза/возобновление)
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && isActive) {
+                    // если вкладка скрыта, ничего не делаем — анимация продолжается в фоне
+                }
+            });
+
+            console.log('🎵 Цветомузыка готова. Нажмите "Включить" и разрешите захват звука.');
+        })();
+    </script>
+</body>
+</html>
