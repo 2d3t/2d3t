@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Захват системного звука (стерео)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e1a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, system-ui, sans-serif;
+            padding: 20px;
+            color: #e8edff;
+        }
+        .card {
+            background: #141c2b;
+            max-width: 520px;
+            width: 100%;
+            padding: 32px 24px 28px;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05);
+            border: 1px solid #263040;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        .header h1 {
+            font-size: 1.7rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #7c9aff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sub {
+            font-size: 0.9rem;
+            opacity: 0.5;
+            margin-bottom: 22px;
+            padding-left: 14px;
+            border-left: 3px solid #4f7aff;
+        }
+        .status-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #0f1625;
+            padding: 10px 18px;
+            border-radius: 40px;
+            margin-bottom: 20px;
+            border: 1px solid #253040;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4a5568;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .dot.active { background: #48bb78; box-shadow: 0 0 20px #48bb7855; }
+        .dot.error { background: #fc8181; box-shadow: 0 0 20px #fc818155; }
+        .meter-wrap {
+            background: #0b111f;
+            height: 10px;
+            border-radius: 20px;
+            margin: 16px 0 22px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+        }
+        .meter-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6);
+            border-radius: 20px;
+            transition: width 0.06s ease;
+        }
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            flex: 1;
+            min-width: 130px;
+            padding: 16px 14px;
+            border: none;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            background: #26304a;
+            box-shadow: 0 5px 0 #0d1320;
+            transition: all 0.07s linear;
+            cursor: pointer;
+            border: 1px solid #3f4a66;
+        }
+        .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #0d1320; }
+        .btn-primary { background: #3b5bdb; border-color: #5f7dfa; box-shadow: 0 5px 0 #1f2e7a; }
+        .btn-danger { background: #b53b4a; border-color: #d95a6a; box-shadow: 0 5px 0 #6e1f2b; }
+        .btn:disabled { opacity: 0.3; transform: translateY(3px); box-shadow: 0 2px 0 #0d1320; pointer-events: none; }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 16px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #1f2840;
+            font-size: 0.8rem;
+            color: #7a88b0;
+        }
+        .info-grid .label { opacity: 0.6; }
+        .info-grid .value { 
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            background: #0e1424;
+            padding: 2px 12px;
+            border-radius: 30px;
+            color: #b0c0f0;
+            text-align: right;
+        }
+        .info-grid .value.stereo { color: #7c9aff; font-weight: 600; }
+        .warning {
+            background: #1a1528;
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin: 16px 0 6px;
+            font-size: 0.85rem;
+            border-left: 4px solid #fbbf24;
+            color: #c8d0f0;
+            line-height: 1.5;
+        }
+        .warning strong { color: #fcd34d; }
+        .stereo-badge {
+            display: inline-block;
+            background: #1f2a4a;
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #7c9aff;
+            border: 1px solid #3b5bdb55;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <h1>🎧 Системный звук</h1>
+        <span class="stereo-badge">⬇ СТЕРЕО</span>
+    </div>
+    <div class="sub">захват с экрана · ноутбук / десктоп</div>
+
+    <div class="status-box">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Остановлен</span>
+    </div>
+
+    <div class="meter-wrap">
+        <div class="meter-bar" id="meterBar"></div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-primary" id="startBtn">▶ Захват</button>
+        <button class="btn btn-danger" id="stopBtn" disabled>⏹ Стоп</button>
+    </div>
+
+    <div class="info-grid">
+        <span class="label">Частота</span>
+        <span class="value" id="sampleInfo">— Гц</span>
+        <span class="label">Каналы</span>
+        <span class="value stereo" id="channelsInfo">—</span>
+        <span class="label">Пик</span>
+        <span class="value" id="peakInfo">0.0%</span>
+        <span class="label">Состояние</span>
+        <span class="value" id="stateInfo">—</span>
+    </div>
+
+    <div class="warning">
+        <strong>💡 Для ноутбука:</strong> При запросе выберите <strong>«Весь экран»</strong> или вкладку с нужным звуком. 
+        Захватывается <strong>стерео</strong> звук со всей системы.
+    </div>
+</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const meterBar = document.getElementById('meterBar');
+        const sampleInfo = document.getElementById('sampleInfo');
+        const channelsInfo = document.getElementById('channelsInfo');
+        const peakInfo = document.getElementById('peakInfo');
+        const stateInfo = document.getElementById('stateInfo');
+
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationId = null;
+        let mediaStream = null;
+        let source = null;
+        let isRecording = false;
+
+        function updateStatus(text, state) {
+            statusText.textContent = text;
+            statusDot.className = 'dot';
+            if (state === 'active') statusDot.classList.add('active');
+            else if (state === 'error') statusDot.classList.add('error');
+            stateInfo.textContent = text;
+        }
+
+        function resetUI() {
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            meterBar.style.width = '0%';
+            peakInfo.textContent = '0.0%';
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+            audioContext = null;
+            analyser = null;
+            dataArray = null;
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+            source = null;
+            isRecording = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('Остановлен', '');
+            channelsInfo.textContent = '—';
+        }
+
+        function updateMeter() {
+            if (!analyser || !isRecording) {
+                if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+                return;
+            }
+
+            analyser.getByteTimeDomainData(dataArray);
+            let max = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const val = (dataArray[i] - 128) / 128;
+                const abs = Math.abs(val);
+                if (abs > max) max = abs;
+            }
+            const percent = Math.min(max * 100, 100);
+            meterBar.style.width = percent + '%';
+            peakInfo.textContent = (max * 100).toFixed(1) + '%';
+
+            animationId = requestAnimationFrame(updateMeter);
+        }
+
+        async function startCapture() {
+            if (isRecording) return;
+
+            try {
+                // Захват экрана со звуком (стерео на десктопе)
+                mediaStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        sampleRate: 48000,
+                        channelCount: 2, // стерео
+                    }
+                });
+
+                const audioTracks = mediaStream.getAudioTracks();
+                if (audioTracks.length === 0) {
+                    throw new Error('Нет аудио-дорожки');
+                }
+
+                // Показываем информацию о дорожке
+                const track = audioTracks[0];
+                const settings = track.getSettings();
+                console.log('Audio settings:', settings);
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 48000,
+                });
+
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+
+                source = audioContext.createMediaStreamSource(mediaStream);
+                
+                // Проверяем количество каналов
+                const channelCount = source.channelCount || 2;
+                channelsInfo.textContent = channelCount >= 2 ? '🔊 Стерео (2)' : 'Моно (1)';
+                
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                source.connect(analyser);
+
+                isRecording = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                updateStatus('Запись стерео звука...', 'active');
+                sampleInfo.textContent = (audioContext.sampleRate / 1000).toFixed(1) + ' кГц';
+
+                if (animationId) cancelAnimationFrame(animationId);
+                updateMeter();
+
+                // Остановка при завершении трансляции пользователем
+                mediaStream.getVideoTracks()[0]?.addEventListener('ended', () => {
+                    if (isRecording) stopCapture();
+                });
+
+            } catch (err) {
+                console.error('Ошибка:', err);
+                let msg = err.message || 'Ошибка захвата';
+                if (msg.includes('Permission') || msg.includes('denied')) {
+                    msg = '❌ Разрешение отклонено';
+                } else if (msg.includes('not supported')) {
+                    msg = '❌ Браузер не поддерживает захват';
+                }
+                updateStatus(msg, 'error');
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(t => t.stop());
+                    mediaStream = null;
+                }
+            }
+        }
+
+        function stopCapture() {
+            if (!isRecording) return;
+            isRecording = false;
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            if (source) { try { source.disconnect(); } catch (_) {} source = null; }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+                audioContext = null;
+            }
+            analyser = null;
+            dataArray = null;
+            meterBar.style.width = '0%';
+            peakInfo.textContent = '0.0%';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('Остановлен', '');
+        }
+
+        startBtn.addEventListener('click', startCapture);
+        stopBtn.addEventListener('click', stopCapture);
+        window.addEventListener('beforeunload', () => { if (isRecording) stopCapture(); });
+
+        updateStatus('Остановлен', '');
+        stopBtn.disabled = true;
+        sampleInfo.textContent = '— Гц';
+        channelsInfo.textContent = '—';
+        peakInfo.textContent = '0.0%';
+        stateInfo.textContent = 'Остановлен';
+
+    })();
+</script>
+</body>
+</html>
