@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Захват → MP3 с авто-стопом</title>
+    <title>Захват звука → MP3</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -13,264 +13,166 @@
             justify-content: center;
             align-items: center;
             font-family: -apple-system, system-ui, sans-serif;
-            padding: 16px;
+            padding: 20px;
             color: #e8edff;
         }
         .app {
-            max-width: 640px;
+            max-width: 480px;
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
         .card {
             background: #141c2b;
-            padding: 24px 20px;
-            border-radius: 32px;
+            padding: 28px 24px;
+            border-radius: 40px;
             border: 1px solid #263040;
             box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            text-align: center;
         }
-        .card h2 {
-            font-size: 1.4rem;
+        .card h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
             background: linear-gradient(135deg, #7c9aff, #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 4px;
         }
         .sub {
-            font-size: 0.8rem;
-            opacity: 0.5;
-            margin-bottom: 14px;
-            padding-left: 12px;
-            border-left: 3px solid #4f7aff;
-        }
-        .row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            background: #0f1625;
-            padding: 10px 16px;
-            border-radius: 40px;
-            border: 1px solid #253040;
-            margin-bottom: 12px;
-        }
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #4a5568;
-            transition: 0.3s;
-            flex-shrink: 0;
-        }
-        .dot.active { background: #48bb78; box-shadow: 0 0 20px #48bb7855; animation: pulse 1s infinite; }
-        .dot.error { background: #fc8181; }
-        .dot.converting { background: #f6ad55; box-shadow: 0 0 20px #f6ad5555; animation: pulse 0.6s infinite; }
-        .dot.auto-stop { background: #a78bfa; box-shadow: 0 0 20px #a78bfa55; animation: pulse 0.8s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
-        .timer { font-family: monospace; font-size: 1.2rem; font-weight: 600; color: #7c9aff; margin-left: auto; }
-        .btn {
-            padding: 12px 18px;
-            border: none;
-            border-radius: 40px;
-            font-weight: 600;
-            color: #fff;
-            background: #26304a;
-            cursor: pointer;
-            border: 1px solid #3f4a66;
-            box-shadow: 0 4px 0 #0d1320;
-            transition: 0.06s linear;
-            font-size: 0.9rem;
-            flex: 1;
-            min-width: 80px;
-            text-align: center;
-        }
-        .btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #0d1320; }
-        .btn-primary { background: #3b5bdb; border-color: #5f7dfa; box-shadow: 0 4px 0 #1f2e7a; }
-        .btn-danger { background: #b53b4a; border-color: #d95a6a; box-shadow: 0 4px 0 #6e1f2b; }
-        .btn-secondary { background: #4a5a7a; border-color: #5f7a9a; box-shadow: 0 4px 0 #2a3a5a; }
-        .btn:disabled { opacity: 0.3; transform: translateY(2px); box-shadow: 0 2px 0 #0d1320; pointer-events: none; }
-
-        .meter-wrap { background: #0b111f; height: 8px; border-radius: 20px; margin: 8px 0 14px; overflow: hidden; }
-        .meter-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6); border-radius: 20px; transition: width 0.06s; }
-
-        .file-preview {
-            background: #0f1625;
-            border-radius: 16px;
-            padding: 12px 16px;
-            margin: 10px 0 12px;
-            display: none;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            border: 1px solid #1f2a4a;
-        }
-        .file-preview.show { display: flex; }
-        .file-preview .name { flex: 1; word-break: break-all; color: #d3d9ee; font-weight: 450; }
-        .file-preview .size { color: #7c9aff; font-weight: 600; font-size: 0.8rem; }
-        .file-preview .play-btn { background: #2a3550; border: none; color: #b0c4f0; padding: 4px 14px; border-radius: 30px; cursor: pointer; font-size: 0.9rem; }
-        .file-preview .play-btn:hover { background: #3c4a6a; }
-
-        .conv-status { margin: 6px 0 4px; font-size: 0.9rem; color: #bcc6e3; min-height: 24px; display: flex; align-items: center; gap: 8px; }
-        .conv-status.success { color: #a1d6a8; }
-        .conv-status.error { color: #f7a9a9; }
-        .conv-status .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #4a5a7a;
-            border-top: 2px solid #7c9aff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        .progress-wrap {
-            background: #1a1f2e;
-            border-radius: 30px;
-            height: 12px;
-            margin: 6px 0 2px;
-            overflow: hidden;
-            opacity: 0;
-            transition: opacity 0.3s;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
-            position: relative;
-        }
-        .progress-wrap.active { opacity: 1; }
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6);
-            border-radius: 30px;
-            transition: width 0.15s;
-            position: relative;
-        }
-        .progress-bar.pulsing::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            animation: shimmer 1.2s infinite;
-        }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: #7a88b0;
-            opacity: 0;
-            transition: opacity 0.3s;
-            margin-top: 3px;
-        }
-        .progress-label.active { opacity: 1; }
-        .progress-label .percent {
-            font-weight: 700;
-            color: #b0c0f0;
             font-size: 0.85rem;
-            background: #0f1625;
-            padding: 0 10px;
-            border-radius: 20px;
+            opacity: 0.4;
+            margin-bottom: 16px;
         }
 
-        .footer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-        .download-btn {
-            background: #2b3650; border: 1px solid #47587a; color: #d3def5;
-            padding: 10px 20px; border-radius: 60px; font-weight: 500; cursor: pointer;
-            transition: 0.15s; flex: 1; text-align: center; text-decoration: none;
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-        }
-        .download-btn:hover:not(:disabled) { background: #36466b; border-color: #6078a8; color: #fff; }
-        .download-btn:disabled { opacity: 0.4; cursor: default; }
-        .reset-btn {
-            background: transparent; border: 1px solid #495478; color: #a8b4d4;
-            padding: 10px 18px; border-radius: 60px; cursor: pointer;
-        }
-        .reset-btn:hover { background: #2d3650; border-color: #6b7da3; color: #d6def5; }
-        .footnote { font-size: 0.7rem; color: #5a6785; text-align: center; margin-top: 14px; border-top: 1px solid #2e364b; padding-top: 12px; }
-
-        .bitrate-group select {
-            background: #2f384f; border: 1px solid #3e4864; color: #f0f3fc;
-            padding: 4px 12px; border-radius: 40px; font-weight: 500; font-size: 0.8rem;
-            cursor: pointer; outline: none;
-        }
-        .bitrate-group select:focus { border-color: #7b8fc7; }
-        .flex { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .gap { gap: 8px; }
-
-        .volume-warning {
+        .warning {
             background: #1a1528;
-            padding: 10px 16px;
+            padding: 12px 16px;
             border-radius: 16px;
-            margin: 10px 0 6px;
-            font-size: 0.8rem;
+            margin: 0 0 14px 0;
+            font-size: 0.85rem;
             border-left: 4px solid #fbbf24;
             color: #c8d0f0;
             line-height: 1.5;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            text-align: left;
         }
-        .volume-warning strong { color: #fcd34d; }
-        .volume-warning .icon { font-size: 1.4rem; }
+        .warning .icon { font-size: 1.6rem; flex-shrink: 0; }
+        .warning strong { color: #fcd34d; }
 
-        .auto-trim-badge {
-            background: #1f2a4a;
-            border-radius: 30px;
-            padding: 2px 14px;
-            font-size: 0.7rem;
-            color: #7c9aff;
-            border: 1px solid #3b5bdb55;
-            margin-left: 8px;
-            display: inline-block;
-        }
-        
-        .trim-stats {
-            background: #0f1625;
-            border-radius: 12px;
-            padding: 8px 14px;
-            margin: 6px 0 10px;
-            font-size: 0.8rem;
-            color: #8a9abb;
-            border: 1px solid #1f2a4a;
-            display: none;
-        }
-        .trim-stats.show { display: block; }
-        .trim-stats .highlight { color: #7c9aff; font-weight: 600; }
-        .trim-stats .saved { color: #48bb78; font-weight: 600; }
-
-        .auto-stop-settings {
-            background: #0f1625;
-            border-radius: 16px;
-            padding: 12px 16px;
-            margin: 8px 0 12px;
-            border: 1px solid #1f2a4a;
+        .status-row {
             display: flex;
             align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
+            gap: 14px;
+            background: #0f1625;
+            padding: 10px 18px;
+            border-radius: 40px;
+            border: 1px solid #253040;
+            margin-bottom: 12px;
         }
-        .auto-stop-settings label {
-            font-size: 0.85rem;
-            color: #b3bddb;
+        .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #4a5568;
+            transition: 0.3s;
+            flex-shrink: 0;
+        }
+        .dot.recording { background: #48bb78; box-shadow: 0 0 20px #48bb7855; animation: pulse 1s infinite; }
+        .dot.error { background: #fc8181; box-shadow: 0 0 20px #fc818155; }
+        .dot.processing { background: #f6ad55; box-shadow: 0 0 20px #f6ad5555; animation: pulse 0.6s infinite; }
+        .dot.done { background: #a78bfa; box-shadow: 0 0 20px #a78bfa55; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+
+        .status-text { font-size: 0.95rem; color: #bcc6e3; flex: 1; text-align: left; }
+        .timer { font-family: 'SF Mono', monospace; font-size: 1.2rem; font-weight: 600; color: #7c9aff; }
+
+        .meter-wrap {
+            background: #0b111f;
+            height: 6px;
+            border-radius: 20px;
+            margin: 0 0 16px 0;
+            overflow: hidden;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+        }
+        .meter-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6);
+            border-radius: 20px;
+            transition: width 0.06s ease;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 60px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            transition: 0.1s linear;
+            position: relative;
+            background: #3b5bdb;
+            border: 1px solid #5f7dfa;
+            box-shadow: 0 6px 0 #1f2e7a;
+            letter-spacing: 0.5px;
+        }
+        .btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #1f2e7a; }
+        .btn-main:disabled {
+            opacity: 0.4;
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #1f2e7a;
+            pointer-events: none;
+        }
+        .btn-main.recording {
+            background: #b53b4a;
+            border-color: #d95a6a;
+            box-shadow: 0 6px 0 #6e1f2b;
+        }
+        .btn-main.recording:active { transform: translateY(4px); box-shadow: 0 2px 0 #6e1f2b; }
+        .btn-main.processing {
+            background: #4a5a7a;
+            border-color: #5f7a9a;
+            box-shadow: 0 6px 0 #2a3a5a;
+        }
+        .btn-main.done {
+            background: #2d8f5c;
+            border-color: #4aad7a;
+            box-shadow: 0 6px 0 #1a5a3a;
+        }
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: #0f1625;
+            padding: 10px 16px;
+            border-radius: 40px;
+            border: 1px solid #1f2a4a;
+            margin-top: 12px;
+        }
+        .settings-row label {
+            font-size: 0.8rem;
+            color: #8a9abb;
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        .auto-stop-settings input[type="range"] {
-            width: 100px;
+        .settings-row input[type="range"] {
+            width: 80px;
             accent-color: #7c9aff;
             background: #1f2840;
             height: 4px;
             border-radius: 10px;
             outline: none;
         }
-        .auto-stop-settings input[type="range"]::-webkit-slider-thumb {
+        .settings-row input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
             width: 14px;
@@ -279,127 +181,149 @@
             background: #7c9aff;
             cursor: pointer;
         }
-        .auto-stop-settings .value {
+        .settings-row .value {
             color: #7c9aff;
             font-weight: 600;
-            min-width: 40px;
+            min-width: 30px;
             text-align: center;
+            font-size: 0.8rem;
         }
-        .auto-stop-badge {
-            background: #2d3748;
-            border-radius: 30px;
-            padding: 2px 12px;
-            font-size: 0.7rem;
-            color: #a0b4e0;
+        .settings-row .toggle-btn {
+            background: #2a3550;
             border: 1px solid #4a5a7a;
+            color: #b0c4f0;
+            padding: 4px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: 0.15s;
         }
-        .auto-stop-badge.active {
+        .settings-row .toggle-btn:hover { background: #36466b; }
+        .settings-row .toggle-btn.active {
             background: #1f2a4a;
             border-color: #7c9aff;
             color: #7c9aff;
         }
+        .settings-row .toggle-btn.inactive {
+            background: #2a1a1a;
+            border-color: #6a4a4a;
+            color: #b08080;
+        }
+
+        .status-msg {
+            font-size: 0.85rem;
+            color: #8a9abb;
+            margin-top: 10px;
+            min-height: 24px;
+        }
+        .status-msg.success { color: #a1d6a8; }
+        .status-msg.error { color: #f7a9a9; }
+
+        .footer { font-size: 0.65rem; color: #4a5a7a; text-align: center; margin-top: 4px; border-top: 1px solid #1f2840; padding-top: 12px; }
+
+        .save-area {
+            margin-top: 12px;
+            display: none;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .save-area.show { display: flex; }
+        .save-area .btn-save {
+            flex: 1;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #fff;
+            background: #2d8f5c;
+            border: 1px solid #4aad7a;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1a5a3a;
+            transition: 0.06s linear;
+            font-size: 0.9rem;
+            min-width: 100px;
+        }
+        .save-area .btn-save:active { transform: translateY(4px); box-shadow: 0 0px 0 #1a5a3a; }
+        .save-area .btn-save:disabled { opacity: 0.4; transform: translateY(2px); box-shadow: 0 2px 0 #1a5a3a; pointer-events: none; }
+        .save-area .btn-reset {
+            padding: 12px 18px;
+            border: 1px solid #495478;
+            background: transparent;
+            color: #a8b4d4;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 450;
+            font-size: 0.9rem;
+        }
+        .save-area .btn-reset:hover { background: #2d3650; border-color: #6b7da3; color: #d6def5; }
+        
+        .file-name-display {
+            font-size: 0.75rem;
+            color: #7a88b0;
+            word-break: break-all;
+            padding: 6px 12px;
+            background: #0f1625;
+            border-radius: 30px;
+            border: 1px solid #1f2a4a;
+            flex: 1;
+            min-width: 100px;
+        }
+        .file-name-display .highlight { color: #7c9aff; font-weight: 600; }
+
+        .trim-info {
+            font-size: 0.7rem;
+            color: #6a7a9a;
+            margin-top: 6px;
+            display: none;
+        }
+        .trim-info.show { display: block; }
+        .trim-info .highlight { color: #48bb78; font-weight: 600; }
     </style>
 </head>
 <body>
 <div class="app">
 
-    <!-- === КАРТОЧКА ЗАХВАТА === -->
     <div class="card">
-        <h2>🎧 Захват звука</h2>
-        <div class="sub">выберите вкладку / экран с звуком → запись</div>
+        <h1>🎧 Захват звука</h1>
+        <div class="sub">запись → авто-обрезка → MP3</div>
 
-        <div class="volume-warning">
+        <div class="warning">
             <span class="icon">🔊</span>
-            <div><strong>Важно!</strong> Установите громкость в захватываемой вкладке на <strong>максимум</strong> — запись берётся именно с той громкости, которая играет в источнике.</div>
+            <div><strong>Важно!</strong> Установите громкость в захватываемой вкладке на <strong>максимум</strong></div>
         </div>
 
-        <!-- Настройки авто-стопа -->
-        <div class="auto-stop-settings">
-            <label>
-                ⏹ Авто-стоп при тишине:
-                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="1.5">
-                <span class="value" id="thresholdValue">1.5</span> сек
-            </label>
-            <span class="auto-stop-badge active" id="autoStopBadge">⚡ активен</span>
-        </div>
-
-        <div class="row">
+        <div class="status-row">
             <span class="dot" id="statusDot"></span>
-            <span id="statusText">Остановлен</span>
+            <span class="status-text" id="statusText">Готов</span>
             <span class="timer" id="timerDisplay">00:00</span>
-            <span id="silenceTimer" style="font-size:0.7rem; color:#6a7a9a; display:none;">тишина: 0.0с</span>
         </div>
 
         <div class="meter-wrap"><div class="meter-bar" id="meterBar"></div></div>
 
-        <div class="flex gap">
-            <button class="btn btn-primary" id="startBtn">▶ Захват</button>
-            <button class="btn btn-danger" id="stopBtn" disabled>⏹ Стоп</button>
+        <button class="btn-main" id="mainBtn">▶ Захват</button>
+
+        <div class="status-msg" id="statusMsg">Нажмите «Захват» и выберите вкладку с звуком</div>
+        <div class="trim-info" id="trimInfo">✂️ Обрезано в конце: <span class="highlight" id="trimEndInfo">0.0</span> сек</div>
+
+        <div class="settings-row">
+            <label>
+                ⏹ Авто-стоп:
+                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="1.5">
+                <span class="value" id="thresholdValue">1.5</span>с
+            </label>
+            <button class="toggle-btn active" id="autoStopToggle">Вкл</button>
         </div>
 
-        <div class="file-preview" id="filePreview">
-            <span class="name" id="previewName">audio.webm</span>
-            <span class="size" id="previewSize">0 KB</span>
-            <button class="play-btn" id="playBtn">▶ Прослушать</button>
+        <div class="save-area" id="saveArea">
+            <span class="file-name-display">📁 <span class="highlight" id="finalFileName">audio.mp3</span></span>
+            <button class="btn-save" id="saveBtn">💾 Сохранить</button>
+            <button class="btn-reset" id="resetBtn">⟳</button>
         </div>
 
-        <div class="footnote" style="border: none; margin-top: 8px; padding-top: 4px;">
-            ⚡ Запись автоматически остановится через 1.5 сек после окончания звука
-        </div>
+        <div class="footer">Конвертация выполняется локально в браузере</div>
     </div>
 
-    <!-- === КАРТОЧКА КОНВЕРТЕРА === -->
-    <div class="card" id="converterCard">
-        <h2>🔄 Авто-обрезка → MP3</h2>
-        <div class="sub">
-            тишина в начале и конце удаляется автоматически
-            <span class="auto-trim-badge">⚡ умная обрезка</span>
-        </div>
-
-        <div class="file-preview show" id="convFileInfo" style="display:flex; margin-bottom:6px;">
-            <span class="name" id="convFileName">Файл не выбран</span>
-            <span class="size" id="convFileSize">—</span>
-        </div>
-
-        <div class="trim-stats" id="trimStats">
-            <div>🔹 Обрезано в начале: <span class="highlight" id="trimStartSaved">0.0</span> сек</div>
-            <div>🔹 Обрезано в конце: <span class="highlight" id="trimEndSaved">0.0</span> сек</div>
-            <div>📊 Итоговая длительность: <span class="saved" id="trimFinalDuration">0:00</span></div>
-        </div>
-
-        <div class="flex gap" style="justify-content:space-between;">
-            <div class="bitrate-group">
-                <label style="color:#b3bddb; font-size:0.8rem;">📊 Битрейт:</label>
-                <select id="bitrateSelect">
-                    <option value="64">64</option>
-                    <option value="96">96</option>
-                    <option value="128">128</option>
-                    <option value="192">192</option>
-                    <option value="256">256</option>
-                    <option value="320" selected>320 kbps</option>
-                </select>
-            </div>
-            <button class="btn btn-secondary" id="convertBtn" disabled style="flex:0; min-width:140px;">🔄 Конвертировать</button>
-        </div>
-
-        <div class="conv-status" id="convStatus">
-            <span>⏳ Готов к работе</span>
-        </div>
-
-        <div class="progress-wrap" id="progressWrap">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-        <div class="progress-label" id="progressLabel">
-            <span class="status-text" id="progressStatusText">Инициализация...</span>
-            <span class="percent" id="progressPercent">0%</span>
-        </div>
-
-        <div class="footer-actions">
-            <a class="download-btn" id="mp3DownloadBtn" disabled>⬇ Скачать MP3</a>
-            <button class="reset-btn" id="resetBtn">⟳ Сброс</button>
-        </div>
-        <div class="footnote">Конвертация локально в браузере. Файлы не уходят на сервер.</div>
-    </div>
 </div>
 
 <script>
@@ -407,37 +331,21 @@
         'use strict';
 
         // ====== ЭЛЕМЕНТЫ ======
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
+        const mainBtn = document.getElementById('mainBtn');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
+        const statusMsg = document.getElementById('statusMsg');
         const meterBar = document.getElementById('meterBar');
         const timerDisplay = document.getElementById('timerDisplay');
-        const silenceTimer = document.getElementById('silenceTimer');
-        const filePreview = document.getElementById('filePreview');
-        const previewName = document.getElementById('previewName');
-        const previewSize = document.getElementById('previewSize');
-        const playBtn = document.getElementById('playBtn');
-
-        const convFileName = document.getElementById('convFileName');
-        const convFileSize = document.getElementById('convFileSize');
-        const convertBtn = document.getElementById('convertBtn');
-        const mp3DownloadBtn = document.getElementById('mp3DownloadBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const convStatus = document.getElementById('convStatus');
-        const progressWrap = document.getElementById('progressWrap');
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        const progressStatusText = document.getElementById('progressStatusText');
-        const progressLabel = document.getElementById('progressLabel');
-        const bitrateSelect = document.getElementById('bitrateSelect');
-        const trimStats = document.getElementById('trimStats');
-        const trimStartSaved = document.getElementById('trimStartSaved');
-        const trimEndSaved = document.getElementById('trimEndSaved');
-        const trimFinalDuration = document.getElementById('trimFinalDuration');
         const silenceThreshold = document.getElementById('silenceThreshold');
         const thresholdValue = document.getElementById('thresholdValue');
-        const autoStopBadge = document.getElementById('autoStopBadge');
+        const autoStopToggle = document.getElementById('autoStopToggle');
+        const saveArea = document.getElementById('saveArea');
+        const finalFileName = document.getElementById('finalFileName');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const trimInfo = document.getElementById('trimInfo');
+        const trimEndInfo = document.getElementById('trimEndInfo');
 
         // ====== СОСТОЯНИЕ ======
         let audioContext = null;
@@ -457,20 +365,24 @@
         let isConverting = false;
         let convertedBlob = null;
         let convertedFileName = '';
-        
-        // Для авто-стопа
+        let autoStopEnabled = true;
         let silenceStartTime = null;
-        let autoStopTimeout = null;
         let isAutoStopping = false;
+        let isManualStop = false; // Флаг ручной остановки
 
         // ====== ВСПОМОГАТЕЛЬНЫЕ ======
-        function updateStatus(text, state) {
+        function setStatus(text, state, msg = '') {
             statusText.textContent = text;
             statusDot.className = 'dot';
-            if (state === 'active') statusDot.classList.add('active');
+            if (state === 'recording') statusDot.classList.add('recording');
             else if (state === 'error') statusDot.classList.add('error');
-            else if (state === 'converting') statusDot.classList.add('converting');
-            else if (state === 'auto-stop') statusDot.classList.add('auto-stop');
+            else if (state === 'processing') statusDot.classList.add('processing');
+            else if (state === 'done') statusDot.classList.add('done');
+            
+            if (msg) statusMsg.textContent = msg;
+            statusMsg.className = 'status-msg';
+            if (state === 'error') statusMsg.classList.add('error');
+            else if (state === 'done') statusMsg.classList.add('success');
         }
 
         function formatTime(seconds) {
@@ -480,28 +392,12 @@
             return m + ':' + s;
         }
 
-        function setConvStatus(html, type = '') {
-            convStatus.innerHTML = html;
-            convStatus.className = 'conv-status' + (type ? ' ' + type : '');
-        }
-
-        function setProgress(value, statusTextVal = null) {
-            const clamped = Math.max(0, Math.min(100, value));
-            if (clamped >= 0) {
-                progressWrap.classList.add('active');
-                progressLabel.classList.add('active');
-                progressBar.style.width = clamped + '%';
-                progressBar.classList.add('pulsing');
-                progressPercent.textContent = Math.round(clamped) + '%';
-                if (statusTextVal !== null) progressStatusText.textContent = statusTextVal;
-            } else {
-                progressWrap.classList.remove('active');
-                progressLabel.classList.remove('active');
-                progressBar.style.width = '0%';
-                progressBar.classList.remove('pulsing');
-                progressPercent.textContent = '0%';
-                progressStatusText.textContent = 'Готово';
-            }
+        function updateMainBtn(text, state) {
+            mainBtn.textContent = text;
+            mainBtn.className = 'btn-main';
+            if (state === 'recording') mainBtn.classList.add('recording');
+            else if (state === 'processing') mainBtn.classList.add('processing');
+            else if (state === 'done') mainBtn.classList.add('done');
         }
 
         function loadLameJs() {
@@ -515,27 +411,45 @@
             });
         }
 
-        // ====== АВТОМАТИЧЕСКОЕ ОПРЕДЕЛЕНИЕ НАЧАЛА И КОНЦА ЗВУКА ======
-        function findSoundStart(buffer, threshold = 0.005, lookback = 0.3) {
+        // ====== НОВАЯ ЛОГИКА ОБРЕЗКИ КОНЦА ======
+        // Для ручной остановки: анализируем последние 20 секунд
+        function findEndForManualStop(buffer, threshold = 0.005, lookahead = 0.4) {
             const samples = buffer.length;
+            const sampleRate = buffer.sampleRate;
             const data = buffer.getChannelData(0);
             
-            let firstSoundIndex = -1;
-            for (let i = 0; i < samples; i++) {
+            // Анализируем последние 20 секунд (или меньше, если запись короче)
+            const maxLookbackSamples = Math.min(samples, Math.floor(20 * sampleRate));
+            const startSearch = samples - maxLookbackSamples;
+            
+            let lastSoundIndex = -1;
+            // Идём с конца найденного диапазона
+            for (let i = samples - 1; i >= startSearch; i--) {
                 if (Math.abs(data[i]) > threshold) {
-                    firstSoundIndex = i;
+                    lastSoundIndex = i;
                     break;
                 }
             }
             
-            if (firstSoundIndex === -1) return 0;
+            // Если звук не найден во всём диапазоне — ищем во всём файле
+            if (lastSoundIndex === -1) {
+                for (let i = samples - 1; i >= 0; i--) {
+                    if (Math.abs(data[i]) > threshold) {
+                        lastSoundIndex = i;
+                        break;
+                    }
+                }
+            }
             
-            const sampleRate = buffer.sampleRate;
-            const lookbackSamples = Math.floor(lookback * sampleRate);
-            const startIndex = Math.max(0, firstSoundIndex - lookbackSamples);
+            if (lastSoundIndex === -1) return buffer.duration;
             
-            let silenceIndex = startIndex;
-            for (let i = startIndex; i < firstSoundIndex; i++) {
+            // Отступаем вперёд на lookahead (0.4 сек)
+            const lookaheadSamples = Math.floor(lookahead * sampleRate);
+            const endIndex = Math.min(samples - 1, lastSoundIndex + lookaheadSamples);
+            
+            // Ищем тишину после последнего звука
+            let silenceIndex = endIndex;
+            for (let i = endIndex; i > lastSoundIndex; i--) {
                 if (Math.abs(data[i]) < threshold * 0.5) {
                     silenceIndex = i;
                 } else {
@@ -546,6 +460,7 @@
             return silenceIndex / sampleRate;
         }
 
+        // Для авто-стопа: стандартная обрезка по всему файлу
         function findSoundEnd(buffer, threshold = 0.005, lookahead = 0.3) {
             const samples = buffer.length;
             const data = buffer.getChannelData(0);
@@ -576,14 +491,26 @@
             return silenceIndex / sampleRate;
         }
 
-        function trimSilenceBoth(buffer, threshold = 0.005, padding = 0.3) {
-            const startTime = findSoundStart(buffer, threshold, padding);
-            const endTime = findSoundEnd(buffer, threshold, padding);
-            
-            if (startTime >= endTime || startTime === 0 && endTime === buffer.duration) {
-                return { trimmed: buffer, startSaved: 0, endSaved: 0 };
+        function findSoundStart(buffer, threshold = 0.005, lookback = 0.3) {
+            const samples = buffer.length;
+            const data = buffer.getChannelData(0);
+            let firstSoundIndex = -1;
+            for (let i = 0; i < samples; i++) {
+                if (Math.abs(data[i]) > threshold) { firstSoundIndex = i; break; }
             }
-            
+            if (firstSoundIndex === -1) return 0;
+            const sampleRate = buffer.sampleRate;
+            const lookbackSamples = Math.floor(lookback * sampleRate);
+            const startIndex = Math.max(0, firstSoundIndex - lookbackSamples);
+            let silenceIndex = startIndex;
+            for (let i = startIndex; i < firstSoundIndex; i++) {
+                if (Math.abs(data[i]) < threshold * 0.5) silenceIndex = i;
+                else break;
+            }
+            return silenceIndex / sampleRate;
+        }
+
+        function trimBuffer(buffer, startTime, endTime) {
             const dur = buffer.duration;
             const channels = buffer.numberOfChannels;
             const sampleRate = buffer.sampleRate;
@@ -591,7 +518,7 @@
             const endSample = Math.floor(endTime * sampleRate);
             const length = endSample - startSample;
             
-            if (length <= 0) return { trimmed: buffer, startSaved: 0, endSaved: 0 };
+            if (length <= 0) return buffer;
             
             const newBuffer = new AudioContext().createBuffer(channels, length, sampleRate);
             for (let ch = 0; ch < channels; ch++) {
@@ -601,26 +528,43 @@
                     dst[i] = src[startSample + i];
                 }
             }
+            return newBuffer;
+        }
+
+        function trimBoth(buffer, isManual) {
+            const startTime = findSoundStart(buffer, 0.005, 0.3);
             
-            return {
-                trimmed: newBuffer,
-                startSaved: startTime,
-                endSaved: dur - endTime,
-                totalSaved: (startTime) + (dur - endTime)
-            };
+            let endTime;
+            if (isManual) {
+                // Ручная остановка: анализируем последние 20 секунд
+                endTime = findEndForManualStop(buffer, 0.005, 0.4);
+            } else {
+                // Авто-стоп: анализируем весь файл
+                endTime = findSoundEnd(buffer, 0.005, 0.3);
+            }
+            
+            // Если конец оказался раньше начала или слишком близко
+            if (endTime <= startTime + 0.1) {
+                endTime = buffer.duration;
+            }
+            
+            const trimmed = trimBuffer(buffer, startTime, endTime);
+            const startSaved = startTime;
+            const endSaved = buffer.duration - endTime;
+            
+            return { trimmed, startSaved, endSaved };
         }
 
         // ====== ЗАХВАТ ======
         function resetCaptureUI() {
             if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-            if (autoStopTimeout) { clearTimeout(autoStopTimeout); autoStopTimeout = null; }
             meterBar.style.width = '0%';
             timerDisplay.textContent = '00:00';
-            silenceTimer.style.display = 'none';
-            silenceTimer.textContent = 'тишина: 0.0с';
             silenceStartTime = null;
             isAutoStopping = false;
+            isManualStop = false;
+            trimInfo.classList.remove('show');
 
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close().catch(() => {});
@@ -634,10 +578,10 @@
             }
             source = null;
             isRecording = false;
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            updateStatus('Остановлен', '');
             recordedChunks = [];
+            updateMainBtn('▶ Захват', '');
+            setStatus('Готов', '', 'Нажмите «Захват» и выберите вкладку с звуком');
+            mainBtn.disabled = false;
         }
 
         function updateMeter() {
@@ -655,35 +599,22 @@
             const percent = Math.min(max * 100, 100);
             meterBar.style.width = percent + '%';
             
-            // Автоматический стоп при тишине
-            if (isRecording && !isAutoStopping) {
+            // Авто-стоп (только если не ручная остановка)
+            if (isRecording && !isAutoStopping && autoStopEnabled && !isManualStop) {
                 const threshold = parseFloat(silenceThreshold.value);
-                const isSilent = percent < 1.5; // порог тишины ~1.5%
+                const isSilent = percent < 1.5;
                 
                 if (isSilent) {
-                    if (silenceStartTime === null) {
-                        silenceStartTime = Date.now();
-                        silenceTimer.style.display = 'inline';
-                    }
+                    if (silenceStartTime === null) silenceStartTime = Date.now();
                     const silenceDuration = (Date.now() - silenceStartTime) / 1000;
-                    silenceTimer.textContent = 'тишина: ' + silenceDuration.toFixed(1) + 'с / ' + threshold + 'с';
-                    
                     if (silenceDuration >= threshold) {
-                        // Авто-стоп!
                         isAutoStopping = true;
-                        updateStatus('Авто-стоп...', 'auto-stop');
-                        setConvStatus('⏹ Авто-стоп (тишина ' + threshold + 'с)', '');
-                        stopCapture();
-                        silenceTimer.style.display = 'none';
+                        setStatus('Авто-стоп...', 'processing', '⏹ Запись остановлена (тишина ' + threshold + 'с)');
+                        stopCapture(false); // false = не ручная остановка
                         return;
                     }
                 } else {
                     silenceStartTime = null;
-                    silenceTimer.style.display = 'none';
-                    if (autoStopTimeout) {
-                        clearTimeout(autoStopTimeout);
-                        autoStopTimeout = null;
-                    }
                 }
             }
             
@@ -730,18 +661,14 @@
                         finalBlob = new Blob(recordedChunks, { type: 'audio/webm' });
                         const name = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '') + '.webm';
                         finalFile = new File([finalBlob], name, { type: 'audio/webm' });
-
-                        previewName.textContent = name;
-                        previewSize.textContent = (finalBlob.size / 1024).toFixed(1) + ' KB';
-                        filePreview.classList.add('show');
-
-                        handleConverterFile(finalFile);
+                        processRecording(finalFile, isManualStop);
                     }
                     isAutoStopping = false;
                 };
                 recorder.start(1000);
 
                 isRecording = true;
+                isManualStop = false;
                 silenceStartTime = null;
                 isAutoStopping = false;
                 startTime = Date.now();
@@ -750,15 +677,18 @@
                     timerDisplay.textContent = formatTime((Date.now() - startTime) / 1000);
                 }, 500);
 
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                updateStatus('Запись...', 'active');
+                updateMainBtn('⏹ Остановить', 'recording');
+                setStatus('Запись...', 'recording', '⏺ Идёт запись звука');
+                mainBtn.disabled = false;
 
                 if (animationId) cancelAnimationFrame(animationId);
                 updateMeter();
 
                 mediaStream.getVideoTracks()[0]?.addEventListener('ended', () => {
-                    if (isRecording) stopCapture();
+                    if (isRecording) {
+                        isManualStop = true;
+                        stopCapture(true);
+                    }
                 });
 
             } catch (err) {
@@ -766,20 +696,20 @@
                 let msg = err.message || 'Ошибка захвата';
                 if (msg.includes('Permission') || msg.includes('denied')) msg = '❌ Разрешение отклонено';
                 else if (msg.includes('not supported')) msg = '❌ Браузер не поддерживает захват';
-                updateStatus(msg, 'error');
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
+                setStatus('Ошибка', 'error', msg);
+                updateMainBtn('▶ Захват', '');
+                mainBtn.disabled = false;
                 if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
             }
         }
 
-        function stopCapture() {
+        function stopCapture(isManual = true) {
             if (!isRecording) return;
             isRecording = false;
+            isManualStop = isManual;
+            
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-            if (autoStopTimeout) { clearTimeout(autoStopTimeout); autoStopTimeout = null; }
-            silenceTimer.style.display = 'none';
 
             if (recorder && recorder.state === 'recording') recorder.stop();
             if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
@@ -792,86 +722,29 @@
             dataArray = null;
 
             meterBar.style.width = '0%';
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            updateStatus('Остановлено', '');
+            updateMainBtn('⏳ Обработка...', 'processing');
+            setStatus('Обработка...', 'processing', isManual ? '🔍 Анализ конца записи...' : '🔄 Конвертация в MP3');
+            mainBtn.disabled = true;
         }
 
-        // ====== ПРОСЛУШИВАНИЕ ======
-        let audioPlayer = null;
-        playBtn.addEventListener('click', () => {
-            if (!finalBlob) return;
-            if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
-            const url = URL.createObjectURL(finalBlob);
-            audioPlayer = new Audio(url);
-            audioPlayer.controls = true;
-            audioPlayer.style.width = '100%';
-            audioPlayer.style.marginTop = '6px';
-            audioPlayer.play();
-            const parent = filePreview;
-            const existing = parent.querySelector('audio');
-            if (existing) existing.remove();
-            parent.appendChild(audioPlayer);
-            audioPlayer.onended = () => { URL.revokeObjectURL(url); };
-        });
-
-        // ====== КОНВЕРТЕР ======
-        function resetConverterUI(keepFile = false) {
-            convertedBlob = null;
-            mp3DownloadBtn.disabled = true;
-            mp3DownloadBtn.href = '#';
-            mp3DownloadBtn.download = '';
-            setProgress(-1);
-            trimStats.classList.remove('show');
-            if (!keepFile) {
-                convFileName.textContent = 'Файл не выбран';
-                convFileSize.textContent = '—';
-                convertBtn.disabled = true;
-                setConvStatus('⏳ Готов к работе');
-                audioBufferData = null;
-                finalFile = null;
-            } else {
-                if (finalFile) {
-                    convertBtn.disabled = false;
-                    setConvStatus('📁 Файл загружен, авто-обрезка готова');
-                } else {
-                    convertBtn.disabled = true;
-                    setConvStatus('⏳ Готов к работе');
-                }
-            }
-        }
-
-        function handleConverterFile(file) {
-            if (!file) return;
-            if (!file.name.toLowerCase().endsWith('.webm') && file.type !== 'video/webm' && file.type !== 'audio/webm') {
-                setConvStatus('❌ Нужен файл WebM', 'error');
-                return;
-            }
-            if (file.size > 500 * 1024 * 1024) {
-                setConvStatus('❌ Файл слишком большой (макс. 500 МБ)', 'error');
-                return;
-            }
-            finalFile = file;
-            convFileName.textContent = file.name || 'audio.webm';
-            const kb = (file.size / 1024).toFixed(1);
-            const mb = (file.size / (1024 * 1024)).toFixed(2);
-            convFileSize.textContent = mb >= 1 ? mb + ' MB' : kb + ' KB';
-            convertBtn.disabled = false;
-            setConvStatus('📁 Файл загружен, авто-обрезка готова');
-
-            file.arrayBuffer().then(buf => {
+        // ====== ОБРАБОТКА ЗАПИСИ ======
+        async function processRecording(file, isManual) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                ctx.decodeAudioData(buf).then(ab => {
-                    audioBufferData = ab;
-                    ctx.close();
-                    setTimeout(() => convertToMp3(), 400);
-                }).catch(() => {
-                    setConvStatus('⚠️ Не удалось декодировать аудио (возможно нет аудиодорожки)', 'error');
-                });
-            }).catch(() => setConvStatus('⚠️ Ошибка чтения файла', 'error'));
+                const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                ctx.close();
+                audioBufferData = audioBuffer;
+                
+                await convertToMp3(isManual);
+            } catch (err) {
+                console.error(err);
+                setStatus('Ошибка', 'error', '❌ Не удалось обработать аудио');
+                updateMainBtn('▶ Захват', '');
+                mainBtn.disabled = false;
+            }
         }
 
-        // ====== КОНВЕРТАЦИЯ С АВТО-ОБРЕЗКОЙ ======
         function encodeAudioBufferToMp3(audioBuffer, bitrate, onProgress) {
             return new Promise((resolve, reject) => {
                 try {
@@ -912,7 +785,7 @@
                         if (mp3buf.length > 0) mp3Data.push(new Uint8Array(mp3buf));
                         sampleIndex += chunkSize;
                         const progress = Math.min(40 + (sampleIndex / totalSamples) * 55, 95);
-                        if (onProgress) onProgress(progress, 'Кодирование MP3... ' + Math.round(progress) + '%');
+                        if (onProgress) onProgress(progress);
                     }
 
                     const tail = encoder.flush();
@@ -927,111 +800,71 @@
             });
         }
 
-        async function convertToMp3() {
-            if (!finalFile || !audioBufferData) {
-                setConvStatus('❌ Нет аудиоданных', 'error');
+        async function convertToMp3(isManual) {
+            if (!audioBufferData) {
+                setStatus('Ошибка', 'error', '❌ Нет аудиоданных');
+                updateMainBtn('▶ Захват', '');
+                mainBtn.disabled = false;
                 return;
             }
-            if (isConverting) { 
-                setConvStatus('⏳ Уже конвертируется... <span class="spinner"></span>', '');
-                return; 
-            }
-
-            isConverting = true;
-            convertBtn.disabled = true;
-            convertBtn.textContent = '⏳ Конвертация...';
-            updateStatus('Конвертация...', 'converting');
-            setConvStatus('🔍 Поиск границ звука... <span class="spinner"></span>');
-            setProgress(5, 'Поиск границ звука...');
 
             try {
-                const startTime = findSoundStart(audioBufferData, 0.005, 0.3);
-                const endTime = findSoundEnd(audioBufferData, 0.005, 0.3);
-                const originalDur = audioBufferData.duration;
+                setStatus('Обработка...', 'processing', isManual ? '🔍 Анализ конца записи...' : '🔄 Обрезка тишины...');
                 
-                setProgress(10, 'Обрезка тишины...');
-                setConvStatus('✂️ Обрезка тишины... <span class="spinner"></span>');
-                
-                const result = trimSilenceBoth(audioBufferData, 0.005, 0.3);
+                // Обрезаем с учётом типа остановки
+                const result = trimBoth(audioBufferData, isManual);
                 const trimmed = result.trimmed;
+                const endSaved = result.endSaved;
                 
-                const startSaved = result.startSaved || 0;
-                const endSaved = result.endSaved || 0;
-                const totalSaved = startSaved + endSaved;
+                // Показываем информацию об обрезке
+                if (endSaved > 0.1) {
+                    trimInfo.classList.add('show');
+                    trimEndInfo.textContent = endSaved.toFixed(2);
+                }
                 
-                trimStats.classList.add('show');
-                trimStartSaved.textContent = startSaved.toFixed(2);
-                trimEndSaved.textContent = endSaved.toFixed(2);
-                trimFinalDuration.textContent = formatTime(trimmed.duration);
-                
-                const savedInfo = totalSaved > 0 ? 
-                    ` (обрезано ${formatTime(startSaved)} в начале и ${formatTime(endSaved)} в конце)` : 
-                    ' (тишина не найдена)';
-                
-                setProgress(30, 'Обрезка выполнена' + savedInfo);
-                setConvStatus('✅ Обрезка выполнена, кодируем... <span class="spinner"></span>');
-
-                const bitrate = parseInt(bitrateSelect.value, 10);
-                if (isNaN(bitrate) || bitrate < 8) throw new Error('Некорректный битрейт');
-
                 if (typeof lamejs === 'undefined') {
-                    setConvStatus('⏳ Загрузка кодера... <span class="spinner"></span>');
-                    setProgress(35, 'Загрузка аудиокодека...');
+                    setStatus('Обработка...', 'processing', '⏳ Загрузка аудиокодека...');
                     await loadLameJs();
-                    setProgress(38, 'Кодек загружен');
                 }
 
-                setConvStatus('🎵 Кодирование MP3 (' + bitrate + ' kbps)... <span class="spinner"></span>');
-                setProgress(40, 'Кодирование MP3... 40%');
-
-                const mp3Blob = await encodeAudioBufferToMp3(trimmed, bitrate, (p, status) => {
-                    setProgress(p, status);
-                    if (p > 40 && p < 95) {
-                        setConvStatus('🎵 Кодирование MP3 (' + bitrate + ' kbps)... ' + Math.round(p) + '% <span class="spinner"></span>');
-                    }
-                });
-                setProgress(98, 'Финальная обработка...');
-                setConvStatus('📦 Финальная обработка... <span class="spinner"></span>');
-
+                const bitrate = 320;
+                setStatus('Обработка...', 'processing', '🎵 Кодирование MP3 (320 kbps)...');
+                
+                const mp3Blob = await encodeAudioBufferToMp3(trimmed, bitrate, (progress) => {});
+                
                 convertedBlob = mp3Blob;
-                const baseName = (finalFile ? finalFile.name.replace(/\.[^.]+$/, '') : 'audio') + '_trimmed';
+                const baseName = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '');
                 convertedFileName = baseName + '.mp3';
-
-                const url = URL.createObjectURL(mp3Blob);
-                mp3DownloadBtn.href = url;
-                mp3DownloadBtn.download = convertedFileName;
-                mp3DownloadBtn.disabled = false;
-
-                setProgress(100, '✅ Готово!');
-                setConvStatus('✅ Готово! MP3 ' + bitrate + ' kbps' + savedInfo, 'success');
-                convertBtn.textContent = '✅ Конвертировано';
-                updateStatus('Готово', '');
-
-                setTimeout(() => triggerDownload(), 400);
+                finalFileName.textContent = convertedFileName;
+                
+                saveArea.classList.add('show');
+                updateMainBtn('✅ Готово!', 'done');
+                setStatus('Готово!', 'done', '✅ MP3 готов к сохранению');
+                mainBtn.disabled = false;
+                mainBtn.textContent = '✅ Готово!';
+                setTimeout(() => {
+                    if (!isRecording && !isConverting) {
+                        mainBtn.textContent = '▶ Захват';
+                        mainBtn.className = 'btn-main';
+                    }
+                }, 3000);
 
             } catch (err) {
                 console.error(err);
-                setConvStatus('❌ Ошибка: ' + (err.message || 'неизвестная'), 'error');
-                setProgress(-1);
-                convertBtn.textContent = '🔄 Конвертировать';
-                updateStatus('Ошибка', 'error');
-            } finally {
-                isConverting = false;
-                if (convertBtn.textContent !== '✅ Конвертировано') {
-                    convertBtn.disabled = false;
-                    convertBtn.textContent = '🔄 Конвертировать';
-                }
-                if (convertedBlob) {
-                    convertBtn.disabled = false;
-                    convertBtn.textContent = '🔄 Конвертировать';
-                }
+                setStatus('Ошибка', 'error', '❌ Ошибка конвертации: ' + err.message);
+                updateMainBtn('▶ Захват', '');
+                mainBtn.disabled = false;
             }
         }
 
-        function triggerDownload() {
-            if (!convertedBlob) { setConvStatus('❌ Нет файла для сохранения', 'error'); return; }
+        // ====== СОХРАНЕНИЕ ======
+        function saveFile() {
+            if (!convertedBlob) {
+                setStatus('Ошибка', 'error', '❌ Нет файла для сохранения');
+                return;
+            }
             const defaultName = convertedFileName || 'audio.mp3';
-            const userFileName = prompt('Введите имя для MP3 файла (без расширения):', defaultName.replace(/\.mp3$/, ''));
+            const userFileName = prompt('Введите имя для MP3 файла:', defaultName.replace(/\.mp3$/, ''));
             if (userFileName === null) return;
             let finalName = userFileName.trim() || defaultName;
             if (!finalName.toLowerCase().endsWith('.mp3')) finalName += '.mp3';
@@ -1044,48 +877,76 @@
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            mp3DownloadBtn.download = finalName;
-            mp3DownloadBtn.href = url;
         }
 
-        // ====== НАСТРОЙКА ПОРОГА ======
+        // ====== СБРОС ======
+        function resetAll() {
+            resetCaptureUI();
+            saveArea.classList.remove('show');
+            trimInfo.classList.remove('show');
+            convertedBlob = null;
+            convertedFileName = '';
+            audioBufferData = null;
+            finalFile = null;
+            finalBlob = null;
+            if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+            setStatus('Готов', '', 'Нажмите «Захват» и выберите вкладку с звуком');
+            updateMainBtn('▶ Захват', '');
+            mainBtn.disabled = false;
+        }
+
+        // ====== НАСТРОЙКИ ======
         silenceThreshold.addEventListener('input', () => {
-            const val = parseFloat(silenceThreshold.value);
-            thresholdValue.textContent = val.toFixed(1);
+            thresholdValue.textContent = parseFloat(silenceThreshold.value).toFixed(1);
+        });
+
+        autoStopToggle.addEventListener('click', () => {
+            autoStopEnabled = !autoStopEnabled;
+            autoStopToggle.textContent = autoStopEnabled ? 'Вкл' : 'Выкл';
+            autoStopToggle.className = 'toggle-btn' + (autoStopEnabled ? ' active' : ' inactive');
         });
 
         // ====== СОБЫТИЯ ======
-        startBtn.addEventListener('click', startCapture);
-        stopBtn.addEventListener('click', stopCapture);
-
-        convertBtn.addEventListener('click', convertToMp3);
-        mp3DownloadBtn.addEventListener('click', (e) => { e.preventDefault(); triggerDownload(); });
-
-        resetBtn.addEventListener('click', () => {
-            resetConverterUI(false);
-            if (mp3DownloadBtn.href && mp3DownloadBtn.href.startsWith('blob:')) {
-                URL.revokeObjectURL(mp3DownloadBtn.href);
+        mainBtn.addEventListener('click', () => {
+            if (isRecording) {
+                isManualStop = true;
+                stopCapture(true);
+            } else {
+                startCapture();
             }
-            mp3DownloadBtn.href = '#';
-            mp3DownloadBtn.download = '';
-            convertedBlob = null;
-            setProgress(-1);
-            setConvStatus('⏳ Готов к работе');
-            convertBtn.textContent = '🔄 Конвертировать';
-            convertBtn.disabled = true;
-            finalFile = null;
-            audioBufferData = null;
-            filePreview.classList.remove('show');
-            trimStats.classList.remove('show');
-            if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
-            const aud = filePreview.querySelector('audio');
-            if (aud) aud.remove();
-            updateStatus('Остановлен', '');
         });
 
-        resetConverterUI(false);
-        window.handleConverterFile = handleConverterFile;
+        saveBtn.addEventListener('click', saveFile);
+        resetBtn.addEventListener('click', resetAll);
 
+        // ====== АУДИО ПЛЕЕР ======
+        let audioPlayer = null;
+        statusMsg.addEventListener('dblclick', () => {
+            if (!convertedBlob) {
+                if (finalBlob) {
+                    const url = URL.createObjectURL(finalBlob);
+                    audioPlayer = new Audio(url);
+                    audioPlayer.controls = true;
+                    audioPlayer.style.width = '100%';
+                    audioPlayer.style.marginTop = '8px';
+                    audioPlayer.play();
+                    audioPlayer.onended = () => URL.revokeObjectURL(url);
+                    document.querySelector('.card').appendChild(audioPlayer);
+                }
+                return;
+            }
+            if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+            const url = URL.createObjectURL(convertedBlob);
+            audioPlayer = new Audio(url);
+            audioPlayer.controls = true;
+            audioPlayer.style.width = '100%';
+            audioPlayer.style.marginTop = '8px';
+            audioPlayer.play();
+            audioPlayer.onended = () => URL.revokeObjectURL(url);
+            document.querySelector('.card').appendChild(audioPlayer);
+        });
+
+        resetAll();
     })();
 </script>
 </body>
