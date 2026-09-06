@@ -87,7 +87,6 @@
         .btn:active { transform: translateY(4px); box-shadow: 0 0px 0 #0d1320; }
         .btn-primary { background: #3b5bdb; border-color: #5f7dfa; box-shadow: 0 4px 0 #1f2e7a; }
         .btn-danger { background: #b53b4a; border-color: #d95a6a; box-shadow: 0 4px 0 #6e1f2b; }
-        .btn-success { background: #2d8f5c; border-color: #4aad7a; box-shadow: 0 4px 0 #1a5a3a; }
         .btn-secondary { background: #4a5a7a; border-color: #5f7a9a; box-shadow: 0 4px 0 #2a3a5a; }
         .btn:disabled { opacity: 0.3; transform: translateY(2px); box-shadow: 0 2px 0 #0d1320; pointer-events: none; }
 
@@ -229,6 +228,20 @@
             margin-left: 8px;
             display: inline-block;
         }
+        
+        .trim-stats {
+            background: #0f1625;
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin: 6px 0 10px;
+            font-size: 0.8rem;
+            color: #8a9abb;
+            border: 1px solid #1f2a4a;
+            display: none;
+        }
+        .trim-stats.show { display: block; }
+        .trim-stats .highlight { color: #7c9aff; font-weight: 600; }
+        .trim-stats .saved { color: #48bb78; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -272,13 +285,20 @@
     <div class="card" id="converterCard">
         <h2>🔄 Авто-обрезка → MP3</h2>
         <div class="sub">
-            тишина в начале удаляется автоматически
+            тишина в начале и конце удаляется автоматически
             <span class="auto-trim-badge">⚡ умная обрезка</span>
         </div>
 
         <div class="file-preview show" id="convFileInfo" style="display:flex; margin-bottom:6px;">
             <span class="name" id="convFileName">Файл не выбран</span>
             <span class="size" id="convFileSize">—</span>
+        </div>
+
+        <!-- Статистика обрезки -->
+        <div class="trim-stats" id="trimStats">
+            <div>🔹 Обрезано в начале: <span class="highlight" id="trimStartSaved">0.0</span> сек</div>
+            <div>🔹 Обрезано в конце: <span class="highlight" id="trimEndSaved">0.0</span> сек</div>
+            <div>📊 Итоговая длительность: <span class="saved" id="trimFinalDuration">0:00</span></div>
         </div>
 
         <div class="flex gap" style="justify-content:space-between;">
@@ -344,6 +364,10 @@
         const progressStatusText = document.getElementById('progressStatusText');
         const progressLabel = document.getElementById('progressLabel');
         const bitrateSelect = document.getElementById('bitrateSelect');
+        const trimStats = document.getElementById('trimStats');
+        const trimStartSaved = document.getElementById('trimStartSaved');
+        const trimEndSaved = document.getElementById('trimEndSaved');
+        const trimFinalDuration = document.getElementById('trimFinalDuration');
 
         // ====== СОСТОЯНИЕ ======
         let audioContext = null;
@@ -374,6 +398,7 @@
         }
 
         function formatTime(seconds) {
+            if (!seconds || seconds < 0) return '0:00';
             const m = String(Math.floor(seconds / 60)).padStart(2, '0');
             const s = String(Math.floor(seconds % 60)).padStart(2, '0');
             return m + ':' + s;
@@ -414,16 +439,11 @@
             });
         }
 
-        // ====== АВТОМАТИЧЕСКОЕ ОПРЕДЕЛЕНИЕ НАЧАЛА ЗВУКА ======
+        // ====== АВТОМАТИЧЕСКОЕ ОПРЕДЕЛЕНИЕ НАЧАЛА И КОНЦА ЗВУКА ======
         function findSoundStart(buffer, threshold = 0.005, lookback = 0.3) {
             const samples = buffer.length;
-            const channels = buffer.numberOfChannels;
-            const sampleRate = buffer.sampleRate;
-            
-            // Берём первый канал для анализа
             const data = buffer.getChannelData(0);
             
-            // Находим первый сэмпл, превышающий порог
             let firstSoundIndex = -1;
             for (let i = 0; i < samples; i++) {
                 if (Math.abs(data[i]) > threshold) {
@@ -432,14 +452,12 @@
                 }
             }
             
-            // Если звук не найден — возвращаем 0
             if (firstSoundIndex === -1) return 0;
             
-            // Отступаем назад на lookback секунд (но не меньше 0)
+            const sampleRate = buffer.sampleRate;
             const lookbackSamples = Math.floor(lookback * sampleRate);
             const startIndex = Math.max(0, firstSoundIndex - lookbackSamples);
             
-            // Ищем тишину в этом диапазоне (чтобы не обрезать атаку звука)
             let silenceIndex = startIndex;
             for (let i = startIndex; i < firstSoundIndex; i++) {
                 if (Math.abs(data[i]) < threshold * 0.5) {
@@ -452,18 +470,53 @@
             return silenceIndex / sampleRate;
         }
 
-        // ====== ОБРЕЗКА ======
-        function trimSilence(buffer, threshold = 0.005, lookback = 0.3) {
-            const startTime = findSoundStart(buffer, threshold, lookback);
-            if (startTime === 0) return buffer; // нет тишины в начале
+        function findSoundEnd(buffer, threshold = 0.005, lookahead = 0.3) {
+            const samples = buffer.length;
+            const data = buffer.getChannelData(0);
+            
+            let lastSoundIndex = -1;
+            for (let i = samples - 1; i >= 0; i--) {
+                if (Math.abs(data[i]) > threshold) {
+                    lastSoundIndex = i;
+                    break;
+                }
+            }
+            
+            if (lastSoundIndex === -1) return buffer.duration;
+            
+            const sampleRate = buffer.sampleRate;
+            const lookaheadSamples = Math.floor(lookahead * sampleRate);
+            const endIndex = Math.min(samples - 1, lastSoundIndex + lookaheadSamples);
+            
+            let silenceIndex = endIndex;
+            for (let i = endIndex; i > lastSoundIndex; i--) {
+                if (Math.abs(data[i]) < threshold * 0.5) {
+                    silenceIndex = i;
+                } else {
+                    break;
+                }
+            }
+            
+            return silenceIndex / sampleRate;
+        }
+
+        // ====== ОБРЕЗКА С НАЧАЛА И КОНЦА ======
+        function trimSilenceBoth(buffer, threshold = 0.005, padding = 0.3) {
+            const startTime = findSoundStart(buffer, threshold, padding);
+            const endTime = findSoundEnd(buffer, threshold, padding);
+            
+            if (startTime >= endTime || startTime === 0 && endTime === buffer.duration) {
+                return { trimmed: buffer, startSaved: 0, endSaved: 0 };
+            }
             
             const dur = buffer.duration;
             const channels = buffer.numberOfChannels;
             const sampleRate = buffer.sampleRate;
             const startSample = Math.floor(startTime * sampleRate);
-            const length = buffer.length - startSample;
+            const endSample = Math.floor(endTime * sampleRate);
+            const length = endSample - startSample;
             
-            if (length <= 0) return buffer;
+            if (length <= 0) return { trimmed: buffer, startSaved: 0, endSaved: 0 };
             
             const newBuffer = new AudioContext().createBuffer(channels, length, sampleRate);
             for (let ch = 0; ch < channels; ch++) {
@@ -473,7 +526,13 @@
                     dst[i] = src[startSample + i];
                 }
             }
-            return newBuffer;
+            
+            return {
+                trimmed: newBuffer,
+                startSaved: startTime,
+                endSaved: dur - endTime,
+                totalSaved: (startTime) + (dur - endTime)
+            };
         }
 
         // ====== ЗАХВАТ ======
@@ -644,6 +703,7 @@
             mp3DownloadBtn.href = '#';
             mp3DownloadBtn.download = '';
             setProgress(-1);
+            trimStats.classList.remove('show');
             if (!keepFile) {
                 convFileName.textContent = 'Файл не выбран';
                 convFileSize.textContent = '—';
@@ -685,8 +745,7 @@
                 ctx.decodeAudioData(buf).then(ab => {
                     audioBufferData = ab;
                     ctx.close();
-                    // Автоматически запускаем конвертацию
-                    setTimeout(() => convertToMp3(), 500);
+                    setTimeout(() => convertToMp3(), 400);
                 }).catch(() => {
                     setConvStatus('⚠️ Не удалось декодировать аудио (возможно нет аудиодорожки)', 'error');
                 });
@@ -763,25 +822,38 @@
             convertBtn.disabled = true;
             convertBtn.textContent = '⏳ Конвертация...';
             updateStatus('Конвертация...', 'converting');
-            setConvStatus('🔍 Поиск начала звука... <span class="spinner"></span>');
-            setProgress(5, 'Поиск начала звука...');
+            setConvStatus('🔍 Поиск границ звука... <span class="spinner"></span>');
+            setProgress(5, 'Поиск границ звука...');
 
             try {
-                // Находим начало звука
+                // Находим начало и конец звука
                 const startTime = findSoundStart(audioBufferData, 0.005, 0.3);
-                const dur = audioBufferData.duration;
-                const trimmedStart = startTime > 0 ? startTime : 0;
+                const endTime = findSoundEnd(audioBufferData, 0.005, 0.3);
+                const originalDur = audioBufferData.duration;
                 
                 setProgress(10, 'Обрезка тишины...');
-                setConvStatus('✂️ Обрезка тишины (' + formatTime(trimmedStart) + ')... <span class="spinner"></span>');
+                setConvStatus('✂️ Обрезка тишины... <span class="spinner"></span>');
                 
-                // Обрезаем тишину
-                const trimmed = trimSilence(audioBufferData, 0.005, 0.3);
-                const trimmedDur = trimmed.duration;
-                const savedTime = dur - trimmedDur;
+                // Обрезаем с обеих сторон
+                const result = trimSilenceBoth(audioBufferData, 0.005, 0.3);
+                const trimmed = result.trimmed;
                 
-                setProgress(30, 'Обрезка выполнена (сохранено ' + formatTime(savedTime) + ')');
-                setConvStatus('✅ Обрезано ' + formatTime(savedTime) + ' тишины, кодируем... <span class="spinner"></span>');
+                const startSaved = result.startSaved || 0;
+                const endSaved = result.endSaved || 0;
+                const totalSaved = startSaved + endSaved;
+                
+                // Показываем статистику
+                trimStats.classList.add('show');
+                trimStartSaved.textContent = startSaved.toFixed(2);
+                trimEndSaved.textContent = endSaved.toFixed(2);
+                trimFinalDuration.textContent = formatTime(trimmed.duration);
+                
+                const savedInfo = totalSaved > 0 ? 
+                    ` (обрезано ${formatTime(startSaved)} в начале и ${formatTime(endSaved)} в конце)` : 
+                    ' (тишина не найдена)';
+                
+                setProgress(30, 'Обрезка выполнена' + savedInfo);
+                setConvStatus('✅ Обрезка выполнена, кодируем... <span class="spinner"></span>');
 
                 const bitrate = parseInt(bitrateSelect.value, 10);
                 if (isNaN(bitrate) || bitrate < 8) throw new Error('Некорректный битрейт');
@@ -815,7 +887,6 @@
                 mp3DownloadBtn.disabled = false;
 
                 setProgress(100, '✅ Готово!');
-                const savedInfo = savedTime > 0 ? ' (обрезано ' + formatTime(savedTime) + ')' : '';
                 setConvStatus('✅ Готово! MP3 ' + bitrate + ' kbps' + savedInfo, 'success');
                 convertBtn.textContent = '✅ Конвертировано';
                 updateStatus('Готово', '');
@@ -883,6 +954,7 @@
             finalFile = null;
             audioBufferData = null;
             filePreview.classList.remove('show');
+            trimStats.classList.remove('show');
             if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
             const aud = filePreview.querySelector('audio');
             if (aud) aud.remove();
