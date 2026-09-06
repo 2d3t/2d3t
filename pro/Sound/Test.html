@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Захват → MP3 с обрезкой</title>
+    <title>Захват → MP3 с авто-обрезкой</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -90,7 +90,6 @@
         .btn-success { background: #2d8f5c; border-color: #4aad7a; box-shadow: 0 4px 0 #1a5a3a; }
         .btn-secondary { background: #4a5a7a; border-color: #5f7a9a; box-shadow: 0 4px 0 #2a3a5a; }
         .btn:disabled { opacity: 0.3; transform: translateY(2px); box-shadow: 0 2px 0 #0d1320; pointer-events: none; }
-        .btn-sm { flex: 0; padding: 8px 16px; font-size: 0.8rem; min-width: auto; }
 
         .meter-wrap { background: #0b111f; height: 8px; border-radius: 20px; margin: 8px 0 14px; overflow: hidden; }
         .meter-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6); border-radius: 20px; transition: width 0.06s; }
@@ -111,52 +110,6 @@
         .file-preview .size { color: #7c9aff; font-weight: 600; font-size: 0.8rem; }
         .file-preview .play-btn { background: #2a3550; border: none; color: #b0c4f0; padding: 4px 14px; border-radius: 30px; cursor: pointer; font-size: 0.9rem; }
         .file-preview .play-btn:hover { background: #3c4a6a; }
-
-        .trim-section {
-            background: #0f1625;
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin: 10px 0 12px;
-            border: 1px solid #1f2a4a;
-        }
-        .trim-section label {
-            font-size: 0.8rem;
-            color: #9aabce;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .trim-row {
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin: 6px 0 4px;
-        }
-        .trim-row > div { flex: 1; min-width: 120px; }
-        .trim-row input[type="range"] {
-            width: 100%;
-            accent-color: #7c9aff;
-            background: #1f2840;
-            height: 4px;
-            border-radius: 10px;
-            outline: none;
-        }
-        .trim-row input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #7c9aff;
-            cursor: pointer;
-        }
-        .trim-values {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.7rem;
-            color: #7a88b0;
-            margin-top: 2px;
-        }
 
         .conv-status { margin: 6px 0 4px; font-size: 0.9rem; color: #bcc6e3; min-height: 24px; display: flex; align-items: center; gap: 8px; }
         .conv-status.success { color: #a1d6a8; }
@@ -224,7 +177,6 @@
             padding: 0 10px;
             border-radius: 20px;
         }
-        .progress-label .status-text { color: #8a9abb; }
 
         .footer-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
         .download-btn {
@@ -250,9 +202,6 @@
         .bitrate-group select:focus { border-color: #7b8fc7; }
         .flex { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .gap { gap: 8px; }
-        .mt-1 { margin-top: 8px; }
-        .mb-1 { margin-bottom: 6px; }
-        .w-full { width: 100%; }
 
         .volume-warning {
             background: #1a1528;
@@ -269,6 +218,17 @@
         }
         .volume-warning strong { color: #fcd34d; }
         .volume-warning .icon { font-size: 1.4rem; }
+
+        .auto-trim-badge {
+            background: #1f2a4a;
+            border-radius: 30px;
+            padding: 2px 14px;
+            font-size: 0.7rem;
+            color: #7c9aff;
+            border: 1px solid #3b5bdb55;
+            margin-left: 8px;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -279,7 +239,6 @@
         <h2>🎧 Захват звука</h2>
         <div class="sub">выберите вкладку / экран с звуком → запись</div>
 
-        <!-- ВАЖНОЕ ПРЕДУПРЕЖДЕНИЕ О ГРОМКОСТИ -->
         <div class="volume-warning">
             <span class="icon">🔊</span>
             <div><strong>Важно!</strong> Установите громкость в захватываемой вкладке на <strong>максимум</strong> — запись берётся именно с той громкости, которая играет в источнике.</div>
@@ -298,7 +257,6 @@
             <button class="btn btn-danger" id="stopBtn" disabled>⏹ Стоп</button>
         </div>
 
-        <!-- Предпросмотр файла -->
         <div class="file-preview" id="filePreview">
             <span class="name" id="previewName">audio.webm</span>
             <span class="size" id="previewSize">0 KB</span>
@@ -306,40 +264,23 @@
         </div>
 
         <div class="footnote" style="border: none; margin-top: 8px; padding-top: 4px;">
-            После остановки файл автоматически подставляется в конвертер ниже.
+            После остановки автоматическая обрезка тишины и конвертация в MP3.
         </div>
     </div>
 
-    <!-- === КАРТОЧКА КОНВЕРТЕРА + ОБРЕЗКА === -->
+    <!-- === КАРТОЧКА КОНВЕРТЕРА === -->
     <div class="card" id="converterCard">
-        <h2>🔄 WebM → MP3</h2>
-        <div class="sub">обрежьте края и конвертируйте</div>
+        <h2>🔄 Авто-обрезка → MP3</h2>
+        <div class="sub">
+            тишина в начале удаляется автоматически
+            <span class="auto-trim-badge">⚡ умная обрезка</span>
+        </div>
 
-        <!-- Инфо о файле -->
         <div class="file-preview show" id="convFileInfo" style="display:flex; margin-bottom:6px;">
             <span class="name" id="convFileName">Файл не выбран</span>
             <span class="size" id="convFileSize">—</span>
         </div>
 
-        <!-- Обрезка -->
-        <div class="trim-section" id="trimSection">
-            <div class="trim-row">
-                <div>
-                    <label>⏵ Начало <span id="trimStartLabel">0:00</span></label>
-                    <input type="range" id="trimStart" min="0" max="100" value="0">
-                </div>
-                <div>
-                    <label>⏸ Конец <span id="trimEndLabel">0:00</span></label>
-                    <input type="range" id="trimEnd" min="0" max="100" value="100">
-                </div>
-            </div>
-            <div class="trim-values">
-                <span id="trimDurationLabel">Длительность: 0:00</span>
-                <span id="trimRangeInfo">0% – 100%</span>
-            </div>
-        </div>
-
-        <!-- Битрейт + кнопка -->
         <div class="flex gap" style="justify-content:space-between;">
             <div class="bitrate-group">
                 <label style="color:#b3bddb; font-size:0.8rem;">📊 Битрейт:</label>
@@ -355,12 +296,10 @@
             <button class="btn btn-secondary" id="convertBtn" disabled style="flex:0; min-width:140px;">🔄 Конвертировать</button>
         </div>
 
-        <!-- СТАТУС С ИНДИКАТОРОМ -->
         <div class="conv-status" id="convStatus">
             <span>⏳ Готов к работе</span>
         </div>
 
-        <!-- ПРОГРЕСС-БАР С ПУЛЬСАЦИЕЙ -->
         <div class="progress-wrap" id="progressWrap">
             <div class="progress-bar" id="progressBar"></div>
         </div>
@@ -395,12 +334,6 @@
 
         const convFileName = document.getElementById('convFileName');
         const convFileSize = document.getElementById('convFileSize');
-        const trimStart = document.getElementById('trimStart');
-        const trimEnd = document.getElementById('trimEnd');
-        const trimStartLabel = document.getElementById('trimStartLabel');
-        const trimEndLabel = document.getElementById('trimEndLabel');
-        const trimDurationLabel = document.getElementById('trimDurationLabel');
-        const trimRangeInfo = document.getElementById('trimRangeInfo');
         const convertBtn = document.getElementById('convertBtn');
         const mp3DownloadBtn = document.getElementById('mp3DownloadBtn');
         const resetBtn = document.getElementById('resetBtn');
@@ -479,6 +412,68 @@
                 script.onerror = () => reject(new Error('Не удалось загрузить lamejs'));
                 document.head.appendChild(script);
             });
+        }
+
+        // ====== АВТОМАТИЧЕСКОЕ ОПРЕДЕЛЕНИЕ НАЧАЛА ЗВУКА ======
+        function findSoundStart(buffer, threshold = 0.005, lookback = 0.3) {
+            const samples = buffer.length;
+            const channels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            
+            // Берём первый канал для анализа
+            const data = buffer.getChannelData(0);
+            
+            // Находим первый сэмпл, превышающий порог
+            let firstSoundIndex = -1;
+            for (let i = 0; i < samples; i++) {
+                if (Math.abs(data[i]) > threshold) {
+                    firstSoundIndex = i;
+                    break;
+                }
+            }
+            
+            // Если звук не найден — возвращаем 0
+            if (firstSoundIndex === -1) return 0;
+            
+            // Отступаем назад на lookback секунд (но не меньше 0)
+            const lookbackSamples = Math.floor(lookback * sampleRate);
+            const startIndex = Math.max(0, firstSoundIndex - lookbackSamples);
+            
+            // Ищем тишину в этом диапазоне (чтобы не обрезать атаку звука)
+            let silenceIndex = startIndex;
+            for (let i = startIndex; i < firstSoundIndex; i++) {
+                if (Math.abs(data[i]) < threshold * 0.5) {
+                    silenceIndex = i;
+                } else {
+                    break;
+                }
+            }
+            
+            return silenceIndex / sampleRate;
+        }
+
+        // ====== ОБРЕЗКА ======
+        function trimSilence(buffer, threshold = 0.005, lookback = 0.3) {
+            const startTime = findSoundStart(buffer, threshold, lookback);
+            if (startTime === 0) return buffer; // нет тишины в начале
+            
+            const dur = buffer.duration;
+            const channels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const startSample = Math.floor(startTime * sampleRate);
+            const length = buffer.length - startSample;
+            
+            if (length <= 0) return buffer;
+            
+            const newBuffer = new AudioContext().createBuffer(channels, length, sampleRate);
+            for (let ch = 0; ch < channels; ch++) {
+                const src = buffer.getChannelData(ch);
+                const dst = newBuffer.getChannelData(ch);
+                for (let i = 0; i < length; i++) {
+                    dst[i] = src[startSample + i];
+                }
+            }
+            return newBuffer;
         }
 
         // ====== ЗАХВАТ ======
@@ -654,18 +649,12 @@
                 convFileSize.textContent = '—';
                 convertBtn.disabled = true;
                 setConvStatus('⏳ Готов к работе');
-                trimStart.value = 0;
-                trimEnd.value = 100;
-                trimStartLabel.textContent = '0:00';
-                trimEndLabel.textContent = '0:00';
-                trimDurationLabel.textContent = 'Длительность: 0:00';
-                trimRangeInfo.textContent = '0% – 100%';
                 audioBufferData = null;
                 finalFile = null;
             } else {
                 if (finalFile) {
                     convertBtn.disabled = false;
-                    setConvStatus('📁 Файл загружен, настройте обрезку');
+                    setConvStatus('📁 Файл загружен, авто-обрезка готова');
                 } else {
                     convertBtn.disabled = true;
                     setConvStatus('⏳ Готов к работе');
@@ -689,80 +678,22 @@
             const mb = (file.size / (1024 * 1024)).toFixed(2);
             convFileSize.textContent = mb >= 1 ? mb + ' MB' : kb + ' KB';
             convertBtn.disabled = false;
-            setConvStatus('📁 Файл загружен, настройте обрезку');
+            setConvStatus('📁 Файл загружен, авто-обрезка готова');
 
             file.arrayBuffer().then(buf => {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 ctx.decodeAudioData(buf).then(ab => {
                     audioBufferData = ab;
-                    const dur = ab.duration;
-                    trimDurationLabel.textContent = 'Длительность: ' + formatTime(dur);
-                    trimEndLabel.textContent = formatTime(dur);
-                    trimStart.max = 100;
-                    trimEnd.max = 100;
-                    trimStart.value = 0;
-                    trimEnd.value = 100;
-                    trimRangeInfo.textContent = '0% – 100%';
                     ctx.close();
+                    // Автоматически запускаем конвертацию
+                    setTimeout(() => convertToMp3(), 500);
                 }).catch(() => {
                     setConvStatus('⚠️ Не удалось декодировать аудио (возможно нет аудиодорожки)', 'error');
                 });
             }).catch(() => setConvStatus('⚠️ Ошибка чтения файла', 'error'));
         }
 
-        // ====== ОБРЕЗКА ======
-        function updateTrimLabels() {
-            if (!audioBufferData) {
-                trimStartLabel.textContent = '0:00';
-                trimEndLabel.textContent = '0:00';
-                return;
-            }
-            const dur = audioBufferData.duration;
-            const s = parseFloat(trimStart.value) / 100 * dur;
-            const e = parseFloat(trimEnd.value) / 100 * dur;
-            trimStartLabel.textContent = formatTime(s);
-            trimEndLabel.textContent = formatTime(e);
-            trimRangeInfo.textContent = Math.round(parseFloat(trimStart.value)) + '% – ' + Math.round(parseFloat(trimEnd.value)) + '%';
-        }
-
-        trimStart.addEventListener('input', () => {
-            const s = parseFloat(trimStart.value);
-            const e = parseFloat(trimEnd.value);
-            if (s >= e) { trimStart.value = Math.max(0, e - 1); }
-            updateTrimLabels();
-        });
-        trimEnd.addEventListener('input', () => {
-            const s = parseFloat(trimStart.value);
-            const e = parseFloat(trimEnd.value);
-            if (e <= s) { trimEnd.value = Math.min(100, s + 1); }
-            updateTrimLabels();
-        });
-
-        // ====== КОНВЕРТАЦИЯ С ОБРЕЗКОЙ ======
-        function trimAudioBuffer(buffer, startPercent, endPercent) {
-            const dur = buffer.duration;
-            const start = (startPercent / 100) * dur;
-            const end = (endPercent / 100) * dur;
-            const trimmedDur = end - start;
-            if (trimmedDur < 0.01) throw new Error('Слишком маленький отрезок');
-
-            const channels = buffer.numberOfChannels;
-            const sampleRate = buffer.sampleRate;
-            const startSample = Math.floor(start * sampleRate);
-            const endSample = Math.floor(end * sampleRate);
-            const length = endSample - startSample;
-
-            const newBuffer = new AudioContext().createBuffer(channels, length, sampleRate);
-            for (let ch = 0; ch < channels; ch++) {
-                const src = buffer.getChannelData(ch);
-                const dst = newBuffer.getChannelData(ch);
-                for (let i = 0; i < length; i++) {
-                    dst[i] = src[startSample + i];
-                }
-            }
-            return newBuffer;
-        }
-
+        // ====== КОНВЕРТАЦИЯ С АВТО-ОБРЕЗКОЙ ======
         function encodeAudioBufferToMp3(audioBuffer, bitrate, onProgress) {
             return new Promise((resolve, reject) => {
                 try {
@@ -832,18 +763,25 @@
             convertBtn.disabled = true;
             convertBtn.textContent = '⏳ Конвертация...';
             updateStatus('Конвертация...', 'converting');
-            setConvStatus('⏳ Подготовка... <span class="spinner"></span>');
-            setProgress(5, 'Подготовка...');
+            setConvStatus('🔍 Поиск начала звука... <span class="spinner"></span>');
+            setProgress(5, 'Поиск начала звука...');
 
             try {
-                const s = parseFloat(trimStart.value);
-                const e = parseFloat(trimEnd.value);
-                if (s >= e) { throw new Error('Начало не может быть позже конца'); }
-
-                setProgress(10, 'Обрезка аудио...');
-                setConvStatus('✂️ Обрезка аудио... <span class="spinner"></span>');
-                const trimmed = trimAudioBuffer(audioBufferData, s, e);
-                setProgress(30, 'Обрезка выполнена');
+                // Находим начало звука
+                const startTime = findSoundStart(audioBufferData, 0.005, 0.3);
+                const dur = audioBufferData.duration;
+                const trimmedStart = startTime > 0 ? startTime : 0;
+                
+                setProgress(10, 'Обрезка тишины...');
+                setConvStatus('✂️ Обрезка тишины (' + formatTime(trimmedStart) + ')... <span class="spinner"></span>');
+                
+                // Обрезаем тишину
+                const trimmed = trimSilence(audioBufferData, 0.005, 0.3);
+                const trimmedDur = trimmed.duration;
+                const savedTime = dur - trimmedDur;
+                
+                setProgress(30, 'Обрезка выполнена (сохранено ' + formatTime(savedTime) + ')');
+                setConvStatus('✅ Обрезано ' + formatTime(savedTime) + ' тишины, кодируем... <span class="spinner"></span>');
 
                 const bitrate = parseInt(bitrateSelect.value, 10);
                 if (isNaN(bitrate) || bitrate < 8) throw new Error('Некорректный битрейт');
@@ -877,7 +815,8 @@
                 mp3DownloadBtn.disabled = false;
 
                 setProgress(100, '✅ Готово!');
-                setConvStatus('✅ Готово! MP3 ' + bitrate + ' kbps, обрезан', 'success');
+                const savedInfo = savedTime > 0 ? ' (обрезано ' + formatTime(savedTime) + ')' : '';
+                setConvStatus('✅ Готово! MP3 ' + bitrate + ' kbps' + savedInfo, 'success');
                 convertBtn.textContent = '✅ Конвертировано';
                 updateStatus('Готово', '');
 
