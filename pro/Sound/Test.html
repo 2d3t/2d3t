@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Захват → MP3 с авто-обрезкой</title>
+    <title>Захват → MP3 с авто-стопом</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -66,6 +66,7 @@
         .dot.active { background: #48bb78; box-shadow: 0 0 20px #48bb7855; animation: pulse 1s infinite; }
         .dot.error { background: #fc8181; }
         .dot.converting { background: #f6ad55; box-shadow: 0 0 20px #f6ad5555; animation: pulse 0.6s infinite; }
+        .dot.auto-stop { background: #a78bfa; box-shadow: 0 0 20px #a78bfa55; animation: pulse 0.8s infinite; }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
         .timer { font-family: monospace; font-size: 1.2rem; font-weight: 600; color: #7c9aff; margin-left: auto; }
         .btn {
@@ -242,6 +243,61 @@
         .trim-stats.show { display: block; }
         .trim-stats .highlight { color: #7c9aff; font-weight: 600; }
         .trim-stats .saved { color: #48bb78; font-weight: 600; }
+
+        .auto-stop-settings {
+            background: #0f1625;
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin: 8px 0 12px;
+            border: 1px solid #1f2a4a;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .auto-stop-settings label {
+            font-size: 0.85rem;
+            color: #b3bddb;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .auto-stop-settings input[type="range"] {
+            width: 100px;
+            accent-color: #7c9aff;
+            background: #1f2840;
+            height: 4px;
+            border-radius: 10px;
+            outline: none;
+        }
+        .auto-stop-settings input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #7c9aff;
+            cursor: pointer;
+        }
+        .auto-stop-settings .value {
+            color: #7c9aff;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+        .auto-stop-badge {
+            background: #2d3748;
+            border-radius: 30px;
+            padding: 2px 12px;
+            font-size: 0.7rem;
+            color: #a0b4e0;
+            border: 1px solid #4a5a7a;
+        }
+        .auto-stop-badge.active {
+            background: #1f2a4a;
+            border-color: #7c9aff;
+            color: #7c9aff;
+        }
     </style>
 </head>
 <body>
@@ -257,10 +313,21 @@
             <div><strong>Важно!</strong> Установите громкость в захватываемой вкладке на <strong>максимум</strong> — запись берётся именно с той громкости, которая играет в источнике.</div>
         </div>
 
+        <!-- Настройки авто-стопа -->
+        <div class="auto-stop-settings">
+            <label>
+                ⏹ Авто-стоп при тишине:
+                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="1.5">
+                <span class="value" id="thresholdValue">1.5</span> сек
+            </label>
+            <span class="auto-stop-badge active" id="autoStopBadge">⚡ активен</span>
+        </div>
+
         <div class="row">
             <span class="dot" id="statusDot"></span>
             <span id="statusText">Остановлен</span>
             <span class="timer" id="timerDisplay">00:00</span>
+            <span id="silenceTimer" style="font-size:0.7rem; color:#6a7a9a; display:none;">тишина: 0.0с</span>
         </div>
 
         <div class="meter-wrap"><div class="meter-bar" id="meterBar"></div></div>
@@ -277,7 +344,7 @@
         </div>
 
         <div class="footnote" style="border: none; margin-top: 8px; padding-top: 4px;">
-            После остановки автоматическая обрезка тишины и конвертация в MP3.
+            ⚡ Запись автоматически остановится через 1.5 сек после окончания звука
         </div>
     </div>
 
@@ -294,7 +361,6 @@
             <span class="size" id="convFileSize">—</span>
         </div>
 
-        <!-- Статистика обрезки -->
         <div class="trim-stats" id="trimStats">
             <div>🔹 Обрезано в начале: <span class="highlight" id="trimStartSaved">0.0</span> сек</div>
             <div>🔹 Обрезано в конце: <span class="highlight" id="trimEndSaved">0.0</span> сек</div>
@@ -347,6 +413,7 @@
         const statusText = document.getElementById('statusText');
         const meterBar = document.getElementById('meterBar');
         const timerDisplay = document.getElementById('timerDisplay');
+        const silenceTimer = document.getElementById('silenceTimer');
         const filePreview = document.getElementById('filePreview');
         const previewName = document.getElementById('previewName');
         const previewSize = document.getElementById('previewSize');
@@ -368,6 +435,9 @@
         const trimStartSaved = document.getElementById('trimStartSaved');
         const trimEndSaved = document.getElementById('trimEndSaved');
         const trimFinalDuration = document.getElementById('trimFinalDuration');
+        const silenceThreshold = document.getElementById('silenceThreshold');
+        const thresholdValue = document.getElementById('thresholdValue');
+        const autoStopBadge = document.getElementById('autoStopBadge');
 
         // ====== СОСТОЯНИЕ ======
         let audioContext = null;
@@ -387,6 +457,11 @@
         let isConverting = false;
         let convertedBlob = null;
         let convertedFileName = '';
+        
+        // Для авто-стопа
+        let silenceStartTime = null;
+        let autoStopTimeout = null;
+        let isAutoStopping = false;
 
         // ====== ВСПОМОГАТЕЛЬНЫЕ ======
         function updateStatus(text, state) {
@@ -395,6 +470,7 @@
             if (state === 'active') statusDot.classList.add('active');
             else if (state === 'error') statusDot.classList.add('error');
             else if (state === 'converting') statusDot.classList.add('converting');
+            else if (state === 'auto-stop') statusDot.classList.add('auto-stop');
         }
 
         function formatTime(seconds) {
@@ -500,7 +576,6 @@
             return silenceIndex / sampleRate;
         }
 
-        // ====== ОБРЕЗКА С НАЧАЛА И КОНЦА ======
         function trimSilenceBoth(buffer, threshold = 0.005, padding = 0.3) {
             const startTime = findSoundStart(buffer, threshold, padding);
             const endTime = findSoundEnd(buffer, threshold, padding);
@@ -539,8 +614,13 @@
         function resetCaptureUI() {
             if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if (autoStopTimeout) { clearTimeout(autoStopTimeout); autoStopTimeout = null; }
             meterBar.style.width = '0%';
             timerDisplay.textContent = '00:00';
+            silenceTimer.style.display = 'none';
+            silenceTimer.textContent = 'тишина: 0.0с';
+            silenceStartTime = null;
+            isAutoStopping = false;
 
             if (audioContext && audioContext.state !== 'closed') {
                 audioContext.close().catch(() => {});
@@ -572,7 +652,41 @@
                 const abs = Math.abs(val);
                 if (abs > max) max = abs;
             }
-            meterBar.style.width = Math.min(max * 100, 100) + '%';
+            const percent = Math.min(max * 100, 100);
+            meterBar.style.width = percent + '%';
+            
+            // Автоматический стоп при тишине
+            if (isRecording && !isAutoStopping) {
+                const threshold = parseFloat(silenceThreshold.value);
+                const isSilent = percent < 1.5; // порог тишины ~1.5%
+                
+                if (isSilent) {
+                    if (silenceStartTime === null) {
+                        silenceStartTime = Date.now();
+                        silenceTimer.style.display = 'inline';
+                    }
+                    const silenceDuration = (Date.now() - silenceStartTime) / 1000;
+                    silenceTimer.textContent = 'тишина: ' + silenceDuration.toFixed(1) + 'с / ' + threshold + 'с';
+                    
+                    if (silenceDuration >= threshold) {
+                        // Авто-стоп!
+                        isAutoStopping = true;
+                        updateStatus('Авто-стоп...', 'auto-stop');
+                        setConvStatus('⏹ Авто-стоп (тишина ' + threshold + 'с)', '');
+                        stopCapture();
+                        silenceTimer.style.display = 'none';
+                        return;
+                    }
+                } else {
+                    silenceStartTime = null;
+                    silenceTimer.style.display = 'none';
+                    if (autoStopTimeout) {
+                        clearTimeout(autoStopTimeout);
+                        autoStopTimeout = null;
+                    }
+                }
+            }
+            
             animationId = requestAnimationFrame(updateMeter);
         }
 
@@ -623,10 +737,13 @@
 
                         handleConverterFile(finalFile);
                     }
+                    isAutoStopping = false;
                 };
                 recorder.start(1000);
 
                 isRecording = true;
+                silenceStartTime = null;
+                isAutoStopping = false;
                 startTime = Date.now();
                 timerInterval = setInterval(() => {
                     if (!isRecording) return;
@@ -661,6 +778,8 @@
             isRecording = false;
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            if (autoStopTimeout) { clearTimeout(autoStopTimeout); autoStopTimeout = null; }
+            silenceTimer.style.display = 'none';
 
             if (recorder && recorder.state === 'recording') recorder.stop();
             if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
@@ -826,7 +945,6 @@
             setProgress(5, 'Поиск границ звука...');
 
             try {
-                // Находим начало и конец звука
                 const startTime = findSoundStart(audioBufferData, 0.005, 0.3);
                 const endTime = findSoundEnd(audioBufferData, 0.005, 0.3);
                 const originalDur = audioBufferData.duration;
@@ -834,7 +952,6 @@
                 setProgress(10, 'Обрезка тишины...');
                 setConvStatus('✂️ Обрезка тишины... <span class="spinner"></span>');
                 
-                // Обрезаем с обеих сторон
                 const result = trimSilenceBoth(audioBufferData, 0.005, 0.3);
                 const trimmed = result.trimmed;
                 
@@ -842,7 +959,6 @@
                 const endSaved = result.endSaved || 0;
                 const totalSaved = startSaved + endSaved;
                 
-                // Показываем статистику
                 trimStats.classList.add('show');
                 trimStartSaved.textContent = startSaved.toFixed(2);
                 trimEndSaved.textContent = endSaved.toFixed(2);
@@ -931,6 +1047,12 @@
             mp3DownloadBtn.download = finalName;
             mp3DownloadBtn.href = url;
         }
+
+        // ====== НАСТРОЙКА ПОРОГА ======
+        silenceThreshold.addEventListener('input', () => {
+            const val = parseFloat(silenceThreshold.value);
+            thresholdValue.textContent = val.toFixed(1);
+        });
 
         // ====== СОБЫТИЯ ======
         startBtn.addEventListener('click', startCapture);
