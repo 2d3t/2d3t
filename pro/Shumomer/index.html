@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+<link rel="manifest" href="manifest.json">
+
+    <!-- Иконки PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
+
+
+    <title>Шумомер + график + сохранение JPEG</title>
+    <!-- Chart.js + html2canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f0f4f8;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .card {
+            max-width: 960px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            padding: 24px 28px 32px;
+            box-shadow: 0 20px 40px rgba(0,20,50,0.12);
+        }
+        h1 {
+            font-weight: 600;
+            font-size: 1.9rem;
+            letter-spacing: -0.5px;
+            margin: 0 0 6px 0;
+            color: #0b1e33;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .sub {
+            color: #2c4b6b;
+            opacity: 0.7;
+            font-weight: 400;
+            font-size: 0.95rem;
+            margin-top: -4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3b7cff;
+            padding-left: 16px;
+        }
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 640px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+        }
+        .meter-panel {
+            background: #eef3fa;
+            border-radius: 28px;
+            padding: 20px 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .db-big {
+            font-size: 4.2rem;
+            font-weight: 700;
+            color: #0b1e33;
+            line-height: 1;
+            letter-spacing: -2px;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .db-big small {
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: #3b5d7c;
+            margin-left: 6px;
+        }
+        .max-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-top: 12px;
+            background: #d9e3ef;
+            padding: 8px 16px 8px 18px;
+            border-radius: 40px;
+        }
+        .max-label {
+            font-weight: 500;
+            color: #12344d;
+        }
+        .max-value {
+            font-weight: 700;
+            font-size: 1.7rem;
+            color: #00337a;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .btn {
+            border: none;
+            background: white;
+            padding: 10px 22px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.02);
+            transition: 0.15s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #cddcee;
+            color: #102a40;
+            flex: 1 0 auto;
+            justify-content: center;
+        }
+        .btn-primary {
+            background: #1a5cff;
+            border: 1px solid #1a5cff;
+            color: white;
+            box-shadow: 0 8px 14px -6px #1a5cff60;
+        }
+        .btn-primary:hover {
+            background: #0a4ad0;
+            transform: scale(0.97);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #b8cee8;
+        }
+        .btn-outline:hover {
+            background: #e3edf7;
+        }
+        .btn-danger {
+            background: #ff4d6d;
+            border: 1px solid #ff4d6d;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #e63456;
+        }
+        .btn-success {
+            background: #2b8c5e;
+            border: 1px solid #2b8c5e;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1f704b;
+        }
+        .save-area {
+            background: #e6edf6;
+            border-radius: 40px;
+            padding: 12px 18px 16px;
+            margin-top: 12px;
+        }
+        .save-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        .save-row input {
+            flex: 2 1 160px;
+            padding: 12px 16px;
+            border-radius: 60px;
+            border: 1px solid #c2d6ea;
+            background: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.15s;
+            color: #0b1e33;
+            font-weight: 500;
+        }
+        .save-row input:focus {
+            border-color: #1a5cff;
+            box-shadow: 0 0 0 3px #1a5cff30;
+        }
+        .save-row .btn {
+            flex: 1 0 auto;
+        }
+        .saved-list {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            align-items: center;
+        }
+        /* КОНТРАСТНЫЕ бейджи — тёмный текст, белый фон, жирное начертание */
+        .saved-badge {
+            background: white;
+            border-radius: 40px;
+            padding: 6px 16px 6px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #b0c8e0;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #0b1a2b; /* очень тёмный */
+        }
+        .saved-badge strong {
+            color: #001f4a; /* тёмно-синий */
+            font-weight: 800;
+            font-size: 1.05rem;
+        }
+        .saved-badge .place-name {
+            color: #0b1e33;
+            font-weight: 700;
+            background: #eef3fa;
+            padding: 0 8px 0 4px;
+            border-radius: 30px;
+        }
+        .saved-badge .del {
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: 700;
+            font-size: 1.3rem;
+            line-height: 1;
+            transition: 0.1s;
+            color: #a0002a;
+            margin-left: 2px;
+        }
+        .saved-badge .del:hover {
+            opacity: 1;
+            color: #d1002b;
+        }
+        .chart-wrapper {
+            background: #f8fafd;
+            border-radius: 28px;
+            padding: 16px 12px 8px;
+            border: 1px solid #dae6f2;
+            position: relative;
+        }
+        .status-led {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 12px;
+            margin-right: 6px;
+            background: #34c759;
+        }
+        .footer-note {
+            font-size: 0.8rem;
+            color: #4c6e8a;
+            margin-top: 18px;
+            text-align: center;
+            opacity: 0.7;
+        }
+        .sensitivity-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+            background: #dce6f2;
+            padding: 8px 16px 8px 20px;
+            border-radius: 60px;
+            flex-wrap: wrap;
+        }
+        .sensitivity-wrap label {
+            font-weight: 500;
+            color: #143450;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sensitivity-wrap input[type="range"] {
+            flex: 2 1 140px;
+            accent-color: #1a5cff;
+            height: 5px;
+            border-radius: 10px;
+            background: #b3c9e2;
+        }
+        .sens-value {
+            font-weight: 700;
+            color: #00337a;
+            min-width: 40px;
+        }
+        .jpeg-btn-wrap {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        /* тёмная тема для бейджей в JPEG — дополнительная контрастность */
+        .jpeg-badge {
+            background: white !important;
+            color: #0b1a2b !important;
+            border: 1px solid #1a3a5a !important;
+        }
+    </style>
+</head>
+<body>
+<div class="card" id="appCard">
+    <h1>
+        <span>🎙️ Шумомер</span>
+        <span style="font-size: 1rem; font-weight: 400; margin-left: auto; background: #eaf1fa; padding: 4px 18px; border-radius: 40px;">
+            <span class="status-led"></span> реальное время
+        </span>
+    </h1>
+    <div class="sub">Микрофон · график · максимум · сохранение JPEG</div>
+
+    <div class="grid-2col">
+        <!-- левая панель -->
+        <div class="meter-panel">
+            <div class="db-big">
+                <span id="currentDb">0.0</span>
+                <small>dB</small>
+            </div>
+            <div class="max-row">
+                <span class="max-label">📈 максимум</span>
+                <span class="max-value" id="maxDb">0.0</span>
+            </div>
+
+            <div class="sensitivity-wrap">
+                <label>🔊 чувствит.</label>
+                <input type="range" id="sensSlider" min="0.2" max="2.0" step="0.05" value="1.0">
+                <span class="sens-value" id="sensValue">1.00</span>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" id="resetMaxBtn">🔄 Сброс макс.</button>
+                <button class="btn btn-outline" id="clearHistoryBtn">🧹 Очистить график</button>
+            </div>
+
+            <div class="save-area">
+                <div class="save-row">
+                    <input type="text" id="placeNameInput" placeholder="Название места" value="Комната">
+                    <button class="btn btn-primary" id="saveMaxBtn">💾 Сохранить</button>
+                </div>
+                <div id="savedContainer" class="saved-list"></div>
+                <div class="jpeg-btn-wrap">
+                    <button class="btn btn-success" id="saveJpegBtn">🖼️ Сохранить список как JPEG</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- правая панель: график -->
+        <div style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="chart-wrapper" id="chartWrapper">
+                <canvas id="realtimeChart" width="400" height="220" style="width:100%; height:auto; max-height:220px;"></canvas>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.75rem; color: #386282; padding: 0 6px;">
+                <span>⏱️ обновление ~200 мс</span>
+                <span id="pointsCount">0 точек</span>
+            </div>
+        </div>
+    </div>
+    <div class="footer-note">Для работы требуется разрешение микрофона. Чувствительность влияет на отображаемый уровень.</div>
+</div>
+
+<script>
+    (function(){
+        // ---- DOM ----
+        const currentDbEl = document.getElementById('currentDb');
+        const maxDbEl = document.getElementById('maxDb');
+        const resetMaxBtn = document.getElementById('resetMaxBtn');
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        const saveMaxBtn = document.getElementById('saveMaxBtn');
+        const placeNameInput = document.getElementById('placeNameInput');
+        const savedContainer = document.getElementById('savedContainer');
+        const pointsCountEl = document.getElementById('pointsCount');
+        const sensSlider = document.getElementById('sensSlider');
+        const sensValueEl = document.getElementById('sensValue');
+
+        // ---- Chart.js ----
+        const ctx = document.getElementById('realtimeChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Уровень шума (dB)',
+                    data: [],
+                    borderColor: '#1a5cff',
+                    backgroundColor: 'rgba(26, 92, 255, 0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 0,
+                    tension: 0.2,
+                    fill: true,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 9 } } },
+                    y: { min: 0, max: 100, grid: { color: '#dde6f0' }, ticks: { stepSize: 20, font: { size: 9 } } }
+                },
+                elements: { line: { borderJoinStyle: 'round' } }
+            }
+        });
+
+        // ---- состояние ----
+        let currentMax = 0;
+        let historyData = [];
+        const MAX_POINTS = 120;
+        let sensitivity = 1.0;
+
+        let savedRecords = [];
+        try {
+            const stored = localStorage.getItem('noise_saved_records');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) savedRecords = parsed;
+            }
+        } catch(e) {}
+
+        // ---- микрофон ----
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationFrame = null;
+        let isRunning = false;
+
+        // ---- функции UI ----
+        function updateDisplay(currentDb, maxDb) {
+            currentDbEl.textContent = currentDb.toFixed(1);
+            maxDbEl.textContent = maxDb.toFixed(1);
+        }
+
+        function updateChart() {
+            const labels = historyData.map((_, i) => (i * 0.2).toFixed(1) + 's');
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = historyData.slice();
+            chart.update('none');
+            pointsCountEl.textContent = historyData.length + ' точек';
+        }
+
+        function addDataPoint(rawValue) {
+            let value = rawValue * sensitivity;
+            if (value < 0) value = 0;
+            if (value > 100) value = 100;
+            value = Math.round(value * 10) / 10;
+
+            if (value > currentMax) {
+                currentMax = value;
+                maxDbEl.textContent = currentMax.toFixed(1);
+            }
+
+            historyData.push(value);
+            if (historyData.length > MAX_POINTS) historyData.shift();
+
+            updateChart();
+            currentDbEl.textContent = value.toFixed(1);
+        }
+
+        function resetMax() {
+            currentMax = 0;
+            maxDbEl.textContent = '0.0';
+        }
+
+        function clearHistory() {
+            historyData = [];
+            currentMax = 0;
+            maxDbEl.textContent = '0.0';
+            currentDbEl.textContent = '0.0';
+            updateChart();
+        }
+
+        // ---- сохранение максимума ----
+        function saveCurrentMax() {
+            const place = placeNameInput.value.trim() || 'Без названия';
+            const value = currentMax;
+            if (value === 0) {
+                alert('Максимум 0 dB. Подождите данных или проверьте микрофон.');
+                return;
+            }
+            savedRecords.push({ place, value: parseFloat(value.toFixed(1)) });
+            savedRecords.sort((a, b) => b.value - a.value);
+            localStorage.setItem('noise_saved_records', JSON.stringify(savedRecords));
+            renderSavedRecords();
+            saveMaxBtn.style.transform = 'scale(0.95)';
+            setTimeout(() => saveMaxBtn.style.transform = '', 150);
+        }
+
+        function deleteSavedRecord(index) {
+            savedRecords.splice(index, 1);
+            localStorage.setItem('noise_saved_records', JSON.stringify(savedRecords));
+            renderSavedRecords();
+        }
+
+        // ---- ОТРИСОВКА СПИСКА с повышенной контрастностью ----
+        function renderSavedRecords() {
+            if (savedRecords.length === 0) {
+                savedContainer.innerHTML = `<span style="opacity:0.6; font-size:0.85rem; color:#1a2f44;">Нет сохранённых максимумов</span>`;
+                return;
+            }
+            let html = '';
+            savedRecords.forEach((rec, idx) => {
+                html += `
+                    <div class="saved-badge">
+                        <strong>${rec.value} dB</strong>
+                        <span class="place-name">${rec.place}</span>
+                        <span class="del" data-index="${idx}">✕</span>
+                    </div>
+                `;
+            });
+            savedContainer.innerHTML = html;
+            document.querySelectorAll('.saved-badge .del').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    const index = parseInt(el.dataset.index, 10);
+                    if (!isNaN(index)) deleteSavedRecord(index);
+                });
+            });
+        }
+
+        // ---- СОХРАНЕНИЕ JPEG (список максимумов) с контрастным оформлением ----
+        async function saveListAsJpeg() {
+            const container = document.createElement('div');
+            container.style.cssText = `
+                background: #ffffff;
+                padding: 32px 40px;
+                border-radius: 32px;
+                font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+                max-width: 600px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                position: fixed;
+                left: -9999px;
+                top: 0;
+                z-index: 9999;
+                color: #0b1a2b;
+            `;
+            
+            const title = document.createElement('h2');
+            title.textContent = '📊 Сохранённые максимумы шума';
+            title.style.cssText = 'margin: 0 0 8px 0; color: #0b1a2b; font-weight: 700; font-size: 1.8rem;';
+            container.appendChild(title);
+            
+            const date = new Date().toLocaleString();
+            const dateP = document.createElement('p');
+            dateP.textContent = `Дата: ${date}`;
+            dateP.style.cssText = 'margin: 0 0 20px 0; color: #1f3a55; font-size: 1rem; font-weight: 500;';
+            container.appendChild(dateP);
+
+            if (savedRecords.length === 0) {
+                const empty = document.createElement('p');
+                empty.textContent = 'Нет сохранённых записей.';
+                empty.style.cssText = 'color: #1f3a55; font-style: italic; font-size: 1.1rem;';
+                container.appendChild(empty);
+            } else {
+                const list = document.createElement('ul');
+                list.style.cssText = 'list-style: none; padding: 0; margin: 0;';
+                savedRecords.forEach((rec, idx) => {
+                    const li = document.createElement('li');
+                    li.style.cssText = `
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 12px 16px;
+                        border-bottom: 2px solid #d0dcec;
+                        font-size: 1.2rem;
+                        font-weight: 500;
+                        color: #0b1a2b;
+                        background: ${idx % 2 === 0 ? '#f5f9ff' : '#ffffff'};
+                    `;
+                    if (idx === 0) {
+                        li.style.background = '#e3edfb';
+                        li.style.borderRadius = '12px 12px 0 0';
+                        li.style.fontWeight = '600';
+                    }
+                    const placeSpan = document.createElement('span');
+                    placeSpan.textContent = rec.place;
+                    placeSpan.style.color = '#001a33';
+                    placeSpan.style.fontWeight = '700';
+                    const valSpan = document.createElement('span');
+                    valSpan.textContent = `${rec.value} dB`;
+                    valSpan.style.fontWeight = '800';
+                    valSpan.style.color = '#002b5e';
+                    valSpan.style.fontSize = '1.3rem';
+                    li.appendChild(placeSpan);
+                    li.appendChild(valSpan);
+                    list.appendChild(li);
+                });
+                container.appendChild(list);
+            }
+
+            const footer = document.createElement('div');
+            footer.style.cssText = 'margin-top: 24px; font-size: 0.9rem; color: #1f3a55; border-top: 2px solid #cfdcec; padding-top: 16px; text-align: center; font-weight: 500;';
+            footer.textContent = 'Сгенерировано шумомером';
+            container.appendChild(footer);
+
+            document.body.appendChild(container);
+
+            try {
+                await new Promise(r => requestAnimationFrame(r));
+                const canvas = await html2canvas(container, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    allowTaint: false,
+                    useCORS: true,
+                    logging: false,
+                });
+                const link = document.createElement('a');
+                link.download = `шумомер_максимумы_${new Date().toISOString().slice(0,10)}.jpeg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.95);
+                link.click();
+            } catch (err) {
+                alert('Ошибка при создании JPEG: ' + err.message);
+            } finally {
+                document.body.removeChild(container);
+            }
+        }
+
+        // ---- инициализация микрофона ----
+        async function initAudio() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.8;
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                isRunning = true;
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                readAudio();
+                return true;
+            } catch (err) {
+                alert('Не удалось получить доступ к микрофону. Разрешите доступ и перезагрузите страницу.\n' + err.message);
+                return false;
+            }
+        }
+
+        function readAudio() {
+            if (!isRunning || !analyser) return;
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            let avg = sum / dataArray.length;
+            let db = 0;
+            if (avg > 0) {
+                const normalized = avg / 255;
+                db = Math.min(100, Math.max(0, normalized * 100 * 1.2));
+                if (db < 3) db = 0;
+                db = Math.round(db * 10) / 10;
+            }
+            addDataPoint(db);
+            animationFrame = requestAnimationFrame(readAudio);
+        }
+
+        function stopAudio() {
+            isRunning = false;
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+            audioContext = null;
+            analyser = null;
+        }
+
+        // ---- обработчики ----
+        resetMaxBtn.addEventListener('click', resetMax);
+        clearHistoryBtn.addEventListener('click', clearHistory);
+        saveMaxBtn.addEventListener('click', saveCurrentMax);
+        document.getElementById('saveJpegBtn').addEventListener('click', saveListAsJpeg);
+
+        sensSlider.addEventListener('input', () => {
+            sensitivity = parseFloat(sensSlider.value);
+            sensValueEl.textContent = sensitivity.toFixed(2);
+        });
+
+        // ---- старт ----
+        async function start() {
+            await initAudio();
+            renderSavedRecords();
+            updateChart();
+            currentDbEl.textContent = '0.0';
+            maxDbEl.textContent = '0.0';
+        }
+
+        start();
+
+        window.addEventListener('beforeunload', () => {
+            stopAudio();
+        });
+
+        document.addEventListener('click', () => {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(() => {});
+            }
+        }, { once: false });
+
+    })();
+</script>
+
+
+
+
+
+<script>
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ОФЛАЙН-ФУНКЦИОНАЛ
+    // ============================================================
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        navigator.serviceWorker.getRegistration()
+            .then(function(registration) {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch(function(err) {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log('📡 ' + status);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', function() {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then(function(registration) {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(function() {});
+            }
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+
+</body>
+</html>
