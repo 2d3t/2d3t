@@ -309,8 +309,8 @@
         <div class="settings-row">
             <label>
                 ⏹ Авто-стоп:
-                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="0.5">
-                <span class="value" id="thresholdValue">0.5</span>с
+                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="0.6">
+                <span class="value" id="thresholdValue">0.6</span>с
             </label>
             <button class="toggle-btn active" id="autoStopToggle">Вкл</button>
         </div>
@@ -368,7 +368,37 @@
         let autoStopEnabled = true;
         let silenceStartTime = null;
         let isAutoStopping = false;
-        let isManualStop = false; // Флаг ручной остановки
+        let isManualStop = false;
+        let isAutoSaveDone = false;
+
+        // ====== ЗВУКОВЫЕ СИГНАЛЫ ======
+        function playBeep(frequency = 880, duration = 200, type = 'sine') {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = ctx.createOscillator();
+                const gain = ctx.createGain();
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+                oscillator.connect(gain);
+                gain.connect(ctx.destination);
+                oscillator.start();
+                oscillator.stop(ctx.currentTime + duration / 1000);
+                setTimeout(() => ctx.close(), duration + 100);
+            } catch (e) { /* игнорируем */ }
+        }
+
+        function playEndSound() {
+            playBeep(523, 150);  // До
+            setTimeout(() => playBeep(659, 150), 180);  // Ми
+            setTimeout(() => playBeep(784, 250), 360);  // Соль
+        }
+
+        function playSaveSound() {
+            playBeep(880, 100);
+            setTimeout(() => playBeep(1100, 150), 120);
+        }
 
         // ====== ВСПОМОГАТЕЛЬНЫЕ ======
         function setStatus(text, state, msg = '') {
@@ -411,19 +441,16 @@
             });
         }
 
-        // ====== НОВАЯ ЛОГИКА ОБРЕЗКИ КОНЦА ======
-        // Для ручной остановки: анализируем последние 20 секунд
+        // ====== ЛОГИКА ОБРЕЗКИ ======
         function findEndForManualStop(buffer, threshold = 0.005, lookahead = 0.4) {
             const samples = buffer.length;
             const sampleRate = buffer.sampleRate;
             const data = buffer.getChannelData(0);
             
-            // Анализируем последние 20 секунд (или меньше, если запись короче)
             const maxLookbackSamples = Math.min(samples, Math.floor(20 * sampleRate));
             const startSearch = samples - maxLookbackSamples;
             
             let lastSoundIndex = -1;
-            // Идём с конца найденного диапазона
             for (let i = samples - 1; i >= startSearch; i--) {
                 if (Math.abs(data[i]) > threshold) {
                     lastSoundIndex = i;
@@ -431,7 +458,6 @@
                 }
             }
             
-            // Если звук не найден во всём диапазоне — ищем во всём файле
             if (lastSoundIndex === -1) {
                 for (let i = samples - 1; i >= 0; i--) {
                     if (Math.abs(data[i]) > threshold) {
@@ -443,11 +469,9 @@
             
             if (lastSoundIndex === -1) return buffer.duration;
             
-            // Отступаем вперёд на lookahead (0.4 сек)
             const lookaheadSamples = Math.floor(lookahead * sampleRate);
             const endIndex = Math.min(samples - 1, lastSoundIndex + lookaheadSamples);
             
-            // Ищем тишину после последнего звука
             let silenceIndex = endIndex;
             for (let i = endIndex; i > lastSoundIndex; i--) {
                 if (Math.abs(data[i]) < threshold * 0.5) {
@@ -460,7 +484,6 @@
             return silenceIndex / sampleRate;
         }
 
-        // Для авто-стопа: стандартная обрезка по всему файлу
         function findSoundEnd(buffer, threshold = 0.005, lookahead = 0.3) {
             const samples = buffer.length;
             const data = buffer.getChannelData(0);
@@ -536,14 +559,11 @@
             
             let endTime;
             if (isManual) {
-                // Ручная остановка: анализируем последние 20 секунд
                 endTime = findEndForManualStop(buffer, 0.005, 0.4);
             } else {
-                // Авто-стоп: анализируем весь файл
                 endTime = findSoundEnd(buffer, 0.005, 0.3);
             }
             
-            // Если конец оказался раньше начала или слишком близко
             if (endTime <= startTime + 0.1) {
                 endTime = buffer.duration;
             }
@@ -564,6 +584,7 @@
             silenceStartTime = null;
             isAutoStopping = false;
             isManualStop = false;
+            isAutoSaveDone = false;
             trimInfo.classList.remove('show');
 
             if (audioContext && audioContext.state !== 'closed') {
@@ -599,7 +620,6 @@
             const percent = Math.min(max * 100, 100);
             meterBar.style.width = percent + '%';
             
-            // Авто-стоп (только если не ручная остановка)
             if (isRecording && !isAutoStopping && autoStopEnabled && !isManualStop) {
                 const threshold = parseFloat(silenceThreshold.value);
                 const isSilent = percent < 1.5;
@@ -610,7 +630,7 @@
                     if (silenceDuration >= threshold) {
                         isAutoStopping = true;
                         setStatus('Авто-стоп...', 'processing', '⏹ Запись остановлена (тишина ' + threshold + 'с)');
-                        stopCapture(false); // false = не ручная остановка
+                        stopCapture(false);
                         return;
                     }
                 } else {
@@ -671,6 +691,7 @@
                 isManualStop = false;
                 silenceStartTime = null;
                 isAutoStopping = false;
+                isAutoSaveDone = false;
                 startTime = Date.now();
                 timerInterval = setInterval(() => {
                     if (!isRecording) return;
@@ -811,12 +832,10 @@
             try {
                 setStatus('Обработка...', 'processing', isManual ? '🔍 Анализ конца записи...' : '🔄 Обрезка тишины...');
                 
-                // Обрезаем с учётом типа остановки
                 const result = trimBoth(audioBufferData, isManual);
                 const trimmed = result.trimmed;
                 const endSaved = result.endSaved;
                 
-                // Показываем информацию об обрезке
                 if (endSaved > 0.1) {
                     trimInfo.classList.add('show');
                     trimEndInfo.textContent = endSaved.toFixed(2);
@@ -841,7 +860,18 @@
                 updateMainBtn('✅ Готово!', 'done');
                 setStatus('Готово!', 'done', '✅ MP3 готов к сохранению');
                 mainBtn.disabled = false;
-                mainBtn.textContent = '✅ Готово!';
+                
+                // Звуковой сигнал окончания захвата
+                playEndSound();
+                
+                // Автоматическое сохранение с запросом имени
+                if (!isAutoSaveDone) {
+                    isAutoSaveDone = true;
+                    setTimeout(() => {
+                        autoSaveWithName();
+                    }, 500);
+                }
+                
                 setTimeout(() => {
                     if (!isRecording && !isConverting) {
                         mainBtn.textContent = '▶ Захват';
@@ -857,14 +887,45 @@
             }
         }
 
-        // ====== СОХРАНЕНИЕ ======
+        // ====== АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ С ЗАПРОСОМ ИМЕНИ ======
+        function autoSaveWithName() {
+            if (!convertedBlob) return;
+            
+            const defaultName = convertedFileName || 'audio.mp3';
+            const userFileName = prompt('💾 Введите название для MP3 файла:', defaultName.replace(/\.mp3$/, ''));
+            
+            let finalName;
+            if (userFileName === null) {
+                // Если пользователь нажал "Отмена" — сохраняем с именем по умолчанию
+                finalName = defaultName;
+            } else {
+                finalName = userFileName.trim() || defaultName;
+                if (!finalName.toLowerCase().endsWith('.mp3')) finalName += '.mp3';
+            }
+            
+            const url = URL.createObjectURL(convertedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            
+            // Звуковой сигнал сохранения
+            playSaveSound();
+            
+            setStatus('✅ Сохранено!', 'done', '✅ Файл сохранён: ' + finalName);
+        }
+
+        // ====== СОХРАНЕНИЕ (ручное) ======
         function saveFile() {
             if (!convertedBlob) {
                 setStatus('Ошибка', 'error', '❌ Нет файла для сохранения');
                 return;
             }
             const defaultName = convertedFileName || 'audio.mp3';
-            const userFileName = prompt('Введите имя для MP3 файла:', defaultName.replace(/\.mp3$/, ''));
+            const userFileName = prompt('💾 Введите название для MP3 файла:', defaultName.replace(/\.mp3$/, ''));
             if (userFileName === null) return;
             let finalName = userFileName.trim() || defaultName;
             if (!finalName.toLowerCase().endsWith('.mp3')) finalName += '.mp3';
@@ -877,6 +938,9 @@
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
+            
+            playSaveSound();
+            setStatus('✅ Сохранено!', 'done', '✅ Файл сохранён: ' + finalName);
         }
 
         // ====== СБРОС ======
@@ -889,6 +953,7 @@
             audioBufferData = null;
             finalFile = null;
             finalBlob = null;
+            isAutoSaveDone = false;
             if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
             setStatus('Готов', '', 'Нажмите «Захват» и выберите вкладку с звуком');
             updateMainBtn('▶ Захват', '');
