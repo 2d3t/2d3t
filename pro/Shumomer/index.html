@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Шумомер + график + калибровка + авточувствительность</title>
+
+
+<link rel="manifest" href="manifest.json">
+
+    <!-- Иконки PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
+
+
+    <title>Шумомер · график · калибровка · авто‑чувствительность · шкала 200 дБ</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
@@ -324,6 +339,15 @@
             color: #00337a;
             display: inline-block;
         }
+        .scale-badge {
+            background: #d5dff0;
+            border-radius: 30px;
+            padding: 2px 14px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #002856;
+            margin-left: 6px;
+        }
     </style>
 </head>
 <body>
@@ -332,9 +356,10 @@
             <span>🎙️ Шумомер</span>
             <span style="font-size: 1rem; font-weight: 400; margin-left: auto; background: #eaf1fa; padding: 4px 18px; border-radius: 40px;">
                 <span class="status-led"></span> реальное время
+                <span class="scale-badge">шкала 200 дБ</span>
             </span>
         </h1>
-        <div class="sub">Микрофон · график · максимум · калибровка · авточувствительность</div>
+        <div class="sub">Микрофон · график · максимум · калибровка · авточувствительность · расширенный диапазон до 200 дБ</div>
 
         <div class="grid-2col">
             <!-- левая панель -->
@@ -351,7 +376,7 @@
                 <!-- чувствительность + авто -->
                 <div class="sensitivity-wrap">
                     <label>🔊 чувствит.</label>
-                    <input type="range" id="sensSlider" min="0.2" max="6.0" step="0.05" value="2.0">
+                    <input type="range" id="sensSlider" min="0.2" max="6.0" step="0.05" value="0.65">
                     <span class="sens-value" id="sensValue">2.00</span>
                     <button class="btn btn-warning" id="autoSensBtn" style="flex:0 1 auto; padding: 6px 16px; font-size:0.8rem;">🤖 Авто</button>
                     <span class="auto-sens-badge" id="autoSensStatus">выкл</span>
@@ -391,7 +416,7 @@
                 </div>
             </div>
         </div>
-        <div class="footer-note">Максимальная шкала — 120 дБ. Калибровка вычитает фоновый шум. Чувствительность увеличена в 2 раза.</div>
+        <div class="footer-note">Максимальная шкала — 200 дБ (расширена). Калибровка вычитает фоновый шум. Чувствительность увеличена в 2 раза.</div>
     </div>
 
     <script>
@@ -438,7 +463,7 @@
                         x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 9 } } },
                         y: {
                             min: 0,
-                            max: 120,
+                            max: 200, // 🚀 расширенная шкала до 200 дБ
                             grid: { color: '#dde6f0' },
                             ticks: { stepSize: 20, font: { size: 9 } }
                         }
@@ -451,7 +476,7 @@
             let currentMax = 0;
             let historyData = [];
             const MAX_POINTS = 120;
-            let sensitivity = 2.0; // Увеличена базовая чувствительность в 2 раза
+            let sensitivity = 2.0; // базовая чувствительность
             let calibrationOffset = 0;
             let isAutoSens = false;
             let autoSensTimer = null;
@@ -500,7 +525,7 @@
                 // 2. Применяем чувствительность
                 let value = calibrated * sensitivity;
                 if (value < 0) value = 0;
-                if (value > 120) value = 120;
+                if (value > 200) value = 200; // ограничение до 200 дБ
                 value = Math.round(value * 10) / 10;
 
                 // 3. Обновляем максимум
@@ -572,7 +597,7 @@
                     let db = 0;
                     if (avg > 0) {
                         const normalized = avg / 255;
-                        db = Math.min(120, Math.max(0, normalized * 120));
+                        db = Math.min(200, Math.max(0, normalized * 200)); // шкала 200
                         if (db < 1) db = 0;
                     }
                     samples.push(db);
@@ -627,7 +652,7 @@
             function renderSavedRecords() {
                 if (savedRecords.length === 0) {
                     savedContainer.innerHTML =
-                    `<span style="opacity:0.6; font-size:0.85rem; color:#1a2f44;">Нет сохранённых максимумов</span>`;
+                        `<span style="opacity:0.6; font-size:0.85rem; color:#1a2f44;">Нет сохранённых максимумов</span>`;
                     return;
                 }
                 let html = '';
@@ -667,7 +692,7 @@
                     `;
 
                 const title = document.createElement('h2');
-                title.textContent = '📊 Сохранённые максимумы шума';
+                title.textContent = '📊 Сохранённые максимумы шума (шкала 200 дБ)';
                 title.style.cssText = 'margin: 0 0 8px 0; color: #0b1a2b; font-weight: 700; font-size: 1.8rem;';
                 container.appendChild(title);
 
@@ -721,7 +746,7 @@
                 const footer = document.createElement('div');
                 footer.style.cssText =
                     'margin-top: 24px; font-size: 0.9rem; color: #1f3a55; border-top: 2px solid #cfdcec; padding-top: 16px; text-align: center; font-weight: 500;';
-                footer.textContent = 'Сгенерировано шумомером';
+                footer.textContent = 'Сгенерировано шумомером · диапазон 200 дБ';
                 container.appendChild(footer);
 
                 document.body.appendChild(container);
@@ -736,7 +761,7 @@
                         logging: false,
                     });
                     const link = document.createElement('a');
-                    link.download = `шумомер_максимумы_${new Date().toISOString().slice(0,10)}.jpeg`;
+                    link.download = `шумомер_максимумы_200dB_${new Date().toISOString().slice(0,10)}.jpeg`;
                     link.href = canvas.toDataURL('image/jpeg', 0.95);
                     link.click();
                 } catch (err) {
@@ -780,7 +805,7 @@
                 let db = 0;
                 if (avg > 0) {
                     const normalized = avg / 255;
-                    db = Math.min(120, Math.max(0, normalized * 120));
+                    db = Math.min(200, Math.max(0, normalized * 200)); // шкала 200
                     if (db < 1) db = 0;
                     db = Math.round(db * 10) / 10;
                 }
@@ -898,5 +923,231 @@
 
         })();
     </script>
+
+
+
+
+<script>
+(function() {
+    "use strict";
+
+    // ============================================================
+    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
+    // ============================================================
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) {
+            oldOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() {
+            overlay.remove();
+        };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+
+        // ============================================================
+        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
+        // ============================================================
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    // ============================================================
+    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
+    // ============================================================
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 5000);
+
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    // ============================================================
+    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
+    // ============================================================
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() {
+                notification.remove();
+            }, 500);
+        }, 3000);
+    }
+
+    // Делаем функции глобальными
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    // ============================================================
+    // ОФЛАЙН-ФУНКЦИОНАЛ
+    // ============================================================
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+
+        navigator.serviceWorker.getRegistration()
+            .then(function(registration) {
+                if (registration) {
+                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
+                    return;
+                }
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(reg) {
+                        console.log('[SW] ✅ Зарегистрирован:', reg);
+                    })
+                    .catch(function(err) {
+                        console.error('[SW] ❌ Ошибка:', err);
+                    });
+            })
+            .catch(function(err) {
+                console.error('[SW] ❌ Ошибка проверки:', err);
+            });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log('📡 ' + status);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', function() {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then(function(registration) {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(function() {});
+            }
+        });
+
+        window.addEventListener('offline', function() {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+
+
+
+
 </body>
 </html>
