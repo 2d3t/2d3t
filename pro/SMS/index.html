@@ -125,7 +125,7 @@
             gap: 6px;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
-            min-height: 0; /* Важно для корректной работы flex */
+            min-height: 0;
         }
         .message-wrapper {
             display: flex;
@@ -238,7 +238,7 @@
         }
         .image-modal .close-modal:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 
-        /* Исправленная панель ввода — всегда видима */
+        /* Панель ввода */
         .input-bar {
             padding: 10px 14px 14px;
             background: rgba(255,255,255,0.03);
@@ -252,6 +252,10 @@
             flex: 0 0 auto;
             position: relative;
             z-index: 5;
+            transition: all 0.3s ease;
+        }
+        .input-bar.hidden {
+            display: none !important;
         }
         .input-bar textarea {
             flex: 1;
@@ -306,6 +310,63 @@
         }
         .input-bar .send-btn:active { transform: scale(0.9); }
 
+        /* ПЛАВАЮЩАЯ КНОПКА-КЛАВИАТУРА */
+        .floating-keyboard-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            border: none;
+            color: #fff;
+            font-size: 30px;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(108, 92, 231, 0.4);
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            animation: pulseBtn 2s infinite;
+        }
+        .floating-keyboard-btn:active {
+            transform: scale(0.85);
+        }
+        .floating-keyboard-btn.show {
+            display: flex;
+        }
+        @keyframes pulseBtn {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* КНОПКА ЗАКРЫТИЯ ПАНЕЛИ */
+        .close-panel-btn {
+            position: absolute;
+            top: -12px;
+            right: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #888;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 14px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .close-panel-btn:hover { background: rgba(255,255,255,0.2); }
+        .close-panel-btn:active { transform: scale(0.85); }
+        .input-bar:hover .close-panel-btn,
+        .input-bar:active .close-panel-btn {
+            display: flex;
+        }
+
         .toast {
             position: fixed; bottom: 100px; left: 50%;
             transform: translateX(-50%);
@@ -341,6 +402,13 @@
             .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
             .image-modal img { max-height: 80vh; }
             .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -6px; right: -6px; }
+            .floating-keyboard-btn {
+                width: 56px;
+                height: 56px;
+                font-size: 26px;
+                bottom: 20px;
+                right: 20px;
+            }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -380,8 +448,9 @@
         <div class="skeleton other"></div>
     </div>
 
-    <!-- Панель ввода с гарантированным отображением -->
+    <!-- Панель ввода -->
     <div class="input-bar" id="inputBar">
+        <button class="close-panel-btn" id="closePanelBtn" title="Скрыть панель">✕</button>
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
         <div class="action-buttons">
             <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
@@ -389,6 +458,9 @@
         </div>
     </div>
 </div>
+
+<!-- ПЛАВАЮЩАЯ КНОПКА-КЛАВИАТУРА -->
+<button class="floating-keyboard-btn" id="floatingKeyboardBtn" title="Показать панель ввода">⌨️</button>
 
 <div class="image-modal" id="imageModal">
     <button class="close-modal" id="closeModalBtn">✕</button>
@@ -407,7 +479,7 @@ const CONFIG = {
     filePath: 'chat.json',
     pollInterval: 5000,
     maxMessages: 1000,
-    maxImageSize: 5 * 1024 * 1024, // 5MB
+    maxImageSize: 5 * 1024 * 1024,
 };
 
 // ===================================================================
@@ -495,15 +567,44 @@ const userAvatar = $('userAvatar');
 const chatTitle = $('chatTitle');
 const toast = $('toast');
 const inputBar = $('inputBar');
+const closePanelBtn = $('closePanelBtn');
+const floatingKeyboardBtn = $('floatingKeyboardBtn');
 const imageModal = $('imageModal');
 const modalImage = $('modalImage');
 const closeModalBtn = $('closeModalBtn');
 
 // ===================================================================
+//  УПРАВЛЕНИЕ ПАНЕЛЬЮ ВВОДА
+// ===================================================================
+function showInputBar() {
+    inputBar.classList.remove('hidden');
+    floatingKeyboardBtn.classList.remove('show');
+    // Фокусируемся на поле ввода с небольшой задержкой
+    setTimeout(() => {
+        messageInput.focus();
+        // Прокручиваем к панели ввода
+        inputBar.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 100);
+}
+
+function hideInputBar() {
+    inputBar.classList.add('hidden');
+    floatingKeyboardBtn.classList.add('show');
+    messageInput.blur();
+}
+
+function toggleInputBar() {
+    if (inputBar.classList.contains('hidden')) {
+        showInputBar();
+    } else {
+        hideInputBar();
+    }
+}
+
+// ===================================================================
 //  ВСПОМОГАТЕЛЬНЫЕ
 // ===================================================================
 function getInitials(name) { return name.charAt(0).toUpperCase(); }
-function formatTime(iso) { return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
 function formatDate(iso) { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
 
 function formatFullTime(iso) {
@@ -520,16 +621,12 @@ function showToast(text, duration = 2000) {
     toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ СКРОЛЛА - теперь она не заставляет панель ввода исчезать
 function scrollToBottom() {
     setTimeout(() => {
         const container = messagesContainer;
-        // Скроллим только если есть переполнение
         if (container.scrollHeight > container.clientHeight) {
             container.scrollTop = container.scrollHeight;
         }
-        // Гарантируем, что панель ввода видна
-        ensureInputBarVisible();
     }, 50);
 }
 
@@ -759,14 +856,6 @@ async function deleteMessage(messageId) {
         state.sha = newSha;
         state.lastMessageCount = messages.length;
         
-        const cacheUrl = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}/contents/${CONFIG.filePath}`;
-        if ('caches' in window) {
-            try {
-                const cache = await caches.open('github-api-cache');
-                await cache.delete(cacheUrl);
-            } catch (e) {}
-        }
-        
         renderMessages(messages);
         soundManager.play('delete');
         showToast('🗑️ Сообщение удалено', 1000);
@@ -897,11 +986,12 @@ function login() {
     authScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
     
-    // Панель ввода всегда видима
-    ensureInputBarVisible();
-    
     userAvatar.textContent = getInitials(username);
     chatTitle.textContent = `Чат (${username})`;
+    
+    // Показываем панель ввода при входе
+    showInputBar();
+    
     loadMessages(true);
     startPolling();
 }
@@ -918,20 +1008,7 @@ function logout() {
     state.sha = null;
     state.lastMessageCount = 0;
     closeImageModal();
-}
-
-// ===================================================================
-//  ГАРАНТИЯ ВИДИМОСТИ ПАНЕЛИ ВВОДА (исправлено)
-// ===================================================================
-function ensureInputBarVisible() {
-    if (chatScreen.style.display === 'flex') {
-        inputBar.style.display = 'flex';
-        inputBar.style.flex = '0 0 auto';
-        inputBar.style.visibility = 'visible';
-        inputBar.style.opacity = '1';
-        // Принудительно сбрасываем любые трансформации
-        inputBar.style.transform = 'none';
-    }
+    hideInputBar();
 }
 
 // ===================================================================
@@ -988,13 +1065,31 @@ clearDataBtn.addEventListener('click', () => {
     }
 });
 
+// Управление панелью ввода
+floatingKeyboardBtn.addEventListener('click', showInputBar);
+closePanelBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    hideInputBar();
+});
+
+// Закрытие панели по Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeImageModal();
+        if (!inputBar.classList.contains('hidden')) {
+            hideInputBar();
+        }
+    }
+});
+
+// Модальное окно для изображений
 closeModalBtn.addEventListener('click', closeImageModal);
 imageModal.addEventListener('click', (e) => {
     if (e.target === imageModal) closeImageModal();
 });
 
+// Звуки
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeImageModal();
     if (e.ctrlKey && e.key === 'm') {
         e.preventDefault();
         const enabled = soundManager.toggle();
@@ -1013,35 +1108,31 @@ function restoreSession() {
     if (savedUsername && savedToken) {
         setTimeout(() => {
             login();
-            setTimeout(() => {
-                ensureInputBarVisible();
-            }, 100);
+            // После входа показываем панель
+            setTimeout(showInputBar, 300);
         }, 500);
     }
 }
 
-// Обработчик события scroll для защиты панели ввода
-messagesContainer.addEventListener('scroll', function() {
-    ensureInputBarVisible();
-});
-
-// Наблюдатель за изменением стиля chatScreen
-const observer = new MutationObserver(() => {
-    if (chatScreen.style.display === 'flex') {
-        setTimeout(ensureInputBarVisible, 50);
-    }
-});
-observer.observe(chatScreen, { attributes: true, attributeFilter: ['style'] });
-
-// Запуск
+// ===================================================================
+//  ЗАПУСК
+// ===================================================================
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
-// Усиленная защита - проверка каждую секунду
-setInterval(ensureInputBarVisible, 1000);
+// Если панель скрыта по какой-то причине, показываем кнопку
+setInterval(() => {
+    if (chatScreen.style.display === 'flex') {
+        if (inputBar.classList.contains('hidden')) {
+            floatingKeyboardBtn.classList.add('show');
+        } else {
+            floatingKeyboardBtn.classList.remove('show');
+        }
+    }
+}, 1000);
 
-console.log('✅ Чат загружен! Панель ввода всегда видима.');
-console.log('📁 Репозиторий:', CONFIG.repoOwner + '/' + CONFIG.repoName);
+console.log('✅ Чат загружен!');
+console.log('⌨️ Нажмите на кнопку-клавиатуру, чтобы показать панель ввода');
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 </script>
