@@ -16,7 +16,6 @@
             overflow: hidden;
         }
 
-        /* АВТОРИЗАЦИЯ */
         #authScreen {
             display: flex;
             flex-direction: column;
@@ -77,7 +76,6 @@
         .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
         .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
 
-        /* ЧАТ */
         #chatScreen {
             display: none;
             flex-direction: column;
@@ -116,7 +114,6 @@
         }
         .chat-header .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
 
-        /* СООБЩЕНИЯ */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -153,7 +150,6 @@
         .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
         .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
         
-        /* ИЗОБРАЖЕНИЯ В СООБЩЕНИЯХ */
         .message .image-container {
             margin: 6px 0 4px;
             border-radius: 12px;
@@ -173,7 +169,6 @@
         }
         .message .image-container img:active { transform: scale(0.98); }
         
-        /* КНОПКА УДАЛЕНИЯ */
         .delete-btn {
             position: absolute;
             top: -8px;
@@ -199,7 +194,6 @@
         .message-wrapper .delete-btn.show { display: flex; }
         .message-wrapper.own .delete-btn { display: flex; }
 
-        /* МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЙ */
         .image-modal {
             display: none;
             position: fixed;
@@ -241,17 +235,18 @@
         }
         .image-modal .close-modal:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 
-        /* ПАНЕЛЬ ВВОДА */
+        /* Исправленная панель ввода — всегда видима */
         .input-bar {
             padding: 10px 14px 14px;
             background: rgba(255,255,255,0.03);
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.06);
-            display: flex !important;
+            display: flex;
             gap: 10px;
             align-items: flex-end;
             flex-shrink: 0;
             min-height: 70px;
+            flex: 0 0 auto; /* фиксированная высота, не сжимается */
         }
         .input-bar textarea {
             flex: 1;
@@ -347,7 +342,6 @@
 </head>
 <body>
 
-<!-- ЭКРАН АВТОРИЗАЦИИ -->
 <div id="authScreen">
     <h1>💬 ChatHub</h1>
     <p class="subtitle">Мессенджер на GitHub</p>
@@ -363,7 +357,6 @@
     </div>
 </div>
 
-<!-- ЭКРАН ЧАТА -->
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
@@ -382,7 +375,7 @@
         <div class="skeleton other"></div>
     </div>
 
-    <!-- ПАНЕЛЬ ВВОДА -->
+    <!-- Панель ввода с гарантированным отображением -->
     <div class="input-bar" id="inputBar">
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
         <div class="action-buttons">
@@ -392,7 +385,6 @@
     </div>
 </div>
 
-<!-- МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЙ -->
 <div class="image-modal" id="imageModal">
     <button class="close-modal" id="closeModalBtn">✕</button>
     <img id="modalImage" src="" alt="Увеличенное изображение">
@@ -741,7 +733,6 @@ async function deleteMessage(messageId) {
             return;
         }
         
-        // Проверяем, что это сообщение пользователя
         if (messages[messageIndex].username !== state.username) {
             showToast('❌ Можно удалять только свои сообщения', 1500);
             return;
@@ -754,15 +745,12 @@ async function deleteMessage(messageId) {
         state.sha = newSha;
         state.lastMessageCount = messages.length;
         
-        // Очищаем кэш браузера для этого файла
         const cacheUrl = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}/contents/${CONFIG.filePath}`;
         if ('caches' in window) {
             try {
                 const cache = await caches.open('github-api-cache');
                 await cache.delete(cacheUrl);
-            } catch (e) {
-                // Игнорируем ошибки кэша
-            }
+            } catch (e) {}
         }
         
         renderMessages(messages);
@@ -892,12 +880,11 @@ function login() {
     localStorage.setItem('chathub_username', username);
     localStorage.setItem('chathub_token', token);
     
-    // Переключаем экраны
     authScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
     
-    // ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ ПАНЕЛЬ ВВОДА
-    inputBar.style.display = 'flex !important';
+    // Панель ввода всегда видима
+    inputBar.style.display = 'flex';
     inputBar.style.flex = '0 0 auto';
     
     userAvatar.textContent = getInitials(username);
@@ -974,13 +961,11 @@ clearDataBtn.addEventListener('click', () => {
     }
 });
 
-// Модальное окно для изображений
 closeModalBtn.addEventListener('click', closeImageModal);
 imageModal.addEventListener('click', (e) => {
     if (e.target === imageModal) closeImageModal();
 });
 
-// Закрытие по Escape
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeImageModal();
     if (e.ctrlKey && e.key === 'm') {
@@ -991,7 +976,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===================================================================
-//  ВОССТАНОВЛЕНИЕ СЕССИИ
+//  ВОССТАНОВЛЕНИЕ СЕССИИ + ГАРАНТИЯ ВИДИМОСТИ ПАНЕЛИ
 // ===================================================================
 function restoreSession() {
     const savedUsername = localStorage.getItem('chathub_username');
@@ -1001,54 +986,44 @@ function restoreSession() {
     if (savedUsername && savedToken) {
         setTimeout(() => {
             login();
-            // Дополнительно принудительно показываем панель ввода после входа
             setTimeout(() => {
-                inputBar.style.display = 'flex !important';
+                inputBar.style.display = 'flex';
                 inputBar.style.flex = '0 0 auto';
-                // Делаем панель видимой через inline стиль
-                inputBar.setAttribute('style', 'display: flex !important; flex: 0 0 auto;');
             }, 100);
         }, 500);
     }
 }
 
-// ===================================================================
-//  ЗАПУСК
-// ===================================================================
-// Принудительно показываем панель ввода при загрузке страницы
-window.addEventListener('load', function() {
+// Дополнительная страховка: всегда показываем панель ввода, если чат активен
+function ensureInputBarVisible() {
     if (chatScreen.style.display === 'flex') {
-        inputBar.style.display = 'flex !important';
+        inputBar.style.display = 'flex';
         inputBar.style.flex = '0 0 auto';
-        inputBar.setAttribute('style', 'display: flex !important; flex: 0 0 auto;');
+    }
+}
+
+// Наблюдатель за изменением стиля chatScreen
+const observer = new MutationObserver(() => {
+    if (chatScreen.style.display === 'flex') {
+        setTimeout(() => {
+            inputBar.style.display = 'flex';
+            inputBar.style.flex = '0 0 auto';
+        }, 50);
     }
 });
+observer.observe(chatScreen, { attributes: true, attributeFilter: ['style'] });
 
-// Перехватываем изменение стиля chatScreen
-const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.attributeName === 'style') {
-            if (chatScreen.style.display === 'flex') {
-                setTimeout(() => {
-                    inputBar.style.display = 'flex !important';
-                    inputBar.style.flex = '0 0 auto';
-                    inputBar.setAttribute('style', 'display: flex !important; flex: 0 0 auto;');
-                }, 50);
-            }
-        }
-    });
-});
-observer.observe(chatScreen, { attributes: true });
-
+// Запуск
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
-console.log('✅ Чат загружен!');
+// Периодическая проверка видимости (на случай, если что-то сбросит стиль)
+setInterval(ensureInputBarVisible, 2000);
+
+console.log('✅ Чат загружен! Панель ввода всегда видима.');
 console.log('📁 Репозиторий:', CONFIG.repoOwner + '/' + CONFIG.repoName);
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
-console.log('🗑️ Для удаления своих сообщений нажмите ✕ на сообщении');
 </script>
-
 </body>
 </html>
