@@ -142,8 +142,76 @@
         .message .text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
         .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
         .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
+        
+        /* ИЗОБРАЖЕНИЯ В СООБЩЕНИЯХ */
+        .message .image-container {
+            margin: 6px 0 4px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            background: rgba(0,0,0,0.2);
+            max-width: 100%;
+        }
+        .message .image-container img {
+            display: block;
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+        .message .image-container img:active { transform: scale(0.98); }
+        .message .file-name {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+            display: block;
+        }
 
-        /* ПАНЕЛЬ ВВОДА — ГЛАВНЫЙ БЛОК! */
+        /* МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЙ */
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            animation: fadeInModal 0.3s ease;
+        }
+        @keyframes fadeInModal { from { opacity:0; } to { opacity:1; } }
+        .image-modal.active { display: flex; }
+        .image-modal img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            animation: zoomIn 0.3s ease;
+        }
+        @keyframes zoomIn { from { transform: scale(0.8); opacity:0; } to { transform: scale(1); opacity:1; } }
+        .image-modal .close-modal {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-modal .close-modal:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
+
+        /* ПАНЕЛЬ ВВОДА */
         .input-bar {
             padding: 10px 14px 14px;
             background: rgba(255,255,255,0.03);
@@ -153,7 +221,7 @@
             gap: 10px;
             align-items: flex-end;
             flex-shrink: 0;
-            min-height: 70px; /* ← Важно! */
+            min-height: 70px;
         }
         .input-bar textarea {
             flex: 1;
@@ -173,6 +241,26 @@
         }
         .input-bar textarea:focus { border-color: #6c5ce7; }
         .input-bar textarea::placeholder { color: #555; }
+        .input-bar .action-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .input-bar .file-btn {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.06);
+            color: #888;
+            font-size: 22px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .input-bar .file-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
         .input-bar .send-btn {
             width: 48px; height: 48px;
             border-radius: 50%;
@@ -219,6 +307,8 @@
             .input-bar { padding: 8px 10px 12px; gap: 8px; min-height: 60px; }
             .input-bar textarea { font-size: 15px; padding: 10px 14px; min-height: 38px; }
             .input-bar .send-btn { width: 42px; height: 42px; font-size: 18px; }
+            .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
+            .image-modal img { max-height: 80vh; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -260,11 +350,20 @@
         <div class="skeleton other"></div>
     </div>
 
-    <!-- ПАНЕЛЬ ВВОДА - всегда видна! -->
+    <!-- ПАНЕЛЬ ВВОДА -->
     <div class="input-bar" id="inputBar">
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
-        <button class="send-btn" id="sendBtn">➤</button>
+        <div class="action-buttons">
+            <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
+            <button class="send-btn" id="sendBtn">➤</button>
+        </div>
     </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЙ -->
+<div class="image-modal" id="imageModal">
+    <button class="close-modal" id="closeModalBtn">✕</button>
+    <img id="modalImage" src="" alt="Увеличенное изображение">
 </div>
 
 <div class="toast" id="toast"></div>
@@ -275,10 +374,11 @@
 // ===================================================================
 const CONFIG = {
     repoOwner: '2d3t',
-    repoName: '2d3t',        // ← ИМЯ РЕПОЗИТОРИЯ!
+    repoName: '2d3t',
     filePath: 'chat.json',
     pollInterval: 5000,
     maxMessages: 1000,
+    maxImageSize: 5 * 1024 * 1024, // 5MB
 };
 
 // ===================================================================
@@ -292,21 +392,12 @@ class SoundManager {
     }
 
     initSounds() {
-        // Создаём звуки с помощью Web Audio API (работает без внешних файлов)
         this.sounds.send = this.createBeep(600, 0.1);
         this.sounds.receive = this.createBeep(800, 0.15);
         this.sounds.error = this.createBeep(300, 0.3);
     }
 
     createBeep(freq, duration) {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        oscillator.frequency.value = freq;
-        oscillator.type = 'sine';
-        gainNode.gain.value = 0.1;
         return {
             play: () => {
                 try {
@@ -368,11 +459,15 @@ const clearDataBtn = $('clearDataBtn');
 const messagesContainer = $('messagesContainer');
 const messageInput = $('messageInput');
 const sendBtn = $('sendBtn');
+const fileBtn = $('fileBtn');
 const exitBtn = $('exitBtn');
 const userAvatar = $('userAvatar');
 const chatTitle = $('chatTitle');
 const toast = $('toast');
 const inputBar = $('inputBar');
+const imageModal = $('imageModal');
+const modalImage = $('modalImage');
+const closeModalBtn = $('closeModalBtn');
 
 // ===================================================================
 //  ВСПОМОГАТЕЛЬНЫЕ
@@ -399,6 +494,54 @@ function scrollToBottom() {
     setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 50);
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===================================================================
+//  РАБОТА С ИЗОБРАЖЕНИЯМИ
+// ===================================================================
+function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.8) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function openImageModal(imageUrl) {
+    modalImage.src = imageUrl;
+    imageModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeImageModal() {
+    imageModal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
 // ===================================================================
 //  GITHUB API
 // ===================================================================
@@ -417,7 +560,10 @@ async function fetchFile(token, owner, repo, path) {
 
 async function saveFile(token, owner, repo, path, content, sha) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    const body = { message: `💬 Сообщение от ${state.username}`, content: btoa(JSON.stringify(content, null, 2)) };
+    const body = { 
+        message: `💬 Сообщение от ${state.username}`,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2))))
+    };
     if (sha) body.sha = sha;
     const response = await fetch(url, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) });
     if (!response.ok) { const error = await response.json(); throw new Error(error.message || `HTTP ${response.status}`); }
@@ -460,15 +606,21 @@ async function loadMessages(showLoading = true) {
     }
 }
 
-async function sendMessage(text) {
-    if (!text.trim() || state.isSending) return;
+async function sendMessage(text, imageData = null) {
+    if ((!text.trim() && !imageData) || state.isSending) return;
     state.isSending = true;
     sendBtn.disabled = true;
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         let messages = result.exists ? (result.content || []) : [];
         let sha = result.exists ? result.sha : null;
-        const newMessage = { id: Date.now(), username: state.username, text: text.trim(), time: new Date().toISOString() };
+        const newMessage = { 
+            id: Date.now(), 
+            username: state.username, 
+            text: text.trim() || '', 
+            time: new Date().toISOString(),
+            image: imageData || null
+        };
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
         const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, sha);
@@ -492,6 +644,31 @@ async function sendMessage(text) {
     }
 }
 
+async function handleFileUpload(file) {
+    if (!file) return;
+    
+    // Проверка типа файла
+    if (!file.type.startsWith('image/')) {
+        showToast('❌ Пожалуйста, выберите изображение', 2000);
+        return;
+    }
+    
+    // Проверка размера
+    if (file.size > CONFIG.maxImageSize) {
+        showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000);
+        return;
+    }
+    
+    try {
+        showToast('⏳ Сжатие изображения...', 1500);
+        const compressedImage = await compressImage(file, 800, 800, 0.8);
+        await sendMessage('', compressedImage);
+    } catch (error) {
+        console.error('Ошибка загрузки изображения:', error);
+        showToast('❌ Ошибка при обработке изображения', 3000);
+    }
+}
+
 // ===================================================================
 //  РЕНДЕРИНГ
 // ===================================================================
@@ -510,10 +687,23 @@ function renderMessages(messages) {
         const isOwn = msg.username === state.username;
         const senderName = msg.username || 'Аноним';
         const fullTime = formatFullTime(msg.time);
+        
+        let content = '';
+        if (msg.text) {
+            content += `<span class="text">${escapeHtml(msg.text)}</span>`;
+        }
+        if (msg.image) {
+            content += `
+                <div class="image-container" onclick="openImageModal('${msg.image}')">
+                    <img src="${msg.image}" alt="Изображение" loading="lazy">
+                </div>
+            `;
+        }
+        
         html += `
             <div class="message ${isOwn ? 'own' : 'other'}">
                 <span class="sender">${isOwn ? 'Вы' : senderName}</span>
-                <span class="text">${escapeHtml(msg.text)}</span>
+                ${content}
                 <span class="time">${fullTime}</span>
             </div>
         `;
@@ -521,8 +711,6 @@ function renderMessages(messages) {
     messagesContainer.innerHTML = html;
     scrollToBottom();
 }
-
-function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
 // ===================================================================
 //  ПОЛЛИНГ
@@ -573,7 +761,6 @@ function login() {
     localStorage.setItem('chathub_token', token);
     authScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
-    // ✅ ЯВНО показываем панель ввода
     inputBar.style.display = 'flex';
     userAvatar.textContent = getInitials(username);
     chatTitle.textContent = `Чат (${username})`;
@@ -589,10 +776,10 @@ function logout() {
     usernameInput.value = '';
     tokenInput.value = '';
     authError.style.display = 'none';
-    // Очищаем состояние
     state.messages = [];
     state.sha = null;
     state.lastMessageCount = 0;
+    closeImageModal();
 }
 
 // ===================================================================
@@ -601,15 +788,36 @@ function logout() {
 loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+
 sendBtn.addEventListener('click', () => sendMessage(messageInput.value));
+
 messageInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(messageInput.value); }
+    if (e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        sendMessage(messageInput.value); 
+    }
 });
+
 messageInput.addEventListener('input', () => {
     messageInput.style.height = 'auto';
     messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
 });
+
+fileBtn.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        if (e.target.files.length > 0) {
+            handleFileUpload(e.target.files[0]);
+        }
+        input.remove();
+    };
+    input.click();
+});
+
 exitBtn.addEventListener('click', logout);
+
 clearDataBtn.addEventListener('click', () => {
     if (confirm('Очистить сохранённые данные?')) {
         localStorage.removeItem('chathub_username');
@@ -617,6 +825,22 @@ clearDataBtn.addEventListener('click', () => {
         usernameInput.value = '';
         tokenInput.value = '';
         showToast('🗑️ Данные очищены', 1500);
+    }
+});
+
+// Модальное окно для изображений
+closeModalBtn.addEventListener('click', closeImageModal);
+imageModal.addEventListener('click', (e) => {
+    if (e.target === imageModal) closeImageModal();
+});
+
+// Закрытие по Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeImageModal();
+    if (e.ctrlKey && e.key === 'm') {
+        e.preventDefault();
+        const enabled = soundManager.toggle();
+        showToast(`🔊 Звук ${enabled ? 'включён' : 'выключен'}`, 1000);
     }
 });
 
@@ -639,18 +863,10 @@ function restoreSession() {
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
-// Добавляем горячие клавиши для звука (Ctrl+M - вкл/выкл звук)
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'm') {
-        e.preventDefault();
-        const enabled = soundManager.toggle();
-        showToast(`🔊 Звук ${enabled ? 'включён' : 'выключен'}`, 1000);
-    }
-});
-
 console.log('✅ Чат загружен!');
 console.log('📁 Репозиторий:', CONFIG.repoOwner + '/' + CONFIG.repoName);
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
+console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 </script>
 
 </body>
