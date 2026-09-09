@@ -127,18 +127,28 @@
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
         }
-        .message {
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
             max-width: 82%;
+            animation: fadeIn 0.3s ease;
+            position: relative;
+        }
+        .message-wrapper.own { align-self: flex-end; }
+        .message-wrapper.other { align-self: flex-start; }
+        
+        .message {
             padding: 10px 14px;
             border-radius: 18px;
             word-wrap: break-word;
-            animation: fadeIn 0.3s ease;
+            position: relative;
         }
+        .message-wrapper.own .message { background: linear-gradient(135deg, #6c5ce7, #4a3f8f); border-bottom-right-radius: 4px; }
+        .message-wrapper.other .message { background: rgba(255,255,255,0.07); border-bottom-left-radius: 4px; }
+        
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-        .message.own { align-self: flex-end; background: linear-gradient(135deg, #6c5ce7, #4a3f8f); border-bottom-right-radius: 4px; }
-        .message.other { align-self: flex-start; background: rgba(255,255,255,0.07); border-bottom-left-radius: 4px; }
         .message .sender { font-size: 12px; font-weight: 600; color: #6c5ce7; margin-bottom: 3px; display: block; }
-        .message.own .sender { color: #a78bfa; }
+        .message-wrapper.own .sender { color: #a78bfa; }
         .message .text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
         .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
         .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
@@ -162,12 +172,32 @@
             transition: transform 0.2s;
         }
         .message .image-container img:active { transform: scale(0.98); }
-        .message .file-name {
+        
+        /* КНОПКА УДАЛЕНИЯ */
+        .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,0,0,0.8);
+            color: #fff;
             font-size: 12px;
-            color: #888;
-            margin-top: 4px;
-            display: block;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 10;
+            padding: 0;
         }
+        .delete-btn:active { transform: scale(0.8); }
+        .message-wrapper:hover .delete-btn,
+        .message-wrapper:active .delete-btn,
+        .message-wrapper .delete-btn.show { display: flex; }
+        .message-wrapper.own .delete-btn { display: flex; }
 
         /* МОДАЛЬНОЕ ОКНО ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЙ */
         .image-modal {
@@ -302,13 +332,15 @@
         @media (max-width: 480px) {
             .auth-form { padding: 20px 16px; }
             #authScreen h1 { font-size: 32px; }
-            .message { max-width: 88%; font-size: 15px; }
+            .message-wrapper { max-width: 88%; }
+            .message { font-size: 15px; }
             .chat-header { padding: 10px 14px; }
             .input-bar { padding: 8px 10px 12px; gap: 8px; min-height: 60px; }
             .input-bar textarea { font-size: 15px; padding: 10px 14px; min-height: 38px; }
             .input-bar .send-btn { width: 42px; height: 42px; font-size: 18px; }
             .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
             .image-modal img { max-height: 80vh; }
+            .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -6px; right: -6px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -351,7 +383,7 @@
     </div>
 
     <!-- ПАНЕЛЬ ВВОДА -->
-    <div class="input-bar" id="inputBar">
+    <div class="input-bar" id="inputBar" style="display: flex !important;">
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
         <div class="action-buttons">
             <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
@@ -395,6 +427,7 @@ class SoundManager {
         this.sounds.send = this.createBeep(600, 0.1);
         this.sounds.receive = this.createBeep(800, 0.15);
         this.sounds.error = this.createBeep(300, 0.3);
+        this.sounds.delete = this.createBeep(400, 0.1);
     }
 
     createBeep(freq, duration) {
@@ -545,26 +578,19 @@ function closeImageModal() {
 // ===================================================================
 //  КОРРЕКТНАЯ РАБОТА С UTF-8 В GITHUB
 // ===================================================================
-// Функция для правильного кодирования UTF-8 в base64
 function utf8ToBase64(str) {
-    // Сначала кодируем строку в UTF-8
     const utf8Bytes = new TextEncoder().encode(str);
-    // Затем конвертируем в base64
     let binary = '';
     utf8Bytes.forEach(byte => binary += String.fromCharCode(byte));
     return btoa(binary);
 }
 
-// Функция для правильного декодирования base64 в UTF-8
 function base64ToUtf8(base64) {
-    // Декодируем base64 в бинарные данные
     const binary = atob(base64);
-    // Конвертируем в массив байтов
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
         bytes[i] = binary.charCodeAt(i);
     }
-    // Декодируем UTF-8
     return new TextDecoder('utf-8').decode(bytes);
 }
 
@@ -585,8 +611,6 @@ async function fetchFile(token, owner, repo, path) {
     if (response.status === 404) return { exists: false };
     if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
     const data = await response.json();
-    
-    // Правильно декодируем содержимое
     const content = JSON.parse(base64ToUtf8(data.content));
     return { exists: true, sha: data.sha, content: content };
 }
@@ -597,7 +621,7 @@ async function saveFile(token, owner, repo, path, content, sha) {
     const encoded = utf8ToBase64(jsonString);
     
     const body = { 
-        message: `💬 Сообщение от ${state.username}`,
+        message: `💬 Обновление чата`,
         content: encoded
     };
     if (sha) body.sha = sha;
@@ -616,7 +640,7 @@ async function saveFile(token, owner, repo, path, content, sha) {
 }
 
 // ===================================================================
-//  ЗАГРУЗКА / ОТПРАВКА
+//  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ
 // ===================================================================
 async function loadMessages(showLoading = true) {
     try {
@@ -702,6 +726,44 @@ async function sendMessage(text, imageData = null) {
     }
 }
 
+async function deleteMessage(messageId) {
+    if (!confirm('Удалить это сообщение?')) return;
+    
+    try {
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        if (!result.exists) return;
+        
+        let messages = result.content || [];
+        const messageIndex = messages.findIndex(msg => msg.id === messageId);
+        
+        if (messageIndex === -1) {
+            showToast('❌ Сообщение не найдено', 1500);
+            return;
+        }
+        
+        // Проверяем, что это сообщение пользователя
+        if (messages[messageIndex].username !== state.username) {
+            showToast('❌ Можно удалять только свои сообщения', 1500);
+            return;
+        }
+        
+        messages.splice(messageIndex, 1);
+        
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, result.sha);
+        state.messages = messages;
+        state.sha = newSha;
+        state.lastMessageCount = messages.length;
+        
+        renderMessages(messages);
+        soundManager.play('delete');
+        showToast('🗑️ Сообщение удалено', 1000);
+    } catch (error) {
+        console.error('Ошибка удаления:', error);
+        soundManager.play('error');
+        showToast('❌ Ошибка: ' + error.message, 3000);
+    }
+}
+
 async function handleFileUpload(file) {
     if (!file) return;
     
@@ -757,10 +819,13 @@ function renderMessages(messages) {
         }
         
         html += `
-            <div class="message ${isOwn ? 'own' : 'other'}">
-                <span class="sender">${isOwn ? 'Вы' : senderName}</span>
-                ${content}
-                <span class="time">${fullTime}</span>
+            <div class="message-wrapper ${isOwn ? 'own' : 'other'}">
+                <div class="message">
+                    <span class="sender">${isOwn ? 'Вы' : senderName}</span>
+                    ${content}
+                    <span class="time">${fullTime}</span>
+                </div>
+                ${isOwn ? `<button class="delete-btn" onclick="deleteMessage(${msg.id})" title="Удалить">✕</button>` : ''}
             </div>
         `;
     });
@@ -815,9 +880,13 @@ function login() {
     state.token = token;
     localStorage.setItem('chathub_username', username);
     localStorage.setItem('chathub_token', token);
+    
+    // Переключаем экраны и принудительно показываем панель ввода
     authScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
-    inputBar.style.display = 'flex';
+    inputBar.style.display = 'flex !important';
+    inputBar.style.flex = '0 0 auto';
+    
     userAvatar.textContent = getInitials(username);
     chatTitle.textContent = `Чат (${username})`;
     loadMessages(true);
@@ -917,7 +986,13 @@ function restoreSession() {
     if (savedUsername) usernameInput.value = savedUsername;
     if (savedToken) tokenInput.value = savedToken;
     if (savedUsername && savedToken) {
-        setTimeout(login, 500);
+        // Принудительно показываем панель ввода при автовходе
+        setTimeout(() => {
+            login();
+            // Дополнительно принудительно показываем панель ввода
+            inputBar.style.display = 'flex !important';
+            inputBar.style.flex = '0 0 auto';
+        }, 500);
     }
 }
 
@@ -931,6 +1006,7 @@ console.log('✅ Чат загружен!');
 console.log('📁 Репозиторий:', CONFIG.repoOwner + '/' + CONFIG.repoName);
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
+console.log('🗑️ Для удаления своих сообщений нажмите ✕ на сообщении');
 </script>
 
 </body>
