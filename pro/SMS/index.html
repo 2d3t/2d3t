@@ -332,9 +332,6 @@
             z-index: 5;
             transition: all 0.3s ease;
         }
-        .input-bar.hidden {
-            display: none !important;
-        }
         .input-bar textarea {
             flex: 1;
             padding: 12px 16px;
@@ -398,57 +395,6 @@
             100% { transform: scale(1); }
         }
 
-        .floating-keyboard-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #6c5ce7, #00b894);
-            border: none;
-            color: #fff;
-            font-size: 30px;
-            cursor: pointer;
-            box-shadow: 0 8px 30px rgba(108, 92, 231, 0.4);
-            z-index: 50;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            animation: pulseBtn 2s infinite;
-        }
-        .floating-keyboard-btn:active { transform: scale(0.85); }
-        .floating-keyboard-btn.show { display: flex; }
-        @keyframes pulseBtn {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-
-        .close-panel-btn {
-            position: absolute;
-            top: -12px;
-            right: 12px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #888;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            font-size: 14px;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-        .close-panel-btn:hover { background: rgba(255,255,255,0.2); }
-        .close-panel-btn:active { transform: scale(0.85); }
-        .input-bar:hover .close-panel-btn,
-        .input-bar:active .close-panel-btn {
-            display: flex;
-        }
-
         .toast {
             position: fixed; bottom: 100px; left: 50%;
             transform: translateX(-50%);
@@ -485,7 +431,6 @@
             .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
             .image-modal img { max-height: 80vh; }
             .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -5px; right: -5px; }
-            .floating-keyboard-btn { width: 56px; height: 56px; font-size: 26px; bottom: 20px; right: 20px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -537,7 +482,6 @@
     </div>
 
     <div class="input-bar" id="inputBar">
-        <button class="close-panel-btn" id="closePanelBtn" title="Скрыть панель">✕</button>
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
         <div class="action-buttons">
             <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
@@ -545,8 +489,6 @@
         </div>
     </div>
 </div>
-
-<button class="floating-keyboard-btn" id="floatingKeyboardBtn" title="Показать панель ввода">⌨️</button>
 
 <div class="image-modal" id="imageModal">
     <button class="close-modal" id="closeModalBtn">✕</button>
@@ -582,7 +524,7 @@ class SoundManager {
         this.sounds.receive = this.createBeep(800, 0.15);
         this.sounds.error = this.createBeep(300, 0.3);
         this.sounds.delete = this.createBeep(400, 0.1);
-        this.sounds.click = this.createBeep(500, 0.05); // Короткий клик
+        this.sounds.click = this.createBeep(1000, 0.03); // Короткий и высокий для тактильности
     }
     createBeep(freq, duration) {
         return {
@@ -595,7 +537,7 @@ class SoundManager {
                     gain.connect(ctx.destination);
                     osc.frequency.value = freq;
                     osc.type = 'sine';
-                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
                     osc.start(ctx.currentTime);
                     osc.stop(ctx.currentTime + duration);
@@ -650,32 +592,9 @@ const userAvatar = $('userAvatar');
 const chatTitle = $('chatTitle');
 const toast = $('toast');
 const inputBar = $('inputBar');
-const closePanelBtn = $('closePanelBtn');
-const floatingKeyboardBtn = $('floatingKeyboardBtn');
 const imageModal = $('imageModal');
 const modalImage = $('modalImage');
 const closeModalBtn = $('closeModalBtn');
-
-// ===================================================================
-//  УПРАВЛЕНИЕ ПАНЕЛЬЮ ВВОДА
-// ===================================================================
-function showInputBar() {
-    inputBar.classList.remove('hidden');
-    floatingKeyboardBtn.classList.remove('show');
-    setTimeout(() => {
-        messageInput.focus();
-        inputBar.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 100);
-}
-function hideInputBar() {
-    inputBar.classList.add('hidden');
-    floatingKeyboardBtn.classList.add('show');
-    messageInput.blur();
-}
-function toggleInputBar() {
-    if (inputBar.classList.contains('hidden')) showInputBar();
-    else hideInputBar();
-}
 
 // ===================================================================
 //  ВСПОМОГАТЕЛЬНЫЕ
@@ -860,6 +779,9 @@ async function sendMessage(text, imageData = null) {
     const hasImage = imageData !== null;
     if ((!hasText && !hasImage) || state.isSending) return;
     
+    // Воспроизводим звук клика в момент нажатия
+    soundManager.play('click');
+    
     state.isSending = true;
     sendBtn.disabled = true;
     
@@ -892,8 +814,7 @@ async function sendMessage(text, imageData = null) {
         renderMessages(messages);
         scrollToBottom();
         
-        // Звук отправки + тактильный клик
-        soundManager.play('click'); // Короткий клик для тактильности
+        // Звук успешной отправки
         soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
     } catch (error) {
@@ -1086,7 +1007,6 @@ async function login() {
         exitFromAuthBtn.classList.remove('show');
         userAvatar.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
-        showInputBar();
         await loadMessages(true);
         startPolling();
     } catch (error) {
@@ -1111,7 +1031,6 @@ function logout() {
     state.sha = null;
     state.lastMessageCount = 0;
     closeImageModal();
-    hideInputBar();
     
     showToast('👋 Вы вышли из чата', 1500);
 }
@@ -1184,16 +1103,9 @@ clearDataBtn.addEventListener('click', () => {
     }
 });
 
-floatingKeyboardBtn.addEventListener('click', showInputBar);
-closePanelBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    hideInputBar();
-});
-
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeImageModal();
-        if (!inputBar.classList.contains('hidden')) hideInputBar();
     }
 });
 
@@ -1229,7 +1141,6 @@ async function restoreSession() {
             exitFromAuthBtn.classList.remove('show');
             userAvatar.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
-            showInputBar();
             await loadMessages(true);
             startPolling();
         } catch (error) {
@@ -1246,16 +1157,8 @@ async function restoreSession() {
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
-setInterval(() => {
-    if (chatScreen.style.display === 'flex') {
-        if (inputBar.classList.contains('hidden')) floatingKeyboardBtn.classList.add('show');
-        else floatingKeyboardBtn.classList.remove('show');
-    }
-}, 1000);
-
 console.log('✅ SMS Чат загружен!');
 console.log('📱 Название: SMS Чат');
-console.log('⌨️ Нажмите на кнопку-клавиатуру, чтобы показать панель ввода');
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
