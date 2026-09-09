@@ -379,6 +379,53 @@
         }
         .message .image-container img:active { transform: scale(0.98); }
         
+        /* ===== МИНИ-АВАТАРКИ В СООБЩЕНИЯХ ===== */
+        .message-wrapper .msg-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 4px;
+            border: 2px solid rgba(255,255,255,0.08);
+        }
+        .message-wrapper .msg-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .message-wrapper .msg-avatar .initials {
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .message-wrapper .message-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .message-wrapper.own .message-row {
+            flex-direction: row-reverse;
+        }
+        .message-wrapper.other .message-row {
+            flex-direction: row;
+        }
+        .message-wrapper .msg-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .message-wrapper .msg-avatar.own-avatar {
+            border-color: rgba(108,92,231,0.4);
+        }
+        
         .delete-btn {
             position: absolute;
             top: -6px;
@@ -715,6 +762,7 @@
             .audio-play-btn { width: 28px; height: 28px; font-size: 12px; }
             .audio-duration { font-size: 10px; min-width: 30px; }
             .audio-recording-ui .recording-timer { font-size: 12px; min-width: 50px; }
+            .message-wrapper .msg-avatar { width: 24px; height: 24px; font-size: 10px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -923,6 +971,11 @@ function escapeHtml(text) {
 }
 function isOwnMessage(msg) {
     return msg.username === state.username && state.isAuthorized;
+}
+
+function getUserAvatar(username) {
+    const user = state.users.find(u => u.username === username);
+    return user && user.avatar ? user.avatar : null;
 }
 
 // ===================================================================
@@ -1644,6 +1697,15 @@ async function deleteMessage(messageId) {
 // ===================================================================
 //  РЕНДЕРИНГ
 // ===================================================================
+function renderAvatarHTML(username, isOwn = false) {
+    const avatarData = getUserAvatar(username);
+    if (avatarData) {
+        return `<img src="${avatarData}" alt="${escapeHtml(username)}">`;
+    } else {
+        return `<span class="initials">${getInitials(username)}</span>`;
+    }
+}
+
 function renderAudioMessage(audioData, isOwn) {
     return `
         <div class="audio-message" style="background: ${isOwn ? 'rgba(108,92,231,0.2)' : 'rgba(255,255,255,0.05)'};">
@@ -1731,15 +1793,24 @@ function renderMessages(messages, isArchiveView = false) {
             content += renderAudioMessage(msg.audio, isOwn);
         }
         
+        const avatarHtml = renderAvatarHTML(senderName, isOwn);
+        
         html += `
             <div class="message-wrapper ${isOwn ? 'own' : 'other'}">
-                <div class="message">
-                    <span class="sender">${isOwn ? 'Вы' : escapeHtml(senderName)}</span>
-                    ${content}
-                    <span class="time">${fullTime}</span>
-                    ${isArchived ? '<span class="archive-label">📦 Архив</span>' : ''}
+                <div class="message-row">
+                    <div class="msg-avatar ${isOwn ? 'own-avatar' : ''}">
+                        ${avatarHtml}
+                    </div>
+                    <div class="msg-content">
+                        <div class="message">
+                            <span class="sender">${isOwn ? 'Вы' : escapeHtml(senderName)}</span>
+                            ${content}
+                            <span class="time">${fullTime}</span>
+                            ${isArchived ? '<span class="archive-label">📦 Архив</span>' : ''}
+                        </div>
+                        ${isOwn ? `<button class="delete-btn" onclick="deleteMessage(${msg.id})" title="Удалить">✕</button>` : ''}
+                    </div>
                 </div>
-                ${isOwn ? `<button class="delete-btn" onclick="deleteMessage(${msg.id})" title="Удалить">✕</button>` : ''}
             </div>
         `;
     });
@@ -2114,7 +2185,7 @@ console.log('  🖼️ Изображения');
 console.log('  🎙️ Аудиосообщения (до 15 сек)');
 console.log('  📚 Архив сообщений (до 500)');
 console.log('  👥 Список пользователей');
-console.log('  🖼️ Аватарки пользователей (нажмите на свой аватар)');
+console.log('  🖼️ Аватарки пользователей (в шапке и рядом с сообщениями)');
 console.log('🔊 Ctrl+M - вкл/выкл звуки');
 console.log('🎙️ Alt+Space - запись аудио');
 </script>
