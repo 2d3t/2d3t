@@ -5,13 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ChatHub</title>
     <style>
-        /* ===== ВЕСЬ СТИЛЬ ИЗ ПРЕДЫДУЩЕГО КОДА (ОСТАВЛЯЕМ БЕЗ ИЗМЕНЕНИЙ) ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a0f;
@@ -22,7 +16,7 @@
             overflow: hidden;
         }
 
-        /* ===== АВТОРИЗАЦИЯ ===== */
+        /* АВТОРИЗАЦИЯ */
         #authScreen {
             display: flex;
             flex-direction: column;
@@ -32,7 +26,6 @@
             padding: 20px;
             background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
         }
-
         #authScreen h1 {
             font-size: 42px;
             font-weight: 700;
@@ -41,13 +34,7 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
         }
-
-        #authScreen .subtitle {
-            color: #888;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
+        #authScreen .subtitle { color: #888; margin-bottom: 30px; font-size: 14px; }
         .auth-form {
             width: 100%;
             max-width: 380px;
@@ -57,15 +44,7 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
         }
-
-        .auth-form label {
-            display: block;
-            font-size: 13px;
-            color: #999;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-
+        .auth-form label { display: block; font-size: 13px; color: #999; margin-bottom: 6px; font-weight: 500; }
         .auth-form input {
             width: 100%;
             padding: 14px 16px;
@@ -78,29 +57,10 @@
             margin-bottom: 16px;
             outline: none;
         }
-
-        .auth-form input:focus {
-            border-color: #6c5ce7;
-            background: rgba(255,255,255,0.08);
-            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
-        }
-
-        .auth-form input::placeholder {
-            color: #666;
-        }
-
-        .auth-form .help-text {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 18px;
-            line-height: 1.5;
-        }
-
-        .auth-form .help-text a {
-            color: #6c5ce7;
-            text-decoration: none;
-        }
-
+        .auth-form input:focus { border-color: #6c5ce7; background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(108,92,231,0.15); }
+        .auth-form input::placeholder { color: #666; }
+        .auth-form .help-text { font-size: 12px; color: #666; margin-bottom: 18px; line-height: 1.5; }
+        .auth-form .help-text a { color: #6c5ce7; text-decoration: none; }
         .btn {
             width: 100%;
             padding: 14px;
@@ -113,37 +73,17 @@
             background: linear-gradient(135deg, #6c5ce7, #00b894);
             color: #fff;
         }
+        .btn:active { transform: scale(0.97); }
+        .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
+        .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
 
-        .btn:active {
-            transform: scale(0.97);
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.08);
-            color: #aaa;
-            margin-top: 10px;
-        }
-
-        .btn-secondary:active {
-            background: rgba(255,255,255,0.12);
-        }
-
-        .error-msg {
-            color: #ff6b6b;
-            font-size: 13px;
-            margin-top: -10px;
-            margin-bottom: 12px;
-            display: none;
-        }
-
-        /* ===== ЧАТ ===== */
+        /* ЧАТ */
         #chatScreen {
             display: none;
             flex-direction: column;
             height: 100vh;
             background: #0a0a0f;
         }
-
         .chat-header {
             padding: 14px 20px;
             background: rgba(255,255,255,0.04);
@@ -153,78 +93,30 @@
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
-
-        .chat-header .left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
+        .chat-header .left { display: flex; align-items: center; gap: 12px; }
         .chat-header .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 40px; height: 40px; border-radius: 50%;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 18px;
-            color: #fff;
-            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 18px; color: #fff;
         }
-
-        .chat-header .info h2 {
-            font-size: 17px;
-            font-weight: 600;
-        }
-
-        .chat-header .info .status {
-            font-size: 12px;
-            color: #00b894;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
+        .chat-header .info h2 { font-size: 17px; font-weight: 600; }
+        .chat-header .info .status { font-size: 12px; color: #00b894; display: flex; align-items: center; gap: 5px; }
         .chat-header .info .status .dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #00b894;
-            display: inline-block;
+            width: 7px; height: 7px; border-radius: 50%; background: #00b894;
             animation: pulse 1.5s infinite;
         }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
         .chat-header .exit-btn {
-            background: rgba(255,255,255,0.06);
-            border: none;
-            color: #888;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: rgba(255,255,255,0.06); border: none; color: #888;
+            width: 38px; height: 38px; border-radius: 50%; font-size: 20px;
+            cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center;
         }
+        .chat-header .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
 
-        .chat-header .exit-btn:active {
-            background: rgba(255,255,255,0.12);
-            transform: scale(0.9);
-        }
-
+        /* СООБЩЕНИЯ */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -235,82 +127,23 @@
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
         }
-
-        .messages-container::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .messages-container::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .messages-container::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.15);
-            border-radius: 10px;
-        }
-
         .message {
             max-width: 82%;
             padding: 10px 14px;
             border-radius: 18px;
             word-wrap: break-word;
             animation: fadeIn 0.3s ease;
-            position: relative;
         }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .message.own { align-self: flex-end; background: linear-gradient(135deg, #6c5ce7, #4a3f8f); border-bottom-right-radius: 4px; }
+        .message.other { align-self: flex-start; background: rgba(255,255,255,0.07); border-bottom-left-radius: 4px; }
+        .message .sender { font-size: 12px; font-weight: 600; color: #6c5ce7; margin-bottom: 3px; display: block; }
+        .message.own .sender { color: #a78bfa; }
+        .message .text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
+        .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
+        .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message.own {
-            align-self: flex-end;
-            background: linear-gradient(135deg, #6c5ce7, #4a3f8f);
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.other {
-            align-self: flex-start;
-            background: rgba(255,255,255,0.07);
-            border-bottom-left-radius: 4px;
-        }
-
-        .message .sender {
-            font-size: 12px;
-            font-weight: 600;
-            color: #6c5ce7;
-            margin-bottom: 3px;
-            display: block;
-        }
-
-        .message.own .sender {
-            color: #a78bfa;
-        }
-
-        .message .text {
-            font-size: 15px;
-            line-height: 1.45;
-            white-space: pre-wrap;
-        }
-
-        .message .time {
-            font-size: 10px;
-            color: rgba(255,255,255,0.35);
-            margin-top: 4px;
-            display: block;
-            text-align: right;
-        }
-
-        .message.system {
-            align-self: center;
-            background: rgba(255,255,255,0.04);
-            border-radius: 30px;
-            padding: 6px 18px;
-            font-size: 12px;
-            color: #666;
-            max-width: 90%;
-        }
-
+        /* ПАНЕЛЬ ВВОДА — ГЛАВНЫЙ БЛОК! */
         .input-bar {
             padding: 10px 14px 14px;
             background: rgba(255,255,255,0.03);
@@ -320,8 +153,8 @@
             gap: 10px;
             align-items: flex-end;
             flex-shrink: 0;
+            min-height: 70px; /* ← Важно! */
         }
-
         .input-bar textarea {
             flex: 1;
             padding: 12px 16px;
@@ -338,62 +171,33 @@
             line-height: 1.4;
             transition: border 0.3s;
         }
-
-        .input-bar textarea:focus {
-            border-color: #6c5ce7;
-        }
-
-        .input-bar textarea::placeholder {
-            color: #555;
-        }
-
+        .input-bar textarea:focus { border-color: #6c5ce7; }
+        .input-bar textarea::placeholder { color: #555; }
         .input-bar .send-btn {
-            width: 48px;
-            height: 48px;
+            width: 48px; height: 48px;
             border-radius: 50%;
             border: none;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
             color: #fff;
             font-size: 22px;
             cursor: pointer;
-            transition: all 0.3s;
             flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-
-        .input-bar .send-btn:active {
-            transform: scale(0.9);
-        }
-
-        .input-bar .send-btn:disabled {
-            opacity: 0.4;
-            transform: none;
-        }
+        .input-bar .send-btn:active { transform: scale(0.9); }
 
         .toast {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
+            position: fixed; bottom: 100px; left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(10px);
-            padding: 10px 22px;
-            border-radius: 30px;
-            font-size: 14px;
-            color: #fff;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            padding: 10px 22px; border-radius: 30px; font-size: 14px; color: #fff;
             border: 1px solid rgba(255,255,255,0.08);
-            z-index: 999;
-            display: none;
-            animation: slideUp 0.3s ease;
-            white-space: nowrap;
+            z-index: 999; display: none;
+            animation: slideUp 0.3s ease; white-space: nowrap;
         }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
+        @keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
 
         .skeleton {
             background: rgba(255,255,255,0.04);
@@ -403,79 +207,48 @@
             animation: shimmer 1.5s infinite;
             margin-bottom: 6px;
         }
-
-        @keyframes shimmer {
-            0% { opacity: 0.4; }
-            50% { opacity: 0.8; }
-            100% { opacity: 0.4; }
-        }
-
-        .skeleton.own {
-            align-self: flex-end;
-        }
-
-        .skeleton.other {
-            align-self: flex-start;
-        }
+        @keyframes shimmer { 0%{opacity:0.4} 50%{opacity:0.8} 100%{opacity:0.4} }
+        .skeleton.own { align-self: flex-end; }
+        .skeleton.other { align-self: flex-start; }
 
         @media (max-width: 480px) {
             .auth-form { padding: 20px 16px; }
             #authScreen h1 { font-size: 32px; }
             .message { max-width: 88%; font-size: 15px; }
             .chat-header { padding: 10px 14px; }
-            .chat-header .info h2 { font-size: 15px; }
-            .input-bar { padding: 8px 10px 12px; gap: 8px; }
+            .input-bar { padding: 8px 10px 12px; gap: 8px; min-height: 60px; }
             .input-bar textarea { font-size: 15px; padding: 10px 14px; min-height: 38px; }
             .input-bar .send-btn { width: 42px; height: 42px; font-size: 18px; }
-            .messages-container { padding: 12px 10px 4px; }
-            .toast { bottom: 90px; font-size: 13px; padding: 8px 18px; }
         }
-
-        @media (max-width: 380px) {
-            .message { max-width: 92%; font-size: 14px; padding: 8px 12px; }
-            .auth-form { padding: 16px 12px; }
-            .chat-header .avatar { width: 34px; height: 34px; font-size: 14px; }
-        }
-
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
 </head>
 <body>
 
-<!-- ===== ЭКРАН АВТОРИЗАЦИИ ===== -->
+<!-- ЭКРАН АВТОРИЗАЦИИ -->
 <div id="authScreen">
     <h1>💬 ChatHub</h1>
     <p class="subtitle">Мессенджер на GitHub</p>
-
     <div class="auth-form">
         <label>👤 Ваш логин</label>
-        <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20" autocomplete="off">
-
+        <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20">
         <label>🔑 GitHub Token</label>
         <input type="password" id="tokenInput" placeholder="Вставьте токен доступа">
-        <div class="help-text">
-            <a href="https://github.com/settings/tokens/new" target="_blank">Создать токен</a>
-            (права <strong>repo</strong>)
-        </div>
-
+        <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank">Создать токен</a> (права <strong>repo</strong>)</div>
         <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
-
         <button class="btn" id="loginBtn">🚀 Войти</button>
         <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
     </div>
 </div>
 
-<!-- ===== ЭКРАН ЧАТА ===== -->
+<!-- ЭКРАН ЧАТА -->
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
             <div class="avatar" id="userAvatar">?</div>
             <div class="info">
                 <h2 id="chatTitle">Общий чат</h2>
-                <div class="status">
-                    <span class="dot"></span>
-                    <span id="onlineStatus">онлайн</span>
-                </div>
+                <div class="status"><span class="dot"></span><span id="onlineStatus">онлайн</span></div>
             </div>
         </div>
         <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
@@ -485,11 +258,10 @@
         <div class="skeleton other"></div>
         <div class="skeleton own"></div>
         <div class="skeleton other"></div>
-        <div class="skeleton other"></div>
-        <div class="skeleton own"></div>
     </div>
 
-    <div class="input-bar">
+    <!-- ПАНЕЛЬ ВВОДА - всегда видна! -->
+    <div class="input-bar" id="inputBar">
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
         <button class="send-btn" id="sendBtn">➤</button>
     </div>
@@ -498,468 +270,297 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    // ===================================================================
-    //  КОНФИГУРАЦИЯ
-    // ===================================================================
-    const CONFIG = {
-        repoOwner: '2d3t',              // ← ВАШ ЛОГИН GITHUB
-        repoName: '2d3t',            // ← НАЗВАНИЕ РЕПОЗИТОРИЯ
-        filePath: 'chat.json',
-        pollInterval: 5000,
-        maxMessages: 1000,
-    };
+// ===================================================================
+//  КОНФИГУРАЦИЯ
+// ===================================================================
+const CONFIG = {
+    repoOwner: '2d3t',
+    repoName: '2d3t',        // ← ИМЯ РЕПОЗИТОРИЯ!
+    filePath: 'chat.json',
+    pollInterval: 5000,
+    maxMessages: 1000,
+};
 
-    // ===================================================================
-    //  СОСТОЯНИЕ
-    // ===================================================================
-    let state = {
-        username: '',
-        token: '',
-        messages: [],
-        sha: null,
-        isPolling: false,
-        isSending: false,
-        lastMessageId: 0,
-    };
+// ===================================================================
+//  СОСТОЯНИЕ
+// ===================================================================
+let state = {
+    username: '',
+    token: '',
+    messages: [],
+    sha: null,
+    isPolling: false,
+    isSending: false,
+};
 
-    // ===================================================================
-    //  DOM-ЭЛЕМЕНТЫ
-    // ===================================================================
-    const $ = id => document.getElementById(id);
-    const authScreen = $('authScreen');
-    const chatScreen = $('chatScreen');
-    const usernameInput = $('usernameInput');
-    const tokenInput = $('tokenInput');
-    const loginBtn = $('loginBtn');
-    const authError = $('authError');
-    const clearDataBtn = $('clearDataBtn');
-    const messagesContainer = $('messagesContainer');
-    const messageInput = $('messageInput');
-    const sendBtn = $('sendBtn');
-    const exitBtn = $('exitBtn');
-    const userAvatar = $('userAvatar');
-    const chatTitle = $('chatTitle');
-    const toast = $('toast');
+// ===================================================================
+//  DOM
+// ===================================================================
+const $ = id => document.getElementById(id);
+const authScreen = $('authScreen');
+const chatScreen = $('chatScreen');
+const usernameInput = $('usernameInput');
+const tokenInput = $('tokenInput');
+const loginBtn = $('loginBtn');
+const authError = $('authError');
+const clearDataBtn = $('clearDataBtn');
+const messagesContainer = $('messagesContainer');
+const messageInput = $('messageInput');
+const sendBtn = $('sendBtn');
+const exitBtn = $('exitBtn');
+const userAvatar = $('userAvatar');
+const chatTitle = $('chatTitle');
+const toast = $('toast');
+const inputBar = $('inputBar');
 
-    // ===================================================================
-    //  ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-    // ===================================================================
-    function getInitials(name) {
-        return name.charAt(0).toUpperCase();
-    }
+// ===================================================================
+//  ВСПОМОГАТЕЛЬНЫЕ
+// ===================================================================
+function getInitials(name) { return name.charAt(0).toUpperCase(); }
+function formatTime(iso) { return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+function formatDate(iso) { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
 
-    function formatTime(iso) {
-        const date = new Date(iso);
-        return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    }
+function showToast(text, duration = 2000) {
+    toast.textContent = text;
+    toast.style.display = 'block';
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
+}
 
-    function formatDate(iso) {
-        const date = new Date(iso);
-        return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-    }
+function scrollToBottom() {
+    setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 50);
+}
 
-    function showToast(text, duration = 2000) {
-        toast.textContent = text;
-        toast.style.display = 'block';
-        clearTimeout(toast._timeout);
-        toast._timeout = setTimeout(() => {
-            toast.style.display = 'none';
-        }, duration);
-    }
+// ===================================================================
+//  GITHUB API
+// ===================================================================
+function getHeaders(token) {
+    return { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' };
+}
 
-    function scrollToBottom() {
-        setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }, 50);
-    }
+async function fetchFile(token, owner, repo, path) {
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+    const response = await fetch(url, { headers: getHeaders(token) });
+    if (response.status === 404) return { exists: false };
+    if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
+    const data = await response.json();
+    return { exists: true, sha: data.sha, content: JSON.parse(atob(data.content)) };
+}
 
-    function getCurrentTimestamp() {
-        return new Date().toISOString();
-    }
+async function saveFile(token, owner, repo, path, content, sha) {
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+    const body = { message: `💬 Сообщение от ${state.username}`, content: btoa(JSON.stringify(content, null, 2)) };
+    if (sha) body.sha = sha;
+    const response = await fetch(url, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) });
+    if (!response.ok) { const error = await response.json(); throw new Error(error.message || `HTTP ${response.status}`); }
+    const data = await response.json();
+    return data.content.sha;
+}
 
-    // ===================================================================
-    //  РАБОТА С GITHUB API
-    // ===================================================================
-    function getHeaders(token) {
-        return {
-            'Authorization': `token ${token}`,
-            'Accept': 'application/vnd.github.v3+json',
-        };
-    }
-
-    async function fetchFile(token, owner, repo, path) {
-        const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-        const response = await fetch(url, { headers: getHeaders(token) });
-
-        if (response.status === 404) {
-            return { exists: false };
-        }
-
-        if (!response.ok) {
-            throw new Error(`GitHub API: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return {
-            exists: true,
-            sha: data.sha,
-            content: JSON.parse(atob(data.content)),
-        };
-    }
-
-    async function saveFile(token, owner, repo, path, content, sha) {
-        const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-        const body = {
-            message: `💬 Сообщение от ${state.username}`,
-            content: btoa(JSON.stringify(content, null, 2)),
-        };
-        if (sha) body.sha = sha;
-
-        const response = await fetch(url, {
-            method: 'PUT',
-            headers: getHeaders(token),
-            body: JSON.stringify(body),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || `HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data.content.sha;
-    }
-
-    // ===================================================================
-    //  ЗАГРУЗКА / ОТПРАВКА СООБЩЕНИЙ
-    // ===================================================================
-    async function loadMessages(showLoading = true) {
-        try {
-            if (showLoading) {
-                messagesContainer.innerHTML = `
-                    <div class="skeleton other"></div>
-                    <div class="skeleton own"></div>
-                    <div class="skeleton other"></div>
-                    <div class="skeleton other"></div>
-                    <div class="skeleton own"></div>
-                `;
-            }
-
-            const result = await fetchFile(
-                state.token,
-                CONFIG.repoOwner,
-                CONFIG.repoName,
-                CONFIG.filePath
-            );
-
-            if (!result.exists) {
-                state.messages = [];
-                state.sha = null;
-                renderMessages([]);
-                return;
-            }
-
-            state.messages = result.content || [];
-            state.sha = result.sha;
-
-            if (state.messages.length > 0) {
-                state.lastMessageId = state.messages[state.messages.length - 1].id || 0;
-            }
-
-            renderMessages(state.messages);
-            scrollToBottom();
-
-        } catch (error) {
-            console.error('Ошибка загрузки:', error);
+// ===================================================================
+//  ЗАГРУЗКА / ОТПРАВКА
+// ===================================================================
+async function loadMessages(showLoading = true) {
+    try {
+        if (showLoading) {
             messagesContainer.innerHTML = `
-                <div class="message system">⚠️ Не удалось загрузить сообщения</div>
-                <div class="message system" style="font-size:12px;color:#555;">${error.message}</div>
+                <div class="skeleton other"></div>
+                <div class="skeleton own"></div>
+                <div class="skeleton other"></div>
+                <div class="skeleton own"></div>
             `;
         }
-    }
-
-    async function sendMessage(text) {
-        if (!text.trim() || state.isSending) return;
-        if (!state.token || !state.username) {
-            showToast('❌ Ошибка авторизации');
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        if (!result.exists) {
+            state.messages = [];
+            state.sha = null;
+            renderMessages([]);
             return;
         }
-
-        state.isSending = true;
-        sendBtn.disabled = true;
-
-        try {
-            const result = await fetchFile(
-                state.token,
-                CONFIG.repoOwner,
-                CONFIG.repoName,
-                CONFIG.filePath
-            );
-
-            let messages = result.exists ? (result.content || []) : [];
-            let sha = result.exists ? result.sha : null;
-
-            const newMessage = {
-                id: Date.now(),
-                username: state.username,
-                text: text.trim(),
-                time: getCurrentTimestamp(),
-            };
-            messages.push(newMessage);
-
-            if (messages.length > CONFIG.maxMessages) {
-                messages = messages.slice(-CONFIG.maxMessages);
-            }
-
-            const newSha = await saveFile(
-                state.token,
-                CONFIG.repoOwner,
-                CONFIG.repoName,
-                CONFIG.filePath,
-                messages,
-                sha
-            );
-
-            state.messages = messages;
-            state.sha = newSha;
-            state.lastMessageId = newMessage.id;
-
-            renderMessages(messages);
-            scrollToBottom();
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-            showToast('✅ Отправлено!', 1000);
-
-        } catch (error) {
-            console.error('Ошибка отправки:', error);
-            showToast('❌ Ошибка: ' + error.message, 3000);
-        } finally {
-            state.isSending = false;
-            sendBtn.disabled = false;
-            messageInput.focus();
-        }
-    }
-
-    // ===================================================================
-    //  РЕНДЕРИНГ
-    // ===================================================================
-    function renderMessages(messages) {
-        if (!messages || messages.length === 0) {
-            messagesContainer.innerHTML = `
-                <div class="message system">💬 История пуста</div>
-                <div class="message system" style="font-size:12px;color:#555;">Напишите первое сообщение!</div>
-            `;
-            return;
-        }
-
-        let html = '';
-        let lastDate = '';
-
-        messages.forEach((msg) => {
-            const msgDate = formatDate(msg.time);
-            if (msgDate !== lastDate) {
-                html += `<div class="message system">${msgDate}</div>`;
-                lastDate = msgDate;
-            }
-
-            const isOwn = msg.username === state.username;
-            const senderName = msg.username || 'Аноним';
-            const time = formatTime(msg.time);
-
-            html += `
-                <div class="message ${isOwn ? 'own' : 'other'}">
-                    <span class="sender">${isOwn ? 'Вы' : senderName}</span>
-                    <span class="text">${escapeHtml(msg.text)}</span>
-                    <span class="time">${time}</span>
-                </div>
-            `;
-        });
-
-        messagesContainer.innerHTML = html;
+        state.messages = result.content || [];
+        state.sha = result.sha;
+        renderMessages(state.messages);
         scrollToBottom();
+    } catch (error) {
+        console.error('Ошибка загрузки:', error);
+        messagesContainer.innerHTML = `
+            <div class="message system">⚠️ Не удалось загрузить сообщения</div>
+            <div class="message system" style="font-size:12px;color:#555;">${error.message}</div>
+        `;
     }
+}
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+async function sendMessage(text) {
+    if (!text.trim() || state.isSending) return;
+    state.isSending = true;
+    sendBtn.disabled = true;
+    try {
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        let messages = result.exists ? (result.content || []) : [];
+        let sha = result.exists ? result.sha : null;
+        const newMessage = { id: Date.now(), username: state.username, text: text.trim(), time: new Date().toISOString() };
+        messages.push(newMessage);
+        if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, sha);
+        state.messages = messages;
+        state.sha = newSha;
+        renderMessages(messages);
+        scrollToBottom();
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        showToast('✅ Отправлено!', 1000);
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showToast('❌ Ошибка: ' + error.message, 3000);
+    } finally {
+        state.isSending = false;
+        sendBtn.disabled = false;
+        messageInput.focus();
     }
+}
 
-    // ===================================================================
-    //  ПОЛЛИНГ
-    // ===================================================================
-    async function pollUpdates() {
-        if (state.isPolling || !state.token) return;
-        state.isPolling = true;
+// ===================================================================
+//  РЕНДЕРИНГ
+// ===================================================================
+function renderMessages(messages) {
+    if (!messages || messages.length === 0) {
+        messagesContainer.innerHTML = `
+            <div class="message system">💬 История пуста</div>
+            <div class="message system" style="font-size:12px;color:#555;">Напишите первое сообщение!</div>
+        `;
+        return;
+    }
+    let html = '', lastDate = '';
+    messages.forEach((msg) => {
+        const msgDate = formatDate(msg.time);
+        if (msgDate !== lastDate) { html += `<div class="message system">${msgDate}</div>`; lastDate = msgDate; }
+        const isOwn = msg.username === state.username;
+        const senderName = msg.username || 'Аноним';
+        const time = formatTime(msg.time);
+        html += `
+            <div class="message ${isOwn ? 'own' : 'other'}">
+                <span class="sender">${isOwn ? 'Вы' : senderName}</span>
+                <span class="text">${escapeHtml(msg.text)}</span>
+                <span class="time">${time}</span>
+            </div>
+        `;
+    });
+    messagesContainer.innerHTML = html;
+    scrollToBottom();
+}
 
-        try {
-            const result = await fetchFile(
-                state.token,
-                CONFIG.repoOwner,
-                CONFIG.repoName,
-                CONFIG.filePath
-            );
+function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
-            if (!result.exists) return;
-
-            if (result.sha !== state.sha) {
-                const newMessages = result.content || [];
-                if (newMessages.length > state.messages.length) {
-                    state.messages = newMessages;
-                    state.sha = result.sha;
-                    renderMessages(newMessages);
-                    scrollToBottom();
-                    showToast('📩 Новые сообщения!', 1000);
-                } else {
-                    state.sha = result.sha;
-                    state.messages = newMessages;
-                }
+// ===================================================================
+//  ПОЛЛИНГ
+// ===================================================================
+async function pollUpdates() {
+    if (state.isPolling || !state.token) return;
+    state.isPolling = true;
+    try {
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        if (!result.exists) return;
+        if (result.sha !== state.sha) {
+            const newMessages = result.content || [];
+            if (newMessages.length > state.messages.length) {
+                state.messages = newMessages;
+                state.sha = result.sha;
+                renderMessages(newMessages);
+                scrollToBottom();
+                showToast('📩 Новые сообщения!', 1000);
+            } else {
+                state.sha = result.sha;
+                state.messages = newMessages;
             }
-        } catch (error) {
-            console.error('Polling error:', error);
-        } finally {
-            state.isPolling = false;
         }
-    }
+    } catch (error) { console.error('Polling error:', error); }
+    finally { state.isPolling = false; }
+}
 
-    function startPolling() {
-        if (window._pollInterval) {
-            clearInterval(window._pollInterval);
-        }
-        window._pollInterval = setInterval(pollUpdates, CONFIG.pollInterval);
-    }
+function startPolling() {
+    if (window._pollInterval) clearInterval(window._pollInterval);
+    window._pollInterval = setInterval(pollUpdates, CONFIG.pollInterval);
+}
 
-    // ===================================================================
-    //  АВТОРИЗАЦИЯ
-    // ===================================================================
-    function login() {
-        const username = usernameInput.value.trim();
-        const token = tokenInput.value.trim();
+// ===================================================================
+//  АВТОРИЗАЦИЯ
+// ===================================================================
+function login() {
+    const username = usernameInput.value.trim();
+    const token = tokenInput.value.trim();
+    if (!username) { authError.textContent = '❌ Введите имя'; authError.style.display = 'block'; return; }
+    if (!token) { authError.textContent = '❌ Введите GitHub токен'; authError.style.display = 'block'; return; }
+    authError.style.display = 'none';
+    state.username = username;
+    state.token = token;
+    localStorage.setItem('chathub_username', username);
+    localStorage.setItem('chathub_token', token);
+    authScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    // ✅ ЯВНО показываем панель ввода
+    inputBar.style.display = 'flex';
+    userAvatar.textContent = getInitials(username);
+    chatTitle.textContent = `Чат (${username})`;
+    loadMessages(true);
+    startPolling();
+}
 
-        if (!username) {
-            authError.textContent = '❌ Введите имя';
-            authError.style.display = 'block';
-            return;
-        }
+function logout() {
+    if (window._pollInterval) clearInterval(window._pollInterval);
+    state.isPolling = false;
+    authScreen.style.display = 'flex';
+    chatScreen.style.display = 'none';
+    usernameInput.value = '';
+    tokenInput.value = '';
+    authError.style.display = 'none';
+}
 
-        if (!token) {
-            authError.textContent = '❌ Введите GitHub токен';
-            authError.style.display = 'block';
-            return;
-        }
-
-        authError.style.display = 'none';
-
-        // Сохраняем в localStorage
-        state.username = username;
-        state.token = token;
-        localStorage.setItem('chathub_username', username);
-        localStorage.setItem('chathub_token', token);
-
-        // Переключаем экран
-        authScreen.style.display = 'none';
-        chatScreen.style.display = 'flex';
-
-        userAvatar.textContent = getInitials(username);
-        chatTitle.textContent = `Чат (${username})`;
-
-        loadMessages(true);
-        startPolling();
-    }
-
-    function logout() {
-        if (window._pollInterval) {
-            clearInterval(window._pollInterval);
-            window._pollInterval = null;
-        }
-        state.isPolling = false;
-        state.username = '';
-        state.token = '';
-        state.messages = [];
-        state.sha = null;
-
-        authScreen.style.display = 'flex';
-        chatScreen.style.display = 'none';
+// ===================================================================
+//  ОБРАБОТЧИКИ
+// ===================================================================
+loginBtn.addEventListener('click', login);
+usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
+tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+sendBtn.addEventListener('click', () => sendMessage(messageInput.value));
+messageInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(messageInput.value); }
+});
+messageInput.addEventListener('input', () => {
+    messageInput.style.height = 'auto';
+    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+});
+exitBtn.addEventListener('click', logout);
+clearDataBtn.addEventListener('click', () => {
+    if (confirm('Очистить сохранённые данные?')) {
+        localStorage.removeItem('chathub_username');
+        localStorage.removeItem('chathub_token');
         usernameInput.value = '';
         tokenInput.value = '';
-        authError.style.display = 'none';
-        
-        // НЕ удаляем из localStorage, чтобы при следующем входе поля заполнились
+        showToast('🗑️ Данные очищены', 1500);
     }
+});
 
-    // ===================================================================
-    //  ОБРАБОТЧИКИ
-    // ===================================================================
-    loginBtn.addEventListener('click', login);
-
-    usernameInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') tokenInput.focus();
-    });
-
-    tokenInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') login();
-    });
-
-    sendBtn.addEventListener('click', () => {
-        sendMessage(messageInput.value);
-    });
-
-    messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage(messageInput.value);
-        }
-    });
-
-    messageInput.addEventListener('input', () => {
-        messageInput.style.height = 'auto';
-        messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
-    });
-
-    exitBtn.addEventListener('click', logout);
-
-    clearDataBtn.addEventListener('click', () => {
-        if (confirm('Очистить сохранённые данные?')) {
-            localStorage.removeItem('chathub_username');
-            localStorage.removeItem('chathub_token');
-            usernameInput.value = '';
-            tokenInput.value = '';
-            authError.style.display = 'none';
-            showToast('🗑️ Данные очищены', 1500);
-        }
-    });
-
-    // ===================================================================
-    //  ВОССТАНОВЛЕНИЕ СЕССИИ
-    // ===================================================================
-    function restoreSession() {
-        const savedUsername = localStorage.getItem('chathub_username');
-        const savedToken = localStorage.getItem('chathub_token');
-
-        if (savedUsername) {
-            usernameInput.value = savedUsername;
-        }
-
-        if (savedToken) {
-            tokenInput.value = savedToken;
-        }
-
-        // Если есть и логин, и токен — входим автоматически
-        if (savedUsername && savedToken) {
-            setTimeout(login, 500);
-        }
+// ===================================================================
+//  ВОССТАНОВЛЕНИЕ СЕССИИ
+// ===================================================================
+function restoreSession() {
+    const savedUsername = localStorage.getItem('chathub_username');
+    const savedToken = localStorage.getItem('chathub_token');
+    if (savedUsername) usernameInput.value = savedUsername;
+    if (savedToken) tokenInput.value = savedToken;
+    if (savedUsername && savedToken) {
+        setTimeout(login, 500);
     }
+}
 
-    // ===================================================================
-    //  ЗАПУСК
-    // ===================================================================
-    if (CONFIG.repoOwner === 'YOUR_USERNAME' || CONFIG.repoName === 'YOUR_REPO') {
-        console.warn('⚠️ Не забудьте указать свои данные в CONFIG!');
-    }
+// ===================================================================
+//  ЗАПУСК
+// ===================================================================
+restoreSession();
+messageInput.addEventListener('focus', scrollToBottom);
 
-    restoreSession();
-
-    messageInput.addEventListener('focus', scrollToBottom);
+console.log('✅ Чат загружен!');
+console.log('📁 Репозиторий:', CONFIG.repoOwner + '/' + CONFIG.repoName);
 </script>
 
 </body>
