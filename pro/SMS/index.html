@@ -20,15 +20,18 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
+        /* ===== АВТОРИЗАЦИЯ ===== */
         #authScreen {
             display: flex;
             flex-direction: column;
             height: 100vh;
             background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
         }
-        
         .auth-header {
             padding: 16px 20px;
             background: rgba(255,255,255,0.04);
@@ -38,9 +41,6 @@
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
         .auth-header .brand {
             display: flex;
@@ -52,10 +52,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .auth-header .brand-icon {
-            font-size: 28px;
-            -webkit-text-fill-color: initial;
-        }
+        .auth-header .brand-icon { font-size: 28px; -webkit-text-fill-color: initial; }
         .auth-header .exit-from-auth-btn {
             background: rgba(255,107,107,0.15);
             border: 1px solid rgba(255,107,107,0.2);
@@ -67,11 +64,8 @@
             transition: all 0.3s;
             font-weight: 500;
             display: none;
-            align-items: center;
-            gap: 6px;
         }
         .auth-header .exit-from-auth-btn:hover { background: rgba(255,107,107,0.25); }
-        .auth-header .exit-from-auth-btn:active { transform: scale(0.95); }
         .auth-header .exit-from-auth-btn.show { display: flex; }
 
         .auth-content {
@@ -91,7 +85,6 @@
             margin-bottom: 8px;
         }
         .auth-content .subtitle { color: #888; margin-bottom: 30px; font-size: 14px; }
-        
         .auth-form {
             width: 100%;
             max-width: 380px;
@@ -134,6 +127,7 @@
         .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
         .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
 
+        /* ===== ЧАТ ===== */
         #chatScreen {
             display: none;
             flex-direction: column;
@@ -160,6 +154,7 @@
             background: linear-gradient(135deg, #6c5ce7, #00b894);
             display: flex; align-items: center; justify-content: center;
             font-weight: 700; font-size: 18px; color: #fff;
+            flex-shrink: 0;
         }
         .chat-header .info h2 { font-size: 17px; font-weight: 600; }
         .chat-header .info .status { font-size: 12px; color: #00b894; display: flex; align-items: center; gap: 5px; }
@@ -196,9 +191,6 @@
             background: rgba(108,92,231,0.3);
             transform: scale(1.05);
         }
-        .chat-header .user-counter .count-icon {
-            font-size: 14px;
-        }
         .chat-header .user-counter .count-number {
             background: rgba(255,255,255,0.1);
             border-radius: 30px;
@@ -224,7 +216,8 @@
             z-index: 20;
             box-shadow: 0 8px 30px rgba(0,0,0,0.5);
         }
-        .chat-header .user-counter:hover .users-tooltip {
+        .chat-header .user-counter:hover .users-tooltip,
+        .chat-header .user-counter:active .users-tooltip {
             display: block;
         }
         .chat-header .user-counter .users-tooltip .user-item {
@@ -236,29 +229,26 @@
             gap: 8px;
             border-bottom: 1px solid rgba(255,255,255,0.04);
         }
-        .chat-header .user-counter .users-tooltip .user-item:last-child {
-            border-bottom: none;
+        .chat-header .user-counter .users-tooltip .user-item:last-child { border-bottom: none; }
+        .chat-header .user-counter .users-tooltip .dot-online {
+            width: 6px; height: 6px; border-radius: 50%; background: #00b894; display: inline-block;
         }
-        .chat-header .user-counter .users-tooltip .user-item .dot-online {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #00b894;
-            display: inline-block;
+        .chat-header .user-counter .users-tooltip .dot-offline {
+            width: 6px; height: 6px; border-radius: 50%; background: #555; display: inline-block;
         }
-        .chat-header .user-counter .users-tooltip .user-item .dot-offline {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #555;
-            display: inline-block;
+        .chat-header .archive-btn {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #aaa;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
         }
-        .chat-header .user-counter .users-tooltip .empty-users {
-            color: #666;
-            font-size: 13px;
-            text-align: center;
-            padding: 8px 0;
-        }
+        .chat-header .archive-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+        .chat-header .archive-btn.active { background: rgba(108,92,231,0.2); border-color: #6c5ce7; color: #c4b5fd; }
         .chat-header .exit-btn {
             background: rgba(255,255,255,0.06); border: none; color: #888;
             width: 38px; height: 38px; border-radius: 50%; font-size: 20px;
@@ -267,6 +257,7 @@
         }
         .chat-header .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
 
+        /* ===== СООБЩЕНИЯ ===== */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -281,7 +272,7 @@
         .message-wrapper {
             display: flex;
             flex-direction: column;
-            max-width: 82%;
+            max-width: 85%;
             animation: fadeIn 0.3s ease;
             position: relative;
         }
@@ -302,8 +293,21 @@
         .message-wrapper.own .sender { color: #a78bfa; }
         .message .text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
         .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
-        .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
-        
+        .message.system {
+            align-self: center;
+            background: rgba(255,255,255,0.04);
+            border-radius: 30px;
+            padding: 6px 18px;
+            font-size: 12px;
+            color: #666;
+            max-width: 90%;
+        }
+        .message .archive-label {
+            font-size: 10px;
+            color: #666;
+            display: block;
+            margin-top: 2px;
+        }
         .message .image-container {
             margin: 6px 0 4px;
             border-radius: 12px;
@@ -353,6 +357,220 @@
             display: flex;
         }
 
+        /* ===== АУДИО ===== */
+        .audio-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 30px;
+            min-width: 180px;
+            max-width: 280px;
+            margin: 4px 0;
+        }
+        .audio-play-btn {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .audio-play-btn:active { transform: scale(0.9); }
+        .audio-play-btn.playing { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .audio-timeline {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+            min-width: 60px;
+        }
+        .audio-timeline .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #6c5ce7, #00b894);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        .audio-duration {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            font-variant-numeric: tabular-nums;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        /* ===== ВВОД ===== */
+        .input-bar {
+            padding: 10px 14px 14px;
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            flex-shrink: 0;
+            min-height: 70px;
+            flex: 0 0 auto;
+            position: relative;
+            z-index: 5;
+            transition: all 0.3s ease;
+            flex-wrap: wrap;
+        }
+        .input-bar .input-wrapper {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            min-width: 0;
+        }
+        .input-bar textarea {
+            flex: 1;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 22px;
+            color: #fff;
+            font-size: 15px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            min-height: 40px;
+            max-height: 100px;
+            line-height: 1.4;
+            transition: border 0.3s;
+            min-width: 0;
+        }
+        .input-bar textarea:focus { border-color: #6c5ce7; }
+        .input-bar textarea::placeholder { color: #555; }
+        .input-bar textarea:disabled { opacity: 0.5; }
+        
+        .input-bar .action-buttons {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .input-bar .icon-btn {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.06);
+            color: #888;
+            font-size: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .input-bar .icon-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
+        .input-bar .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .input-bar .icon-btn.recording {
+            background: rgba(255,107,107,0.2);
+            color: #ff6b6b;
+            animation: pulse-btn 1s infinite;
+        }
+        @keyframes pulse-btn {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .input-bar .send-btn {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .input-bar .send-btn:active { transform: scale(0.85); }
+        .input-bar .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .input-bar .send-btn.clicked {
+            animation: clickFeedback 0.15s ease;
+        }
+        @keyframes clickFeedback {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.85); background: linear-gradient(135deg, #5a4ad7, #00a87a); }
+            100% { transform: scale(1); }
+        }
+
+        /* ===== АУДИО ЗАПИСЬ ===== */
+        .audio-recording-ui {
+            display: none;
+            width: 100%;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 0;
+            background: rgba(255,107,107,0.05);
+            border-radius: 30px;
+            padding: 6px 14px;
+        }
+        .audio-recording-ui.active { display: flex; }
+        .audio-recording-ui .recording-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ff6b6b;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .audio-recording-ui .recording-indicator .pulse {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #ff6b6b;
+            animation: pulse-recording 1s infinite;
+        }
+        @keyframes pulse-recording {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+        }
+        .audio-recording-ui .recording-timer {
+            font-size: 14px;
+            color: #ff6b6b;
+            font-variant-numeric: tabular-nums;
+            min-width: 60px;
+        }
+        .audio-recording-ui .recording-progress {
+            flex: 1;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            min-width: 40px;
+        }
+        .audio-recording-ui .recording-progress .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a24);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        .audio-recording-ui .cancel-recording {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .audio-recording-ui .cancel-recording:active { transform: scale(0.9); }
+
+        /* ===== МОДАЛКА ===== */
         .image-modal {
             display: none;
             position: fixed;
@@ -394,95 +612,7 @@
         }
         .image-modal .close-modal:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 
-        .input-bar {
-            padding: 10px 14px 14px;
-            background: rgba(255,255,255,0.03);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            flex-shrink: 0;
-            min-height: 70px;
-            flex: 0 0 auto;
-            position: relative;
-            z-index: 5;
-            transition: all 0.3s ease;
-        }
-        .input-bar textarea {
-            flex: 1;
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 22px;
-            color: #fff;
-            font-size: 16px;
-            resize: none;
-            outline: none;
-            font-family: inherit;
-            min-height: 44px;
-            max-height: 120px;
-            line-height: 1.4;
-            transition: border 0.3s;
-        }
-        .input-bar textarea:focus { border-color: #6c5ce7; }
-        .input-bar textarea::placeholder { color: #555; }
-        .input-bar .action-buttons {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        .input-bar .file-btn {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255,255,255,0.06);
-            color: #888;
-            font-size: 22px;
-            cursor: pointer;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-        .input-bar .file-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
-        .input-bar .send-btn {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: linear-gradient(135deg, #6c5ce7, #00b894);
-            color: #fff;
-            font-size: 22px;
-            cursor: pointer;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            position: relative;
-        }
-        .input-bar .send-btn:active { transform: scale(0.85); }
-        .input-bar .send-btn.clicked {
-            animation: clickFeedback 0.15s ease;
-        }
-        @keyframes clickFeedback {
-            0% { transform: scale(1); }
-            50% { transform: scale(0.85); background: linear-gradient(135deg, #5a4ad7, #00a87a); }
-            100% { transform: scale(1); }
-        }
-
-        .toast {
-            position: fixed; bottom: 100px; left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-            padding: 10px 22px; border-radius: 30px; font-size: 14px; color: #fff;
-            border: 1px solid rgba(255,255,255,0.08);
-            z-index: 999; display: none;
-            animation: slideUp 0.3s ease; white-space: nowrap;
-        }
-        @keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
-
+        /* ===== СКЕЛЕТОН ===== */
         .skeleton {
             background: rgba(255,255,255,0.04);
             border-radius: 18px;
@@ -495,17 +625,32 @@
         .skeleton.own { align-self: flex-end; }
         .skeleton.other { align-self: flex-start; }
 
+        /* ===== TOAST ===== */
+        .toast {
+            position: fixed; bottom: 100px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            padding: 10px 22px; border-radius: 30px; font-size: 14px; color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+            z-index: 999; display: none;
+            animation: slideUp 0.3s ease; white-space: nowrap;
+            max-width: 90%;
+        }
+        @keyframes slideUp { from { opacity:0; transform:translateX(-50%) translateY(20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
+        /* ===== МОБИЛЬНЫЕ ===== */
         @media (max-width: 480px) {
             .auth-form { padding: 20px 16px; }
             .auth-content h1 { font-size: 28px; }
             .auth-header .brand { font-size: 17px; }
-            .message-wrapper { max-width: 88%; }
+            .message-wrapper { max-width: 90%; }
             .message { font-size: 15px; }
             .chat-header { padding: 10px 14px; }
-            .input-bar { padding: 8px 10px 12px; gap: 8px; min-height: 60px; }
-            .input-bar textarea { font-size: 15px; padding: 10px 14px; min-height: 38px; }
-            .input-bar .send-btn { width: 42px; height: 42px; font-size: 18px; }
-            .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
+            .chat-header .archive-btn { font-size: 10px; padding: 4px 10px; }
+            .input-bar { padding: 8px 10px 12px; gap: 6px; min-height: 60px; }
+            .input-bar textarea { font-size: 15px; padding: 8px 12px; min-height: 36px; }
+            .input-bar .icon-btn { width: 38px; height: 38px; font-size: 16px; }
+            .input-bar .send-btn { width: 38px; height: 38px; font-size: 16px; }
             .image-modal img { max-height: 80vh; }
             .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -5px; right: -5px; }
             .chat-header .user-counter { font-size: 11px; padding: 2px 8px 2px 6px; min-width: 26px; }
@@ -514,12 +659,17 @@
                 min-width: 120px;
                 right: -10px;
             }
+            .audio-message { min-width: 140px; max-width: 220px; padding: 4px 8px; }
+            .audio-play-btn { width: 28px; height: 28px; font-size: 12px; }
+            .audio-duration { font-size: 10px; min-width: 30px; }
+            .audio-recording-ui .recording-timer { font-size: 12px; min-width: 50px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
 </head>
 <body>
 
+<!-- ===== ЭКРАН АВТОРИЗАЦИИ ===== -->
 <div id="authScreen">
     <div class="auth-header">
         <div class="brand">
@@ -533,9 +683,9 @@
         <p class="subtitle">Войдите или зарегистрируйтесь</p>
         <div class="auth-form">
             <label>👤 Ваш логин</label>
-            <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20">
+            <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20" autocomplete="username">
             <label>🔑 GitHub Token</label>
-            <input type="password" id="tokenInput" placeholder="Вставьте токен доступа">
+            <input type="password" id="tokenInput" placeholder="Вставьте токен доступа" autocomplete="current-password">
             <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank">Создать токен</a> (права <strong>repo</strong>)</div>
             <div class="error-msg" id="authError">❌ Ошибка</div>
             <button class="btn" id="loginBtn">🚀 Войти</button>
@@ -544,6 +694,7 @@
     </div>
 </div>
 
+<!-- ===== ЭКРАН ЧАТА ===== -->
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
@@ -555,12 +706,12 @@
         </div>
         <div class="right-actions">
             <div class="user-counter" id="userCounter">
-                <span class="count-icon">👥</span>
-                <span class="count-number" id="userCountValue">0</span>
+                👥 <span class="count-number" id="userCountValue">0</span>
                 <div class="users-tooltip" id="usersTooltip">
                     <div class="empty-users">Загружаем...</div>
                 </div>
             </div>
+            <button class="archive-btn" id="archiveToggleBtn">📚 Архив</button>
             <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
         </div>
     </div>
@@ -571,20 +722,39 @@
         <div class="skeleton other"></div>
     </div>
 
+    <!-- ===== ПАНЕЛЬ ВВОДА ===== -->
     <div class="input-bar" id="inputBar">
-        <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
-        <div class="action-buttons">
-            <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
-            <button class="send-btn" id="sendBtn">➤</button>
+        <div class="input-wrapper">
+            <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
+            <div class="action-buttons">
+                <button class="icon-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
+                <button class="icon-btn" id="audioRecordBtn" title="🎙️ Запись (Alt+Space)">🎙️</button>
+                <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+        </div>
+        
+        <!-- ===== UI ЗАПИСИ АУДИО ===== -->
+        <div class="audio-recording-ui" id="audioRecordingUI">
+            <div class="recording-indicator">
+                <span class="pulse"></span>
+                <span>Запись</span>
+            </div>
+            <div class="recording-timer" id="recordingTimer">0:00</div>
+            <div class="recording-progress">
+                <div class="fill" id="recordingProgress"></div>
+            </div>
+            <button class="cancel-recording" id="cancelRecordingBtn" title="Отменить">✕</button>
         </div>
     </div>
 </div>
 
+<!-- ===== МОДАЛКА ИЗОБРАЖЕНИЙ ===== -->
 <div class="image-modal" id="imageModal">
     <button class="close-modal" id="closeModalBtn">✕</button>
     <img id="modalImage" src="" alt="Увеличенное изображение">
 </div>
 
+<!-- ===== TOAST ===== -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -595,57 +765,16 @@ const CONFIG = {
     repoOwner: '2d3t',
     repoName: '2d3t',
     chatFilePath: 'chat.json',
+    chatArchivePath: 'chat-archive.json',
     usersFilePath: 'users.json',
     pollInterval: 5000,
-    maxMessages: 1000,
+    maxMessages: 50,
+    maxArchiveMessages: 500,
     maxImageSize: 5 * 1024 * 1024,
+    maxAudioDuration: 15,
+    maxAudioSize: 1 * 1024 * 1024,
+    audioBitrate: 24000,
 };
-
-// ===================================================================
-//  ЗВУКИ
-// ===================================================================
-class SoundManager {
-    constructor() {
-        this.enabled = true;
-        this.sounds = {};
-        this.initSounds();
-    }
-    initSounds() {
-        this.sounds.send = this.createBeep(600, 0.1);
-        this.sounds.receive = this.createBeep(800, 0.15);
-        this.sounds.error = this.createBeep(300, 0.3);
-        this.sounds.delete = this.createBeep(400, 0.1);
-        this.sounds.click = this.createBeep(1000, 0.03);
-    }
-    createBeep(freq, duration) {
-        return {
-            play: () => {
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.frequency.value = freq;
-                    osc.type = 'sine';
-                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-                    osc.start(ctx.currentTime);
-                    osc.stop(ctx.currentTime + duration);
-                } catch (e) { }
-            }
-        };
-    }
-    play(type) {
-        if (!this.enabled) return;
-        if (this.sounds[type]) this.sounds[type].play();
-    }
-    toggle() {
-        this.enabled = !this.enabled;
-        return this.enabled;
-    }
-}
-const soundManager = new SoundManager();
 
 // ===================================================================
 //  СОСТОЯНИЕ
@@ -654,14 +783,16 @@ let state = {
     username: '',
     token: '',
     messages: [],
-    users: [],
+    archiveMessages: [],
     chatSha: null,
+    archiveSha: null,
     usersSha: null,
     isPolling: false,
     isSending: false,
     lastMessageCount: 0,
     isAuthorized: false,
     _lastSentMessageId: null,
+    showArchive: false,
 };
 
 // ===================================================================
@@ -690,6 +821,12 @@ const closeModalBtn = $('closeModalBtn');
 const userCounter = $('userCounter');
 const userCountValue = $('userCountValue');
 const usersTooltip = $('usersTooltip');
+const archiveToggleBtn = $('archiveToggleBtn');
+const audioRecordBtn = $('audioRecordBtn');
+const audioRecordingUI = $('audioRecordingUI');
+const recordingTimer = $('recordingTimer');
+const recordingProgress = $('recordingProgress');
+const cancelRecordingBtn = $('cancelRecordingBtn');
 
 // ===================================================================
 //  ВСПОМОГАТЕЛЬНЫЕ
@@ -701,6 +838,11 @@ function formatFullTime(iso) {
     const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     const day = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
     return `${day} ${time}`;
+}
+function formatDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 function showToast(text, duration = 2000) {
     toast.textContent = text;
@@ -721,48 +863,20 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
-
-// ===================================================================
-//  РАБОТА С ИЗОБРАЖЕНИЯМИ
-// ===================================================================
-function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.8) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                let width = img.width;
-                let height = img.height;
-                if (width > maxWidth || height > maxHeight) {
-                    const ratio = Math.min(maxWidth / width, maxHeight / height);
-                    width = Math.round(width * ratio);
-                    height = Math.round(height * ratio);
-                }
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', quality));
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-function openImageModal(imageUrl) {
-    modalImage.src = imageUrl;
-    imageModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-function closeImageModal() {
-    imageModal.classList.remove('active');
-    document.body.style.overflow = '';
+function isOwnMessage(msg) {
+    return msg.username === state.username && state.isAuthorized;
 }
 
 // ===================================================================
-//  КОРРЕКТНАЯ РАБОТА С UTF-8 В GITHUB
+//  GITHUB API
 // ===================================================================
+function getHeaders(token) {
+    return { 
+        'Authorization': `token ${token}`, 
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+    };
+}
 function utf8ToBase64(str) {
     const utf8Bytes = new TextEncoder().encode(str);
     let binary = '';
@@ -776,17 +890,6 @@ function base64ToUtf8(base64) {
         bytes[i] = binary.charCodeAt(i);
     }
     return new TextDecoder('utf-8').decode(bytes);
-}
-
-// ===================================================================
-//  GITHUB API
-// ===================================================================
-function getHeaders(token) {
-    return { 
-        'Authorization': `token ${token}`, 
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-    };
 }
 
 async function fetchFile(token, owner, repo, path) {
@@ -847,10 +950,8 @@ async function registerUser(username) {
         let users = result.exists ? (result.content || []) : [];
         let sha = result.exists ? result.sha : null;
         
-        // Проверяем, есть ли уже такой пользователь
         const existingUser = users.find(u => u.username === username);
         if (existingUser) {
-            // Обновляем время последнего входа
             existingUser.lastSeen = new Date().toISOString();
         } else {
             users.push({
@@ -894,7 +995,273 @@ function updateUsersUI() {
 }
 
 // ===================================================================
-//  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ СООБЩЕНИЙ
+//  ЗВУКИ
+// ===================================================================
+class SoundManager {
+    constructor() {
+        this.enabled = true;
+        this.sounds = {};
+        this.initSounds();
+    }
+    initSounds() {
+        this.sounds.send = this.createBeep(600, 0.1);
+        this.sounds.receive = this.createBeep(800, 0.15);
+        this.sounds.error = this.createBeep(300, 0.3);
+        this.sounds.delete = this.createBeep(400, 0.1);
+        this.sounds.click = this.createBeep(1000, 0.03);
+    }
+    createBeep(freq, duration) {
+        return {
+            play: () => {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + duration);
+                } catch (e) { }
+            }
+        };
+    }
+    play(type) {
+        if (!this.enabled) return;
+        if (this.sounds[type]) this.sounds[type].play();
+    }
+    toggle() {
+        this.enabled = !this.enabled;
+        return this.enabled;
+    }
+}
+const soundManager = new SoundManager();
+
+// ===================================================================
+//  РАБОТА С ИЗОБРАЖЕНИЯМИ
+// ===================================================================
+function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.8) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+function openImageModal(imageUrl) {
+    modalImage.src = imageUrl;
+    imageModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeImageModal() {
+    imageModal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// ===================================================================
+//  АУДИО РЕКОРДЕР
+// ===================================================================
+class AudioRecorder {
+    constructor() {
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.isRecording = false;
+        this.startTime = 0;
+        this.duration = 0;
+        this.stream = null;
+        this.timerInterval = null;
+        this.onDurationUpdate = null;
+        this.onRecordingComplete = null;
+    }
+
+    async startRecording() {
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({ 
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 16000,
+                } 
+            });
+
+            const options = {
+                mimeType: 'audio/webm;codecs=opus',
+                audioBitsPerSecond: CONFIG.audioBitrate
+            };
+
+            this.mediaRecorder = new MediaRecorder(this.stream, options);
+            this.audioChunks = [];
+            this.isRecording = true;
+            this.startTime = Date.now();
+            this.duration = 0;
+
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = () => {
+                this.processRecording();
+            };
+
+            this.mediaRecorder.start(1000);
+            this.timerInterval = setInterval(() => {
+                this.duration = (Date.now() - this.startTime) / 1000;
+                if (this.onDurationUpdate) {
+                    this.onDurationUpdate(this.duration);
+                }
+                if (this.duration >= CONFIG.maxAudioDuration) {
+                    this.stopRecording();
+                }
+            }, 100);
+
+            return true;
+        } catch (error) {
+            console.error('Ошибка доступа к микрофону:', error);
+            showToast('❌ Нет доступа к микрофону', 3000);
+            return false;
+        }
+    }
+
+    stopRecording() {
+        if (this.mediaRecorder && this.isRecording) {
+            this.isRecording = false;
+            this.mediaRecorder.stop();
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+            if (this.stream) {
+                this.stream.getTracks().forEach(track => track.stop());
+                this.stream = null;
+            }
+        }
+    }
+
+    processRecording() {
+        if (this.audioChunks.length === 0) {
+            showToast('⚠️ Аудио не записано', 1500);
+            return;
+        }
+
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+        
+        if (audioBlob.size > CONFIG.maxAudioSize) {
+            showToast(`❌ Аудио слишком большое (${(audioBlob.size / 1024 / 1024).toFixed(2)}MB)`, 3000);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (this.onRecordingComplete) {
+                this.onRecordingComplete({
+                    data: reader.result,
+                    duration: this.duration,
+                    size: audioBlob.size
+                });
+            }
+        };
+        reader.readAsDataURL(audioBlob);
+    }
+}
+
+// ===================================================================
+//  АУДИО ПЛЕЕР
+// ===================================================================
+class AudioPlayer {
+    constructor() {
+        this.currentAudio = null;
+        this.currentElement = null;
+        this.isPlaying = false;
+    }
+
+    play(audioData, element) {
+        this.stop();
+        
+        try {
+            const audio = new Audio(audioData);
+            this.currentAudio = audio;
+            this.currentElement = element;
+            
+            this.updatePlayButton(element, true);
+            
+            audio.onended = () => { this.stop(); };
+            audio.onerror = () => {
+                console.error('Ошибка воспроизведения аудио');
+                this.stop();
+                showToast('❌ Ошибка воспроизведения', 1500);
+            };
+            
+            audio.ontimeupdate = () => {
+                const progress = (audio.currentTime / audio.duration) * 100;
+                const progressBar = element.querySelector('.progress');
+                if (progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                }
+            };
+            
+            audio.play();
+            this.isPlaying = true;
+        } catch (error) {
+            console.error('Ошибка воспроизведения:', error);
+            showToast('❌ Не удалось воспроизвести аудио', 2000);
+        }
+    }
+
+    stop() {
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0;
+            if (this.currentElement) {
+                this.updatePlayButton(this.currentElement, false);
+            }
+            this.currentAudio = null;
+            this.currentElement = null;
+            this.isPlaying = false;
+        }
+    }
+
+    updatePlayButton(element, isPlaying) {
+        const button = element.querySelector('.audio-play-btn');
+        if (button) {
+            button.textContent = isPlaying ? '⏹️' : '▶️';
+            button.classList.toggle('playing', isPlaying);
+        }
+        if (!isPlaying) {
+            const progressBar = element.querySelector('.progress');
+            if (progressBar) progressBar.style.width = '0%';
+        }
+    }
+}
+
+const audioPlayer = new AudioPlayer();
+let audioRecorder = null;
+let isAudioRecording = false;
+
+// ===================================================================
+//  ЗАГРУЗКА/СОХРАНЕНИЕ СООБЩЕНИЙ
 // ===================================================================
 async function loadMessages(showLoading = true) {
     if (!state.isAuthorized) {
@@ -913,6 +1280,7 @@ async function loadMessages(showLoading = true) {
                 <div class="skeleton own"></div>
             `;
         }
+        
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
         if (!result.exists) {
             state.messages = [];
@@ -924,6 +1292,17 @@ async function loadMessages(showLoading = true) {
         state.messages = result.content || [];
         state.chatSha = result.sha;
         state.lastMessageCount = state.messages.length;
+        
+        if (state.messages.length > CONFIG.maxMessages) {
+            await archiveOldMessages();
+            const newResult = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
+            if (newResult.exists) {
+                state.messages = newResult.content || [];
+                state.chatSha = newResult.sha;
+                state.lastMessageCount = state.messages.length;
+            }
+        }
+        
         renderMessages(state.messages);
         scrollToBottom();
     } catch (error) {
@@ -937,14 +1316,91 @@ async function loadMessages(showLoading = true) {
     }
 }
 
-async function sendMessage(text, imageData = null) {
+async function archiveOldMessages() {
+    try {
+        const archiveResult = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatArchivePath);
+        let archiveMessages = archiveResult.exists ? (archiveResult.content || []) : [];
+        let archiveSha = archiveResult.exists ? archiveResult.sha : null;
+        
+        const messagesToKeep = state.messages.slice(-CONFIG.maxMessages);
+        const messagesToArchive = state.messages.slice(0, -CONFIG.maxMessages);
+        
+        if (messagesToArchive.length === 0) return;
+        
+        archiveMessages = [...archiveMessages, ...messagesToArchive];
+        if (archiveMessages.length > CONFIG.maxArchiveMessages) {
+            archiveMessages = archiveMessages.slice(-CONFIG.maxArchiveMessages);
+        }
+        
+        const newChatSha = await saveFile(
+            state.token, CONFIG.repoOwner, CONFIG.repoName, 
+            CONFIG.chatFilePath, messagesToKeep, state.chatSha
+        );
+        const newArchiveSha = await saveFile(
+            state.token, CONFIG.repoOwner, CONFIG.repoName, 
+            CONFIG.chatArchivePath, archiveMessages, archiveSha
+        );
+        
+        state.chatSha = newChatSha;
+        state.archiveSha = newArchiveSha;
+        state.messages = messagesToKeep;
+        state.archiveMessages = archiveMessages;
+        state.lastMessageCount = messagesToKeep.length;
+    } catch (error) {
+        console.error('Ошибка архивации:', error);
+        showToast('❌ Ошибка при архивации', 3000);
+    }
+}
+
+async function loadArchive() {
+    if (!state.isAuthorized) {
+        showToast('❌ Нет доступа', 1500);
+        return;
+    }
+    
+    state.showArchive = !state.showArchive;
+    archiveToggleBtn.classList.toggle('active', state.showArchive);
+    archiveToggleBtn.textContent = state.showArchive ? '📚 Скрыть' : '📚 Архив';
+    
+    if (state.showArchive) {
+        try {
+            showToast('📚 Загрузка архива...', 1500);
+            const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatArchivePath);
+            if (!result.exists) {
+                state.archiveMessages = [];
+                showToast('📭 Архив пуст', 1500);
+                renderMessages(state.messages);
+                return;
+            }
+            state.archiveMessages = result.content || [];
+            state.archiveSha = result.sha;
+            
+            const allMessages = [...state.messages, ...state.archiveMessages];
+            renderMessages(allMessages, true);
+            showToast(`📚 Загружено ${state.archiveMessages.length} архивных сообщений`, 2000);
+            scrollToBottom();
+        } catch (error) {
+            console.error('Ошибка загрузки архива:', error);
+            showToast('❌ Ошибка загрузки архива', 3000);
+        }
+    } else {
+        renderMessages(state.messages);
+        scrollToBottom();
+    }
+}
+
+// ===================================================================
+//  ОТПРАВКА СООБЩЕНИЙ
+// ===================================================================
+async function sendMessage(text, audioData = null, imageData = null) {
     if (!state.isAuthorized) {
         showToast('❌ Нет доступа для отправки', 2000);
         return;
     }
     const hasText = text && text.trim();
     const hasImage = imageData !== null;
-    if ((!hasText && !hasImage) || state.isSending) return;
+    const hasAudio = audioData !== null;
+    if ((!hasText && !hasImage && !hasAudio) || state.isSending) return;
     
     soundManager.play('click');
     state.isSending = true;
@@ -963,23 +1419,56 @@ async function sendMessage(text, imageData = null) {
             time: new Date().toISOString()
         };
         if (hasImage) newMessage.image = imageData;
+        if (hasAudio) newMessage.audio = audioData;
         
         state._lastSentMessageId = messageId;
         messages.push(newMessage);
-        if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
         
-        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath, messages, sha);
-        state.messages = messages;
-        state.chatSha = newSha;
-        state.lastMessageCount = messages.length;
+        if (messages.length > CONFIG.maxMessages) {
+            const messagesToKeep = messages.slice(-CONFIG.maxMessages);
+            const messagesToArchive = messages.slice(0, -CONFIG.maxMessages);
+            
+            const archiveResult = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatArchivePath);
+            let archiveMessages = archiveResult.exists ? (archiveResult.content || []) : [];
+            let archiveSha = archiveResult.exists ? archiveResult.sha : null;
+            
+            archiveMessages = [...archiveMessages, ...messagesToArchive];
+            if (archiveMessages.length > CONFIG.maxArchiveMessages) {
+                archiveMessages = archiveMessages.slice(-CONFIG.maxArchiveMessages);
+            }
+            
+            const newArchiveSha = await saveFile(
+                state.token, CONFIG.repoOwner, CONFIG.repoName, 
+                CONFIG.chatArchivePath, archiveMessages, archiveSha
+            );
+            const newChatSha = await saveFile(
+                state.token, CONFIG.repoOwner, CONFIG.repoName, 
+                CONFIG.chatFilePath, messagesToKeep, sha
+            );
+            
+            state.messages = messagesToKeep;
+            state.chatSha = newChatSha;
+            state.archiveMessages = archiveMessages;
+            state.archiveSha = newArchiveSha;
+            state.lastMessageCount = messagesToKeep.length;
+        } else {
+            const newSha = await saveFile(
+                state.token, CONFIG.repoOwner, CONFIG.repoName, 
+                CONFIG.chatFilePath, messages, sha
+            );
+            state.messages = messages;
+            state.chatSha = newSha;
+            state.lastMessageCount = messages.length;
+        }
         
         messageInput.value = '';
         messageInput.style.height = 'auto';
-        renderMessages(messages);
+        renderMessages(state.messages);
         scrollToBottom();
         
         soundManager.play('send');
-        showToast('✅ Отправлено!', 1000);
+        if (hasAudio) showToast('🎙️ Аудио отправлено!', 1000);
+        else showToast('✅ Отправлено!', 1000);
     } catch (error) {
         console.error('Ошибка:', error);
         soundManager.play('error');
@@ -1018,7 +1507,7 @@ async function deleteMessage(messageId) {
         state.messages = messages;
         state.chatSha = newSha;
         state.lastMessageCount = messages.length;
-        renderMessages(messages);
+        renderMessages(state.messages);
         soundManager.play('delete');
         showToast('🗑️ Сообщение удалено', 1000);
     } catch (error) {
@@ -1032,28 +1521,48 @@ async function deleteMessage(messageId) {
     }
 }
 
-async function handleFileUpload(file) {
-    if (!file) return;
-    if (!state.isAuthorized) { showToast('❌ Нет доступа', 2000); return; }
-    if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение', 2000); return; }
-    if (file.size > CONFIG.maxImageSize) {
-        showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000);
-        return;
-    }
-    try {
-        showToast('⏳ Обработка изображения...', 1500);
-        const compressedImage = await compressImage(file, 800, 800, 0.8);
-        await sendMessage('', compressedImage);
-    } catch (error) {
-        console.error('Ошибка загрузки изображения:', error);
-        showToast('❌ Ошибка при обработке изображения', 3000);
-    }
-}
-
 // ===================================================================
 //  РЕНДЕРИНГ
 // ===================================================================
-function renderMessages(messages) {
+function renderAudioMessage(audioData, isOwn) {
+    return `
+        <div class="audio-message" style="background: ${isOwn ? 'rgba(108,92,231,0.2)' : 'rgba(255,255,255,0.05)'};">
+            <button class="audio-play-btn" onclick="window._toggleAudioPlay(this, '${audioData}')">
+                ▶️
+            </button>
+            <div class="audio-timeline" onclick="window._seekAudio(event, this)">
+                <div class="progress"></div>
+            </div>
+            <span class="audio-duration">0:00</span>
+        </div>
+    `;
+}
+
+window._toggleAudioPlay = function(button, audioData) {
+    const container = button.closest('.audio-message');
+    if (!container) return;
+    if (audioPlayer.currentElement === container && audioPlayer.isPlaying) {
+        audioPlayer.stop();
+        return;
+    }
+    audioPlayer.play(audioData, container);
+    const durationEl = container.querySelector('.audio-duration');
+    if (durationEl) {
+        const audio = new Audio(audioData);
+        audio.onloadedmetadata = () => {
+            durationEl.textContent = formatDuration(audio.duration);
+        };
+    }
+};
+
+window._seekAudio = function(event, timeline) {
+    if (!audioPlayer.currentAudio || audioPlayer.currentElement !== timeline.closest('.audio-message')) return;
+    const rect = timeline.getBoundingClientRect();
+    const percent = (event.clientX - rect.left) / rect.width;
+    audioPlayer.currentAudio.currentTime = percent * audioPlayer.currentAudio.duration;
+};
+
+function renderMessages(messages, isArchiveView = false) {
     if (!messages || messages.length === 0) {
         messagesContainer.innerHTML = `
             <div class="message system">💬 История пуста</div>
@@ -1061,13 +1570,31 @@ function renderMessages(messages) {
         `;
         return;
     }
+    
     let html = '', lastDate = '';
+    let showArchiveBtn = !isArchiveView && state.archiveMessages.length > 0;
+    
+    if (showArchiveBtn) {
+        html += `
+            <button class="btn" style="margin-bottom:12px;max-width:220px;align-self:center;font-size:12px;padding:6px 16px;background:rgba(255,255,255,0.06);color:#aaa;" onclick="loadArchive()">
+                📚 Загрузить архив (${state.archiveMessages.length} сообщений)
+            </button>
+        `;
+    }
+    
     messages.forEach((msg) => {
+        if (!isArchiveView && state.archiveMessages.some(a => a.id === msg.id)) return;
+        
         const msgDate = formatDate(msg.time);
-        if (msgDate !== lastDate) { html += `<div class="message system">${msgDate}</div>`; lastDate = msgDate; }
-        const isOwn = msg.username === state.username && state.isAuthorized;
+        if (msgDate !== lastDate) { 
+            html += `<div class="message system">${msgDate}</div>`; 
+            lastDate = msgDate; 
+        }
+        
+        const isOwn = isOwnMessage(msg);
         const senderName = msg.username || 'Аноним';
         const fullTime = formatFullTime(msg.time);
+        const isArchived = isArchiveView && !state.messages.some(m => m.id === msg.id);
         
         let content = '';
         if (msg.text) {
@@ -1080,18 +1607,23 @@ function renderMessages(messages) {
                 </div>
             `;
         }
+        if (msg.audio) {
+            content += renderAudioMessage(msg.audio, isOwn);
+        }
         
         html += `
             <div class="message-wrapper ${isOwn ? 'own' : 'other'}">
                 <div class="message">
-                    <span class="sender">${isOwn ? 'Вы' : senderName}</span>
+                    <span class="sender">${isOwn ? 'Вы' : escapeHtml(senderName)}</span>
                     ${content}
                     <span class="time">${fullTime}</span>
+                    ${isArchived ? '<span class="archive-label">📦 Архив</span>' : ''}
                 </div>
                 ${isOwn ? `<button class="delete-btn" onclick="deleteMessage(${msg.id})" title="Удалить">✕</button>` : ''}
             </div>
         `;
     });
+    
     messagesContainer.innerHTML = html;
     scrollToBottom();
 }
@@ -1116,7 +1648,13 @@ async function pollUpdates() {
                 state.messages = newMessages;
                 state.chatSha = chatResult.sha;
                 state.lastMessageCount = newMessages.length;
-                renderMessages(newMessages);
+                
+                if (!state.showArchive) {
+                    renderMessages(newMessages);
+                } else {
+                    const allMessages = [...newMessages, ...state.archiveMessages];
+                    renderMessages(allMessages, true);
+                }
                 scrollToBottom();
                 
                 if (!hasOwnMessage) {
@@ -1131,7 +1669,6 @@ async function pollUpdates() {
             }
         }
         
-        // Проверяем обновления пользователей
         const usersResult = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.usersFilePath);
         if (usersResult.exists && usersResult.sha !== state.usersSha) {
             state.users = usersResult.content || [];
@@ -1155,7 +1692,89 @@ function startPolling() {
 }
 
 // ===================================================================
-//  АВТОРИЗАЦИЯ И ВЫХОД
+//  АУДИО ЗАПИСЬ UI
+// ===================================================================
+function initAudioRecorder() {
+    audioRecorder = new AudioRecorder();
+    
+    audioRecorder.onDurationUpdate = (duration) => {
+        recordingTimer.textContent = formatDuration(duration);
+        const progress = (duration / CONFIG.maxAudioDuration) * 100;
+        recordingProgress.style.width = `${Math.min(progress, 100)}%`;
+    };
+    
+    audioRecorder.onRecordingComplete = (audioData) => {
+        sendMessage('', audioData.data);
+        resetAudioUI();
+    };
+}
+
+function showAudioRecordingUI() {
+    audioRecordingUI.classList.add('active');
+    audioRecordBtn.classList.add('recording');
+    audioRecordBtn.textContent = '⏹️';
+    messageInput.disabled = true;
+    sendBtn.disabled = true;
+    fileBtn.disabled = true;
+    recordingTimer.textContent = '0:00';
+    recordingProgress.style.width = '0%';
+}
+
+function resetAudioUI() {
+    audioRecordingUI.classList.remove('active');
+    audioRecordBtn.classList.remove('recording');
+    audioRecordBtn.textContent = '🎙️';
+    messageInput.disabled = false;
+    sendBtn.disabled = false;
+    fileBtn.disabled = false;
+    recordingTimer.textContent = '0:00';
+    recordingProgress.style.width = '0%';
+}
+
+async function toggleAudioRecording() {
+    if (!state.isAuthorized) {
+        showToast('❌ Нет доступа для отправки', 2000);
+        return;
+    }
+    
+    if (isAudioRecording) {
+        if (audioRecorder) audioRecorder.stopRecording();
+        isAudioRecording = false;
+        resetAudioUI();
+        return;
+    }
+    
+    const success = await audioRecorder.startRecording();
+    if (success) {
+        isAudioRecording = true;
+        showAudioRecordingUI();
+        showToast('🎙️ Запись начата...', 1000);
+    }
+}
+
+// ===================================================================
+//  ОБРАБОТКА ФАЙЛОВ
+// ===================================================================
+async function handleFileUpload(file) {
+    if (!file) return;
+    if (!state.isAuthorized) { showToast('❌ Нет доступа', 2000); return; }
+    if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение', 2000); return; }
+    if (file.size > CONFIG.maxImageSize) {
+        showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000);
+        return;
+    }
+    try {
+        showToast('⏳ Обработка изображения...', 1500);
+        const compressedImage = await compressImage(file, 800, 800, 0.8);
+        await sendMessage('', null, compressedImage);
+    } catch (error) {
+        console.error('Ошибка загрузки изображения:', error);
+        showToast('❌ Ошибка при обработке изображения', 3000);
+    }
+}
+
+// ===================================================================
+//  АВТОРИЗАЦИЯ
 // ===================================================================
 async function login() {
     const username = usernameInput.value.trim();
@@ -1165,7 +1784,6 @@ async function login() {
     authError.style.display = 'none';
     
     try {
-        // Проверяем доступ к репозиторию
         await fetchFile(token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
         
         state.username = username;
@@ -1174,7 +1792,6 @@ async function login() {
         localStorage.setItem('chathub_username', username);
         localStorage.setItem('chathub_token', token);
         
-        // Регистрируем пользователя
         await registerUser(username);
         await loadUsers();
         await loadMessages(true);
@@ -1198,6 +1815,9 @@ function logout() {
     state.isPolling = false;
     state.isAuthorized = false;
     state._lastSentMessageId = null;
+    state.showArchive = false;
+    archiveToggleBtn.classList.remove('active');
+    archiveToggleBtn.textContent = '📚 Архив';
     
     authScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
@@ -1208,14 +1828,50 @@ function logout() {
     state.lastMessageCount = 0;
     state.users = [];
     state.usersSha = null;
+    state.archiveMessages = [];
+    state.archiveSha = null;
     closeImageModal();
+    resetAudioUI();
     updateUsersUI();
     
     showToast('👋 Вы вышли из чата', 1500);
 }
 
 // ===================================================================
-//  ОБРАБОТЧИКИ
+//  ВОССТАНОВЛЕНИЕ СЕССИИ
+// ===================================================================
+async function restoreSession() {
+    const savedUsername = localStorage.getItem('chathub_username');
+    const savedToken = localStorage.getItem('chathub_token');
+    if (savedUsername) usernameInput.value = savedUsername;
+    if (savedToken) tokenInput.value = savedToken;
+    if (savedUsername && savedToken) {
+        try {
+            await fetchFile(savedToken, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
+            state.username = savedUsername;
+            state.token = savedToken;
+            state.isAuthorized = true;
+            
+            await registerUser(savedUsername);
+            await loadUsers();
+            await loadMessages(true);
+            
+            authScreen.style.display = 'none';
+            chatScreen.style.display = 'flex';
+            exitFromAuthBtn.classList.remove('show');
+            userAvatar.textContent = getInitials(savedUsername);
+            chatTitle.textContent = `Чат (${savedUsername})`;
+            startPolling();
+        } catch (error) {
+            console.log('Автовход не удался, ждём ручного входа');
+            state.isAuthorized = false;
+            exitFromAuthBtn.classList.add('show');
+        }
+    }
+}
+
+// ===================================================================
+//  ОБРАБОТЧИКИ СОБЫТИЙ
 // ===================================================================
 loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
@@ -1254,7 +1910,7 @@ messageInput.addEventListener('keydown', (e) => {
 
 messageInput.addEventListener('input', () => {
     messageInput.style.height = 'auto';
-    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+    messageInput.style.height = Math.min(messageInput.scrollHeight, 100) + 'px';
 });
 
 fileBtn.addEventListener('click', () => {
@@ -1268,6 +1924,15 @@ fileBtn.addEventListener('click', () => {
     input.click();
 });
 
+audioRecordBtn.addEventListener('click', toggleAudioRecording);
+cancelRecordingBtn.addEventListener('click', () => {
+    if (audioRecorder) audioRecorder.stopRecording();
+    isAudioRecording = false;
+    resetAudioUI();
+    showToast('⏹️ Запись отменена', 1000);
+});
+
+archiveToggleBtn.addEventListener('click', loadArchive);
 exitBtn.addEventListener('click', logout);
 
 clearDataBtn.addEventListener('click', () => {
@@ -1281,18 +1946,20 @@ clearDataBtn.addEventListener('click', () => {
     }
 });
 
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeImageModal();
-    }
-});
-
 closeModalBtn.addEventListener('click', closeImageModal);
 imageModal.addEventListener('click', (e) => {
     if (e.target === imageModal) closeImageModal();
 });
 
 document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeImageModal();
+        if (audioPlayer.isPlaying) audioPlayer.stop();
+    }
+    if (e.altKey && e.code === 'Space') {
+        e.preventDefault();
+        toggleAudioRecording();
+    }
     if (e.ctrlKey && e.key === 'm') {
         e.preventDefault();
         const enabled = soundManager.toggle();
@@ -1301,50 +1968,21 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===================================================================
-//  ВОССТАНОВЛЕНИЕ СЕССИИ
-// ===================================================================
-async function restoreSession() {
-    const savedUsername = localStorage.getItem('chathub_username');
-    const savedToken = localStorage.getItem('chathub_token');
-    if (savedUsername) usernameInput.value = savedUsername;
-    if (savedToken) tokenInput.value = savedToken;
-    if (savedUsername && savedToken) {
-        try {
-            await fetchFile(savedToken, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
-            state.username = savedUsername;
-            state.token = savedToken;
-            state.isAuthorized = true;
-            
-            await registerUser(savedUsername);
-            await loadUsers();
-            await loadMessages(true);
-            
-            authScreen.style.display = 'none';
-            chatScreen.style.display = 'flex';
-            exitFromAuthBtn.classList.remove('show');
-            userAvatar.textContent = getInitials(savedUsername);
-            chatTitle.textContent = `Чат (${savedUsername})`;
-            startPolling();
-        } catch (error) {
-            console.log('Автовход не удался, ждём ручного входа');
-            state.isAuthorized = false;
-            exitFromAuthBtn.classList.add('show');
-        }
-    }
-}
-
-// ===================================================================
 //  ЗАПУСК
 // ===================================================================
+initAudioRecorder();
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
 console.log('✅ SMS Чат загружен!');
-console.log('📱 Название: SMS Чат');
-console.log('👥 Регистрация пользователей в users.json');
-console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
-console.log('🖼️ Для отправки фото нажмите кнопку 📎');
-console.log('🔒 Только авторизованные пользователи могут читать и писать');
+console.log('📱 Функции:');
+console.log('  💬 Текстовые сообщения');
+console.log('  🖼️ Изображения');
+console.log('  🎙️ Аудиосообщения (до 15 сек)');
+console.log('  📚 Архив сообщений (до 500)');
+console.log('  👥 Список пользователей');
+console.log('🔊 Ctrl+M - вкл/выкл звуки');
+console.log('🎙️ Alt+Space - запись аудио');
 </script>
 </body>
 </html>
