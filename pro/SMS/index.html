@@ -543,10 +543,40 @@ function closeImageModal() {
 }
 
 // ===================================================================
+//  КОРРЕКТНАЯ РАБОТА С UTF-8 В GITHUB
+// ===================================================================
+// Функция для правильного кодирования UTF-8 в base64
+function utf8ToBase64(str) {
+    // Сначала кодируем строку в UTF-8
+    const utf8Bytes = new TextEncoder().encode(str);
+    // Затем конвертируем в base64
+    let binary = '';
+    utf8Bytes.forEach(byte => binary += String.fromCharCode(byte));
+    return btoa(binary);
+}
+
+// Функция для правильного декодирования base64 в UTF-8
+function base64ToUtf8(base64) {
+    // Декодируем base64 в бинарные данные
+    const binary = atob(base64);
+    // Конвертируем в массив байтов
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    // Декодируем UTF-8
+    return new TextDecoder('utf-8').decode(bytes);
+}
+
+// ===================================================================
 //  GITHUB API
 // ===================================================================
 function getHeaders(token) {
-    return { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' };
+    return { 
+        'Authorization': `token ${token}`, 
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+    };
 }
 
 async function fetchFile(token, owner, repo, path) {
@@ -555,21 +585,32 @@ async function fetchFile(token, owner, repo, path) {
     if (response.status === 404) return { exists: false };
     if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
     const data = await response.json();
-    return { exists: true, sha: data.sha, content: JSON.parse(atob(data.content)) };
+    
+    // Правильно декодируем содержимое
+    const content = JSON.parse(base64ToUtf8(data.content));
+    return { exists: true, sha: data.sha, content: content };
 }
 
 async function saveFile(token, owner, repo, path, content, sha) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    // Используем правильное кодирование для UTF-8
     const jsonString = JSON.stringify(content, null, 2);
-    const encoded = btoa(unescape(encodeURIComponent(jsonString)));
+    const encoded = utf8ToBase64(jsonString);
+    
     const body = { 
         message: `💬 Сообщение от ${state.username}`,
         content: encoded
     };
     if (sha) body.sha = sha;
-    const response = await fetch(url, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) });
-    if (!response.ok) { const error = await response.json(); throw new Error(error.message || `HTTP ${response.status}`); }
+    
+    const response = await fetch(url, { 
+        method: 'PUT', 
+        headers: getHeaders(token), 
+        body: JSON.stringify(body) 
+    });
+    if (!response.ok) { 
+        const error = await response.json(); 
+        throw new Error(error.message || `HTTP ${response.status}`); 
+    }
     const data = await response.json();
     return data.content.sha;
 }
@@ -610,7 +651,6 @@ async function loadMessages(showLoading = true) {
 }
 
 async function sendMessage(text, imageData = null) {
-    // Проверяем, есть ли что отправлять
     const hasText = text && text.trim();
     const hasImage = imageData !== null;
     
@@ -624,7 +664,6 @@ async function sendMessage(text, imageData = null) {
         let messages = result.exists ? (result.content || []) : [];
         let sha = result.exists ? result.sha : null;
         
-        // Создаём новое сообщение
         const newMessage = { 
             id: Date.now(), 
             username: state.username, 
@@ -632,7 +671,6 @@ async function sendMessage(text, imageData = null) {
             time: new Date().toISOString()
         };
         
-        // Добавляем изображение, если есть
         if (hasImage) {
             newMessage.image = imageData;
         }
@@ -645,11 +683,9 @@ async function sendMessage(text, imageData = null) {
         state.sha = newSha;
         state.lastMessageCount = messages.length;
         
-        // Очищаем поле ввода
         messageInput.value = '';
         messageInput.style.height = 'auto';
         
-        // Обновляем отображение
         renderMessages(messages);
         scrollToBottom();
         
@@ -669,13 +705,11 @@ async function sendMessage(text, imageData = null) {
 async function handleFileUpload(file) {
     if (!file) return;
     
-    // Проверка типа файла
     if (!file.type.startsWith('image/')) {
         showToast('❌ Пожалуйста, выберите изображение', 2000);
         return;
     }
     
-    // Проверка размера
     if (file.size > CONFIG.maxImageSize) {
         showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000);
         return;
@@ -684,7 +718,6 @@ async function handleFileUpload(file) {
     try {
         showToast('⏳ Обработка изображения...', 1500);
         const compressedImage = await compressImage(file, 800, 800, 0.8);
-        // Отправляем изображение без текста
         await sendMessage('', compressedImage);
     } catch (error) {
         console.error('Ошибка загрузки изображения:', error);
