@@ -149,12 +149,64 @@
             top: 0;
         }
         .chat-header .left { display: flex; align-items: center; gap: 12px; }
-        .chat-header .avatar {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: linear-gradient(135deg, #6c5ce7, #00b894);
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 18px; color: #fff;
+        .chat-header .avatar-wrapper {
+            position: relative;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
             flex-shrink: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #fff;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .chat-header .avatar-wrapper:hover {
+            transform: scale(1.05);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .chat-header .avatar-wrapper:active {
+            transform: scale(0.95);
+        }
+        .chat-header .avatar-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .chat-header .avatar-wrapper .initials {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #fff;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .chat-header .avatar-wrapper .change-avatar-hint {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            font-size: 8px;
+            text-align: center;
+            padding: 2px 0;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .chat-header .avatar-wrapper:hover .change-avatar-hint {
+            opacity: 1;
         }
         .chat-header .info h2 { font-size: 17px; font-weight: 600; }
         .chat-header .info .status { font-size: 12px; color: #00b894; display: flex; align-items: center; gap: 5px; }
@@ -698,7 +750,11 @@
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
-            <div class="avatar" id="userAvatar">?</div>
+            <div class="avatar-wrapper" id="avatarWrapper" title="Нажмите, чтобы изменить аватар">
+                <img id="avatarImage" style="display:none;" alt="Avatar">
+                <span class="initials" id="avatarInitials">?</span>
+                <span class="change-avatar-hint">✏️ Сменить</span>
+            </div>
             <div class="info">
                 <h2 id="chatTitle">Общий чат</h2>
                 <div class="status"><span class="dot"></span><span id="onlineStatus">онлайн</span></div>
@@ -812,7 +868,9 @@ const messageInput = $('messageInput');
 const sendBtn = $('sendBtn');
 const fileBtn = $('fileBtn');
 const exitBtn = $('exitBtn');
-const userAvatar = $('userAvatar');
+const avatarWrapper = $('avatarWrapper');
+const avatarImage = $('avatarImage');
+const avatarInitials = $('avatarInitials');
 const chatTitle = $('chatTitle');
 const toast = $('toast');
 const imageModal = $('imageModal');
@@ -939,6 +997,7 @@ async function loadUsers() {
         state.users = result.content || [];
         state.usersSha = result.sha;
         updateUsersUI();
+        updateAvatarFromUsers();
     } catch (error) {
         console.error('Ошибка загрузки пользователей:', error);
     }
@@ -965,10 +1024,45 @@ async function registerUser(username) {
         state.users = users;
         state.usersSha = newSha;
         updateUsersUI();
+        updateAvatarFromUsers();
         return true;
     } catch (error) {
         console.error('Ошибка регистрации:', error);
         return false;
+    }
+}
+
+async function updateUserAvatar(username, avatarData) {
+    try {
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.usersFilePath);
+        if (!result.exists) return false;
+        let users = result.content || [];
+        const userIndex = users.findIndex(u => u.username === username);
+        if (userIndex === -1) return false;
+        
+        users[userIndex].avatar = avatarData;
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.usersFilePath, users, result.sha);
+        state.users = users;
+        state.usersSha = newSha;
+        updateAvatarFromUsers();
+        return true;
+    } catch (error) {
+        console.error('Ошибка обновления аватара:', error);
+        return false;
+    }
+}
+
+function updateAvatarFromUsers() {
+    if (!state.isAuthorized) return;
+    const currentUser = state.users.find(u => u.username === state.username);
+    if (currentUser && currentUser.avatar) {
+        avatarImage.src = currentUser.avatar;
+        avatarImage.style.display = 'block';
+        avatarInitials.style.display = 'none';
+    } else {
+        avatarImage.style.display = 'none';
+        avatarInitials.style.display = 'flex';
+        avatarInitials.textContent = getInitials(state.username);
     }
 }
 
@@ -1076,6 +1170,32 @@ function openImageModal(imageUrl) {
 function closeImageModal() {
     imageModal.classList.remove('active');
     document.body.style.overflow = '';
+}
+
+// ===================================================================
+//  АВАТАР
+// ===================================================================
+async function handleAvatarUpload(file) {
+    if (!file) return;
+    if (!state.isAuthorized) { showToast('❌ Нет доступа', 2000); return; }
+    if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение', 2000); return; }
+    if (file.size > CONFIG.maxImageSize) {
+        showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000);
+        return;
+    }
+    try {
+        showToast('⏳ Обновление аватара...', 1500);
+        const compressed = await compressImage(file, 200, 200, 0.7);
+        const success = await updateUserAvatar(state.username, compressed);
+        if (success) {
+            showToast('✅ Аватар обновлён!', 1500);
+        } else {
+            showToast('❌ Ошибка при обновлении аватара', 2000);
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки аватара:', error);
+        showToast('❌ Ошибка при обработке изображения', 3000);
+    }
 }
 
 // ===================================================================
@@ -1674,6 +1794,7 @@ async function pollUpdates() {
             state.users = usersResult.content || [];
             state.usersSha = usersResult.sha;
             updateUsersUI();
+            updateAvatarFromUsers();
         }
     } catch (error) {
         console.error('Polling error:', error);
@@ -1799,7 +1920,7 @@ async function login() {
         authScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
         exitFromAuthBtn.classList.remove('show');
-        userAvatar.textContent = getInitials(username);
+        avatarInitials.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
         startPolling();
     } catch (error) {
@@ -1859,7 +1980,7 @@ async function restoreSession() {
             authScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
             exitFromAuthBtn.classList.remove('show');
-            userAvatar.textContent = getInitials(savedUsername);
+            avatarInitials.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
             startPolling();
         } catch (error) {
@@ -1924,6 +2045,18 @@ fileBtn.addEventListener('click', () => {
     input.click();
 });
 
+avatarWrapper.addEventListener('click', () => {
+    if (!state.isAuthorized) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        if (e.target.files.length > 0) handleAvatarUpload(e.target.files[0]);
+        input.remove();
+    };
+    input.click();
+});
+
 audioRecordBtn.addEventListener('click', toggleAudioRecording);
 cancelRecordingBtn.addEventListener('click', () => {
     if (audioRecorder) audioRecorder.stopRecording();
@@ -1981,6 +2114,7 @@ console.log('  🖼️ Изображения');
 console.log('  🎙️ Аудиосообщения (до 15 сек)');
 console.log('  📚 Архив сообщений (до 500)');
 console.log('  👥 Список пользователей');
+console.log('  🖼️ Аватарки пользователей (нажмите на свой аватар)');
 console.log('🔊 Ctrl+M - вкл/выкл звуки');
 console.log('🎙️ Alt+Space - запись аудио');
 </script>
