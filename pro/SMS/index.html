@@ -282,6 +282,66 @@ const CONFIG = {
 };
 
 // ===================================================================
+//  ЗВУКИ
+// ===================================================================
+class SoundManager {
+    constructor() {
+        this.enabled = true;
+        this.sounds = {};
+        this.initSounds();
+    }
+
+    initSounds() {
+        // Создаём звуки с помощью Web Audio API (работает без внешних файлов)
+        this.sounds.send = this.createBeep(600, 0.1);
+        this.sounds.receive = this.createBeep(800, 0.15);
+        this.sounds.error = this.createBeep(300, 0.3);
+    }
+
+    createBeep(freq, duration) {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine';
+        gainNode.gain.value = 0.1;
+        return {
+            play: () => {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + duration);
+                } catch (e) { /* игнорируем ошибки аудио */ }
+            }
+        };
+    }
+
+    play(type) {
+        if (!this.enabled) return;
+        if (this.sounds[type]) {
+            this.sounds[type].play();
+        }
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
+        return this.enabled;
+    }
+}
+
+const soundManager = new SoundManager();
+
+// ===================================================================
 //  СОСТОЯНИЕ
 // ===================================================================
 let state = {
@@ -291,6 +351,7 @@ let state = {
     sha: null,
     isPolling: false,
     isSending: false,
+    lastMessageCount: 0,
 };
 
 // ===================================================================
@@ -319,6 +380,13 @@ const inputBar = $('inputBar');
 function getInitials(name) { return name.charAt(0).toUpperCase(); }
 function formatTime(iso) { return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
 function formatDate(iso) { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
+
+function formatFullTime(iso) {
+    const date = new Date(iso);
+    const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const day = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    return `${day} ${time}`;
+}
 
 function showToast(text, duration = 2000) {
     toast.textContent = text;
@@ -374,11 +442,13 @@ async function loadMessages(showLoading = true) {
         if (!result.exists) {
             state.messages = [];
             state.sha = null;
+            state.lastMessageCount = 0;
             renderMessages([]);
             return;
         }
         state.messages = result.content || [];
         state.sha = result.sha;
+        state.lastMessageCount = state.messages.length;
         renderMessages(state.messages);
         scrollToBottom();
     } catch (error) {
@@ -404,13 +474,16 @@ async function sendMessage(text) {
         const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, sha);
         state.messages = messages;
         state.sha = newSha;
+        state.lastMessageCount = messages.length;
         renderMessages(messages);
         scrollToBottom();
         messageInput.value = '';
         messageInput.style.height = 'auto';
+        soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
     } catch (error) {
         console.error('Ошибка:', error);
+        soundManager.play('error');
         showToast('❌ Ошибка: ' + error.message, 3000);
     } finally {
         state.isSending = false;
@@ -436,12 +509,12 @@ function renderMessages(messages) {
         if (msgDate !== lastDate) { html += `<div class="message system">${msgDate}</div>`; lastDate = msgDate; }
         const isOwn = msg.username === state.username;
         const senderName = msg.username || 'Аноним';
-        const time = formatTime(msg.time);
+        const fullTime = formatFullTime(msg.time);
         html += `
             <div class="message ${isOwn ? 'own' : 'other'}">
                 <span class="sender">${isOwn ? 'Вы' : senderName}</span>
                 <span class="text">${escapeHtml(msg.text)}</span>
-                <span class="time">${time}</span>
+                <span class="time">${fullTime}</span>
             </div>
         `;
     });
@@ -462,15 +535,18 @@ async function pollUpdates() {
         if (!result.exists) return;
         if (result.sha !== state.sha) {
             const newMessages = result.content || [];
-            if (newMessages.length > state.messages.length) {
+            if (newMessages.length > state.lastMessageCount) {
                 state.messages = newMessages;
                 state.sha = result.sha;
+                state.lastMessageCount = newMessages.length;
                 renderMessages(newMessages);
                 scrollToBottom();
+                soundManager.play('receive');
                 showToast('📩 Новые сообщения!', 1000);
             } else {
                 state.sha = result.sha;
                 state.messages = newMessages;
+                state.lastMessageCount = newMessages.length;
             }
         }
     } catch (error) { console.error('Polling error:', error); }
@@ -513,6 +589,10 @@ function logout() {
     usernameInput.value = '';
     tokenInput.value = '';
     authError.style.display = 'none';
+    // Очищаем состояние
+    state.messages = [];
+    state.sha = null;
+    state.lastMessageCount = 0;
 }
 
 // ===================================================================
@@ -559,8 +639,18 @@ function restoreSession() {
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
+// Добавляем горячие клавиши для звука (Ctrl+M - вкл/выкл звук)
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'm') {
+        e.preventDefault();
+        const enabled = soundManager.toggle();
+        showToast(`🔊 Звук ${enabled ? 'включён' : 'выключен'}`, 1000);
+    }
+});
+
 console.log('✅ Чат загружен!');
 console.log('📁 Репозиторий:', CONFIG.repoOwner + '/' + CONFIG.repoName);
+console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 </script>
 
 </body>
