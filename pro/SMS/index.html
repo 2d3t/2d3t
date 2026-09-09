@@ -42,6 +42,7 @@
             padding: 28px 24px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
+            position: relative;
         }
         .auth-form label { display: block; font-size: 13px; color: #999; margin-bottom: 6px; font-weight: 500; }
         .auth-form input {
@@ -74,6 +75,8 @@
         }
         .btn:active { transform: scale(0.97); }
         .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
+        .btn-danger { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; margin-top: 10px; border: 1px solid rgba(255, 107, 107, 0.2); }
+        .btn-danger:active { background: rgba(255, 107, 107, 0.25); }
         .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
 
         #chatScreen {
@@ -172,7 +175,6 @@
         }
         .message .image-container img:active { transform: scale(0.98); }
         
-        /* НОВЫЙ ЛАКОНИЧНЫЙ ДИЗАЙН КНОПКИ УДАЛЕНИЯ */
         .delete-btn {
             position: absolute;
             top: -6px;
@@ -244,7 +246,6 @@
         }
         .image-modal .close-modal:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 
-        /* Панель ввода */
         .input-bar {
             padding: 10px 14px 14px;
             background: rgba(255,255,255,0.03);
@@ -421,6 +422,7 @@
         <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
         <button class="btn" id="loginBtn">🚀 Войти</button>
         <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
+        <button class="btn btn-danger" id="logoutFromAuthBtn" style="display:none;">🚪 Выйти из чата</button>
     </div>
 </div>
 
@@ -475,7 +477,7 @@ const CONFIG = {
 };
 
 // ===================================================================
-//  ЗВУКИ (без изменений)
+//  ЗВУКИ
 // ===================================================================
 class SoundManager {
     constructor() {
@@ -530,7 +532,8 @@ let state = {
     isPolling: false,
     isSending: false,
     lastMessageCount: 0,
-    isAuthorized: false,  // флаг, что токен валиден и мы имеем доступ
+    isAuthorized: false,
+    _lastSentMessageId: null, // ID последнего отправленного сообщения
 };
 
 // ===================================================================
@@ -544,6 +547,7 @@ const tokenInput = $('tokenInput');
 const loginBtn = $('loginBtn');
 const authError = $('authError');
 const clearDataBtn = $('clearDataBtn');
+const logoutFromAuthBtn = $('logoutFromAuthBtn');
 const messagesContainer = $('messagesContainer');
 const messageInput = $('messageInput');
 const sendBtn = $('sendBtn');
@@ -711,10 +715,9 @@ async function saveFile(token, owner, repo, path, content, sha) {
 }
 
 // ===================================================================
-//  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ (с проверкой авторизации)
+//  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ
 // ===================================================================
 async function loadMessages(showLoading = true) {
-    // Если нет авторизации — не загружаем, показываем заглушку
     if (!state.isAuthorized) {
         messagesContainer.innerHTML = `
             <div class="message system">🔒 Доступ закрыт</div>
@@ -746,7 +749,6 @@ async function loadMessages(showLoading = true) {
         scrollToBottom();
     } catch (error) {
         console.error('Ошибка загрузки:', error);
-        // Если ошибка — сбрасываем авторизацию
         state.isAuthorized = false;
         messagesContainer.innerHTML = `
             <div class="message system">⚠️ Ошибка доступа</div>
@@ -773,13 +775,17 @@ async function sendMessage(text, imageData = null) {
         let messages = result.exists ? (result.content || []) : [];
         let sha = result.exists ? result.sha : null;
         
+        const messageId = Date.now();
         const newMessage = { 
-            id: Date.now(), 
+            id: messageId, 
             username: state.username, 
             text: hasText ? text.trim() : '', 
             time: new Date().toISOString()
         };
         if (hasImage) newMessage.image = imageData;
+        
+        // Сохраняем ID отправленного сообщения для проверки в pollUpdates
+        state._lastSentMessageId = messageId;
         
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
@@ -803,6 +809,7 @@ async function sendMessage(text, imageData = null) {
             state.isAuthorized = false;
             loadMessages(false);
         }
+        state._lastSentMessageId = null;
     } finally {
         state.isSending = false;
         sendBtn.disabled = false;
@@ -911,7 +918,7 @@ function renderMessages(messages) {
 }
 
 // ===================================================================
-//  ПОЛЛИНГ (только если авторизован)
+//  ПОЛЛИНГ (с проверкой на свои сообщения)
 // ===================================================================
 async function pollUpdates() {
     if (state.isPolling || !state.token || !state.isAuthorized) return;
@@ -922,12 +929,27 @@ async function pollUpdates() {
         if (result.sha !== state.sha) {
             const newMessages = result.content || [];
             if (newMessages.length > state.lastMessageCount) {
+                // Проверяем, не наши ли это сообщения
+                const newMessagesArray = newMessages.slice(state.lastMessageCount);
+                // Проверяем, есть ли среди новых сообщений наши (отправленные только что)
+                const hasOwnMessage = newMessagesArray.some(msg => 
+                    msg.username === state.username && 
+                    msg.id === state._lastSentMessageId
+                );
+                
                 state.messages = newMessages;
                 state.sha = result.sha;
                 state.lastMessageCount = newMessages.length;
                 renderMessages(newMessages);
                 scrollToBottom();
-                soundManager.play('receive');
+                
+                // Воспроизводим звук получения только если это не наше сообщение
+                if (!hasOwnMessage) {
+                    soundManager.play('receive');
+                } else {
+                    // Если это наше сообщение, сбрасываем ID, чтобы не блокировать будущие уведомления
+                    state._lastSentMessageId = null;
+                }
             } else {
                 state.sha = result.sha;
                 state.messages = newMessages;
@@ -951,7 +973,7 @@ function startPolling() {
 }
 
 // ===================================================================
-//  АВТОРИЗАЦИЯ С ПРОВЕРКОЙ ДОСТУПА
+//  АВТОРИЗАЦИЯ И ВЫХОД
 // ===================================================================
 async function login() {
     const username = usernameInput.value.trim();
@@ -960,10 +982,8 @@ async function login() {
     if (!token) { authError.textContent = '❌ Введите GitHub токен'; authError.style.display = 'block'; return; }
     authError.style.display = 'none';
     
-    // Пробуем получить доступ к репозиторию
     try {
         const test = await fetchFile(token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
-        // Если получили ответ (даже 404 — это ок, значит репозиторий доступен)
         state.username = username;
         state.token = token;
         state.isAuthorized = true;
@@ -972,6 +992,7 @@ async function login() {
         
         authScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
+        logoutFromAuthBtn.style.display = 'none';
         userAvatar.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
         showInputBar();
@@ -982,7 +1003,6 @@ async function login() {
         authError.textContent = '❌ Неверный токен или нет доступа к репозиторию';
         authError.style.display = 'block';
         state.isAuthorized = false;
-        // Не переходим в чат
     }
 }
 
@@ -990,16 +1010,19 @@ function logout() {
     if (window._pollInterval) clearInterval(window._pollInterval);
     state.isPolling = false;
     state.isAuthorized = false;
+    state._lastSentMessageId = null;
+    
     authScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
-    usernameInput.value = '';
-    tokenInput.value = '';
+    logoutFromAuthBtn.style.display = 'block';
     authError.style.display = 'none';
     state.messages = [];
     state.sha = null;
     state.lastMessageCount = 0;
     closeImageModal();
     hideInputBar();
+    
+    showToast('👋 Вы вышли из чата', 1500);
 }
 
 // ===================================================================
@@ -1008,6 +1031,18 @@ function logout() {
 loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+
+logoutFromAuthBtn.addEventListener('click', () => {
+    // Эта кнопка появляется только когда мы вышли из чата
+    // Просто очищаем данные и показываем форму входа
+    localStorage.removeItem('chathub_username');
+    localStorage.removeItem('chathub_token');
+    usernameInput.value = '';
+    tokenInput.value = '';
+    logoutFromAuthBtn.style.display = 'none';
+    authError.style.display = 'none';
+    showToast('🗑️ Данные очищены', 1500);
+});
 
 sendBtn.addEventListener('click', () => {
     const text = messageInput.value;
@@ -1046,6 +1081,7 @@ clearDataBtn.addEventListener('click', () => {
         localStorage.removeItem('chathub_token');
         usernameInput.value = '';
         tokenInput.value = '';
+        logoutFromAuthBtn.style.display = 'none';
         showToast('🗑️ Данные очищены', 1500);
     }
 });
@@ -1085,7 +1121,6 @@ async function restoreSession() {
     if (savedUsername) usernameInput.value = savedUsername;
     if (savedToken) tokenInput.value = savedToken;
     if (savedUsername && savedToken) {
-        // Попробуем автоматически войти
         try {
             const test = await fetchFile(savedToken, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
             state.username = savedUsername;
@@ -1093,6 +1128,7 @@ async function restoreSession() {
             state.isAuthorized = true;
             authScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
+            logoutFromAuthBtn.style.display = 'none';
             userAvatar.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
             showInputBar();
@@ -1101,6 +1137,7 @@ async function restoreSession() {
         } catch (error) {
             console.log('Автовход не удался, ждём ручного входа');
             state.isAuthorized = false;
+            logoutFromAuthBtn.style.display = 'block';
         }
     }
 }
@@ -1123,6 +1160,7 @@ console.log('⌨️ Нажмите на кнопку-клавиатуру, чт�
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
+console.log('🚪 Для выхода из чата нажмите ✕ в шапке или кнопку "Выйти из чата" в форме входа');
 </script>
 </body>
 </html>
