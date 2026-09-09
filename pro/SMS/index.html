@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ChatHub</title>
     <style>
+        /* ===== ВЕСЬ СТИЛЬ ИЗ ПРЕДЫДУЩЕГО КОДА (ОСТАВЛЯЕМ БЕЗ ИЗМЕНЕНИЙ) ===== */
         * {
             margin: 0;
             padding: 0;
@@ -143,7 +144,6 @@
             background: #0a0a0f;
         }
 
-        /* Шапка */
         .chat-header {
             padding: 14px 20px;
             background: rgba(255,255,255,0.04);
@@ -225,7 +225,6 @@
             transform: scale(0.9);
         }
 
-        /* Область сообщений */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -250,7 +249,6 @@
             border-radius: 10px;
         }
 
-        /* Сообщения */
         .message {
             max-width: 82%;
             padding: 10px 14px;
@@ -313,7 +311,6 @@
             max-width: 90%;
         }
 
-        /* Панель ввода */
         .input-bar {
             padding: 10px 14px 14px;
             background: rgba(255,255,255,0.03);
@@ -375,7 +372,6 @@
             transform: none;
         }
 
-        /* Системные уведомления */
         .toast {
             position: fixed;
             bottom: 100px;
@@ -399,82 +395,6 @@
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
-        /* ===== АДАПТИВ ===== */
-        @media (max-width: 480px) {
-            .auth-form {
-                padding: 20px 16px;
-            }
-
-            #authScreen h1 {
-                font-size: 32px;
-            }
-
-            .message {
-                max-width: 88%;
-                font-size: 15px;
-            }
-
-            .chat-header {
-                padding: 10px 14px;
-            }
-
-            .chat-header .info h2 {
-                font-size: 15px;
-            }
-
-            .input-bar {
-                padding: 8px 10px 12px;
-                gap: 8px;
-            }
-
-            .input-bar textarea {
-                font-size: 15px;
-                padding: 10px 14px;
-                min-height: 38px;
-            }
-
-            .input-bar .send-btn {
-                width: 42px;
-                height: 42px;
-                font-size: 18px;
-            }
-
-            .messages-container {
-                padding: 12px 10px 4px;
-            }
-
-            .toast {
-                bottom: 90px;
-                font-size: 13px;
-                padding: 8px 18px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .message {
-                max-width: 92%;
-                font-size: 14px;
-                padding: 8px 12px;
-            }
-
-            .auth-form {
-                padding: 16px 12px;
-            }
-
-            .chat-header .avatar {
-                width: 34px;
-                height: 34px;
-                font-size: 14px;
-            }
-        }
-
-        /* Убираем скролл у body */
-        ::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-        }
-
-        /* Скелетон загрузки */
         .skeleton {
             background: rgba(255,255,255,0.04);
             border-radius: 18px;
@@ -497,6 +417,27 @@
         .skeleton.other {
             align-self: flex-start;
         }
+
+        @media (max-width: 480px) {
+            .auth-form { padding: 20px 16px; }
+            #authScreen h1 { font-size: 32px; }
+            .message { max-width: 88%; font-size: 15px; }
+            .chat-header { padding: 10px 14px; }
+            .chat-header .info h2 { font-size: 15px; }
+            .input-bar { padding: 8px 10px 12px; gap: 8px; }
+            .input-bar textarea { font-size: 15px; padding: 10px 14px; min-height: 38px; }
+            .input-bar .send-btn { width: 42px; height: 42px; font-size: 18px; }
+            .messages-container { padding: 12px 10px 4px; }
+            .toast { bottom: 90px; font-size: 13px; padding: 8px 18px; }
+        }
+
+        @media (max-width: 380px) {
+            .message { max-width: 92%; font-size: 14px; padding: 8px 12px; }
+            .auth-form { padding: 16px 12px; }
+            .chat-header .avatar { width: 34px; height: 34px; font-size: 14px; }
+        }
+
+        ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
 </head>
 <body>
@@ -507,7 +448,7 @@
     <p class="subtitle">Мессенджер на GitHub</p>
 
     <div class="auth-form">
-        <label>👤 Ваше имя</label>
+        <label>👤 Ваш логин</label>
         <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20" autocomplete="off">
 
         <label>🔑 GitHub Token</label>
@@ -519,14 +460,13 @@
 
         <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
 
-        <button class="btn" id="loginBtn">🚀 Войти в чат</button>
+        <button class="btn" id="loginBtn">🚀 Войти</button>
         <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
     </div>
 </div>
 
 <!-- ===== ЭКРАН ЧАТА ===== -->
 <div id="chatScreen">
-    <!-- Шапка -->
     <div class="chat-header">
         <div class="left">
             <div class="avatar" id="userAvatar">?</div>
@@ -541,7 +481,6 @@
         <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
     </div>
 
-    <!-- Сообщения -->
     <div class="messages-container" id="messagesContainer">
         <div class="skeleton other"></div>
         <div class="skeleton own"></div>
@@ -550,14 +489,12 @@
         <div class="skeleton own"></div>
     </div>
 
-    <!-- Панель ввода -->
     <div class="input-bar">
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
         <button class="send-btn" id="sendBtn">➤</button>
     </div>
 </div>
 
-<!-- Toast уведомление -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -565,10 +502,10 @@
     //  КОНФИГУРАЦИЯ
     // ===================================================================
     const CONFIG = {
-        repoOwner: 'YOUR_USERNAME',    // ← ЗАМЕНИТЕ НА СВОЙ ЛОГИН
-        repoName: 'YOUR_REPO',         // ← ЗАМЕНИТЕ НА СВОЙ РЕПОЗИТОРИЙ
+        repoOwner: '2d3t',              // ← ВАШ ЛОГИН GITHUB
+        repoName: 'my-chat',            // ← НАЗВАНИЕ РЕПОЗИТОРИЯ
         filePath: 'chat.json',
-        pollInterval: 5000,            // 5 секунд
+        pollInterval: 5000,
         maxMessages: 1000,
     };
 
@@ -716,7 +653,6 @@
             );
 
             if (!result.exists) {
-                // Файла нет — создаём пустой
                 state.messages = [];
                 state.sha = null;
                 renderMessages([]);
@@ -726,7 +662,6 @@
             state.messages = result.content || [];
             state.sha = result.sha;
 
-            // Обновляем lastMessageId
             if (state.messages.length > 0) {
                 state.lastMessageId = state.messages[state.messages.length - 1].id || 0;
             }
@@ -754,7 +689,6 @@
         sendBtn.disabled = true;
 
         try {
-            // 1. Загружаем актуальную версию
             const result = await fetchFile(
                 state.token,
                 CONFIG.repoOwner,
@@ -765,7 +699,6 @@
             let messages = result.exists ? (result.content || []) : [];
             let sha = result.exists ? result.sha : null;
 
-            // 2. Добавляем новое сообщение
             const newMessage = {
                 id: Date.now(),
                 username: state.username,
@@ -774,12 +707,10 @@
             };
             messages.push(newMessage);
 
-            // Ограничиваем историю
             if (messages.length > CONFIG.maxMessages) {
                 messages = messages.slice(-CONFIG.maxMessages);
             }
 
-            // 3. Сохраняем
             const newSha = await saveFile(
                 state.token,
                 CONFIG.repoOwner,
@@ -789,7 +720,6 @@
                 sha
             );
 
-            // 4. Обновляем состояние
             state.messages = messages;
             state.sha = newSha;
             state.lastMessageId = newMessage.id;
@@ -825,7 +755,7 @@
         let html = '';
         let lastDate = '';
 
-        messages.forEach((msg, index) => {
+        messages.forEach((msg) => {
             const msgDate = formatDate(msg.time);
             if (msgDate !== lastDate) {
                 html += `<div class="message system">${msgDate}</div>`;
@@ -856,7 +786,7 @@
     }
 
     // ===================================================================
-    //  ПОЛЛИНГ (ПРОВЕРКА ОБНОВЛЕНИЙ)
+    //  ПОЛЛИНГ
     // ===================================================================
     async function pollUpdates() {
         if (state.isPolling || !state.token) return;
@@ -872,10 +802,8 @@
 
             if (!result.exists) return;
 
-            // Если SHA изменился — обновляем
             if (result.sha !== state.sha) {
                 const newMessages = result.content || [];
-                // Проверяем, есть ли новые сообщения
                 if (newMessages.length > state.messages.length) {
                     state.messages = newMessages;
                     state.sha = result.sha;
@@ -883,7 +811,6 @@
                     scrollToBottom();
                     showToast('📩 Новые сообщения!', 1000);
                 } else {
-                    // Просто обновляем SHA (могло измениться без новых сообщений)
                     state.sha = result.sha;
                     state.messages = newMessages;
                 }
@@ -893,6 +820,13 @@
         } finally {
             state.isPolling = false;
         }
+    }
+
+    function startPolling() {
+        if (window._pollInterval) {
+            clearInterval(window._pollInterval);
+        }
+        window._pollInterval = setInterval(pollUpdates, CONFIG.pollInterval);
     }
 
     // ===================================================================
@@ -916,7 +850,7 @@
 
         authError.style.display = 'none';
 
-        // Сохраняем
+        // Сохраняем в localStorage
         state.username = username;
         state.token = token;
         localStorage.setItem('chathub_username', username);
@@ -926,18 +860,11 @@
         authScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
 
-        // Настраиваем интерфейс
         userAvatar.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
 
-        // Загружаем сообщения
         loadMessages(true);
-
-        // Запускаем polling
-        if (window._pollInterval) {
-            clearInterval(window._pollInterval);
-        }
-        window._pollInterval = setInterval(pollUpdates, CONFIG.pollInterval);
+        startPolling();
     }
 
     function logout() {
@@ -956,25 +883,21 @@
         usernameInput.value = '';
         tokenInput.value = '';
         authError.style.display = 'none';
-        localStorage.removeItem('chathub_username');
-        localStorage.removeItem('chathub_token');
+        
+        // НЕ удаляем из localStorage, чтобы при следующем входе поля заполнились
     }
 
     // ===================================================================
-    //  ОБРАБОТЧИКИ СОБЫТИЙ
+    //  ОБРАБОТЧИКИ
     // ===================================================================
     loginBtn.addEventListener('click', login);
 
     usernameInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            tokenInput.focus();
-        }
+        if (e.key === 'Enter') tokenInput.focus();
     });
 
     tokenInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            login();
-        }
+        if (e.key === 'Enter') login();
     });
 
     sendBtn.addEventListener('click', () => {
@@ -988,7 +911,6 @@
         }
     });
 
-    // Авто-высота textarea
     messageInput.addEventListener('input', () => {
         messageInput.style.height = 'auto';
         messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
@@ -1014,26 +936,29 @@
         const savedUsername = localStorage.getItem('chathub_username');
         const savedToken = localStorage.getItem('chathub_token');
 
-        if (savedUsername && savedToken) {
+        if (savedUsername) {
             usernameInput.value = savedUsername;
+        }
+
+        if (savedToken) {
             tokenInput.value = savedToken;
-            // Автоматический вход
-            setTimeout(login, 300);
+        }
+
+        // Если есть и логин, и токен — входим автоматически
+        if (savedUsername && savedToken) {
+            setTimeout(login, 500);
         }
     }
 
     // ===================================================================
     //  ЗАПУСК
     // ===================================================================
-    // Проверяем конфиг
     if (CONFIG.repoOwner === 'YOUR_USERNAME' || CONFIG.repoName === 'YOUR_REPO') {
         console.warn('⚠️ Не забудьте указать свои данные в CONFIG!');
-        document.querySelector('.subtitle').textContent += ' ⚠️ Настройте CONFIG';
     }
 
     restoreSession();
 
-    // При фокусе на инпут скроллим вниз (для мобильных)
     messageInput.addEventListener('focus', scrollToBottom);
 </script>
 
