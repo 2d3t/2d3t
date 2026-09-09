@@ -3,24 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-
-
-
-<link rel="manifest" href="manifest.json">
-
-    <!-- Иконки PWA -->
+    <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-    <!-- Мета-теги для PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-
-
-
-
     <title>SMS Чат</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,7 +22,6 @@
             overflow: hidden;
         }
 
-        /* ===== ФОРМА ВХОДА С ФИКСИРОВАННОЙ ШАПКОЙ ===== */
         #authScreen {
             display: flex;
             flex-direction: column;
@@ -147,7 +134,6 @@
         .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
         .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
 
-        /* ===== ЧАТ ===== */
         #chatScreen {
             display: none;
             flex-direction: column;
@@ -182,6 +168,97 @@
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        
+        .chat-header .right-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-header .user-counter {
+            background: rgba(108,92,231,0.2);
+            border: 1px solid rgba(108,92,231,0.3);
+            color: #c4b5fd;
+            padding: 4px 10px 4px 8px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            min-width: 32px;
+            justify-content: center;
+            position: relative;
+        }
+        .chat-header .user-counter:hover {
+            background: rgba(108,92,231,0.3);
+            transform: scale(1.05);
+        }
+        .chat-header .user-counter .count-icon {
+            font-size: 14px;
+        }
+        .chat-header .user-counter .count-number {
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            padding: 0 6px;
+            min-width: 18px;
+            text-align: center;
+            line-height: 18px;
+            font-size: 12px;
+        }
+        .chat-header .user-counter .users-tooltip {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: rgba(20,20,30,0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 10px 14px;
+            min-width: 150px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 20;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        .chat-header .user-counter:hover .users-tooltip {
+            display: block;
+        }
+        .chat-header .user-counter .users-tooltip .user-item {
+            padding: 4px 0;
+            font-size: 13px;
+            color: #ddd;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .chat-header .user-counter .users-tooltip .user-item:last-child {
+            border-bottom: none;
+        }
+        .chat-header .user-counter .users-tooltip .user-item .dot-online {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00b894;
+            display: inline-block;
+        }
+        .chat-header .user-counter .users-tooltip .user-item .dot-offline {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #555;
+            display: inline-block;
+        }
+        .chat-header .user-counter .users-tooltip .empty-users {
+            color: #666;
+            font-size: 13px;
+            text-align: center;
+            padding: 8px 0;
+        }
         .chat-header .exit-btn {
             background: rgba(255,255,255,0.06); border: none; color: #888;
             width: 38px; height: 38px; border-radius: 50%; font-size: 20px;
@@ -431,13 +508,18 @@
             .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
             .image-modal img { max-height: 80vh; }
             .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -5px; right: -5px; }
+            .chat-header .user-counter { font-size: 11px; padding: 2px 8px 2px 6px; min-width: 26px; }
+            .chat-header .user-counter .count-number { font-size: 10px; line-height: 16px; min-width: 16px; }
+            .chat-header .user-counter .users-tooltip {
+                min-width: 120px;
+                right: -10px;
+            }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
 </head>
 <body>
 
-<!-- ===== ЭКРАН ВХОДА ===== -->
 <div id="authScreen">
     <div class="auth-header">
         <div class="brand">
@@ -448,21 +530,20 @@
     </div>
     <div class="auth-content">
         <h1>💬 Добро пожаловать</h1>
-        <p class="subtitle">Войдите в свой мессенджер</p>
+        <p class="subtitle">Войдите или зарегистрируйтесь</p>
         <div class="auth-form">
             <label>👤 Ваш логин</label>
             <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20">
             <label>🔑 GitHub Token</label>
             <input type="password" id="tokenInput" placeholder="Вставьте токен доступа">
             <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank">Создать токен</a> (права <strong>repo</strong>)</div>
-            <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
+            <div class="error-msg" id="authError">❌ Ошибка</div>
             <button class="btn" id="loginBtn">🚀 Войти</button>
             <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
         </div>
     </div>
 </div>
 
-<!-- ===== ЭКРАН ЧАТА ===== -->
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
@@ -472,7 +553,16 @@
                 <div class="status"><span class="dot"></span><span id="onlineStatus">онлайн</span></div>
             </div>
         </div>
-        <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
+        <div class="right-actions">
+            <div class="user-counter" id="userCounter">
+                <span class="count-icon">👥</span>
+                <span class="count-number" id="userCountValue">0</span>
+                <div class="users-tooltip" id="usersTooltip">
+                    <div class="empty-users">Загружаем...</div>
+                </div>
+            </div>
+            <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
+        </div>
     </div>
 
     <div class="messages-container" id="messagesContainer">
@@ -504,7 +594,8 @@
 const CONFIG = {
     repoOwner: '2d3t',
     repoName: '2d3t',
-    filePath: 'chat.json',
+    chatFilePath: 'chat.json',
+    usersFilePath: 'users.json',
     pollInterval: 5000,
     maxMessages: 1000,
     maxImageSize: 5 * 1024 * 1024,
@@ -524,7 +615,7 @@ class SoundManager {
         this.sounds.receive = this.createBeep(800, 0.15);
         this.sounds.error = this.createBeep(300, 0.3);
         this.sounds.delete = this.createBeep(400, 0.1);
-        this.sounds.click = this.createBeep(1000, 0.03); // Короткий и высокий для тактильности
+        this.sounds.click = this.createBeep(1000, 0.03);
     }
     createBeep(freq, duration) {
         return {
@@ -541,7 +632,7 @@ class SoundManager {
                     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
                     osc.start(ctx.currentTime);
                     osc.stop(ctx.currentTime + duration);
-                } catch (e) { /* игнорируем ошибки аудио */ }
+                } catch (e) { }
             }
         };
     }
@@ -563,7 +654,9 @@ let state = {
     username: '',
     token: '',
     messages: [],
-    sha: null,
+    users: [],
+    chatSha: null,
+    usersSha: null,
     isPolling: false,
     isSending: false,
     lastMessageCount: 0,
@@ -591,10 +684,12 @@ const exitBtn = $('exitBtn');
 const userAvatar = $('userAvatar');
 const chatTitle = $('chatTitle');
 const toast = $('toast');
-const inputBar = $('inputBar');
 const imageModal = $('imageModal');
 const modalImage = $('modalImage');
 const closeModalBtn = $('closeModalBtn');
+const userCounter = $('userCounter');
+const userCountValue = $('userCountValue');
+const usersTooltip = $('usersTooltip');
 
 // ===================================================================
 //  ВСПОМОГАТЕЛЬНЫЕ
@@ -709,7 +804,7 @@ async function saveFile(token, owner, repo, path, content, sha) {
     const jsonString = JSON.stringify(content, null, 2);
     const encoded = utf8ToBase64(jsonString);
     const body = { 
-        message: `💬 Обновление чата`,
+        message: `💬 Обновление ${path}`,
         content: encoded
     };
     if (sha) body.sha = sha;
@@ -727,7 +822,79 @@ async function saveFile(token, owner, repo, path, content, sha) {
 }
 
 // ===================================================================
-//  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ
+//  РАБОТА С ПОЛЬЗОВАТЕЛЯМИ
+// ===================================================================
+async function loadUsers() {
+    try {
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.usersFilePath);
+        if (!result.exists) {
+            state.users = [];
+            state.usersSha = null;
+            updateUsersUI();
+            return;
+        }
+        state.users = result.content || [];
+        state.usersSha = result.sha;
+        updateUsersUI();
+    } catch (error) {
+        console.error('Ошибка загрузки пользователей:', error);
+    }
+}
+
+async function registerUser(username) {
+    try {
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.usersFilePath);
+        let users = result.exists ? (result.content || []) : [];
+        let sha = result.exists ? result.sha : null;
+        
+        // Проверяем, есть ли уже такой пользователь
+        const existingUser = users.find(u => u.username === username);
+        if (existingUser) {
+            // Обновляем время последнего входа
+            existingUser.lastSeen = new Date().toISOString();
+        } else {
+            users.push({
+                username: username,
+                registeredAt: new Date().toISOString(),
+                lastSeen: new Date().toISOString()
+            });
+        }
+        
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.usersFilePath, users, sha);
+        state.users = users;
+        state.usersSha = newSha;
+        updateUsersUI();
+        return true;
+    } catch (error) {
+        console.error('Ошибка регистрации:', error);
+        return false;
+    }
+}
+
+function updateUsersUI() {
+    const count = state.users.length;
+    userCountValue.textContent = count;
+    
+    if (count === 0) {
+        usersTooltip.innerHTML = `<div class="empty-users">Нет зарегистрированных пользователей</div>`;
+        return;
+    }
+    
+    let html = '';
+    state.users.forEach(user => {
+        const isOnline = user.lastSeen && (Date.now() - new Date(user.lastSeen).getTime() < 5 * 60 * 1000);
+        html += `
+            <div class="user-item">
+                <span class="${isOnline ? 'dot-online' : 'dot-offline'}"></span>
+                ${escapeHtml(user.username)}
+            </div>
+        `;
+    });
+    usersTooltip.innerHTML = html;
+}
+
+// ===================================================================
+//  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ СООБЩЕНИЙ
 // ===================================================================
 async function loadMessages(showLoading = true) {
     if (!state.isAuthorized) {
@@ -746,16 +913,16 @@ async function loadMessages(showLoading = true) {
                 <div class="skeleton own"></div>
             `;
         }
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
         if (!result.exists) {
             state.messages = [];
-            state.sha = null;
+            state.chatSha = null;
             state.lastMessageCount = 0;
             renderMessages([]);
             return;
         }
         state.messages = result.content || [];
-        state.sha = result.sha;
+        state.chatSha = result.sha;
         state.lastMessageCount = state.messages.length;
         renderMessages(state.messages);
         scrollToBottom();
@@ -779,14 +946,12 @@ async function sendMessage(text, imageData = null) {
     const hasImage = imageData !== null;
     if ((!hasText && !hasImage) || state.isSending) return;
     
-    // Воспроизводим звук клика в момент нажатия
     soundManager.play('click');
-    
     state.isSending = true;
     sendBtn.disabled = true;
     
     try {
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
         let messages = result.exists ? (result.content || []) : [];
         let sha = result.exists ? result.sha : null;
         
@@ -800,13 +965,12 @@ async function sendMessage(text, imageData = null) {
         if (hasImage) newMessage.image = imageData;
         
         state._lastSentMessageId = messageId;
-        
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
         
-        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, sha);
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath, messages, sha);
         state.messages = messages;
-        state.sha = newSha;
+        state.chatSha = newSha;
         state.lastMessageCount = messages.length;
         
         messageInput.value = '';
@@ -814,7 +978,6 @@ async function sendMessage(text, imageData = null) {
         renderMessages(messages);
         scrollToBottom();
         
-        // Звук успешной отправки
         soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
     } catch (error) {
@@ -841,7 +1004,7 @@ async function deleteMessage(messageId) {
     if (!confirm('Удалить это сообщение?')) return;
     
     try {
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
         if (!result.exists) return;
         let messages = result.content || [];
         const messageIndex = messages.findIndex(msg => msg.id === messageId);
@@ -851,9 +1014,9 @@ async function deleteMessage(messageId) {
             return;
         }
         messages.splice(messageIndex, 1);
-        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, result.sha);
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath, messages, result.sha);
         state.messages = messages;
-        state.sha = newSha;
+        state.chatSha = newSha;
         state.lastMessageCount = messages.length;
         renderMessages(messages);
         soundManager.play('delete');
@@ -934,16 +1097,15 @@ function renderMessages(messages) {
 }
 
 // ===================================================================
-//  ПОЛЛИНГ (с проверкой на свои сообщения)
+//  ПОЛЛИНГ
 // ===================================================================
 async function pollUpdates() {
     if (state.isPolling || !state.token || !state.isAuthorized) return;
     state.isPolling = true;
     try {
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
-        if (!result.exists) return;
-        if (result.sha !== state.sha) {
-            const newMessages = result.content || [];
+        const chatResult = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
+        if (chatResult.exists && chatResult.sha !== state.chatSha) {
+            const newMessages = chatResult.content || [];
             if (newMessages.length > state.lastMessageCount) {
                 const newMessagesArray = newMessages.slice(state.lastMessageCount);
                 const hasOwnMessage = newMessagesArray.some(msg => 
@@ -952,7 +1114,7 @@ async function pollUpdates() {
                 );
                 
                 state.messages = newMessages;
-                state.sha = result.sha;
+                state.chatSha = chatResult.sha;
                 state.lastMessageCount = newMessages.length;
                 renderMessages(newMessages);
                 scrollToBottom();
@@ -963,10 +1125,18 @@ async function pollUpdates() {
                     state._lastSentMessageId = null;
                 }
             } else {
-                state.sha = result.sha;
+                state.chatSha = chatResult.sha;
                 state.messages = newMessages;
                 state.lastMessageCount = newMessages.length;
             }
+        }
+        
+        // Проверяем обновления пользователей
+        const usersResult = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.usersFilePath);
+        if (usersResult.exists && usersResult.sha !== state.usersSha) {
+            state.users = usersResult.content || [];
+            state.usersSha = usersResult.sha;
+            updateUsersUI();
         }
     } catch (error) {
         console.error('Polling error:', error);
@@ -995,19 +1165,25 @@ async function login() {
     authError.style.display = 'none';
     
     try {
-        const test = await fetchFile(token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        // Проверяем доступ к репозиторию
+        await fetchFile(token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
+        
         state.username = username;
         state.token = token;
         state.isAuthorized = true;
         localStorage.setItem('chathub_username', username);
         localStorage.setItem('chathub_token', token);
         
+        // Регистрируем пользователя
+        await registerUser(username);
+        await loadUsers();
+        await loadMessages(true);
+        
         authScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
         exitFromAuthBtn.classList.remove('show');
         userAvatar.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
-        await loadMessages(true);
         startPolling();
     } catch (error) {
         console.error('Ошибка доступа:', error);
@@ -1028,9 +1204,12 @@ function logout() {
     exitFromAuthBtn.classList.add('show');
     authError.style.display = 'none';
     state.messages = [];
-    state.sha = null;
+    state.chatSha = null;
     state.lastMessageCount = 0;
+    state.users = [];
+    state.usersSha = null;
     closeImageModal();
+    updateUsersUI();
     
     showToast('👋 Вы вышли из чата', 1500);
 }
@@ -1055,7 +1234,6 @@ exitFromAuthBtn.addEventListener('click', () => {
 sendBtn.addEventListener('click', () => {
     const text = messageInput.value;
     if (text.trim()) {
-        // Визуальный фидбек при нажатии
         sendBtn.classList.add('clicked');
         setTimeout(() => sendBtn.classList.remove('clicked'), 200);
         sendMessage(text);
@@ -1132,16 +1310,20 @@ async function restoreSession() {
     if (savedToken) tokenInput.value = savedToken;
     if (savedUsername && savedToken) {
         try {
-            const test = await fetchFile(savedToken, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+            await fetchFile(savedToken, CONFIG.repoOwner, CONFIG.repoName, CONFIG.chatFilePath);
             state.username = savedUsername;
             state.token = savedToken;
             state.isAuthorized = true;
+            
+            await registerUser(savedUsername);
+            await loadUsers();
+            await loadMessages(true);
+            
             authScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
             exitFromAuthBtn.classList.remove('show');
             userAvatar.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
-            await loadMessages(true);
             startPolling();
         } catch (error) {
             console.log('Автовход не удался, ждём ручного входа');
@@ -1159,10 +1341,10 @@ messageInput.addEventListener('focus', scrollToBottom);
 
 console.log('✅ SMS Чат загружен!');
 console.log('📱 Название: SMS Чат');
+console.log('👥 Регистрация пользователей в users.json');
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
-console.log('🚪 Для выхода из чата нажмите ✕ в шапке или кнопку "Выйти" в шапке входа');
 </script>
 </body>
 </html>
