@@ -560,9 +560,12 @@ async function fetchFile(token, owner, repo, path) {
 
 async function saveFile(token, owner, repo, path, content, sha) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+    // Используем правильное кодирование для UTF-8
+    const jsonString = JSON.stringify(content, null, 2);
+    const encoded = btoa(unescape(encodeURIComponent(jsonString)));
     const body = { 
         message: `💬 Сообщение от ${state.username}`,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2))))
+        content: encoded
     };
     if (sha) body.sha = sha;
     const response = await fetch(url, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) });
@@ -607,30 +610,49 @@ async function loadMessages(showLoading = true) {
 }
 
 async function sendMessage(text, imageData = null) {
-    if ((!text.trim() && !imageData) || state.isSending) return;
+    // Проверяем, есть ли что отправлять
+    const hasText = text && text.trim();
+    const hasImage = imageData !== null;
+    
+    if ((!hasText && !hasImage) || state.isSending) return;
+    
     state.isSending = true;
     sendBtn.disabled = true;
+    
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         let messages = result.exists ? (result.content || []) : [];
         let sha = result.exists ? result.sha : null;
+        
+        // Создаём новое сообщение
         const newMessage = { 
             id: Date.now(), 
             username: state.username, 
-            text: text.trim() || '', 
-            time: new Date().toISOString(),
-            image: imageData || null
+            text: hasText ? text.trim() : '', 
+            time: new Date().toISOString()
         };
+        
+        // Добавляем изображение, если есть
+        if (hasImage) {
+            newMessage.image = imageData;
+        }
+        
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
+        
         const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, sha);
         state.messages = messages;
         state.sha = newSha;
         state.lastMessageCount = messages.length;
-        renderMessages(messages);
-        scrollToBottom();
+        
+        // Очищаем поле ввода
         messageInput.value = '';
         messageInput.style.height = 'auto';
+        
+        // Обновляем отображение
+        renderMessages(messages);
+        scrollToBottom();
+        
         soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
     } catch (error) {
@@ -660,8 +682,9 @@ async function handleFileUpload(file) {
     }
     
     try {
-        showToast('⏳ Сжатие изображения...', 1500);
+        showToast('⏳ Обработка изображения...', 1500);
         const compressedImage = await compressImage(file, 800, 800, 0.8);
+        // Отправляем изображение без текста
         await sendMessage('', compressedImage);
     } catch (error) {
         console.error('Ошибка загрузки изображения:', error);
@@ -789,12 +812,20 @@ loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
 
-sendBtn.addEventListener('click', () => sendMessage(messageInput.value));
+sendBtn.addEventListener('click', () => {
+    const text = messageInput.value;
+    if (text.trim()) {
+        sendMessage(text);
+    }
+});
 
 messageInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { 
         e.preventDefault(); 
-        sendMessage(messageInput.value); 
+        const text = messageInput.value;
+        if (text.trim()) {
+            sendMessage(text);
+        }
     }
 });
 
