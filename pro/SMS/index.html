@@ -81,6 +81,7 @@
             flex-direction: column;
             height: 100vh;
             background: #0a0a0f;
+            position: relative;
         }
         .chat-header {
             padding: 14px 20px;
@@ -91,6 +92,7 @@
             justify-content: space-between;
             align-items: center;
             flex-shrink: 0;
+            z-index: 10;
         }
         .chat-header .left { display: flex; align-items: center; gap: 12px; }
         .chat-header .avatar {
@@ -123,6 +125,7 @@
             gap: 6px;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
+            min-height: 0; /* Важно для корректной работы flex */
         }
         .message-wrapper {
             display: flex;
@@ -246,7 +249,9 @@
             align-items: flex-end;
             flex-shrink: 0;
             min-height: 70px;
-            flex: 0 0 auto; /* фиксированная высота, не сжимается */
+            flex: 0 0 auto;
+            position: relative;
+            z-index: 5;
         }
         .input-bar textarea {
             flex: 1;
@@ -515,8 +520,17 @@ function showToast(text, duration = 2000) {
     toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ СКРОЛЛА - теперь она не заставляет панель ввода исчезать
 function scrollToBottom() {
-    setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 50);
+    setTimeout(() => {
+        const container = messagesContainer;
+        // Скроллим только если есть переполнение
+        if (container.scrollHeight > container.clientHeight) {
+            container.scrollTop = container.scrollHeight;
+        }
+        // Гарантируем, что панель ввода видна
+        ensureInputBarVisible();
+    }, 50);
 }
 
 function escapeHtml(text) {
@@ -884,8 +898,7 @@ function login() {
     chatScreen.style.display = 'flex';
     
     // Панель ввода всегда видима
-    inputBar.style.display = 'flex';
-    inputBar.style.flex = '0 0 auto';
+    ensureInputBarVisible();
     
     userAvatar.textContent = getInitials(username);
     chatTitle.textContent = `Чат (${username})`;
@@ -905,6 +918,20 @@ function logout() {
     state.sha = null;
     state.lastMessageCount = 0;
     closeImageModal();
+}
+
+// ===================================================================
+//  ГАРАНТИЯ ВИДИМОСТИ ПАНЕЛИ ВВОДА (исправлено)
+// ===================================================================
+function ensureInputBarVisible() {
+    if (chatScreen.style.display === 'flex') {
+        inputBar.style.display = 'flex';
+        inputBar.style.flex = '0 0 auto';
+        inputBar.style.visibility = 'visible';
+        inputBar.style.opacity = '1';
+        // Принудительно сбрасываем любые трансформации
+        inputBar.style.transform = 'none';
+    }
 }
 
 // ===================================================================
@@ -976,7 +1003,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ===================================================================
-//  ВОССТАНОВЛЕНИЕ СЕССИИ + ГАРАНТИЯ ВИДИМОСТИ ПАНЕЛИ
+//  ВОССТАНОВЛЕНИЕ СЕССИИ
 // ===================================================================
 function restoreSession() {
     const savedUsername = localStorage.getItem('chathub_username');
@@ -987,28 +1014,21 @@ function restoreSession() {
         setTimeout(() => {
             login();
             setTimeout(() => {
-                inputBar.style.display = 'flex';
-                inputBar.style.flex = '0 0 auto';
+                ensureInputBarVisible();
             }, 100);
         }, 500);
     }
 }
 
-// Дополнительная страховка: всегда показываем панель ввода, если чат активен
-function ensureInputBarVisible() {
-    if (chatScreen.style.display === 'flex') {
-        inputBar.style.display = 'flex';
-        inputBar.style.flex = '0 0 auto';
-    }
-}
+// Обработчик события scroll для защиты панели ввода
+messagesContainer.addEventListener('scroll', function() {
+    ensureInputBarVisible();
+});
 
 // Наблюдатель за изменением стиля chatScreen
 const observer = new MutationObserver(() => {
     if (chatScreen.style.display === 'flex') {
-        setTimeout(() => {
-            inputBar.style.display = 'flex';
-            inputBar.style.flex = '0 0 auto';
-        }, 50);
+        setTimeout(ensureInputBarVisible, 50);
     }
 });
 observer.observe(chatScreen, { attributes: true, attributeFilter: ['style'] });
@@ -1017,8 +1037,8 @@ observer.observe(chatScreen, { attributes: true, attributeFilter: ['style'] });
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
-// Периодическая проверка видимости (на случай, если что-то сбросит стиль)
-setInterval(ensureInputBarVisible, 2000);
+// Усиленная защита - проверка каждую секунду
+setInterval(ensureInputBarVisible, 1000);
 
 console.log('✅ Чат загружен! Панель ввода всегда видима.');
 console.log('📁 Репозиторий:', CONFIG.repoOwner + '/' + CONFIG.repoName);
