@@ -579,10 +579,8 @@ const closeModalBtn = $('closeModalBtn');
 function showInputBar() {
     inputBar.classList.remove('hidden');
     floatingKeyboardBtn.classList.remove('show');
-    // Фокусируемся на поле ввода с небольшой задержкой
     setTimeout(() => {
         messageInput.focus();
-        // Прокручиваем к панели ввода
         inputBar.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 100);
 }
@@ -953,7 +951,7 @@ async function pollUpdates() {
                 renderMessages(newMessages);
                 scrollToBottom();
                 soundManager.play('receive');
-                showToast('📩 Новые сообщения!', 1000);
+                // Убрано уведомление "📩 Новые сообщения!"
             } else {
                 state.sha = result.sha;
                 state.messages = newMessages;
@@ -989,7 +987,6 @@ function login() {
     userAvatar.textContent = getInitials(username);
     chatTitle.textContent = `Чат (${username})`;
     
-    // Показываем панель ввода при входе
     showInputBar();
     
     loadMessages(true);
@@ -1065,14 +1062,12 @@ clearDataBtn.addEventListener('click', () => {
     }
 });
 
-// Управление панелью ввода
 floatingKeyboardBtn.addEventListener('click', showInputBar);
 closePanelBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     hideInputBar();
 });
 
-// Закрытие панели по Escape
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeImageModal();
@@ -1082,13 +1077,11 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Модальное окно для изображений
 closeModalBtn.addEventListener('click', closeImageModal);
 imageModal.addEventListener('click', (e) => {
     if (e.target === imageModal) closeImageModal();
 });
 
-// Звуки
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'm') {
         e.preventDefault();
@@ -1108,7 +1101,6 @@ function restoreSession() {
     if (savedUsername && savedToken) {
         setTimeout(() => {
             login();
-            // После входа показываем панель
             setTimeout(showInputBar, 300);
         }, 500);
     }
@@ -1120,7 +1112,6 @@ function restoreSession() {
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
-// Если панель скрыта по какой-то причине, показываем кнопку
 setInterval(() => {
     if (chatScreen.style.display === 'flex') {
         if (inputBar.classList.contains('hidden')) {
