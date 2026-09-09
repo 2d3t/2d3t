@@ -247,7 +247,7 @@
             background: rgba(255,255,255,0.03);
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.06);
-            display: flex;
+            display: flex !important;
             gap: 10px;
             align-items: flex-end;
             flex-shrink: 0;
@@ -383,7 +383,7 @@
     </div>
 
     <!-- ПАНЕЛЬ ВВОДА -->
-    <div class="input-bar" id="inputBar" style="display: flex !important;">
+    <div class="input-bar" id="inputBar">
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
         <div class="action-buttons">
             <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
@@ -754,6 +754,17 @@ async function deleteMessage(messageId) {
         state.sha = newSha;
         state.lastMessageCount = messages.length;
         
+        // Очищаем кэш браузера для этого файла
+        const cacheUrl = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}/contents/${CONFIG.filePath}`;
+        if ('caches' in window) {
+            try {
+                const cache = await caches.open('github-api-cache');
+                await cache.delete(cacheUrl);
+            } catch (e) {
+                // Игнорируем ошибки кэша
+            }
+        }
+        
         renderMessages(messages);
         soundManager.play('delete');
         showToast('🗑️ Сообщение удалено', 1000);
@@ -881,9 +892,11 @@ function login() {
     localStorage.setItem('chathub_username', username);
     localStorage.setItem('chathub_token', token);
     
-    // Переключаем экраны и принудительно показываем панель ввода
+    // Переключаем экраны
     authScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
+    
+    // ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ ПАНЕЛЬ ВВОДА
     inputBar.style.display = 'flex !important';
     inputBar.style.flex = '0 0 auto';
     
@@ -986,12 +999,15 @@ function restoreSession() {
     if (savedUsername) usernameInput.value = savedUsername;
     if (savedToken) tokenInput.value = savedToken;
     if (savedUsername && savedToken) {
-        // Принудительно показываем панель ввода при автовходе
         setTimeout(() => {
             login();
-            // Дополнительно принудительно показываем панель ввода
-            inputBar.style.display = 'flex !important';
-            inputBar.style.flex = '0 0 auto';
+            // Дополнительно принудительно показываем панель ввода после входа
+            setTimeout(() => {
+                inputBar.style.display = 'flex !important';
+                inputBar.style.flex = '0 0 auto';
+                // Делаем панель видимой через inline стиль
+                inputBar.setAttribute('style', 'display: flex !important; flex: 0 0 auto;');
+            }, 100);
         }, 500);
     }
 }
@@ -999,6 +1015,31 @@ function restoreSession() {
 // ===================================================================
 //  ЗАПУСК
 // ===================================================================
+// Принудительно показываем панель ввода при загрузке страницы
+window.addEventListener('load', function() {
+    if (chatScreen.style.display === 'flex') {
+        inputBar.style.display = 'flex !important';
+        inputBar.style.flex = '0 0 auto';
+        inputBar.setAttribute('style', 'display: flex !important; flex: 0 0 auto;');
+    }
+});
+
+// Перехватываем изменение стиля chatScreen
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.attributeName === 'style') {
+            if (chatScreen.style.display === 'flex') {
+                setTimeout(() => {
+                    inputBar.style.display = 'flex !important';
+                    inputBar.style.flex = '0 0 auto';
+                    inputBar.setAttribute('style', 'display: flex !important; flex: 0 0 auto;');
+                }, 50);
+            }
+        }
+    });
+});
+observer.observe(chatScreen, { attributes: true });
+
 restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
