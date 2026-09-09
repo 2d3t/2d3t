@@ -3,12 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="manifest" href="manifest.json">
+
+
+
+
+<link rel="manifest" href="manifest.json">
+
+    <!-- Иконки PWA -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Мета-теги для PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
+
+
+
+
     <title>SMS Чат</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -170,41 +182,6 @@
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        
-        .chat-header .right-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .chat-header .user-counter {
-            background: rgba(108,92,231,0.2);
-            border: 1px solid rgba(108,92,231,0.3);
-            color: #c4b5fd;
-            padding: 4px 10px 4px 8px;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: default;
-            transition: all 0.2s;
-            white-space: nowrap;
-            min-width: 32px;
-            justify-content: center;
-        }
-        .chat-header .user-counter .count-icon {
-            font-size: 14px;
-        }
-        .chat-header .user-counter .count-number {
-            background: rgba(255,255,255,0.1);
-            border-radius: 30px;
-            padding: 0 6px;
-            min-width: 18px;
-            text-align: center;
-            line-height: 18px;
-            font-size: 12px;
-        }
         .chat-header .exit-btn {
             background: rgba(255,255,255,0.06); border: none; color: #888;
             width: 38px; height: 38px; border-radius: 50%; font-size: 20px;
@@ -454,8 +431,6 @@
             .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
             .image-modal img { max-height: 80vh; }
             .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -5px; right: -5px; }
-            .chat-header .user-counter { font-size: 11px; padding: 2px 8px 2px 6px; min-width: 26px; }
-            .chat-header .user-counter .count-number { font-size: 10px; line-height: 16px; min-width: 16px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -497,13 +472,7 @@
                 <div class="status"><span class="dot"></span><span id="onlineStatus">онлайн</span></div>
             </div>
         </div>
-        <div class="right-actions">
-            <div class="user-counter" id="userCounter" title="Количество уникальных пользователей">
-                <span class="count-icon">👥</span>
-                <span class="count-number" id="userCountValue">0</span>
-            </div>
-            <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
-        </div>
+        <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
     </div>
 
     <div class="messages-container" id="messagesContainer">
@@ -555,7 +524,7 @@ class SoundManager {
         this.sounds.receive = this.createBeep(800, 0.15);
         this.sounds.error = this.createBeep(300, 0.3);
         this.sounds.delete = this.createBeep(400, 0.1);
-        this.sounds.click = this.createBeep(1000, 0.03);
+        this.sounds.click = this.createBeep(1000, 0.03); // Короткий и высокий для тактильности
     }
     createBeep(freq, duration) {
         return {
@@ -626,8 +595,6 @@ const inputBar = $('inputBar');
 const imageModal = $('imageModal');
 const modalImage = $('modalImage');
 const closeModalBtn = $('closeModalBtn');
-const userCounter = $('userCounter');
-const userCountValue = $('userCountValue');
 
 // ===================================================================
 //  ВСПОМОГАТЕЛЬНЫЕ
@@ -760,24 +727,6 @@ async function saveFile(token, owner, repo, path, content, sha) {
 }
 
 // ===================================================================
-//  ПОДСЧЕТ УНИКАЛЬНЫХ ПОЛЬЗОВАТЕЛЕЙ
-// ===================================================================
-function updateUserCounter(messages) {
-    if (!messages || messages.length === 0) {
-        userCountValue.textContent = '0';
-        return;
-    }
-    const uniqueUsers = new Set();
-    messages.forEach(msg => {
-        if (msg.username && msg.username.trim()) {
-            uniqueUsers.add(msg.username.trim());
-        }
-    });
-    const count = uniqueUsers.size;
-    userCountValue.textContent = count;
-}
-
-// ===================================================================
 //  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ
 // ===================================================================
 async function loadMessages(showLoading = true) {
@@ -803,14 +752,12 @@ async function loadMessages(showLoading = true) {
             state.sha = null;
             state.lastMessageCount = 0;
             renderMessages([]);
-            updateUserCounter([]);
             return;
         }
         state.messages = result.content || [];
         state.sha = result.sha;
         state.lastMessageCount = state.messages.length;
         renderMessages(state.messages);
-        updateUserCounter(state.messages);
         scrollToBottom();
     } catch (error) {
         console.error('Ошибка загрузки:', error);
@@ -832,6 +779,7 @@ async function sendMessage(text, imageData = null) {
     const hasImage = imageData !== null;
     if ((!hasText && !hasImage) || state.isSending) return;
     
+    // Воспроизводим звук клика в момент нажатия
     soundManager.play('click');
     
     state.isSending = true;
@@ -864,9 +812,9 @@ async function sendMessage(text, imageData = null) {
         messageInput.value = '';
         messageInput.style.height = 'auto';
         renderMessages(messages);
-        updateUserCounter(messages);
         scrollToBottom();
         
+        // Звук успешной отправки
         soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
     } catch (error) {
@@ -908,7 +856,6 @@ async function deleteMessage(messageId) {
         state.sha = newSha;
         state.lastMessageCount = messages.length;
         renderMessages(messages);
-        updateUserCounter(messages);
         soundManager.play('delete');
         showToast('🗑️ Сообщение удалено', 1000);
     } catch (error) {
@@ -1008,7 +955,6 @@ async function pollUpdates() {
                 state.sha = result.sha;
                 state.lastMessageCount = newMessages.length;
                 renderMessages(newMessages);
-                updateUserCounter(newMessages);
                 scrollToBottom();
                 
                 if (!hasOwnMessage) {
@@ -1020,7 +966,6 @@ async function pollUpdates() {
                 state.sha = result.sha;
                 state.messages = newMessages;
                 state.lastMessageCount = newMessages.length;
-                updateUserCounter(newMessages);
             }
         }
     } catch (error) {
@@ -1086,7 +1031,6 @@ function logout() {
     state.sha = null;
     state.lastMessageCount = 0;
     closeImageModal();
-    updateUserCounter([]);
     
     showToast('👋 Вы вышли из чата', 1500);
 }
@@ -1111,6 +1055,7 @@ exitFromAuthBtn.addEventListener('click', () => {
 sendBtn.addEventListener('click', () => {
     const text = messageInput.value;
     if (text.trim()) {
+        // Визуальный фидбек при нажатии
         sendBtn.classList.add('clicked');
         setTimeout(() => sendBtn.classList.remove('clicked'), 200);
         sendMessage(text);
