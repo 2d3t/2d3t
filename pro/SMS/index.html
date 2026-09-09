@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChatHub</title>
+    <title>SMS Чат</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -16,24 +16,77 @@
             overflow: hidden;
         }
 
+        /* ===== ФОРМА ВХОДА С ФИКСИРОВАННОЙ ШАПКОЙ ===== */
         #authScreen {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
+        }
+        
+        .auth-header {
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .auth-header .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .auth-header .brand-icon {
+            font-size: 28px;
+            -webkit-text-fill-color: initial;
+        }
+        .auth-header .exit-from-auth-btn {
+            background: rgba(255,107,107,0.15);
+            border: 1px solid rgba(255,107,107,0.2);
+            color: #ff6b6b;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+        .auth-header .exit-from-auth-btn:hover { background: rgba(255,107,107,0.25); }
+        .auth-header .exit-from-auth-btn:active { transform: scale(0.95); }
+        .auth-header .exit-from-auth-btn.show { display: flex; }
+
+        .auth-content {
+            flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
             padding: 20px;
-            background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
         }
-        #authScreen h1 {
-            font-size: 42px;
+        .auth-content h1 {
+            font-size: 36px;
             font-weight: 700;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
         }
-        #authScreen .subtitle { color: #888; margin-bottom: 30px; font-size: 14px; }
+        .auth-content .subtitle { color: #888; margin-bottom: 30px; font-size: 14px; }
+        
         .auth-form {
             width: 100%;
             max-width: 380px;
@@ -42,7 +95,6 @@
             padding: 28px 24px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
-            position: relative;
         }
         .auth-form label { display: block; font-size: 13px; color: #999; margin-bottom: 6px; font-weight: 500; }
         .auth-form input {
@@ -75,10 +127,9 @@
         }
         .btn:active { transform: scale(0.97); }
         .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
-        .btn-danger { background: rgba(255, 107, 107, 0.15); color: #ff6b6b; margin-top: 10px; border: 1px solid rgba(255, 107, 107, 0.2); }
-        .btn-danger:active { background: rgba(255, 107, 107, 0.25); }
         .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
 
+        /* ===== ЧАТ ===== */
         #chatScreen {
             display: none;
             flex-direction: column;
@@ -96,6 +147,8 @@
             align-items: center;
             flex-shrink: 0;
             z-index: 10;
+            position: sticky;
+            top: 0;
         }
         .chat-header .left { display: flex; align-items: center; gap: 12px; }
         .chat-header .avatar {
@@ -314,8 +367,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: all 0.2s;
+            position: relative;
         }
-        .input-bar .send-btn:active { transform: scale(0.9); }
+        .input-bar .send-btn:active { transform: scale(0.85); }
+        .input-bar .send-btn.clicked {
+            animation: clickFeedback 0.15s ease;
+        }
+        @keyframes clickFeedback {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.85); background: linear-gradient(135deg, #5a4ad7, #00a87a); }
+            100% { transform: scale(1); }
+        }
 
         .floating-keyboard-btn {
             position: fixed;
@@ -393,7 +456,8 @@
 
         @media (max-width: 480px) {
             .auth-form { padding: 20px 16px; }
-            #authScreen h1 { font-size: 32px; }
+            .auth-content h1 { font-size: 28px; }
+            .auth-header .brand { font-size: 17px; }
             .message-wrapper { max-width: 88%; }
             .message { font-size: 15px; }
             .chat-header { padding: 10px 14px; }
@@ -410,22 +474,32 @@
 </head>
 <body>
 
+<!-- ===== ЭКРАН ВХОДА ===== -->
 <div id="authScreen">
-    <h1>💬 ChatHub</h1>
-    <p class="subtitle">Мессенджер на GitHub</p>
-    <div class="auth-form">
-        <label>👤 Ваш логин</label>
-        <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20">
-        <label>🔑 GitHub Token</label>
-        <input type="password" id="tokenInput" placeholder="Вставьте токен доступа">
-        <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank">Создать токен</a> (права <strong>repo</strong>)</div>
-        <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
-        <button class="btn" id="loginBtn">🚀 Войти</button>
-        <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
-        <button class="btn btn-danger" id="logoutFromAuthBtn" style="display:none;">🚪 Выйти из чата</button>
+    <div class="auth-header">
+        <div class="brand">
+            <span class="brand-icon">📱</span>
+            <span>SMS Чат</span>
+        </div>
+        <button class="exit-from-auth-btn" id="exitFromAuthBtn">🚪 Выйти</button>
+    </div>
+    <div class="auth-content">
+        <h1>💬 Добро пожаловать</h1>
+        <p class="subtitle">Войдите в свой мессенджер</p>
+        <div class="auth-form">
+            <label>👤 Ваш логин</label>
+            <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20">
+            <label>🔑 GitHub Token</label>
+            <input type="password" id="tokenInput" placeholder="Вставьте токен доступа">
+            <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank">Создать токен</a> (права <strong>repo</strong>)</div>
+            <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
+            <button class="btn" id="loginBtn">🚀 Войти</button>
+            <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
+        </div>
     </div>
 </div>
 
+<!-- ===== ЭКРАН ЧАТА ===== -->
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
@@ -490,6 +564,7 @@ class SoundManager {
         this.sounds.receive = this.createBeep(800, 0.15);
         this.sounds.error = this.createBeep(300, 0.3);
         this.sounds.delete = this.createBeep(400, 0.1);
+        this.sounds.click = this.createBeep(500, 0.05); // Короткий клик
     }
     createBeep(freq, duration) {
         return {
@@ -533,7 +608,7 @@ let state = {
     isSending: false,
     lastMessageCount: 0,
     isAuthorized: false,
-    _lastSentMessageId: null, // ID последнего отправленного сообщения
+    _lastSentMessageId: null,
 };
 
 // ===================================================================
@@ -547,7 +622,7 @@ const tokenInput = $('tokenInput');
 const loginBtn = $('loginBtn');
 const authError = $('authError');
 const clearDataBtn = $('clearDataBtn');
-const logoutFromAuthBtn = $('logoutFromAuthBtn');
+const exitFromAuthBtn = $('exitFromAuthBtn');
 const messagesContainer = $('messagesContainer');
 const messageInput = $('messageInput');
 const sendBtn = $('sendBtn');
@@ -784,7 +859,6 @@ async function sendMessage(text, imageData = null) {
         };
         if (hasImage) newMessage.image = imageData;
         
-        // Сохраняем ID отправленного сообщения для проверки в pollUpdates
         state._lastSentMessageId = messageId;
         
         messages.push(newMessage);
@@ -799,6 +873,9 @@ async function sendMessage(text, imageData = null) {
         messageInput.style.height = 'auto';
         renderMessages(messages);
         scrollToBottom();
+        
+        // Звук отправки + тактильный клик
+        soundManager.play('click'); // Короткий клик для тактильности
         soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
     } catch (error) {
@@ -929,9 +1006,7 @@ async function pollUpdates() {
         if (result.sha !== state.sha) {
             const newMessages = result.content || [];
             if (newMessages.length > state.lastMessageCount) {
-                // Проверяем, не наши ли это сообщения
                 const newMessagesArray = newMessages.slice(state.lastMessageCount);
-                // Проверяем, есть ли среди новых сообщений наши (отправленные только что)
                 const hasOwnMessage = newMessagesArray.some(msg => 
                     msg.username === state.username && 
                     msg.id === state._lastSentMessageId
@@ -943,11 +1018,9 @@ async function pollUpdates() {
                 renderMessages(newMessages);
                 scrollToBottom();
                 
-                // Воспроизводим звук получения только если это не наше сообщение
                 if (!hasOwnMessage) {
                     soundManager.play('receive');
                 } else {
-                    // Если это наше сообщение, сбрасываем ID, чтобы не блокировать будущие уведомления
                     state._lastSentMessageId = null;
                 }
             } else {
@@ -992,7 +1065,7 @@ async function login() {
         
         authScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
-        logoutFromAuthBtn.style.display = 'none';
+        exitFromAuthBtn.classList.remove('show');
         userAvatar.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
         showInputBar();
@@ -1014,7 +1087,7 @@ function logout() {
     
     authScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
-    logoutFromAuthBtn.style.display = 'block';
+    exitFromAuthBtn.classList.add('show');
     authError.style.display = 'none';
     state.messages = [];
     state.sha = null;
@@ -1032,28 +1105,35 @@ loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
 
-logoutFromAuthBtn.addEventListener('click', () => {
-    // Эта кнопка появляется только когда мы вышли из чата
-    // Просто очищаем данные и показываем форму входа
+exitFromAuthBtn.addEventListener('click', () => {
     localStorage.removeItem('chathub_username');
     localStorage.removeItem('chathub_token');
     usernameInput.value = '';
     tokenInput.value = '';
-    logoutFromAuthBtn.style.display = 'none';
+    exitFromAuthBtn.classList.remove('show');
     authError.style.display = 'none';
     showToast('🗑️ Данные очищены', 1500);
 });
 
 sendBtn.addEventListener('click', () => {
     const text = messageInput.value;
-    if (text.trim()) sendMessage(text);
+    if (text.trim()) {
+        // Визуальный фидбек при нажатии
+        sendBtn.classList.add('clicked');
+        setTimeout(() => sendBtn.classList.remove('clicked'), 200);
+        sendMessage(text);
+    }
 });
 
 messageInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { 
         e.preventDefault(); 
         const text = messageInput.value;
-        if (text.trim()) sendMessage(text);
+        if (text.trim()) {
+            sendBtn.classList.add('clicked');
+            setTimeout(() => sendBtn.classList.remove('clicked'), 200);
+            sendMessage(text);
+        }
     }
 });
 
@@ -1081,7 +1161,7 @@ clearDataBtn.addEventListener('click', () => {
         localStorage.removeItem('chathub_token');
         usernameInput.value = '';
         tokenInput.value = '';
-        logoutFromAuthBtn.style.display = 'none';
+        exitFromAuthBtn.classList.remove('show');
         showToast('🗑️ Данные очищены', 1500);
     }
 });
@@ -1128,7 +1208,7 @@ async function restoreSession() {
             state.isAuthorized = true;
             authScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
-            logoutFromAuthBtn.style.display = 'none';
+            exitFromAuthBtn.classList.remove('show');
             userAvatar.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
             showInputBar();
@@ -1137,7 +1217,7 @@ async function restoreSession() {
         } catch (error) {
             console.log('Автовход не удался, ждём ручного входа');
             state.isAuthorized = false;
-            logoutFromAuthBtn.style.display = 'block';
+            exitFromAuthBtn.classList.add('show');
         }
     }
 }
@@ -1155,12 +1235,13 @@ setInterval(() => {
     }
 }, 1000);
 
-console.log('✅ Чат загружен!');
+console.log('✅ SMS Чат загружен!');
+console.log('📱 Название: SMS Чат');
 console.log('⌨️ Нажмите на кнопку-клавиатуру, чтобы показать панель ввода');
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
-console.log('🚪 Для выхода из чата нажмите ✕ в шапке или кнопку "Выйти из чата" в форме входа');
+console.log('🚪 Для выхода из чата нажмите ✕ в шапке или кнопку "Выйти" в шапке входа');
 </script>
 </body>
 </html>
