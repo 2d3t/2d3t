@@ -98,6 +98,8 @@
         }
         .auth-form input:focus { border-color: #6c5ce7; background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(108,92,231,0.15); }
         .auth-form input::placeholder { color: #666; }
+        .auth-form input.invalid { border-color: #ff6b6b; box-shadow: 0 0 0 3px rgba(255,107,107,0.15); }
+        .auth-form input.valid { border-color: #00b894; box-shadow: 0 0 0 3px rgba(0,184,148,0.15); }
         .auth-form .help-text { font-size: 12px; color: #666; margin-bottom: 18px; line-height: 1.5; }
         .auth-form .help-text a { color: #6c5ce7; text-decoration: none; }
         .btn {
@@ -113,8 +115,12 @@
             color: #fff;
         }
         .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
         .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
+        .error-msg.show { display: block; }
+        .hint-msg { color: #feca57; font-size: 12px; margin-top: -8px; margin-bottom: 10px; display: none; }
+        .hint-msg.show { display: block; }
 
         #chatScreen {
             display: none;
@@ -198,6 +204,7 @@
         .message .text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
         .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
         .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
+        .message.system.locked { background: rgba(255,107,107,0.1); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.2); }
 
         .message .image-container {
             margin: 6px 0 4px;
@@ -361,6 +368,7 @@
             position: relative;
         }
         .input-bar .send-btn:active { transform: scale(0.85); }
+        .input-bar .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .input-bar .send-btn.clicked {
             animation: clickFeedback 0.15s ease;
         }
@@ -476,10 +484,11 @@
         <p class="subtitle">Войдите в свой мессенджер</p>
         <div class="auth-form">
             <label>👤 Ваш логин</label>
-            <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20">
+            <input type="text" id="usernameInput" placeholder="Введите ник" maxlength="20" autocomplete="off">
             <label>🔑 GitHub Token</label>
-            <input type="password" id="tokenInput" placeholder="Вставьте токен доступа">
-            <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank">Создать токен</a> (права <strong>repo</strong>)</div>
+            <input type="password" id="tokenInput" placeholder="Вставьте токен доступа" autocomplete="off" spellcheck="false">
+            <div class="hint-msg" id="tokenHint"></div>
+            <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">Создать токен</a> (права <strong>repo</strong>)</div>
             <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
             <button class="btn" id="loginBtn">🚀 Войти</button>
             <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
@@ -537,6 +546,154 @@ const CONFIG = {
     maxMessages: 24,
     maxImageSize: 8 * 1024 * 1024,
 };
+
+// ===================================================================
+//  ЗАЩИТА ОТ НЕПРАВИЛЬНОГО ВВОДА GITHUB ТОКЕНА
+// ===================================================================
+const TOKEN_SECURITY = {
+    // Разрешённые префиксы GitHub-токенов (classic / fine-grained / OAuth)
+    allowedPrefixes: ['ghp_', 'github_pat_', 'gho_', 'ghu_', 'ghs_', 'ghr_'],
+    // Допустимые длины (примерные диапазоны)
+    minLength: 20,
+    maxLength: 255,
+    // Максимум неудачных попыток входа до временной блокировки
+    maxAttempts: 5,
+    // Время блокировки (мс)
+    lockoutTime: 30000,
+    // Сколько раз можно ввести неверный токен подряд
+    _failedAttempts: 0,
+    _lockedUntil: 0,
+};
+
+/**
+ * Строгая проверка формата токена.
+ * Возвращает { ok: boolean, reason: string }
+ */
+function validateTokenFormat(rawToken) {
+    if (typeof rawToken !== 'string') {
+        return { ok: false, reason: 'Токен должен быть строкой' };
+    }
+    const token = rawToken.trim();
+
+    if (!token) {
+        return { ok: false, reason: 'Введите токен' };
+    }
+    if (token.length < TOKEN_SECURITY.minLength) {
+        return { ok: false, reason: `Токен слишком короткий (мин. ${TOKEN_SECURITY.minLength} символов)` };
+    }
+    if (token.length > TOKEN_SECURITY.maxLength) {
+        return { ok: false, reason: `Токен слишком длинный (макс. ${TOKEN_SECURITY.maxLength} символов)` };
+    }
+    // Только допустимые символы: буквы, цифры, подчёркивания
+    if (!/^[A-Za-z0-9_]+$/.test(token)) {
+        return { ok: false, reason: 'Токен содержит недопустимые символы (пробелы/переносы/спецсимволы)' };
+    }
+    // Проверка префикса
+    const hasAllowedPrefix = TOKEN_SECURITY.allowedPrefixes.some(p => token.startsWith(p));
+    if (!hasAllowedPrefix) {
+        return {
+            ok: false,
+            reason: 'Неверный формат токена. Ожидается ghp_…, github_pat_… и т.п.'
+        };
+    }
+    return { ok: true, reason: '' };
+}
+
+/**
+ * Проверка, что токен реально имеет доступ к нужному репозиторию.
+ * Делает запрос к GitHub API и проверяет права (push).
+ * Возвращает { ok: boolean, status: number, message: string }
+ */
+async function validateTokenAccess(token) {
+    const url = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            signal: controller.signal,
+            cache: 'no-store'
+        });
+        clearTimeout(timeoutId);
+
+        if (response.status === 401) {
+            return { ok: false, status: 401, message: 'Токен недействителен (401 Unauthorized)' };
+        }
+        if (response.status === 403) {
+            return { ok: false, status: 403, message: 'Доступ запрещён (403 Forbidden). Возможно, закончился лимит или нет прав.' };
+        }
+        if (response.status === 404) {
+            return { ok: false, status: 404, message: 'Репозиторий не найден или у токена нет к нему доступа (404)' };
+        }
+        if (!response.ok) {
+            return { ok: false, status: response.status, message: `Ошибка GitHub API: ${response.status}` };
+        }
+
+        const data = await response.json();
+        // Проверяем, что у токена есть право push (иначе нельзя писать в чат)
+        const canPush = data.permissions && data.permissions.push === true;
+        if (!canPush) {
+            return { ok: false, status: 200, message: 'У токена нет прав на запись (push) в этот репозиторий' };
+        }
+        return { ok: true, status: 200, message: 'Доступ разрешён' };
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            return { ok: false, status: 0, message: 'Превышено время ожидания ответа от GitHub' };
+        }
+        return { ok: false, status: 0, message: 'Нет подключения к GitHub. Проверьте интернет.' };
+    }
+}
+
+/**
+ * Полная проверка токена: формат + реальный доступ.
+ */
+async function validateTokenFull(rawToken) {
+    const formatCheck = validateTokenFormat(rawToken);
+    if (!formatCheck.ok) {
+        return { ok: false, stage: 'format', message: formatCheck.reason };
+    }
+    const accessCheck = await validateTokenAccess(rawToken.trim());
+    if (!accessCheck.ok) {
+        return { ok: false, stage: 'access', message: accessCheck.message };
+    }
+    return { ok: true, stage: 'ok', message: 'Токен принят' };
+}
+
+/**
+ * Проверка блокировки после нескольких неудачных попыток.
+ */
+function isLockedOut() {
+    const now = Date.now();
+    if (TOKEN_SECURITY._lockedUntil > now) {
+        const secondsLeft = Math.ceil((TOKEN_SECURITY._lockedUntil - now) / 1000);
+        return { locked: true, secondsLeft };
+    }
+    if (TOKEN_SECURITY._lockedUntil && TOKEN_SECURITY._lockedUntil <= now) {
+        TOKEN_SECURITY._failedAttempts = 0;
+        TOKEN_SECURITY._lockedUntil = 0;
+    }
+    return { locked: false, secondsLeft: 0 };
+}
+
+function registerFailedAttempt() {
+    TOKEN_SECURITY._failedAttempts++;
+    if (TOKEN_SECURITY._failedAttempts >= TOKEN_SECURITY.maxAttempts) {
+        TOKEN_SECURITY._lockedUntil = Date.now() + TOKEN_SECURITY.lockoutTime;
+        TOKEN_SECURITY._failedAttempts = 0;
+        return true; // заблокирован
+    }
+    return false;
+}
+
+function resetFailedAttempts() {
+    TOKEN_SECURITY._failedAttempts = 0;
+    TOKEN_SECURITY._lockedUntil = 0;
+}
 
 // ===================================================================
 //  ЗВУКИ
@@ -613,6 +770,7 @@ const usernameInput = $('usernameInput');
 const tokenInput = $('tokenInput');
 const loginBtn = $('loginBtn');
 const authError = $('authError');
+const tokenHint = $('tokenHint');
 const clearDataBtn = $('clearDataBtn');
 const messagesContainer = $('messagesContainer');
 const messagesInner = $('messagesInner');
@@ -634,6 +792,7 @@ const closeModalBtn = $('closeModalBtn');
 //  УПРАВЛЕНИЕ ПАНЕЛЬЮ ВВОДА
 // ===================================================================
 function showInputBar() {
+    if (!state.isAuthorized) return; // защита: без авторизации панель не показываем
     inputBar.classList.remove('hidden');
     floatingKeyboardBtn.classList.remove('show');
     setTimeout(() => {
@@ -809,6 +968,8 @@ async function fetchFile(token, owner, repo, path) {
         });
         clearTimeout(timeoutId);
         if (response.status === 404) return { exists: false };
+        if (response.status === 401) throw new Error('401');
+        if (response.status === 403) throw new Error('403');
         if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
         const data = await response.json();
         const content = JSON.parse(base64ToUtf8(data.content));
@@ -846,10 +1007,7 @@ async function saveFile(token, owner, repo, path, content, sha) {
 // ===================================================================
 async function loadMessages(showLoading = true) {
     if (!state.isAuthorized) {
-        messagesInner.innerHTML = `
-            <div class="message system">🔒 Доступ закрыт</div>
-            <div class="message system" style="font-size:12px;color:#555;">Неверный токен или недостаточно прав</div>
-        `;
+        lockChatUI('Доступ закрыт. Войдите с корректным токеном.');
         return;
     }
     try {
@@ -877,17 +1035,38 @@ async function loadMessages(showLoading = true) {
     } catch (error) {
         console.error('Ошибка загрузки:', error);
         state.isAuthorized = false;
-        messagesInner.innerHTML = `
-            <div class="message system">⚠️ Ошибка доступа</div>
-            <div class="message system" style="font-size:12px;color:#555;">${error.message}</div>
-        `;
+        lockChatUI('⚠️ Ошибка доступа: ' + error.message);
         showToast('❌ Ошибка доступа к репозиторию', 3000);
+        soundManager.play('error');
     }
+}
+
+/**
+ * Блокировка интерфейса чата при потере авторизации.
+ * Полностью скрывает историю и отключает ввод.
+ */
+function lockChatUI(reason) {
+    state.isAuthorized = false;
+    state.messages = [];
+    state.sha = null;
+    state.lastMessageCount = 0;
+    if (window._pollInterval) clearInterval(window._pollInterval);
+
+    messagesInner.innerHTML = `
+        <div class="message system locked">🔒 ${reason || 'Доступ закрыт'}</div>
+        <div class="message system" style="font-size:12px;color:#555;">История чата недоступна. Проверьте токен и войдите снова.</div>
+    `;
+    messageInput.disabled = true;
+    sendBtn.disabled = true;
+    fileBtn.disabled = true;
+    hideInputBar();
+    floatingKeyboardBtn.classList.remove('show');
 }
 
 async function sendMessage(text, imageData = null) {
     if (!state.isAuthorized) {
         showToast('❌ Нет доступа для отправки', 2000);
+        soundManager.play('error');
         return;
     }
     if (!navigator.onLine || !networkState.isOnline) {
@@ -950,14 +1129,13 @@ async function sendMessage(text, imageData = null) {
             showToast('❌ Ошибка: ' + error.message, 3000);
         }
         if (error.message.includes('403') || error.message.includes('401')) {
-            state.isAuthorized = false;
-            loadMessages(false);
+            lockChatUI('Сессия истекла. Токен больше не действителен.');
         }
         state._lastSentMessageId = null;
     } finally {
         state.isSending = false;
-        sendBtn.disabled = false;
-        messageInput.focus();
+        sendBtn.disabled = !state.isAuthorized;
+        if (state.isAuthorized) messageInput.focus();
     }
 }
 
@@ -1004,8 +1182,7 @@ async function deleteMessage(messageId) {
             showToast('❌ Ошибка: ' + error.message, 3000);
         }
         if (error.message.includes('403') || error.message.includes('401')) {
-            state.isAuthorized = false;
-            loadMessages(false);
+            lockChatUI('Сессия истекла. Токен больше не действителен.');
         }
     }
 }
@@ -1036,6 +1213,11 @@ async function handleFileUpload(file) {
 //  РЕНДЕРИНГ
 // ===================================================================
 function renderMessages(messages) {
+    if (!state.isAuthorized) {
+        // Никогда не показываем историю неавторизованным
+        messagesInner.innerHTML = `<div class="message system locked">🔒 История недоступна</div>`;
+        return;
+    }
     if (!messages || messages.length === 0) {
         messagesInner.innerHTML = `
             <div class="message system">💬 История пуста</div>
@@ -1132,8 +1314,7 @@ async function pollUpdates() {
             return;
         }
         if (error.message.includes('403') || error.message.includes('401')) {
-            state.isAuthorized = false;
-            loadMessages(false);
+            lockChatUI('Сессия истекла. Токен больше не действителен.');
         }
     } finally {
         state.isPolling = false;
@@ -1148,35 +1329,120 @@ function startPolling() {
 // ===================================================================
 //  АВТОРИЗАЦИЯ И ВЫХОД
 // ===================================================================
+function setTokenHint(message, type = 'error') {
+    tokenHint.textContent = message;
+    tokenHint.classList.add('show');
+    tokenHint.style.color = type === 'error' ? '#ff6b6b' : '#feca57';
+}
+function clearTokenHint() {
+    tokenHint.textContent = '';
+    tokenHint.classList.remove('show');
+}
+
+function setAuthError(message) {
+    authError.textContent = '❌ ' + message;
+    authError.classList.add('show');
+}
+function clearAuthError() {
+    authError.classList.remove('show');
+}
+
 async function login() {
-    const username = usernameInput.value.trim();
-    const token = tokenInput.value.trim();
-    if (!username) { authError.textContent = '❌ Введите имя'; authError.style.display = 'block'; return; }
-    if (!token) { authError.textContent = '❌ Введите GitHub токен'; authError.style.display = 'block'; return; }
-    authError.style.display = 'none';
-
-    try {
-        const test = await fetchFile(token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
-        state.username = username;
-        state.token = token;
-        state.isAuthorized = true;
-        localStorage.setItem('chathub_username', username);
-        localStorage.setItem('chathub_token', token);
-
-        authScreen.style.display = 'none';
-        chatScreen.style.display = 'flex';
-        userAvatar.textContent = getInitials(username);
-        chatTitle.textContent = `Чат (${username})`;
-        showInputBar();
-        await loadMessages(true);
-        startPolling();
-        await checkNetwork();
-    } catch (error) {
-        console.error('Ошибка доступа:', error);
-        authError.textContent = '❌ Неверный токен или нет доступа к репозиторию';
-        authError.style.display = 'block';
-        state.isAuthorized = false;
+    // Проверка блокировки
+    const lock = isLockedOut();
+    if (lock.locked) {
+        setAuthError(`Слишком много попыток. Повторите через ${lock.secondsLeft} сек.`);
+        return;
     }
+
+    const username = usernameInput.value.trim();
+    const rawToken = tokenInput.value;
+
+    clearAuthError();
+    clearTokenHint();
+    tokenInput.classList.remove('invalid', 'valid');
+
+    if (!username) {
+        setAuthError('Введите имя пользователя');
+        return;
+    }
+    if (username.length < 2) {
+        setAuthError('Имя должно содержать минимум 2 символа');
+        return;
+    }
+    if (username.length > 20) {
+        setAuthError('Имя слишком длинное (макс. 20 символов)');
+        return;
+    }
+
+    // 1. Проверка формата токена
+    const formatCheck = validateTokenFormat(rawToken);
+    if (!formatCheck.ok) {
+        tokenInput.classList.add('invalid');
+        setTokenHint(formatCheck.reason, 'error');
+        setAuthError(formatCheck.reason);
+        const locked = registerFailedAttempt();
+        if (locked) {
+            setAuthError(`Слишком много неудачных попыток. Вход заблокирован на ${TOKEN_SECURITY.lockoutTime / 1000} сек.`);
+            loginBtn.disabled = true;
+            setTimeout(() => { loginBtn.disabled = false; }, TOKEN_SECURITY.lockoutTime);
+        }
+        soundManager.play('error');
+        return;
+    }
+
+    // 2. Проверка реального доступа к репозиторию
+    loginBtn.disabled = true;
+    loginBtn.textContent = '⏳ Проверка доступа...';
+    setTokenHint('Проверяем доступ к репозиторию...', 'warning');
+
+    const accessCheck = await validateTokenAccess(rawToken.trim());
+
+    if (!accessCheck.ok) {
+        tokenInput.classList.add('invalid');
+        setTokenHint(accessCheck.message, 'error');
+        setAuthError(accessCheck.message);
+        const locked = registerFailedAttempt();
+        if (locked) {
+            setAuthError(`Слишком много неудачных попыток. Вход заблокирован на ${TOKEN_SECURITY.lockoutTime / 1000} сек.`);
+            loginBtn.disabled = true;
+            setTimeout(() => { loginBtn.disabled = false; }, TOKEN_SECURITY.lockoutTime);
+        }
+        loginBtn.disabled = false;
+        loginBtn.textContent = '🚀 Войти';
+        soundManager.play('error');
+        return;
+    }
+
+    // 3. Токен прошёл проверку — пускаем в чат
+    resetFailedAttempts();
+    tokenInput.classList.add('valid');
+    tokenInput.classList.remove('invalid');
+    clearTokenHint();
+
+    state.username = username;
+    state.token = rawToken.trim();
+    state.isAuthorized = true;
+
+    localStorage.setItem('chathub_username', username);
+    localStorage.setItem('chathub_token', state.token);
+
+    authScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    userAvatar.textContent = getInitials(username);
+    chatTitle.textContent = `Чат (${username})`;
+
+    messageInput.disabled = false;
+    sendBtn.disabled = false;
+    fileBtn.disabled = false;
+
+    showInputBar();
+    await loadMessages(true);
+    startPolling();
+    await checkNetwork();
+
+    loginBtn.disabled = false;
+    loginBtn.textContent = '🚀 Войти';
 }
 
 function logout() {
@@ -1184,15 +1450,23 @@ function logout() {
     state.isPolling = false;
     state.isAuthorized = false;
     state._lastSentMessageId = null;
-
-    authScreen.style.display = 'flex';
-    chatScreen.style.display = 'none';
-    authError.style.display = 'none';
     state.messages = [];
     state.sha = null;
     state.lastMessageCount = 0;
+
+    authScreen.style.display = 'flex';
+    chatScreen.style.display = 'none';
+    clearAuthError();
+    clearTokenHint();
+    tokenInput.classList.remove('valid', 'invalid');
     closeImageModal();
     hideInputBar();
+    floatingKeyboardBtn.classList.remove('show');
+
+    messageInput.disabled = false;
+    sendBtn.disabled = false;
+    fileBtn.disabled = false;
+
     showToast('👋 Вы вышли из чата', 1500);
 }
 
@@ -1203,7 +1477,42 @@ loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
 
+// Живая валидация формата токена при вводе
+tokenInput.addEventListener('input', () => {
+    const raw = tokenInput.value;
+    if (!raw) {
+        tokenInput.classList.remove('invalid', 'valid');
+        clearTokenHint();
+        return;
+    }
+    const check = validateTokenFormat(raw);
+    if (check.ok) {
+        tokenInput.classList.add('valid');
+        tokenInput.classList.remove('invalid');
+        clearTokenHint();
+    } else {
+        // Не показываем ошибку на каждый символ, только лёгкая индикация
+        tokenInput.classList.remove('valid');
+        if (raw.length > 5) {
+            tokenInput.classList.add('invalid');
+        }
+    }
+});
+
+// Защита от вставки токена с пробелами/переносами
+tokenInput.addEventListener('paste', (e) => {
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    if (pasted && /[\s\n\r]/.test(pasted.trim()) === false && pasted.trim() !== pasted) {
+        // Если в буфере есть лишние пробелы — подскажем
+        setTimeout(() => {
+            tokenInput.value = tokenInput.value.trim();
+            showToast('✂️ Лишние пробелы удалены из токена', 1500);
+        }, 0);
+    }
+});
+
 sendBtn.addEventListener('click', () => {
+    if (!state.isAuthorized) { showToast('🔒 Требуется авторизация', 1500); return; }
     const text = messageInput.value;
     if (text.trim()) {
         sendBtn.classList.add('clicked');
@@ -1213,6 +1522,7 @@ sendBtn.addEventListener('click', () => {
 });
 
 messageInput.addEventListener('keydown', (e) => {
+    if (!state.isAuthorized) return;
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         const text = messageInput.value;
@@ -1230,6 +1540,7 @@ messageInput.addEventListener('input', () => {
 });
 
 fileBtn.addEventListener('click', () => {
+    if (!state.isAuthorized) { showToast('🔒 Требуется авторизация', 1500); return; }
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -1248,6 +1559,9 @@ clearDataBtn.addEventListener('click', () => {
         localStorage.removeItem('chathub_token');
         usernameInput.value = '';
         tokenInput.value = '';
+        tokenInput.classList.remove('valid', 'invalid');
+        clearAuthError();
+        clearTokenHint();
         showToast('🗑️ Данные очищены', 1500);
     }
 });
@@ -1284,18 +1598,41 @@ document.addEventListener('keydown', (e) => {
 async function restoreSession() {
     const savedUsername = localStorage.getItem('chathub_username');
     const savedToken = localStorage.getItem('chathub_token');
+
     if (savedUsername) usernameInput.value = savedUsername;
     if (savedToken) tokenInput.value = savedToken;
+
     if (savedUsername && savedToken) {
+        // При восстановлении сессии тоже строго проверяем токен
+        const formatCheck = validateTokenFormat(savedToken);
+        if (!formatCheck.ok) {
+            console.log('Автовход не удался: неверный формат токена');
+            localStorage.removeItem('chathub_token');
+            tokenInput.value = '';
+            return;
+        }
         try {
-            const test = await fetchFile(savedToken, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+            const accessCheck = await validateTokenAccess(savedToken.trim());
+            if (!accessCheck.ok) {
+                console.log('Автовход не удался:', accessCheck.message);
+                localStorage.removeItem('chathub_token');
+                tokenInput.value = '';
+                return;
+            }
             state.username = savedUsername;
-            state.token = savedToken;
+            state.token = savedToken.trim();
             state.isAuthorized = true;
+
             authScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
             userAvatar.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
+            tokenInput.classList.add('valid');
+
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            fileBtn.disabled = false;
+
             showInputBar();
             await loadMessages(true);
             startPolling();
@@ -1303,6 +1640,8 @@ async function restoreSession() {
         } catch (error) {
             console.log('Автовход не удался, ждём ручного входа');
             state.isAuthorized = false;
+            localStorage.removeItem('chathub_token');
+            tokenInput.value = '';
         }
     }
 }
@@ -1314,9 +1653,11 @@ restoreSession();
 messageInput.addEventListener('focus', scrollToBottom);
 
 setInterval(() => {
-    if (chatScreen.style.display === 'flex') {
+    if (chatScreen.style.display === 'flex' && state.isAuthorized) {
         if (inputBar.classList.contains('hidden')) floatingKeyboardBtn.classList.add('show');
         else floatingKeyboardBtn.classList.remove('show');
+    } else {
+        floatingKeyboardBtn.classList.remove('show');
     }
 }, 1000);
 
@@ -1326,6 +1667,7 @@ console.log('⌨️ Нажмите на кнопку-клавиатуру, чт�
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
+console.log('🛡️ Токен проверяется: формат + реальные права push в репозиторий');
 </script>
 </body>
 </html>
