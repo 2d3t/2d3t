@@ -94,7 +94,8 @@
             border: 1px solid rgba(255,255,255,0.08);
         }
         .auth-form label { display: block; font-size: 13px; color: #999; margin-bottom: 6px; font-weight: 500; }
-        .auth-form input {
+        .auth-form input[type="text"],
+        .auth-form input[type="password"] {
             width: 100%;
             padding: 14px 16px;
             background: rgba(255,255,255,0.06);
@@ -106,7 +107,8 @@
             margin-bottom: 16px;
             outline: none;
         }
-        .auth-form input:focus { border-color: #6c5ce7; background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(108,92,231,0.15); }
+        .auth-form input[type="text"]:focus,
+        .auth-form input[type="password"]:focus { border-color: #6c5ce7; background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(108,92,231,0.15); }
         .auth-form input::placeholder { color: #666; }
         .auth-form input.invalid { border-color: #ff6b6b; box-shadow: 0 0 0 3px rgba(255,107,107,0.15); }
         .auth-form input.valid { border-color: #00b894; box-shadow: 0 0 0 3px rgba(0,184,148,0.15); }
@@ -680,6 +682,18 @@
             <input type="password" id="tokenInput" placeholder="Вставьте токен доступа" autocomplete="off" spellcheck="false">
             <div class="hint-msg" id="tokenHint"></div>
             <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">Создать токен</a> (права <strong>repo</strong>)</div>
+            <label>🔐 Пароль чата</label>
+            <input type="password" id="chatPasswordInput" placeholder="Пароль для расшифровки" autocomplete="off" spellcheck="false">
+            <div class="help-text" style="margin-top:-8px;color:#feca57;">
+                ⚠️ Без этого пароля история будет нечитаемой. Запомните его — восстановления нет.
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px;margin-bottom:14px;font-size:14px;color:#ccc;user-select:none;">
+                <input type="checkbox" id="rememberMeInput" style="width:18px;height:18px;accent-color:#6c5ce7;cursor:pointer;margin:0;">
+                <span>Запомнить меня на этом устройстве</span>
+            </label>
+            <div class="help-text" id="rememberWarning" style="display:none;color:#ff9f43;background:rgba(255,159,67,0.08);padding:10px 12px;border-radius:10px;border:1px solid rgba(255,159,67,0.2);margin-bottom:14px;margin-top:-8px;line-height:1.5;">
+                ⚠️ Токен и пароль будут сохранены в браузере <strong>в открытом виде</strong>. Не включайте на чужом устройстве.
+            </div>
             <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
             <button class="btn" id="loginBtn">🚀 Войти</button>
             <button class="btn btn-secondary" id="clearDataBtn">🗑️ Очистить данные</button>
@@ -695,7 +709,10 @@
                 <h2 id="chatTitle">Общий чат</h2>
             </div>
         </div>
-        <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
+        <div style="display:flex;align-items:center;">
+            <button class="exit-btn" id="forgetBtn" title="Забыть это устройство" style="margin-right:8px;">🔓</button>
+            <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
+        </div>
     </div>
 
     <div class="messages-container" id="messagesContainer">
@@ -743,7 +760,7 @@
 const CONFIG = {
     repoOwner: '2d3t',
     repoName: '2d3t',
-    filePath: 'pro/SMS/chat.json',
+    filePath: 'pro/SMS/chatx.json',
     pollInterval: 5000,
     maxMessages: 24,
     maxImageSize: 8 * 1024 * 1024,
@@ -751,6 +768,89 @@ const CONFIG = {
     audioMimeType: 'audio/webm;codecs=opus',
     audioBitsPerSecond: 8000,
 };
+
+// ===================================================================
+//  E2E-ШИФРОВАНИЕ (AES-GCM + PBKDF2)
+// ===================================================================
+const CRYPTO = {
+    VERSION: 2,
+    PBKDF2_ITERATIONS: 200000,
+    SALT_BYTES: 32,
+    IV_BYTES: 12,
+    _key: null,
+};
+
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
+function base64ToArrayBuffer(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function generateSalt() {
+    return crypto.getRandomValues(new Uint8Array(CRYPTO.SALT_BYTES));
+}
+
+function generateIV() {
+    return crypto.getRandomValues(new Uint8Array(CRYPTO.IV_BYTES));
+}
+
+async function deriveKey(password, saltBase64) {
+    const enc = new TextEncoder();
+    const salt = new Uint8Array(base64ToArrayBuffer(saltBase64));
+    const baseKey = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+    );
+    return crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: salt,
+            iterations: CRYPTO.PBKDF2_ITERATIONS,
+            hash: 'SHA-256'
+        },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+async function encryptObject(obj, key) {
+    const iv = generateIV();
+    const enc = new TextEncoder();
+    const plaintext = enc.encode(JSON.stringify(obj));
+    const ciphertext = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        plaintext
+    );
+    return {
+        iv: arrayBufferToBase64(iv),
+        data: arrayBufferToBase64(ciphertext)
+    };
+}
+
+async function decryptObject(ivBase64, dataBase64, key) {
+    const iv = new Uint8Array(base64ToArrayBuffer(ivBase64));
+    const ciphertext = base64ToArrayBuffer(dataBase64);
+    const plaintext = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        ciphertext
+    );
+    return JSON.parse(new TextDecoder().decode(plaintext));
+}
 
 // ===================================================================
 //  ЗАЩИТА ТОКЕНА
@@ -866,7 +966,8 @@ const soundManager = new SoundManager();
 //  СОСТОЯНИЕ
 // ===================================================================
 let state = {
-    username: '', token: '', messages: [], sha: null,
+    username: '', token: '', chatPassword: '', salt: null,
+    messages: [], sha: null,
     isPolling: false, isSending: false, lastMessageCount: 0,
     isAuthorized: false, _lastSentMessageId: null,
 };
@@ -881,6 +982,9 @@ const authScreen = $('authScreen');
 const chatScreen = $('chatScreen');
 const usernameInput = $('usernameInput');
 const tokenInput = $('tokenInput');
+const chatPasswordInput = $('chatPasswordInput');
+const rememberMeInput = $('rememberMeInput');
+const rememberWarning = $('rememberWarning');
 const loginBtn = $('loginBtn');
 const authError = $('authError');
 const tokenHint = $('tokenHint');
@@ -894,6 +998,7 @@ const micBtn = $('micBtn');
 const recordingIndicator = $('recordingIndicator');
 const recordingTime = $('recordingTime');
 const exitBtn = $('exitBtn');
+const forgetBtn = $('forgetBtn');
 const userAvatar = $('userAvatar');
 const chatTitle = $('chatTitle');
 const toast = $('toast');
@@ -907,7 +1012,7 @@ const scrollDownBtn = $('scrollDownBtn');
 const scrollBadge = $('scrollBadge');
 
 // ===================================================================
-//  УМНЫЙ СКРОЛЛ (ИСПРАВЛЕНО)
+//  УМНЫЙ СКРОЛЛ
 // ===================================================================
 const SCROLL_THRESHOLD = 80;
 const SCROLL_BTN_SHOW = 150;
@@ -939,12 +1044,10 @@ function updateScrollBadge() {
     }
 }
 
-// 🔧 ИСПРАВЛЕНО: двойной rAF + форсированный reflow + финальная страховка
 function scrollToBottom(force = false) {
     if (!force && !scrollState.isAtBottom) return;
 
     requestAnimationFrame(() => {
-        // Форсируем reflow: читаем scrollHeight, чтобы браузер пересчитал высоту
         void messagesContainer.scrollHeight;
 
         requestAnimationFrame(() => {
@@ -954,7 +1057,6 @@ function scrollToBottom(force = false) {
             updateScrollBadge();
             updateScrollButton();
 
-            // Страховка: если картинки/аудио изменили высоту после отрисовки
             setTimeout(() => {
                 if (scrollState.isAtBottom) {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1104,6 +1206,62 @@ function base64ToUtf8(base64) {
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return new TextDecoder('utf-8').decode(bytes);
+}
+
+// ===================================================================
+//  ШИФРОВАННОЕ ХРАНИЛИЩЕ
+// ===================================================================
+async function encryptMessage(msg) {
+    const payload = {
+        username: msg.username,
+        text: msg.text || '',
+    };
+    if (msg.image) payload.image = msg.image;
+    if (msg.audio) {
+        payload.audio = msg.audio;
+        payload.audioDuration = msg.audioDuration || 0;
+        payload.audioMime = msg.audioMime || 'audio/webm';
+    }
+    const encrypted = await encryptObject(payload, CRYPTO._key);
+    return {
+        id: msg.id,
+        time: msg.time,
+        iv: encrypted.iv,
+        data: encrypted.data
+    };
+}
+
+async function decryptMessage(encMsg) {
+    try {
+        const payload = await decryptObject(encMsg.iv, encMsg.data, CRYPTO._key);
+        const msg = {
+            id: encMsg.id,
+            time: encMsg.time,
+            username: payload.username,
+            text: payload.text || ''
+        };
+        if (payload.image) msg.image = payload.image;
+        if (payload.audio) {
+            msg.audio = payload.audio;
+            msg.audioDuration = payload.audioDuration || 0;
+            msg.audioMime = payload.audioMime || 'audio/webm';
+        }
+        return msg;
+    } catch (e) {
+        console.error('Не удалось расшифровать сообщение', encMsg.id, e);
+        return null;
+    }
+}
+
+async function loadAndDecrypt(saltBase64, encMessages) {
+    const key = await deriveKey(state.chatPassword, saltBase64);
+    CRYPTO._key = key;
+    const decrypted = [];
+    for (const encMsg of encMessages) {
+        const msg = await decryptMessage(encMsg);
+        if (msg) decrypted.push(msg);
+    }
+    return decrypted;
 }
 
 // ===================================================================
@@ -1304,18 +1462,54 @@ async function loadMessages(showLoading = true) {
             `;
         }
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+
         if (!result.exists) {
-            state.messages = []; state.sha = null; state.lastMessageCount = 0;
+            const saltBytes = generateSalt();
+            state.salt = arrayBufferToBase64(saltBytes);
+            CRYPTO._key = await deriveKey(state.chatPassword, state.salt);
+            state.messages = [];
+            state.sha = null;
+            state.lastMessageCount = 0;
             renderMessages([]);
+            showToast('🆕 Чат создан. Пароль установлен.', 2500);
             return;
         }
-        state.messages = result.content || [];
+
+        const content = result.content;
+
+        if (!content || typeof content !== 'object' || content.v !== CRYPTO.VERSION || !content.salt) {
+            throw new Error('Файл чата в старом (незашифрованном) формате. Требуется очистка репозитория.');
+        }
+
+        state.salt = content.salt;
+        const encMessages = Array.isArray(content.messages) ? content.messages : [];
+
+        const decrypted = await loadAndDecrypt(content.salt, encMessages);
+
+        if (encMessages.length > 0 && decrypted.length === 0) {
+            throw new Error('Неверный пароль чата');
+        }
+
+        state.messages = decrypted;
         state.sha = result.sha;
-        state.lastMessageCount = state.messages.length;
+        state.lastMessageCount = decrypted.length;
         renderMessages(state.messages);
         scrollToBottom(true);
     } catch (error) {
         console.error('Ошибка загрузки:', error);
+        if (error.message.includes('Неверный пароль')) {
+            showToast('🔐 Неверный пароль чата', 3000);
+            soundManager.play('error');
+            state.isAuthorized = false;
+            state.token = '';
+            state.chatPassword = '';
+            CRYPTO._key = null;
+            if (window._pollInterval) clearInterval(window._pollInterval);
+            authScreen.style.display = 'flex';
+            chatScreen.style.display = 'none';
+            setAuthError('Неверный пароль чата');
+            return;
+        }
         state.isAuthorized = false;
         lockChatUI('⚠️ Ошибка доступа: ' + error.message);
         showToast('❌ Ошибка доступа к репозиторию', 3000);
@@ -1326,6 +1520,7 @@ async function loadMessages(showLoading = true) {
 function lockChatUI(reason) {
     state.isAuthorized = false;
     state.messages = []; state.sha = null; state.lastMessageCount = 0;
+    CRYPTO._key = null;
     if (window._pollInterval) clearInterval(window._pollInterval);
     messagesInner.innerHTML = `
         <div class="message system locked">🔒 ${reason || 'Доступ закрыт'}</div>
@@ -1356,38 +1551,62 @@ async function sendMessage(text, imageData = null, audioData = null) {
 
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
-        let messages = result.exists ? (result.content || []) : [];
-        let sha = result.exists ? result.sha : null;
+        let fileContent, sha;
+
+        if (!result.exists) {
+            const saltBytes = generateSalt();
+            state.salt = arrayBufferToBase64(saltBytes);
+            CRYPTO._key = await deriveKey(state.chatPassword, state.salt);
+            fileContent = { v: CRYPTO.VERSION, salt: state.salt, messages: [] };
+            sha = null;
+        } else {
+            fileContent = result.content;
+            sha = result.sha;
+            if (fileContent.v !== CRYPTO.VERSION) {
+                throw new Error('Формат файла не поддерживается');
+            }
+            if (fileContent.salt !== state.salt) {
+                state.salt = fileContent.salt;
+                CRYPTO._key = await deriveKey(state.chatPassword, state.salt);
+            }
+        }
 
         const messageId = Date.now();
-        const newMessage = {
+        const plainMsg = {
             id: messageId,
             username: state.username,
             text: hasText ? text.trim() : '',
             time: new Date().toISOString()
         };
-        if (hasImage) newMessage.image = imageData;
+        if (hasImage) plainMsg.image = imageData;
         if (hasAudio) {
-            newMessage.audio = audioData.data;
-            newMessage.audioDuration = audioData.duration || 0;
-            newMessage.audioMime = audioData.mime || 'audio/webm';
+            plainMsg.audio = audioData.data;
+            plainMsg.audioDuration = audioData.duration || 0;
+            plainMsg.audioMime = audioData.mime || 'audio/webm';
         }
-        state._lastSentMessageId = messageId;
-        messages.push(newMessage);
-        if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
 
-        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, sha);
-        state.messages = messages;
+        state._lastSentMessageId = messageId;
+
+        const encMsg = await encryptMessage(plainMsg);
+        fileContent.messages.push(encMsg);
+        if (fileContent.messages.length > CONFIG.maxMessages) {
+            fileContent.messages = fileContent.messages.slice(-CONFIG.maxMessages);
+        }
+
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, fileContent, sha);
+
+        state.messages.push(plainMsg);
+        if (state.messages.length > CONFIG.maxMessages) {
+            state.messages = state.messages.slice(-CONFIG.maxMessages);
+        }
         state.sha = newSha;
-        state.lastMessageCount = messages.length;
+        state.lastMessageCount = state.messages.length;
 
         messageInput.value = '';
         messageInput.style.height = 'auto';
-
-        // 🔧 ИСПРАВЛЕНО: перед перерисовкой фиксируем, что мы хотим быть внизу
         scrollState.isAtBottom = true;
 
-        renderMessages(messages);
+        renderMessages(state.messages);
         scrollToBottom(true);
 
         soundManager.play('click');
@@ -1416,16 +1635,25 @@ async function deleteMessage(messageId) {
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         if (!result.exists) return;
-        let messages = result.content || [];
-        const messageIndex = messages.findIndex(msg => msg.id === messageId);
+        const fileContent = result.content;
+        if (fileContent.v !== CRYPTO.VERSION) { showToast('❌ Формат не поддерживается', 2000); return; }
+
+        const encMessages = fileContent.messages || [];
+        const messageIndex = encMessages.findIndex(m => m.id === messageId);
         if (messageIndex === -1) { showToast('❌ Сообщение не найдено', 1500); return; }
-        if (messages[messageIndex].username !== state.username) { showToast('❌ Можно удалять только свои сообщения', 1500); return; }
-        messages.splice(messageIndex, 1);
-        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, result.sha);
-        state.messages = messages;
+
+        const plain = await decryptMessage(encMessages[messageIndex]);
+        if (!plain) { showToast('❌ Не удалось прочитать сообщение', 2000); return; }
+        if (plain.username !== state.username) { showToast('❌ Можно удалять только свои сообщения', 1500); return; }
+
+        encMessages.splice(messageIndex, 1);
+        fileContent.messages = encMessages;
+
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, fileContent, result.sha);
+        state.messages = state.messages.filter(m => m.id !== messageId);
         state.sha = newSha;
-        state.lastMessageCount = messages.length;
-        renderMessages(messages);
+        state.lastMessageCount = state.messages.length;
+        renderMessages(state.messages);
         soundManager.play('delete');
         showToast('🗑️ Сообщение удалено', 1000);
     } catch (error) {
@@ -1568,7 +1796,7 @@ function seekAudio(event, msgId) {
 }
 
 // ===================================================================
-//  РЕНДЕРИНГ (ИСПРАВЛЕНО)
+//  РЕНДЕРИНГ
 // ===================================================================
 function renderMessages(messages) {
     if (!state.isAuthorized) {
@@ -1617,8 +1845,6 @@ function renderMessages(messages) {
     messagesInner.innerHTML = html;
     setTimeout(initAudioPlayers, 0);
 
-    // 🔧 ИСПРАВЛЕНО: не сбрасываем isAtBottom.
-    // Если пользователь был внизу — оставляем его внизу.
     setTimeout(() => {
         if (scrollState.isAtBottom) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1631,44 +1857,59 @@ function renderMessages(messages) {
 //  ПОЛЛИНГ
 // ===================================================================
 async function pollUpdates() {
-    if (state.isPolling || !state.token || !state.isAuthorized) return;
+    if (state.isPolling || !state.token || !state.isAuthorized || !CRYPTO._key) return;
     state.isPolling = true;
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         if (!networkState.isOnline) { networkState.isOnline = true; showToast('🌐 Соединение восстановлено', 2000); }
         if (!result.exists) return;
-        if (result.sha !== state.sha) {
-            const newMessages = result.content || [];
-            if (newMessages.length > state.lastMessageCount) {
-                const newMessagesArray = newMessages.slice(state.lastMessageCount);
-                const hasOwnMessage = newMessagesArray.some(msg => msg.username === state.username && msg.id === state._lastSentMessageId);
-                const wasAtBottom = scrollState.isAtBottom;
-                const addedCount = newMessagesArray.length;
+        if (result.sha === state.sha) return;
 
-                state.messages = newMessages;
-                state.sha = result.sha;
-                state.lastMessageCount = newMessages.length;
+        const content = result.content;
+        if (!content || content.v !== CRYPTO.VERSION) return;
 
-                // 🔧 ИСПРАВЛЕНО: сохраняем намерение быть внизу перед перерисовкой
-                scrollState.isAtBottom = wasAtBottom;
-
-                renderMessages(newMessages);
-
-                if (wasAtBottom) {
-                    scrollToBottom(true);
-                } else {
-                    scrollState.unreadCount += addedCount;
-                    updateScrollBadge();
-                    updateScrollButton();
-                }
-                if (!hasOwnMessage) soundManager.play('receive');
-                else state._lastSentMessageId = null;
-            } else {
-                state.sha = result.sha;
-                state.messages = newMessages;
-                state.lastMessageCount = newMessages.length;
-            }
+        if (content.salt !== state.salt) {
+            state.salt = content.salt;
+            CRYPTO._key = await deriveKey(state.chatPassword, state.salt);
         }
+
+        const encMessages = content.messages || [];
+        if (encMessages.length <= state.lastMessageCount) {
+            state.sha = result.sha;
+            return;
+        }
+
+        const newEncMessages = encMessages.slice(state.lastMessageCount);
+        const newPlainMessages = [];
+        for (const enc of newEncMessages) {
+            const m = await decryptMessage(enc);
+            if (m) newPlainMessages.push(m);
+        }
+        if (newPlainMessages.length === 0) { state.sha = result.sha; return; }
+
+        const hasOwnMessage = newPlainMessages.some(m => m.username === state.username && m.id === state._lastSentMessageId);
+        const wasAtBottom = scrollState.isAtBottom;
+        const addedCount = newPlainMessages.length;
+
+        state.messages = state.messages.concat(newPlainMessages);
+        if (state.messages.length > CONFIG.maxMessages) {
+            state.messages = state.messages.slice(-CONFIG.maxMessages);
+        }
+        state.sha = result.sha;
+        state.lastMessageCount = encMessages.length;
+
+        scrollState.isAtBottom = wasAtBottom;
+        renderMessages(state.messages);
+
+        if (wasAtBottom) {
+            scrollToBottom(true);
+        } else {
+            scrollState.unreadCount += addedCount;
+            updateScrollBadge();
+            updateScrollButton();
+        }
+        if (!hasOwnMessage) soundManager.play('receive');
+        else state._lastSentMessageId = null;
     } catch (error) {
         console.error('Polling error:', error);
         const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('NetworkError');
@@ -1701,12 +1942,15 @@ async function login() {
     if (lock.locked) { setAuthError(`Слишком много попыток. Повторите через ${lock.secondsLeft} сек.`); return; }
     const username = usernameInput.value.trim();
     const rawToken = tokenInput.value;
+    const chatPassword = chatPasswordInput.value;
     clearAuthError(); clearTokenHint();
     tokenInput.classList.remove('invalid', 'valid');
 
     if (!username) { setAuthError('Введите имя пользователя'); return; }
     if (username.length < 2) { setAuthError('Имя должно содержать минимум 2 символа'); return; }
     if (username.length > 20) { setAuthError('Имя слишком длинное (макс. 20 символов)'); return; }
+    if (!chatPassword) { setAuthError('Введите пароль чата'); return; }
+    if (chatPassword.length < 6) { setAuthError('Пароль чата — минимум 6 символов'); return; }
 
     const formatCheck = validateTokenFormat(rawToken);
     if (!formatCheck.ok) {
@@ -1749,10 +1993,20 @@ async function login() {
 
     state.username = username;
     state.token = rawToken.trim();
+    state.chatPassword = chatPassword;
     state.isAuthorized = true;
 
-    localStorage.setItem('chathub_username', username);
-    localStorage.setItem('chathub_token', state.token);
+    if (rememberMeInput.checked) {
+        localStorage.setItem('chathub_username', username);
+        localStorage.setItem('chathub_token', state.token);
+        localStorage.setItem('chathub_password', state.chatPassword);
+        localStorage.setItem('chathub_remember', '1');
+    } else {
+        localStorage.setItem('chathub_username', username);
+        localStorage.removeItem('chathub_token');
+        localStorage.removeItem('chathub_password');
+        localStorage.removeItem('chathub_remember');
+    }
 
     authScreen.style.display = 'none';
     chatScreen.style.display = 'flex';
@@ -1766,8 +2020,15 @@ async function login() {
 
     showInputBar();
     await loadMessages(true);
-    startPolling();
-    await checkNetwork();
+    if (state.isAuthorized) {
+        startPolling();
+        await checkNetwork();
+    }
+
+    if (localStorage.getItem('chathub_remember') === '1') {
+        rememberMeInput.checked = true;
+        rememberWarning.style.display = 'block';
+    }
 
     loginBtn.disabled = false;
     loginBtn.textContent = '🚀 Войти';
@@ -1784,6 +2045,21 @@ function logout() {
     state.isAuthorized = false;
     state._lastSentMessageId = null;
     state.messages = []; state.sha = null; state.lastMessageCount = 0;
+
+    state.chatPassword = '';
+    state.salt = null;
+    CRYPTO._key = null;
+
+    if (localStorage.getItem('chathub_remember') !== '1') {
+        chatPasswordInput.value = '';
+        localStorage.removeItem('chathub_token');
+        localStorage.removeItem('chathub_password');
+    } else {
+        tokenInput.value = localStorage.getItem('chathub_token') || '';
+        chatPasswordInput.value = localStorage.getItem('chathub_password') || '';
+        rememberMeInput.checked = true;
+        rememberWarning.style.display = 'block';
+    }
 
     authScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
@@ -1809,7 +2085,8 @@ function logout() {
 // ===================================================================
 loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
-tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') chatPasswordInput.focus(); });
+chatPasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
 
 tokenInput.addEventListener('input', () => {
     const raw = tokenInput.value;
@@ -1823,6 +2100,14 @@ tokenInput.addEventListener('paste', (e) => {
     const pasted = (e.clipboardData || window.clipboardData).getData('text');
     if (pasted && /[\s\n\r]/.test(pasted.trim()) === false && pasted.trim() !== pasted) {
         setTimeout(() => { tokenInput.value = tokenInput.value.trim(); showToast('✂️ Лишние пробелы удалены из токена', 1500); }, 0);
+    }
+});
+
+rememberMeInput.addEventListener('change', () => {
+    if (rememberMeInput.checked) {
+        rememberWarning.style.display = 'block';
+    } else {
+        rememberWarning.style.display = 'none';
     }
 });
 
@@ -1866,13 +2151,33 @@ fileBtn.addEventListener('click', () => {
 micBtn.addEventListener('click', handleMicClick);
 exitBtn.addEventListener('click', logout);
 
+forgetBtn.addEventListener('click', () => {
+    if (!localStorage.getItem('chathub_remember')) {
+        showToast('ℹ️ Запоминание не включено', 1500);
+        return;
+    }
+    if (confirm('Удалить сохранённые токен и пароль с этого устройства?')) {
+        localStorage.removeItem('chathub_token');
+        localStorage.removeItem('chathub_password');
+        localStorage.removeItem('chathub_remember');
+        rememberMeInput.checked = false;
+        rememberWarning.style.display = 'none';
+        showToast('🔓 Данные удалены с устройства', 1500);
+    }
+});
+
 clearDataBtn.addEventListener('click', () => {
-    if (confirm('Очистить сохранённые данные?')) {
+    if (confirm('Очистить сохранённые данные (токен и пароль)?')) {
         localStorage.removeItem('chathub_username');
         localStorage.removeItem('chathub_token');
+        localStorage.removeItem('chathub_password');
+        localStorage.removeItem('chathub_remember');
         usernameInput.value = '';
         tokenInput.value = '';
+        chatPasswordInput.value = '';
         tokenInput.classList.remove('valid', 'invalid');
+        rememberMeInput.checked = false;
+        rememberWarning.style.display = 'none';
         clearAuthError(); clearTokenHint();
         showToast('🗑️ Данные очищены', 1500);
     }
@@ -1910,52 +2215,63 @@ document.addEventListener('keydown', (e) => {
 // ===================================================================
 async function restoreSession() {
     const savedUsername = localStorage.getItem('chathub_username');
-    const savedToken = localStorage.getItem('chathub_token');
+    const remember = localStorage.getItem('chathub_remember') === '1';
+    const savedToken = remember ? localStorage.getItem('chathub_token') : null;
+    const savedPassword = remember ? localStorage.getItem('chathub_password') : null;
 
     if (savedUsername) usernameInput.value = savedUsername;
-    if (savedToken) tokenInput.value = savedToken;
 
-    if (savedUsername && savedToken) {
-        const formatCheck = validateTokenFormat(savedToken);
-        if (!formatCheck.ok) {
-            console.log('Автовход не удался: неверный формат токена');
-            localStorage.removeItem('chathub_token');
-            tokenInput.value = '';
+    if (!remember || !savedToken || !savedPassword) {
+        return;
+    }
+
+    tokenInput.value = savedToken;
+    chatPasswordInput.value = savedPassword;
+    rememberMeInput.checked = true;
+    rememberWarning.style.display = 'block';
+
+    const formatCheck = validateTokenFormat(savedToken);
+    if (!formatCheck.ok) {
+        console.log('Автовход: неверный формат токена');
+        localStorage.removeItem('chathub_token');
+        return;
+    }
+
+    try {
+        const accessCheck = await validateTokenAccess(savedToken.trim());
+        if (!accessCheck.ok) {
+            console.log('Автовход: токен недействителен —', accessCheck.message);
+            setTokenHint('Сохранённый токен недействителен. Введите новый.', 'error');
             return;
         }
-        try {
-            const accessCheck = await validateTokenAccess(savedToken.trim());
-            if (!accessCheck.ok) {
-                console.log('Автовход не удался:', accessCheck.message);
-                localStorage.removeItem('chathub_token');
-                tokenInput.value = '';
-                return;
-            }
-            state.username = savedUsername;
-            state.token = savedToken.trim();
-            state.isAuthorized = true;
+    } catch (e) {
+        console.log('Автовход: ошибка проверки токена');
+        return;
+    }
 
-            authScreen.style.display = 'none';
-            chatScreen.style.display = 'flex';
-            userAvatar.textContent = getInitials(savedUsername);
-            chatTitle.textContent = `Чат (${savedUsername})`;
-            tokenInput.classList.add('valid');
+    state.username = savedUsername;
+    state.token = savedToken.trim();
+    state.chatPassword = savedPassword;
+    state.isAuthorized = true;
 
-            messageInput.disabled = false;
-            sendBtn.disabled = false;
-            fileBtn.disabled = false;
-            micBtn.disabled = false;
+    authScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    userAvatar.textContent = getInitials(savedUsername);
+    chatTitle.textContent = `Чат (${savedUsername})`;
+    tokenInput.classList.add('valid');
 
-            showInputBar();
-            await loadMessages(true);
-            startPolling();
-            await checkNetwork();
-        } catch (error) {
-            console.log('Автовход не удался, ждём ручного входа');
-            state.isAuthorized = false;
-            localStorage.removeItem('chathub_token');
-            tokenInput.value = '';
-        }
+    messageInput.disabled = false;
+    sendBtn.disabled = false;
+    fileBtn.disabled = false;
+    micBtn.disabled = false;
+
+    showInputBar();
+
+    await loadMessages(true);
+
+    if (state.isAuthorized) {
+        startPolling();
+        await checkNetwork();
     }
 }
 
@@ -1976,6 +2292,7 @@ setInterval(() => {
 
 console.log('✅ SMS Чат загружен!');
 console.log('📱 Название: SMS Чат');
+console.log('🔐 E2E-шифрование: AES-256-GCM + PBKDF2 (200k итераций)');
 console.log('⌨️ Нажмите на кнопку-клавиатуру, чтобы показать панель ввода');
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
@@ -1983,7 +2300,8 @@ console.log('🎤 Для отправки аудио нажмите 🎤 (мак
 console.log('⬇️ Кнопка вниз появляется при прокрутке истории, с бейджем непрочитанных');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
 console.log('🛡️ Токен проверяется: формат + реальные права push в репозиторий');
-console.log('🔧 Скролл исправлен: сообщения больше не отскакивают вверх');
+console.log('🔑 Пароль чата обязателен — без него chat.json нечитаем');
+console.log('💾 Запоминание пароля — опционально (галочка в форме входа)');
 </script>
 </body>
 </html>
