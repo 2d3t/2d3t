@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -582,6 +585,53 @@
         .skeleton.own { align-self: flex-end; }
         .skeleton.other { align-self: flex-start; }
 
+        /* ==== КНОПКА ПРОКРУТКИ ВНИЗ ==== */
+        .scroll-down-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 100px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 24px rgba(108, 92, 231, 0.45);
+            z-index: 60;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            animation: fadeInBtn 0.25s ease;
+        }
+        .scroll-down-btn.show { display: flex; }
+        .scroll-down-btn:active { transform: scale(0.88); }
+        @keyframes fadeInBtn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .scroll-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border-radius: 10px;
+            background: #ff6b6b;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            line-height: 1;
+        }
+        .scroll-badge.show { display: flex; }
+
         @media (max-width: 480px) {
             .auth-form { padding: 20px 16px; }
             .auth-content h1 { font-size: 28px; }
@@ -600,6 +650,7 @@
             .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -5px; right: -5px; }
             .floating-keyboard-btn { width: 56px; height: 56px; font-size: 26px; bottom: 20px; right: 20px; }
             .recording-indicator { padding: 6px 12px; font-size: 12px; }
+            .scroll-down-btn { right: 14px; bottom: 84px; width: 44px; height: 44px; font-size: 20px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -667,6 +718,11 @@
 
 <button class="floating-keyboard-btn" id="floatingKeyboardBtn" title="Показать панель ввода">⌨️</button>
 
+<button class="scroll-down-btn" id="scrollDownBtn" title="Вниз">
+    ↓
+    <span class="scroll-badge" id="scrollBadge">0</span>
+</button>
+
 <div class="image-modal" id="imageModal">
     <button class="close-modal" id="closeModalBtn">✕</button>
     <img id="modalImage" src="" alt="Увеличенное изображение">
@@ -685,13 +741,13 @@ const CONFIG = {
     pollInterval: 5000,
     maxMessages: 24,
     maxImageSize: 8 * 1024 * 1024,
-    maxAudioDuration: 7000,       // 7 секунд
-    audioMimeType: 'audio/webm;codecs=opus', // Сжатый формат
-    audioBitsPerSecond: 32000,    // 32 kbps — компактно и разборчиво
+    maxAudioDuration: 7000,
+    audioMimeType: 'audio/webm;codecs=opus',
+    audioBitsPerSecond: 32000,
 };
 
 // ===================================================================
-//  ЗАЩИТА ОТ НЕПРАВИЛЬНОГО ВВОДА GITHUB ТОКЕНА
+//  ЗАЩИТА ТОКЕНА
 // ===================================================================
 const TOKEN_SECURITY = {
     allowedPrefixes: ['ghp_', 'github_pat_', 'gho_', 'ghu_', 'ghs_', 'ghr_'],
@@ -841,6 +897,68 @@ const floatingKeyboardBtn = $('floatingKeyboardBtn');
 const imageModal = $('imageModal');
 const modalImage = $('modalImage');
 const closeModalBtn = $('closeModalBtn');
+const scrollDownBtn = $('scrollDownBtn');
+const scrollBadge = $('scrollBadge');
+
+// ===================================================================
+//  УМНЫЙ СКРОЛЛ
+// ===================================================================
+const SCROLL_THRESHOLD = 80;
+const SCROLL_BTN_SHOW = 150;
+
+let scrollState = { isAtBottom: true, unreadCount: 0 };
+
+function isNearBottom() {
+    const diff = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
+    return diff <= SCROLL_THRESHOLD;
+}
+
+function updateScrollButton() {
+    const diff = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
+    if (diff > SCROLL_BTN_SHOW) {
+        scrollDownBtn.classList.add('show');
+    } else {
+        scrollDownBtn.classList.remove('show');
+        scrollState.unreadCount = 0;
+        updateScrollBadge();
+    }
+}
+
+function updateScrollBadge() {
+    if (scrollState.unreadCount > 0) {
+        scrollBadge.textContent = scrollState.unreadCount > 99 ? '99+' : scrollState.unreadCount;
+        scrollBadge.classList.add('show');
+    } else {
+        scrollBadge.classList.remove('show');
+    }
+}
+
+function scrollToBottom(force = false) {
+    if (!force && !scrollState.isAtBottom) return;
+    requestAnimationFrame(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        scrollState.unreadCount = 0;
+        updateScrollBadge();
+        updateScrollButton();
+    });
+}
+
+function scrollToBottomNow() {
+    messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+    scrollState.unreadCount = 0;
+    updateScrollBadge();
+    scrollState.isAtBottom = true;
+    setTimeout(updateScrollButton, 300);
+}
+
+messagesContainer.addEventListener('scroll', () => {
+    scrollState.isAtBottom = isNearBottom();
+    if (scrollState.isAtBottom) {
+        scrollState.unreadCount = 0;
+        updateScrollBadge();
+    }
+    updateScrollButton();
+}, { passive: true });
 
 // ===================================================================
 //  УПРАВЛЕНИЕ ПАНЕЛЬЮ ВВОДА
@@ -882,13 +1000,6 @@ function showToast(text, duration = 2000) {
     toast.style.display = 'block';
     clearTimeout(toast._timeout);
     toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
-}
-function scrollToBottom() {
-    requestAnimationFrame(() => {
-        if (messagesContainer.scrollHeight > messagesContainer.clientHeight) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    });
 }
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -958,7 +1069,7 @@ function closeImageModal() {
 }
 
 // ===================================================================
-//  КОРРЕКТНАЯ РАБОТА С UTF-8 В GITHUB
+//  UTF-8 <-> BASE64
 // ===================================================================
 function utf8ToBase64(str) {
     const utf8Bytes = new TextEncoder().encode(str);
@@ -1025,7 +1136,6 @@ class AudioRecorder {
         this.autoStopTimeout = null;
         this.onStopCallback = null;
     }
-
     async start() {
         if (this.isRecording) return false;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1034,81 +1144,50 @@ class AudioRecorder {
         }
         try {
             this.stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    sampleRate: 16000,
-                    channelCount: 1
-                }
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 16000, channelCount: 1 }
             });
-
-            // Проверка поддержки mimeType
             let mimeType = CONFIG.audioMimeType;
             if (!MediaRecorder.isTypeSupported(mimeType)) {
                 mimeType = 'audio/webm';
-                if (!MediaRecorder.isTypeSupported(mimeType)) {
-                    mimeType = ''; // пусть выберет браузер
-                }
+                if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
             }
-
             const options = { audioBitsPerSecond: CONFIG.audioBitsPerSecond };
             if (mimeType) options.mimeType = mimeType;
-
             this.mediaRecorder = new MediaRecorder(this.stream, options);
             this.chunks = [];
-
-            this.mediaRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) this.chunks.push(e.data);
-            };
-
+            this.mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) this.chunks.push(e.data); };
             this.mediaRecorder.onstop = async () => {
                 this.isRecording = false;
                 this.stopTimer();
                 micBtn.classList.remove('recording');
                 recordingIndicator.classList.remove('active');
-
                 const audioBlob = new Blob(this.chunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
                 this.cleanup();
-
                 if (this.onStopCallback) {
                     const cb = this.onStopCallback;
                     this.onStopCallback = null;
                     await cb(audioBlob);
                 }
             };
-
-            this.mediaRecorder.start(100); // chunks каждые 100мс
+            this.mediaRecorder.start(100);
             this.isRecording = true;
             this.startTime = Date.now();
-
             micBtn.classList.add('recording');
             recordingIndicator.classList.add('active');
             this.startTimer();
-
-            // Автостоп через 7 секунд
             this.autoStopTimeout = setTimeout(() => {
-                if (this.isRecording) {
-                    showToast('⏱️ Максимум 7 секунд', 1200);
-                    this.stop();
-                }
+                if (this.isRecording) { showToast('⏱️ Максимум 7 секунд', 1200); this.stop(); }
             }, CONFIG.maxAudioDuration);
-
             return true;
         } catch (error) {
             console.error('Ошибка доступа к микрофону:', error);
-            if (error.name === 'NotAllowedError') {
-                showToast('🚫 Разрешите доступ к микрофону', 3000);
-            } else if (error.name === 'NotFoundError') {
-                showToast('🎤 Микрофон не найден', 2500);
-            } else {
-                showToast('❌ Ошибка записи: ' + error.message, 3000);
-            }
+            if (error.name === 'NotAllowedError') showToast('🚫 Разрешите доступ к микрофону', 3000);
+            else if (error.name === 'NotFoundError') showToast('🎤 Микрофон не найден', 2500);
+            else showToast('❌ Ошибка записи: ' + error.message, 3000);
             this.cleanup();
             return false;
         }
     }
-
     startTimer() {
         this.stopTimer();
         this.timerInterval = setInterval(() => {
@@ -1116,51 +1195,37 @@ class AudioRecorder {
             recordingTime.textContent = elapsed.toFixed(1) + ' с';
         }, 100);
     }
-
     stopTimer() {
         if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
         if (this.autoStopTimeout) { clearTimeout(this.autoStopTimeout); this.autoStopTimeout = null; }
     }
-
     stop() {
         if (!this.isRecording || !this.mediaRecorder) return;
         this.stopTimer();
-        try {
-            if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
-        } catch (e) { console.error(e); }
+        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) { console.error(e); }
     }
-
     cancel() {
         if (!this.isRecording || !this.mediaRecorder) return;
         this.onStopCallback = null;
         this.stopTimer();
-        try {
-            if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop();
-        } catch (e) { console.error(e); }
+        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) { console.error(e); }
         this.cleanup();
         micBtn.classList.remove('recording');
         recordingIndicator.classList.remove('active');
     }
-
     cleanup() {
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
-        }
+        if (this.stream) { this.stream.getTracks().forEach(track => track.stop()); this.stream = null; }
         this.mediaRecorder = null;
         this.chunks = [];
         this.stopTimer();
     }
-
     getDuration() {
         if (!this.startTime) return 0;
         return Math.min((Date.now() - this.startTime) / 1000, CONFIG.maxAudioDuration / 1000);
     }
 }
-
 const audioRecorder = new AudioRecorder();
 
-// Конвертация Blob в base64
 function blobToBase64(blob) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1170,27 +1235,14 @@ function blobToBase64(blob) {
     });
 }
 
-// Обработка нажатия на микрофон
 async function handleMicClick() {
     if (!state.isAuthorized) { showToast('🔒 Требуется авторизация', 1500); return; }
-    if (!navigator.onLine || !networkState.isOnline) {
-        showToast('📵 Нет подключения к интернету', 2500);
-        return;
-    }
-
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); return; }
     if (audioRecorder.isRecording) {
-        // Остановка записи (отправка)
         audioRecorder.onStopCallback = async (blob) => {
-            if (!blob || blob.size === 0) {
-                showToast('❌ Пустая запись', 2000);
-                return;
-            }
-            // Проверка длительности по размеру (приблизительно) или по времени
+            if (!blob || blob.size === 0) { showToast('❌ Пустая запись', 2000); return; }
             const duration = audioRecorder.getDuration();
-            if (duration < 0.5) {
-                showToast('⏱️ Слишком короткая запись', 1500);
-                return;
-            }
+            if (duration < 0.5) { showToast('⏱️ Слишком короткая запись', 1500); return; }
             try {
                 showToast('⏳ Отправка аудио...', 1500);
                 const base64 = await blobToBase64(blob);
@@ -1207,7 +1259,6 @@ async function handleMicClick() {
         audioRecorder.stop();
         soundManager.play('click');
     } else {
-        // Начало записи
         const started = await audioRecorder.start();
         if (started) {
             soundManager.play('click');
@@ -1220,10 +1271,7 @@ async function handleMicClick() {
 //  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ
 // ===================================================================
 async function loadMessages(showLoading = true) {
-    if (!state.isAuthorized) {
-        lockChatUI('Доступ закрыт. Войдите с корректным токеном.');
-        return;
-    }
+    if (!state.isAuthorized) { lockChatUI('Доступ закрыт. Войдите с корректным токеном.'); return; }
     try {
         if (showLoading) {
             messagesInner.innerHTML = `
@@ -1243,7 +1291,7 @@ async function loadMessages(showLoading = true) {
         state.sha = result.sha;
         state.lastMessageCount = state.messages.length;
         renderMessages(state.messages);
-        scrollToBottom();
+        scrollToBottom(true);
     } catch (error) {
         console.error('Ошибка загрузки:', error);
         state.isAuthorized = false;
@@ -1267,6 +1315,9 @@ function lockChatUI(reason) {
     micBtn.disabled = true;
     hideInputBar();
     floatingKeyboardBtn.classList.remove('show');
+    scrollDownBtn.classList.remove('show');
+    scrollState.unreadCount = 0;
+    updateScrollBadge();
 }
 
 async function sendMessage(text, imageData = null, audioData = null) {
@@ -1299,9 +1350,7 @@ async function sendMessage(text, imageData = null, audioData = null) {
             newMessage.audioDuration = audioData.duration || 0;
             newMessage.audioMime = audioData.mime || 'audio/webm';
         }
-
         state._lastSentMessageId = messageId;
-
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
 
@@ -1313,7 +1362,7 @@ async function sendMessage(text, imageData = null, audioData = null) {
         messageInput.value = '';
         messageInput.style.height = 'auto';
         renderMessages(messages);
-        scrollToBottom();
+        scrollToBottom(true);
 
         soundManager.play('click');
         soundManager.play('send');
@@ -1380,14 +1429,13 @@ async function handleFileUpload(file) {
 }
 
 // ===================================================================
-//  АУДИО-ПЛЕЕР В СООБЩЕНИЯХ
+//  АУДИО-ПЛЕЕР
 // ===================================================================
-const audioPlayers = {}; // id -> { audio, btn, progressFill, timeEl, waveEl, isPlaying }
+const audioPlayers = {};
 
 function createAudioPlayerHTML(msgId, audioSrc, duration, mime) {
     const safeDuration = duration || 0;
     const displayTime = formatAudioTime(safeDuration);
-    // Генерируем случайную волну из 24 столбцов
     let waveBars = '';
     for (let i = 0; i < 24; i++) {
         const h = 4 + Math.floor(Math.random() * 14);
@@ -1412,16 +1460,13 @@ function initAudioPlayers() {
     document.querySelectorAll('.audio-container').forEach(container => {
         const msgId = container.dataset.audioId;
         if (!msgId || audioPlayers[msgId]) return;
-
         const audio = document.getElementById(`audio-${msgId}`);
         if (!audio) return;
         const btn = container.querySelector('.audio-play-btn');
         const progressFill = document.getElementById(`progress-fill-${msgId}`);
         const timeEl = document.getElementById(`time-${msgId}`);
         const waveEl = document.getElementById(`wave-${msgId}`);
-
         audioPlayers[msgId] = { audio, btn, progressFill, timeEl, waveEl, isPlaying: false };
-
         audio.addEventListener('timeupdate', () => {
             if (audio.duration && isFinite(audio.duration)) {
                 const pct = (audio.currentTime / audio.duration) * 100;
@@ -1430,13 +1475,9 @@ function initAudioPlayers() {
                 timeEl.textContent = formatAudioTime(remaining);
             }
         });
-
         audio.addEventListener('loadedmetadata', () => {
-            if (audio.duration && isFinite(audio.duration)) {
-                timeEl.textContent = formatAudioTime(audio.duration);
-            }
+            if (audio.duration && isFinite(audio.duration)) timeEl.textContent = formatAudioTime(audio.duration);
         });
-
         audio.addEventListener('ended', () => {
             btn.textContent = '▶';
             audio.currentTime = 0;
@@ -1445,7 +1486,6 @@ function initAudioPlayers() {
             waveEl.classList.remove('playing');
             audioPlayers[msgId].isPlaying = false;
         });
-
         audio.addEventListener('error', () => {
             timeEl.textContent = 'ошибка';
             btn.textContent = '⚠';
@@ -1457,8 +1497,6 @@ function initAudioPlayers() {
 function toggleAudioPlayback(msgId) {
     const player = audioPlayers[msgId];
     if (!player) return;
-
-    // Останавливаем все другие плееры
     Object.keys(audioPlayers).forEach(id => {
         if (id !== String(msgId)) {
             const p = audioPlayers[id];
@@ -1473,7 +1511,6 @@ function toggleAudioPlayback(msgId) {
             }
         }
     });
-
     if (player.isPlaying) {
         player.audio.pause();
         player.btn.textContent = '▶';
@@ -1519,15 +1556,10 @@ function renderMessages(messages) {
         `;
         return;
     }
-
-    // Останавливаем все плееры перед перерисовкой
     Object.keys(audioPlayers).forEach(id => {
-        try {
-            audioPlayers[id].audio.pause();
-        } catch (e) {}
+        try { audioPlayers[id].audio.pause(); } catch (e) {}
         delete audioPlayers[id];
     });
-
     let html = '', lastDate = '';
     messages.forEach((msg) => {
         const msgDate = formatDate(msg.time);
@@ -1535,11 +1567,8 @@ function renderMessages(messages) {
         const isOwn = msg.username === state.username && state.isAuthorized;
         const senderName = msg.username || 'Аноним';
         const fullTime = formatFullTime(msg.time);
-
         let content = '';
-        if (msg.text) {
-            content += `<span class="text">${escapeHtml(msg.text)}</span>`;
-        }
+        if (msg.text) content += `<span class="text">${escapeHtml(msg.text)}</span>`;
         if (msg.image) {
             content += `
                 <div class="image-container" onclick="openImageModal('${msg.image}')">
@@ -1547,10 +1576,7 @@ function renderMessages(messages) {
                 </div>
             `;
         }
-        if (msg.audio) {
-            content += createAudioPlayerHTML(msg.id, msg.audio, msg.audioDuration, msg.audioMime);
-        }
-
+        if (msg.audio) content += createAudioPlayerHTML(msg.id, msg.audio, msg.audioDuration, msg.audioMime);
         html += `
             <div class="message-wrapper ${isOwn ? 'own' : 'other'}">
                 <div class="message">
@@ -1563,9 +1589,11 @@ function renderMessages(messages) {
         `;
     });
     messagesInner.innerHTML = html;
-    // Инициализация аудио-плееров после вставки HTML
     setTimeout(initAudioPlayers, 0);
-    scrollToBottom();
+    setTimeout(() => {
+        scrollState.isAtBottom = isNearBottom();
+        updateScrollButton();
+    }, 0);
 }
 
 // ===================================================================
@@ -1583,11 +1611,21 @@ async function pollUpdates() {
             if (newMessages.length > state.lastMessageCount) {
                 const newMessagesArray = newMessages.slice(state.lastMessageCount);
                 const hasOwnMessage = newMessagesArray.some(msg => msg.username === state.username && msg.id === state._lastSentMessageId);
+                const wasAtBottom = scrollState.isAtBottom;
+                const addedCount = newMessagesArray.length;
+
                 state.messages = newMessages;
                 state.sha = result.sha;
                 state.lastMessageCount = newMessages.length;
                 renderMessages(newMessages);
-                scrollToBottom();
+
+                if (wasAtBottom) {
+                    scrollToBottom(true);
+                } else {
+                    scrollState.unreadCount += addedCount;
+                    updateScrollBadge();
+                    updateScrollButton();
+                }
                 if (!hasOwnMessage) soundManager.play('receive');
                 else state._lastSentMessageId = null;
             } else {
@@ -1619,23 +1657,15 @@ function setTokenHint(message, type = 'error') {
     tokenHint.classList.add('show');
     tokenHint.style.color = type === 'error' ? '#ff6b6b' : '#feca57';
 }
-function clearTokenHint() {
-    tokenHint.textContent = '';
-    tokenHint.classList.remove('show');
-}
-function setAuthError(message) {
-    authError.textContent = '❌ ' + message;
-    authError.classList.add('show');
-}
+function clearTokenHint() { tokenHint.textContent = ''; tokenHint.classList.remove('show'); }
+function setAuthError(message) { authError.textContent = '❌ ' + message; authError.classList.add('show'); }
 function clearAuthError() { authError.classList.remove('show'); }
 
 async function login() {
     const lock = isLockedOut();
     if (lock.locked) { setAuthError(`Слишком много попыток. Повторите через ${lock.secondsLeft} сек.`); return; }
-
     const username = usernameInput.value.trim();
     const rawToken = tokenInput.value;
-
     clearAuthError(); clearTokenHint();
     tokenInput.classList.remove('invalid', 'valid');
 
@@ -1657,13 +1687,11 @@ async function login() {
         soundManager.play('error');
         return;
     }
-
     loginBtn.disabled = true;
     loginBtn.textContent = '⏳ Проверка доступа...';
     setTokenHint('Проверяем доступ к репозиторию...', 'warning');
 
     const accessCheck = await validateTokenAccess(rawToken.trim());
-
     if (!accessCheck.ok) {
         tokenInput.classList.add('invalid');
         setTokenHint(accessCheck.message, 'error');
@@ -1679,7 +1707,6 @@ async function login() {
         soundManager.play('error');
         return;
     }
-
     resetFailedAttempts();
     tokenInput.classList.add('valid');
     tokenInput.classList.remove('invalid');
@@ -1714,7 +1741,6 @@ async function login() {
 function logout() {
     if (audioRecorder.isRecording) audioRecorder.cancel();
     if (window._pollInterval) clearInterval(window._pollInterval);
-    // Останавливаем все аудио
     Object.keys(audioPlayers).forEach(id => {
         try { audioPlayers[id].audio.pause(); } catch (e) {}
         delete audioPlayers[id];
@@ -1731,6 +1757,9 @@ function logout() {
     closeImageModal();
     hideInputBar();
     floatingKeyboardBtn.classList.remove('show');
+    scrollDownBtn.classList.remove('show');
+    scrollState.unreadCount = 0;
+    updateScrollBadge();
 
     messageInput.disabled = false;
     sendBtn.disabled = false;
@@ -1800,7 +1829,6 @@ fileBtn.addEventListener('click', () => {
 });
 
 micBtn.addEventListener('click', handleMicClick);
-
 exitBtn.addEventListener('click', logout);
 
 clearDataBtn.addEventListener('click', () => {
@@ -1817,6 +1845,11 @@ clearDataBtn.addEventListener('click', () => {
 
 floatingKeyboardBtn.addEventListener('click', showInputBar);
 closePanelBtn.addEventListener('click', (e) => { e.stopPropagation(); hideInputBar(); });
+
+scrollDownBtn.addEventListener('click', () => {
+    scrollToBottomNow();
+    soundManager.play('click');
+});
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -1895,7 +1928,7 @@ async function restoreSession() {
 //  ЗАПУСК
 // ===================================================================
 restoreSession();
-messageInput.addEventListener('focus', scrollToBottom);
+messageInput.addEventListener('focus', () => { scrollToBottom(); });
 
 setInterval(() => {
     if (chatScreen.style.display === 'flex' && state.isAuthorized) {
@@ -1912,6 +1945,7 @@ console.log('⌨️ Нажмите на кнопку-клавиатуру, чт�
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 console.log('🎤 Для отправки аудио нажмите 🎤 (макс. 7 сек, нажмите ещё раз для отправки)');
+console.log('⬇️ Кнопка вниз появляется при прокрутке истории, с бейджем непрочитанных');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
 console.log('🛡️ Токен проверяется: формат + реальные права push в репозиторий');
 </script>
