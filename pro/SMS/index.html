@@ -15,11 +15,16 @@
     <title>SMS Чат</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a0f;
             color: #e0e0e0;
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -29,6 +34,7 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh;
             background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
         }
         .auth-header {
@@ -66,6 +72,7 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
+            overflow-y: auto;
         }
         .auth-content h1 {
             font-size: 36px;
@@ -129,8 +136,10 @@
             display: none;
             flex-direction: column;
             height: 100vh;
+            height: 100dvh;
             background: #0a0a0f;
             position: relative;
+            overflow: hidden;
         }
         .chat-header {
             padding: 14px 20px;
@@ -142,8 +151,6 @@
             align-items: center;
             flex-shrink: 0;
             z-index: 10;
-            position: sticky;
-            top: 0;
         }
         .chat-header .left { display: flex; align-items: center; gap: 12px; }
         .chat-header .avatar {
@@ -162,23 +169,26 @@
         }
         .chat-header .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
 
+        /* ====== ИСПРАВЛЕННЫЙ СКРОЛЛ ====== */
         .messages-container {
-            flex: 1;
+            flex: 1 1 auto;
             overflow-y: auto;
+            overflow-x: hidden;
             padding: 16px 14px 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+            display: block;
             scroll-behavior: auto;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
             min-height: 0;
-            justify-content: flex-end;
+            max-height: 100%;
         }
         .messages-container > .messages-inner {
             display: flex;
             flex-direction: column;
             gap: 6px;
             width: 100%;
+            min-height: 100%;
+            justify-content: flex-end;
         }
 
         .message-wrapper {
@@ -743,7 +753,7 @@ const CONFIG = {
     maxImageSize: 8 * 1024 * 1024,
     maxAudioDuration: 7000,
     audioMimeType: 'audio/webm;codecs=opus',
-    audioBitsPerSecond: 32000,
+    audioBitsPerSecond: 10000,
 };
 
 // ===================================================================
