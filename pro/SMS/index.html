@@ -169,7 +169,6 @@
         }
         .chat-header .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
 
-        /* ====== ИСПРАВЛЕННЫЙ СКРОЛЛ ====== */
         .messages-container {
             flex: 1 1 auto;
             overflow-y: auto;
@@ -238,7 +237,6 @@
         }
         .message .image-container img:active { transform: scale(0.98); }
 
-        /* ==== АУДИО-ПЛЕЕР В СООБЩЕНИИ ==== */
         .message .audio-container {
             display: flex;
             align-items: center;
@@ -318,7 +316,6 @@
             transition: width 0.1s linear;
         }
 
-        /* ==== ИНДИКАТОР ЗАПИСИ ==== */
         .recording-indicator {
             display: none;
             align-items: center;
@@ -595,7 +592,6 @@
         .skeleton.own { align-self: flex-end; }
         .skeleton.other { align-self: flex-start; }
 
-        /* ==== КНОПКА ПРОКРУТКИ ВНИЗ ==== */
         .scroll-down-btn {
             position: fixed;
             right: 20px;
@@ -753,7 +749,7 @@ const CONFIG = {
     maxImageSize: 8 * 1024 * 1024,
     maxAudioDuration: 7000,
     audioMimeType: 'audio/webm;codecs=opus',
-    audioBitsPerSecond: 10000,
+    audioBitsPerSecond: 32000,
 };
 
 // ===================================================================
@@ -911,7 +907,7 @@ const scrollDownBtn = $('scrollDownBtn');
 const scrollBadge = $('scrollBadge');
 
 // ===================================================================
-//  УМНЫЙ СКРОЛЛ
+//  УМНЫЙ СКРОЛЛ (ИСПРАВЛЕНО)
 // ===================================================================
 const SCROLL_THRESHOLD = 80;
 const SCROLL_BTN_SHOW = 150;
@@ -943,13 +939,29 @@ function updateScrollBadge() {
     }
 }
 
+// 🔧 ИСПРАВЛЕНО: двойной rAF + форсированный reflow + финальная страховка
 function scrollToBottom(force = false) {
     if (!force && !scrollState.isAtBottom) return;
+
     requestAnimationFrame(() => {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        scrollState.unreadCount = 0;
-        updateScrollBadge();
-        updateScrollButton();
+        // Форсируем reflow: читаем scrollHeight, чтобы браузер пересчитал высоту
+        void messagesContainer.scrollHeight;
+
+        requestAnimationFrame(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            scrollState.unreadCount = 0;
+            scrollState.isAtBottom = true;
+            updateScrollBadge();
+            updateScrollButton();
+
+            // Страховка: если картинки/аудио изменили высоту после отрисовки
+            setTimeout(() => {
+                if (scrollState.isAtBottom) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+                updateScrollButton();
+            }, 50);
+        });
     });
 }
 
@@ -1371,6 +1383,10 @@ async function sendMessage(text, imageData = null, audioData = null) {
 
         messageInput.value = '';
         messageInput.style.height = 'auto';
+
+        // 🔧 ИСПРАВЛЕНО: перед перерисовкой фиксируем, что мы хотим быть внизу
+        scrollState.isAtBottom = true;
+
         renderMessages(messages);
         scrollToBottom(true);
 
@@ -1552,7 +1568,7 @@ function seekAudio(event, msgId) {
 }
 
 // ===================================================================
-//  РЕНДЕРИНГ
+//  РЕНДЕРИНГ (ИСПРАВЛЕНО)
 // ===================================================================
 function renderMessages(messages) {
     if (!state.isAuthorized) {
@@ -1600,8 +1616,13 @@ function renderMessages(messages) {
     });
     messagesInner.innerHTML = html;
     setTimeout(initAudioPlayers, 0);
+
+    // 🔧 ИСПРАВЛЕНО: не сбрасываем isAtBottom.
+    // Если пользователь был внизу — оставляем его внизу.
     setTimeout(() => {
-        scrollState.isAtBottom = isNearBottom();
+        if (scrollState.isAtBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
         updateScrollButton();
     }, 0);
 }
@@ -1627,6 +1648,10 @@ async function pollUpdates() {
                 state.messages = newMessages;
                 state.sha = result.sha;
                 state.lastMessageCount = newMessages.length;
+
+                // 🔧 ИСПРАВЛЕНО: сохраняем намерение быть внизу перед перерисовкой
+                scrollState.isAtBottom = wasAtBottom;
+
                 renderMessages(newMessages);
 
                 if (wasAtBottom) {
@@ -1958,6 +1983,7 @@ console.log('🎤 Для отправки аудио нажмите 🎤 (мак
 console.log('⬇️ Кнопка вниз появляется при прокрутке истории, с бейджем непрочитанных');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
 console.log('🛡️ Токен проверяется: формат + реальные права push в репозиторий');
+console.log('🔧 Скролл исправлен: сообщения больше не отскакивают вверх');
 </script>
 </body>
 </html>
