@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
@@ -224,6 +227,136 @@
             transition: transform 0.2s;
         }
         .message .image-container img:active { transform: scale(0.98); }
+
+        /* ==== АУДИО-ПЛЕЕР В СООБЩЕНИИ ==== */
+        .message .audio-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 30px;
+            padding: 6px 14px 6px 6px;
+            margin: 6px 0 2px;
+            min-width: 180px;
+        }
+        .message-wrapper.own .audio-container { background: rgba(0,0,0,0.25); }
+        .audio-play-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            color: #fff;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+        .audio-play-btn:active { transform: scale(0.9); }
+        .audio-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .audio-wave {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 20px;
+        }
+        .audio-wave span {
+            display: block;
+            width: 3px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 2px;
+            transition: height 0.15s, background 0.15s;
+        }
+        .audio-wave.playing span {
+            background: #fff;
+            animation: waveAnim 1s infinite ease-in-out;
+        }
+        .audio-wave.playing span:nth-child(odd) { animation-delay: 0.1s; }
+        .audio-wave.playing span:nth-child(3n) { animation-delay: 0.2s; }
+        .audio-wave.playing span:nth-child(4n) { animation-delay: 0.3s; }
+        @keyframes waveAnim {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.8); }
+        }
+        .audio-time {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            font-variant-numeric: tabular-nums;
+            min-width: 34px;
+        }
+        .audio-progress {
+            width: 100%;
+            height: 3px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .audio-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #6c5ce7, #00b894);
+            border-radius: 3px;
+            transition: width 0.1s linear;
+        }
+
+        /* ==== ИНДИКАТОР ЗАПИСИ ==== */
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(255,107,107,0.15);
+            border: 1px solid rgba(255,107,107,0.3);
+            border-radius: 30px;
+            color: #ff6b6b;
+            font-size: 14px;
+            font-weight: 500;
+            margin-right: 4px;
+            animation: pulseRec 1s infinite;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .recording-indicator.active { display: flex; }
+        .recording-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            animation: blink 0.8s infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        @keyframes pulseRec { 0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.3)} 50%{box-shadow:0 0 0 6px rgba(255,107,107,0)} }
+
+        .input-bar .mic-btn {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.06);
+            color: #888;
+            font-size: 22px;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .input-bar .mic-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
+        .input-bar .mic-btn.recording {
+            background: rgba(255,107,107,0.25);
+            color: #ff6b6b;
+            animation: pulseMic 1s infinite;
+        }
+        @keyframes pulseMic { 0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.4)} 50%{box-shadow:0 0 0 8px rgba(255,107,107,0)} }
 
         .delete-btn {
             position: absolute;
@@ -452,6 +585,53 @@
         .skeleton.own { align-self: flex-end; }
         .skeleton.other { align-self: flex-start; }
 
+        /* ==== КНОПКА ПРОКРУТКИ ВНИЗ ==== */
+        .scroll-down-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 100px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 24px rgba(108, 92, 231, 0.45);
+            z-index: 60;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            animation: fadeInBtn 0.25s ease;
+        }
+        .scroll-down-btn.show { display: flex; }
+        .scroll-down-btn:active { transform: scale(0.88); }
+        @keyframes fadeInBtn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .scroll-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border-radius: 10px;
+            background: #ff6b6b;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            line-height: 1;
+        }
+        .scroll-badge.show { display: flex; }
+
         @media (max-width: 480px) {
             .auth-form { padding: 20px 16px; }
             .auth-content h1 { font-size: 28px; }
@@ -459,13 +639,18 @@
             .message-wrapper { max-width: 88%; }
             .message { font-size: 15px; }
             .chat-header { padding: 10px 14px; }
-            .input-bar { padding: 8px 10px 12px; gap: 8px; min-height: 60px; }
-            .input-bar textarea { font-size: 15px; padding: 10px 14px; min-height: 38px; }
-            .input-bar .send-btn { width: 42px; height: 42px; font-size: 18px; }
-            .input-bar .file-btn { width: 42px; height: 42px; font-size: 18px; }
+            .input-bar { padding: 8px 10px 12px; gap: 6px; min-height: 60px; }
+            .input-bar textarea { font-size: 15px; padding: 10px 12px; min-height: 38px; }
+            .input-bar .send-btn { width: 40px; height: 40px; font-size: 16px; }
+            .input-bar .file-btn { width: 40px; height: 40px; font-size: 18px; }
+            .input-bar .mic-btn { width: 40px; height: 40px; font-size: 18px; }
+            .audio-container { min-width: 140px; padding: 4px 10px 4px 4px; }
+            .audio-play-btn { width: 30px; height: 30px; font-size: 14px; }
             .image-modal img { max-height: 80vh; }
             .delete-btn { width: 20px; height: 20px; font-size: 10px; top: -5px; right: -5px; }
             .floating-keyboard-btn { width: 56px; height: 56px; font-size: 26px; bottom: 20px; right: 20px; }
+            .recording-indicator { padding: 6px 12px; font-size: 12px; }
+            .scroll-down-btn { right: 14px; bottom: 84px; width: 44px; height: 44px; font-size: 20px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -518,14 +703,25 @@
     <div class="input-bar" id="inputBar">
         <button class="close-panel-btn" id="closePanelBtn" title="Скрыть панель">✕</button>
         <textarea id="messageInput" rows="1" placeholder="Напишите сообщение..." maxlength="5000"></textarea>
+        <div class="recording-indicator" id="recordingIndicator">
+            <span class="recording-dot"></span>
+            <span id="recordingTime">0.0 с</span>
+            <span style="opacity:0.6;font-size:12px;">(макс. 7 с)</span>
+        </div>
         <div class="action-buttons">
             <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
+            <button class="mic-btn" id="micBtn" title="Записать аудио (до 7 сек)">🎤</button>
             <button class="send-btn" id="sendBtn">➤</button>
         </div>
     </div>
 </div>
 
 <button class="floating-keyboard-btn" id="floatingKeyboardBtn" title="Показать панель ввода">⌨️</button>
+
+<button class="scroll-down-btn" id="scrollDownBtn" title="Вниз">
+    ↓
+    <span class="scroll-badge" id="scrollBadge">0</span>
+</button>
 
 <div class="image-modal" id="imageModal">
     <button class="close-modal" id="closeModalBtn">✕</button>
@@ -545,133 +741,65 @@ const CONFIG = {
     pollInterval: 5000,
     maxMessages: 24,
     maxImageSize: 8 * 1024 * 1024,
+    maxAudioDuration: 7000,
+    audioMimeType: 'audio/webm;codecs=opus',
+    audioBitsPerSecond: 32000,
 };
 
 // ===================================================================
-//  ЗАЩИТА ОТ НЕПРАВИЛЬНОГО ВВОДА GITHUB ТОКЕНА
+//  ЗАЩИТА ТОКЕНА
 // ===================================================================
 const TOKEN_SECURITY = {
-    // Разрешённые префиксы GitHub-токенов (classic / fine-grained / OAuth)
     allowedPrefixes: ['ghp_', 'github_pat_', 'gho_', 'ghu_', 'ghs_', 'ghr_'],
-    // Допустимые длины (примерные диапазоны)
     minLength: 20,
     maxLength: 255,
-    // Максимум неудачных попыток входа до временной блокировки
     maxAttempts: 5,
-    // Время блокировки (мс)
     lockoutTime: 30000,
-    // Сколько раз можно ввести неверный токен подряд
     _failedAttempts: 0,
     _lockedUntil: 0,
 };
 
-/**
- * Строгая проверка формата токена.
- * Возвращает { ok: boolean, reason: string }
- */
 function validateTokenFormat(rawToken) {
-    if (typeof rawToken !== 'string') {
-        return { ok: false, reason: 'Токен должен быть строкой' };
-    }
+    if (typeof rawToken !== 'string') return { ok: false, reason: 'Токен должен быть строкой' };
     const token = rawToken.trim();
-
-    if (!token) {
-        return { ok: false, reason: 'Введите токен' };
-    }
-    if (token.length < TOKEN_SECURITY.minLength) {
-        return { ok: false, reason: `Токен слишком короткий (мин. ${TOKEN_SECURITY.minLength} символов)` };
-    }
-    if (token.length > TOKEN_SECURITY.maxLength) {
-        return { ok: false, reason: `Токен слишком длинный (макс. ${TOKEN_SECURITY.maxLength} символов)` };
-    }
-    // Только допустимые символы: буквы, цифры, подчёркивания
-    if (!/^[A-Za-z0-9_]+$/.test(token)) {
-        return { ok: false, reason: 'Токен содержит недопустимые символы (пробелы/переносы/спецсимволы)' };
-    }
-    // Проверка префикса
+    if (!token) return { ok: false, reason: 'Введите токен' };
+    if (token.length < TOKEN_SECURITY.minLength) return { ok: false, reason: `Токен слишком короткий (мин. ${TOKEN_SECURITY.minLength} символов)` };
+    if (token.length > TOKEN_SECURITY.maxLength) return { ok: false, reason: `Токен слишком длинный (макс. ${TOKEN_SECURITY.maxLength} символов)` };
+    if (!/^[A-Za-z0-9_]+$/.test(token)) return { ok: false, reason: 'Токен содержит недопустимые символы' };
     const hasAllowedPrefix = TOKEN_SECURITY.allowedPrefixes.some(p => token.startsWith(p));
-    if (!hasAllowedPrefix) {
-        return {
-            ok: false,
-            reason: 'Неверный формат токена. Ожидается ghp_…, github_pat_… и т.п.'
-        };
-    }
+    if (!hasAllowedPrefix) return { ok: false, reason: 'Неверный формат токена. Ожидается ghp_…, github_pat_… и т.п.' };
     return { ok: true, reason: '' };
 }
 
-/**
- * Проверка, что токен реально имеет доступ к нужному репозиторию.
- * Делает запрос к GitHub API и проверяет права (push).
- * Возвращает { ok: boolean, status: number, message: string }
- */
 async function validateTokenAccess(token) {
     const url = `https://api.github.com/repos/${CONFIG.repoOwner}/${CONFIG.repoName}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
-
     try {
         const response = await fetch(url, {
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            signal: controller.signal,
-            cache: 'no-store'
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+            signal: controller.signal, cache: 'no-store'
         });
         clearTimeout(timeoutId);
-
-        if (response.status === 401) {
-            return { ok: false, status: 401, message: 'Токен недействителен (401 Unauthorized)' };
-        }
-        if (response.status === 403) {
-            return { ok: false, status: 403, message: 'Доступ запрещён (403 Forbidden). Возможно, закончился лимит или нет прав.' };
-        }
-        if (response.status === 404) {
-            return { ok: false, status: 404, message: 'Репозиторий не найден или у токена нет к нему доступа (404)' };
-        }
-        if (!response.ok) {
-            return { ok: false, status: response.status, message: `Ошибка GitHub API: ${response.status}` };
-        }
-
+        if (response.status === 401) return { ok: false, status: 401, message: 'Токен недействителен (401)' };
+        if (response.status === 403) return { ok: false, status: 403, message: 'Доступ запрещён (403)' };
+        if (response.status === 404) return { ok: false, status: 404, message: 'Репозиторий не найден или нет доступа (404)' };
+        if (!response.ok) return { ok: false, status: response.status, message: `Ошибка GitHub API: ${response.status}` };
         const data = await response.json();
-        // Проверяем, что у токена есть право push (иначе нельзя писать в чат)
         const canPush = data.permissions && data.permissions.push === true;
-        if (!canPush) {
-            return { ok: false, status: 200, message: 'У токена нет прав на запись (push) в этот репозиторий' };
-        }
+        if (!canPush) return { ok: false, status: 200, message: 'У токена нет прав на запись (push)' };
         return { ok: true, status: 200, message: 'Доступ разрешён' };
     } catch (error) {
         clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-            return { ok: false, status: 0, message: 'Превышено время ожидания ответа от GitHub' };
-        }
-        return { ok: false, status: 0, message: 'Нет подключения к GitHub. Проверьте интернет.' };
+        if (error.name === 'AbortError') return { ok: false, status: 0, message: 'Превышено время ожидания' };
+        return { ok: false, status: 0, message: 'Нет подключения к GitHub' };
     }
 }
 
-/**
- * Полная проверка токена: формат + реальный доступ.
- */
-async function validateTokenFull(rawToken) {
-    const formatCheck = validateTokenFormat(rawToken);
-    if (!formatCheck.ok) {
-        return { ok: false, stage: 'format', message: formatCheck.reason };
-    }
-    const accessCheck = await validateTokenAccess(rawToken.trim());
-    if (!accessCheck.ok) {
-        return { ok: false, stage: 'access', message: accessCheck.message };
-    }
-    return { ok: true, stage: 'ok', message: 'Токен принят' };
-}
-
-/**
- * Проверка блокировки после нескольких неудачных попыток.
- */
 function isLockedOut() {
     const now = Date.now();
     if (TOKEN_SECURITY._lockedUntil > now) {
-        const secondsLeft = Math.ceil((TOKEN_SECURITY._lockedUntil - now) / 1000);
-        return { locked: true, secondsLeft };
+        return { locked: true, secondsLeft: Math.ceil((TOKEN_SECURITY._lockedUntil - now) / 1000) };
     }
     if (TOKEN_SECURITY._lockedUntil && TOKEN_SECURITY._lockedUntil <= now) {
         TOKEN_SECURITY._failedAttempts = 0;
@@ -685,7 +813,7 @@ function registerFailedAttempt() {
     if (TOKEN_SECURITY._failedAttempts >= TOKEN_SECURITY.maxAttempts) {
         TOKEN_SECURITY._lockedUntil = Date.now() + TOKEN_SECURITY.lockoutTime;
         TOKEN_SECURITY._failedAttempts = 0;
-        return true; // заблокирован
+        return true;
     }
     return false;
 }
@@ -699,11 +827,7 @@ function resetFailedAttempts() {
 //  ЗВУКИ
 // ===================================================================
 class SoundManager {
-    constructor() {
-        this.enabled = true;
-        this.sounds = {};
-        this.initSounds();
-    }
+    constructor() { this.enabled = true; this.sounds = {}; this.initSounds(); }
     initSounds() {
         this.sounds.send = this.createBeep(600, 0.1);
         this.sounds.receive = this.createBeep(800, 0.15);
@@ -718,26 +842,17 @@ class SoundManager {
                     const ctx = new (window.AudioContext || window.webkitAudioContext)();
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.frequency.value = freq;
-                    osc.type = 'sine';
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.value = freq; osc.type = 'sine';
                     gain.gain.setValueAtTime(0.1, ctx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-                    osc.start(ctx.currentTime);
-                    osc.stop(ctx.currentTime + duration);
-                } catch (e) { /* игнорируем */ }
+                    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + duration);
+                } catch (e) {}
             }
         };
     }
-    play(type) {
-        if (!this.enabled) return;
-        if (this.sounds[type]) this.sounds[type].play();
-    }
-    toggle() {
-        this.enabled = !this.enabled;
-        return this.enabled;
-    }
+    play(type) { if (!this.enabled) return; if (this.sounds[type]) this.sounds[type].play(); }
+    toggle() { this.enabled = !this.enabled; return this.enabled; }
 }
 const soundManager = new SoundManager();
 
@@ -745,20 +860,12 @@ const soundManager = new SoundManager();
 //  СОСТОЯНИЕ
 // ===================================================================
 let state = {
-    username: '',
-    token: '',
-    messages: [],
-    sha: null,
-    isPolling: false,
-    isSending: false,
-    lastMessageCount: 0,
-    isAuthorized: false,
-    _lastSentMessageId: null,
+    username: '', token: '', messages: [], sha: null,
+    isPolling: false, isSending: false, lastMessageCount: 0,
+    isAuthorized: false, _lastSentMessageId: null,
 };
 
-let networkState = {
-    isOnline: navigator.onLine,
-};
+let networkState = { isOnline: navigator.onLine };
 
 // ===================================================================
 //  DOM
@@ -777,6 +884,9 @@ const messagesInner = $('messagesInner');
 const messageInput = $('messageInput');
 const sendBtn = $('sendBtn');
 const fileBtn = $('fileBtn');
+const micBtn = $('micBtn');
+const recordingIndicator = $('recordingIndicator');
+const recordingTime = $('recordingTime');
 const exitBtn = $('exitBtn');
 const userAvatar = $('userAvatar');
 const chatTitle = $('chatTitle');
@@ -787,18 +897,77 @@ const floatingKeyboardBtn = $('floatingKeyboardBtn');
 const imageModal = $('imageModal');
 const modalImage = $('modalImage');
 const closeModalBtn = $('closeModalBtn');
+const scrollDownBtn = $('scrollDownBtn');
+const scrollBadge = $('scrollBadge');
+
+// ===================================================================
+//  УМНЫЙ СКРОЛЛ
+// ===================================================================
+const SCROLL_THRESHOLD = 80;
+const SCROLL_BTN_SHOW = 150;
+
+let scrollState = { isAtBottom: true, unreadCount: 0 };
+
+function isNearBottom() {
+    const diff = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
+    return diff <= SCROLL_THRESHOLD;
+}
+
+function updateScrollButton() {
+    const diff = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
+    if (diff > SCROLL_BTN_SHOW) {
+        scrollDownBtn.classList.add('show');
+    } else {
+        scrollDownBtn.classList.remove('show');
+        scrollState.unreadCount = 0;
+        updateScrollBadge();
+    }
+}
+
+function updateScrollBadge() {
+    if (scrollState.unreadCount > 0) {
+        scrollBadge.textContent = scrollState.unreadCount > 99 ? '99+' : scrollState.unreadCount;
+        scrollBadge.classList.add('show');
+    } else {
+        scrollBadge.classList.remove('show');
+    }
+}
+
+function scrollToBottom(force = false) {
+    if (!force && !scrollState.isAtBottom) return;
+    requestAnimationFrame(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        scrollState.unreadCount = 0;
+        updateScrollBadge();
+        updateScrollButton();
+    });
+}
+
+function scrollToBottomNow() {
+    messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+    scrollState.unreadCount = 0;
+    updateScrollBadge();
+    scrollState.isAtBottom = true;
+    setTimeout(updateScrollButton, 300);
+}
+
+messagesContainer.addEventListener('scroll', () => {
+    scrollState.isAtBottom = isNearBottom();
+    if (scrollState.isAtBottom) {
+        scrollState.unreadCount = 0;
+        updateScrollBadge();
+    }
+    updateScrollButton();
+}, { passive: true });
 
 // ===================================================================
 //  УПРАВЛЕНИЕ ПАНЕЛЬЮ ВВОДА
 // ===================================================================
 function showInputBar() {
-    if (!state.isAuthorized) return; // защита: без авторизации панель не показываем
+    if (!state.isAuthorized) return;
     inputBar.classList.remove('hidden');
     floatingKeyboardBtn.classList.remove('show');
-    setTimeout(() => {
-        messageInput.focus();
-        scrollToBottom();
-    }, 100);
+    setTimeout(() => { messageInput.focus(); scrollToBottom(); }, 100);
 }
 function hideInputBar() {
     inputBar.classList.add('hidden');
@@ -806,8 +975,7 @@ function hideInputBar() {
     messageInput.blur();
 }
 function toggleInputBar() {
-    if (inputBar.classList.contains('hidden')) showInputBar();
-    else hideInputBar();
+    if (inputBar.classList.contains('hidden')) showInputBar(); else hideInputBar();
 }
 
 // ===================================================================
@@ -821,21 +989,18 @@ function formatFullTime(iso) {
     const day = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
     return `${day} ${time}`;
 }
+function formatAudioTime(seconds) {
+    if (isNaN(seconds) || seconds < 0) seconds = 0;
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
 function showToast(text, duration = 2000) {
     toast.textContent = text;
     toast.style.display = 'block';
     clearTimeout(toast._timeout);
     toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
 }
-
-function scrollToBottom() {
-    requestAnimationFrame(() => {
-        if (messagesContainer.scrollHeight > messagesContainer.clientHeight) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    });
-}
-
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -846,48 +1011,26 @@ function escapeHtml(text) {
 //  ПРОВЕРКА СЕТИ
 // ===================================================================
 async function checkNetwork() {
-    if (!navigator.onLine) {
-        networkState.isOnline = false;
-        return false;
-    }
+    if (!navigator.onLine) { networkState.isOnline = false; return false; }
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch('https://api.github.com/rate_limit', {
-            method: 'GET',
-            signal: controller.signal,
-            cache: 'no-store'
-        });
+        const response = await fetch('https://api.github.com/rate_limit', { method: 'GET', signal: controller.signal, cache: 'no-store' });
         clearTimeout(timeoutId);
-        if (response.ok || response.status === 403 || response.status === 401) {
-            networkState.isOnline = true;
-            return true;
-        }
-        networkState.isOnline = false;
-        return false;
-    } catch (error) {
-        networkState.isOnline = false;
-        return false;
-    }
+        if (response.ok || response.status === 403 || response.status === 401) { networkState.isOnline = true; return true; }
+        networkState.isOnline = false; return false;
+    } catch (error) { networkState.isOnline = false; return false; }
 }
-
 window.addEventListener('online', async () => {
     const ok = await checkNetwork();
-    if (ok) {
-        showToast('🌐 Соединение восстановлено', 2000);
-        await pollUpdates();
-    }
+    if (ok) { showToast('🌐 Соединение восстановлено', 2000); await pollUpdates(); }
 });
-
 window.addEventListener('offline', () => {
     networkState.isOnline = false;
     showToast('📵 Нет подключения к интернету', 2500);
 });
-
 setInterval(() => {
-    if (chatScreen.style.display === 'flex' && state.isAuthorized) {
-        checkNetwork();
-    }
+    if (chatScreen.style.display === 'flex' && state.isAuthorized) checkNetwork();
 }, 15000);
 
 // ===================================================================
@@ -899,16 +1042,13 @@ function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.8) {
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                let width = img.width;
-                let height = img.height;
+                let width = img.width, height = img.height;
                 if (width > maxWidth || height > maxHeight) {
                     const ratio = Math.min(maxWidth / width, maxHeight / height);
-                    width = Math.round(width * ratio);
-                    height = Math.round(height * ratio);
+                    width = Math.round(width * ratio); height = Math.round(height * ratio);
                 }
                 const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
+                canvas.width = width; canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL('image/jpeg', quality));
@@ -929,7 +1069,7 @@ function closeImageModal() {
 }
 
 // ===================================================================
-//  КОРРЕКТНАЯ РАБОТА С UTF-8 В GITHUB
+//  UTF-8 <-> BASE64
 // ===================================================================
 function utf8ToBase64(str) {
     const utf8Bytes = new TextEncoder().encode(str);
@@ -940,9 +1080,7 @@ function utf8ToBase64(str) {
 function base64ToUtf8(base64) {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return new TextDecoder('utf-8').decode(bytes);
 }
 
@@ -956,16 +1094,12 @@ function getHeaders(token) {
         'Content-Type': 'application/json'
     };
 }
-
 async function fetchFile(token, owner, repo, path) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
-        const response = await fetch(url, {
-            headers: getHeaders(token),
-            signal: controller.signal
-        });
+        const response = await fetch(url, { headers: getHeaders(token), signal: controller.signal });
         clearTimeout(timeoutId);
         if (response.status === 404) return { exists: false };
         if (response.status === 401) throw new Error('401');
@@ -974,42 +1108,170 @@ async function fetchFile(token, owner, repo, path) {
         const data = await response.json();
         const content = JSON.parse(base64ToUtf8(data.content));
         return { exists: true, sha: data.sha, content: content };
-    } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
-    }
+    } catch (error) { clearTimeout(timeoutId); throw error; }
 }
-
 async function saveFile(token, owner, repo, path, content, sha) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
     const jsonString = JSON.stringify(content, null, 2);
     const encoded = utf8ToBase64(jsonString);
-    const body = {
-        message: `💬 Обновление чата`,
-        content: encoded
-    };
+    const body = { message: `💬 Обновление чата`, content: encoded };
     if (sha) body.sha = sha;
-    const response = await fetch(url, {
-        method: 'PUT',
-        headers: getHeaders(token),
-        body: JSON.stringify(body)
-    });
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || `HTTP ${response.status}`);
-    }
+    const response = await fetch(url, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) });
+    if (!response.ok) { const error = await response.json(); throw new Error(error.message || `HTTP ${response.status}`); }
     const data = await response.json();
     return data.content.sha;
+}
+
+// ===================================================================
+//  ЗАПИСЬ АУДИО
+// ===================================================================
+class AudioRecorder {
+    constructor() {
+        this.mediaRecorder = null;
+        this.chunks = [];
+        this.stream = null;
+        this.isRecording = false;
+        this.startTime = 0;
+        this.timerInterval = null;
+        this.autoStopTimeout = null;
+        this.onStopCallback = null;
+    }
+    async start() {
+        if (this.isRecording) return false;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast('❌ Микрофон не поддерживается', 2500);
+            return false;
+        }
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 16000, channelCount: 1 }
+            });
+            let mimeType = CONFIG.audioMimeType;
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'audio/webm';
+                if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+            }
+            const options = { audioBitsPerSecond: CONFIG.audioBitsPerSecond };
+            if (mimeType) options.mimeType = mimeType;
+            this.mediaRecorder = new MediaRecorder(this.stream, options);
+            this.chunks = [];
+            this.mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) this.chunks.push(e.data); };
+            this.mediaRecorder.onstop = async () => {
+                this.isRecording = false;
+                this.stopTimer();
+                micBtn.classList.remove('recording');
+                recordingIndicator.classList.remove('active');
+                const audioBlob = new Blob(this.chunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+                this.cleanup();
+                if (this.onStopCallback) {
+                    const cb = this.onStopCallback;
+                    this.onStopCallback = null;
+                    await cb(audioBlob);
+                }
+            };
+            this.mediaRecorder.start(100);
+            this.isRecording = true;
+            this.startTime = Date.now();
+            micBtn.classList.add('recording');
+            recordingIndicator.classList.add('active');
+            this.startTimer();
+            this.autoStopTimeout = setTimeout(() => {
+                if (this.isRecording) { showToast('⏱️ Максимум 7 секунд', 1200); this.stop(); }
+            }, CONFIG.maxAudioDuration);
+            return true;
+        } catch (error) {
+            console.error('Ошибка доступа к микрофону:', error);
+            if (error.name === 'NotAllowedError') showToast('🚫 Разрешите доступ к микрофону', 3000);
+            else if (error.name === 'NotFoundError') showToast('🎤 Микрофон не найден', 2500);
+            else showToast('❌ Ошибка записи: ' + error.message, 3000);
+            this.cleanup();
+            return false;
+        }
+    }
+    startTimer() {
+        this.stopTimer();
+        this.timerInterval = setInterval(() => {
+            const elapsed = (Date.now() - this.startTime) / 1000;
+            recordingTime.textContent = elapsed.toFixed(1) + ' с';
+        }, 100);
+    }
+    stopTimer() {
+        if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
+        if (this.autoStopTimeout) { clearTimeout(this.autoStopTimeout); this.autoStopTimeout = null; }
+    }
+    stop() {
+        if (!this.isRecording || !this.mediaRecorder) return;
+        this.stopTimer();
+        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) { console.error(e); }
+    }
+    cancel() {
+        if (!this.isRecording || !this.mediaRecorder) return;
+        this.onStopCallback = null;
+        this.stopTimer();
+        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) { console.error(e); }
+        this.cleanup();
+        micBtn.classList.remove('recording');
+        recordingIndicator.classList.remove('active');
+    }
+    cleanup() {
+        if (this.stream) { this.stream.getTracks().forEach(track => track.stop()); this.stream = null; }
+        this.mediaRecorder = null;
+        this.chunks = [];
+        this.stopTimer();
+    }
+    getDuration() {
+        if (!this.startTime) return 0;
+        return Math.min((Date.now() - this.startTime) / 1000, CONFIG.maxAudioDuration / 1000);
+    }
+}
+const audioRecorder = new AudioRecorder();
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function handleMicClick() {
+    if (!state.isAuthorized) { showToast('🔒 Требуется авторизация', 1500); return; }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); return; }
+    if (audioRecorder.isRecording) {
+        audioRecorder.onStopCallback = async (blob) => {
+            if (!blob || blob.size === 0) { showToast('❌ Пустая запись', 2000); return; }
+            const duration = audioRecorder.getDuration();
+            if (duration < 0.5) { showToast('⏱️ Слишком короткая запись', 1500); return; }
+            try {
+                showToast('⏳ Отправка аудио...', 1500);
+                const base64 = await blobToBase64(blob);
+                await sendMessage('', null, {
+                    data: base64,
+                    duration: Math.min(duration, CONFIG.maxAudioDuration / 1000),
+                    mime: blob.type || 'audio/webm'
+                });
+            } catch (err) {
+                console.error('Ошибка отправки аудио:', err);
+                showToast('❌ Ошибка отправки аудио', 2500);
+            }
+        };
+        audioRecorder.stop();
+        soundManager.play('click');
+    } else {
+        const started = await audioRecorder.start();
+        if (started) {
+            soundManager.play('click');
+            showToast('🎤 Запись... нажмите ещё раз для отправки', 2000);
+        }
+    }
 }
 
 // ===================================================================
 //  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ
 // ===================================================================
 async function loadMessages(showLoading = true) {
-    if (!state.isAuthorized) {
-        lockChatUI('Доступ закрыт. Войдите с корректным токеном.');
-        return;
-    }
+    if (!state.isAuthorized) { lockChatUI('Доступ закрыт. Войдите с корректным токеном.'); return; }
     try {
         if (showLoading) {
             messagesInner.innerHTML = `
@@ -1021,9 +1283,7 @@ async function loadMessages(showLoading = true) {
         }
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         if (!result.exists) {
-            state.messages = [];
-            state.sha = null;
-            state.lastMessageCount = 0;
+            state.messages = []; state.sha = null; state.lastMessageCount = 0;
             renderMessages([]);
             return;
         }
@@ -1031,7 +1291,7 @@ async function loadMessages(showLoading = true) {
         state.sha = result.sha;
         state.lastMessageCount = state.messages.length;
         renderMessages(state.messages);
-        scrollToBottom();
+        scrollToBottom(true);
     } catch (error) {
         console.error('Ошибка загрузки:', error);
         state.isAuthorized = false;
@@ -1041,17 +1301,10 @@ async function loadMessages(showLoading = true) {
     }
 }
 
-/**
- * Блокировка интерфейса чата при потере авторизации.
- * Полностью скрывает историю и отключает ввод.
- */
 function lockChatUI(reason) {
     state.isAuthorized = false;
-    state.messages = [];
-    state.sha = null;
-    state.lastMessageCount = 0;
+    state.messages = []; state.sha = null; state.lastMessageCount = 0;
     if (window._pollInterval) clearInterval(window._pollInterval);
-
     messagesInner.innerHTML = `
         <div class="message system locked">🔒 ${reason || 'Доступ закрыт'}</div>
         <div class="message system" style="font-size:12px;color:#555;">История чата недоступна. Проверьте токен и войдите снова.</div>
@@ -1059,27 +1312,25 @@ function lockChatUI(reason) {
     messageInput.disabled = true;
     sendBtn.disabled = true;
     fileBtn.disabled = true;
+    micBtn.disabled = true;
     hideInputBar();
     floatingKeyboardBtn.classList.remove('show');
+    scrollDownBtn.classList.remove('show');
+    scrollState.unreadCount = 0;
+    updateScrollBadge();
 }
 
-async function sendMessage(text, imageData = null) {
-    if (!state.isAuthorized) {
-        showToast('❌ Нет доступа для отправки', 2000);
-        soundManager.play('error');
-        return;
-    }
-    if (!navigator.onLine || !networkState.isOnline) {
-        showToast('📵 Нет подключения к интернету', 2500);
-        soundManager.play('error');
-        return;
-    }
+async function sendMessage(text, imageData = null, audioData = null) {
+    if (!state.isAuthorized) { showToast('❌ Нет доступа для отправки', 2000); soundManager.play('error'); return; }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); soundManager.play('error'); return; }
     const hasText = text && text.trim();
     const hasImage = imageData !== null;
-    if ((!hasText && !hasImage) || state.isSending) return;
+    const hasAudio = audioData !== null;
+    if ((!hasText && !hasImage && !hasAudio) || state.isSending) return;
 
     state.isSending = true;
     sendBtn.disabled = true;
+    micBtn.disabled = true;
 
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
@@ -1094,9 +1345,12 @@ async function sendMessage(text, imageData = null) {
             time: new Date().toISOString()
         };
         if (hasImage) newMessage.image = imageData;
-
+        if (hasAudio) {
+            newMessage.audio = audioData.data;
+            newMessage.audioDuration = audioData.duration || 0;
+            newMessage.audioMime = audioData.mime || 'audio/webm';
+        }
         state._lastSentMessageId = messageId;
-
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
 
@@ -1108,7 +1362,7 @@ async function sendMessage(text, imageData = null) {
         messageInput.value = '';
         messageInput.style.height = 'auto';
         renderMessages(messages);
-        scrollToBottom();
+        scrollToBottom(true);
 
         soundManager.play('click');
         soundManager.play('send');
@@ -1116,38 +1370,22 @@ async function sendMessage(text, imageData = null) {
     } catch (error) {
         console.error('Ошибка:', error);
         soundManager.play('error');
-        const isNetworkError =
-            !navigator.onLine ||
-            error.name === 'AbortError' ||
-            error.name === 'TypeError' ||
-            error.message.includes('Failed to fetch') ||
-            error.message.includes('NetworkError');
-        if (isNetworkError) {
-            networkState.isOnline = false;
-            showToast('📵 Соединение потеряно', 2500);
-        } else {
-            showToast('❌ Ошибка: ' + error.message, 3000);
-        }
-        if (error.message.includes('403') || error.message.includes('401')) {
-            lockChatUI('Сессия истекла. Токен больше не действителен.');
-        }
+        const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('NetworkError');
+        if (isNetworkError) { networkState.isOnline = false; showToast('📵 Соединение потеряно', 2500); }
+        else { showToast('❌ Ошибка: ' + error.message, 3000); }
+        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла. Токен больше не действителен.');
         state._lastSentMessageId = null;
     } finally {
         state.isSending = false;
         sendBtn.disabled = !state.isAuthorized;
+        micBtn.disabled = !state.isAuthorized;
         if (state.isAuthorized) messageInput.focus();
     }
 }
 
 async function deleteMessage(messageId) {
-    if (!state.isAuthorized) {
-        showToast('❌ Нет доступа', 1500);
-        return;
-    }
-    if (!navigator.onLine || !networkState.isOnline) {
-        showToast('📵 Нет подключения к интернету', 2500);
-        return;
-    }
+    if (!state.isAuthorized) { showToast('❌ Нет доступа', 1500); return; }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); return; }
     if (!confirm('Удалить это сообщение?')) return;
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
@@ -1155,10 +1393,7 @@ async function deleteMessage(messageId) {
         let messages = result.content || [];
         const messageIndex = messages.findIndex(msg => msg.id === messageId);
         if (messageIndex === -1) { showToast('❌ Сообщение не найдено', 1500); return; }
-        if (messages[messageIndex].username !== state.username) {
-            showToast('❌ Можно удалять только свои сообщения', 1500);
-            return;
-        }
+        if (messages[messageIndex].username !== state.username) { showToast('❌ Можно удалять только свои сообщения', 1500); return; }
         messages.splice(messageIndex, 1);
         const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, result.sha);
         state.messages = messages;
@@ -1170,35 +1405,19 @@ async function deleteMessage(messageId) {
     } catch (error) {
         console.error('Ошибка удаления:', error);
         soundManager.play('error');
-        const isNetworkError =
-            !navigator.onLine ||
-            error.name === 'AbortError' ||
-            error.name === 'TypeError' ||
-            error.message.includes('Failed to fetch');
-        if (isNetworkError) {
-            networkState.isOnline = false;
-            showToast('📵 Соединение потеряно', 2500);
-        } else {
-            showToast('❌ Ошибка: ' + error.message, 3000);
-        }
-        if (error.message.includes('403') || error.message.includes('401')) {
-            lockChatUI('Сессия истекла. Токен больше не действителен.');
-        }
+        const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch');
+        if (isNetworkError) { networkState.isOnline = false; showToast('📵 Соединение потеряно', 2500); }
+        else { showToast('❌ Ошибка: ' + error.message, 3000); }
+        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла. Токен больше не действителен.');
     }
 }
 
 async function handleFileUpload(file) {
     if (!file) return;
     if (!state.isAuthorized) { showToast('❌ Нет доступа', 2000); return; }
-    if (!navigator.onLine || !networkState.isOnline) {
-        showToast('📵 Нет подключения к интернету', 2500);
-        return;
-    }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); return; }
     if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение', 2000); return; }
-    if (file.size > CONFIG.maxImageSize) {
-        showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000);
-        return;
-    }
+    if (file.size > CONFIG.maxImageSize) { showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000); return; }
     try {
         showToast('⏳ Обработка изображения...', 1500);
         const compressedImage = await compressImage(file, 800, 800, 0.8);
@@ -1210,11 +1429,123 @@ async function handleFileUpload(file) {
 }
 
 // ===================================================================
+//  АУДИО-ПЛЕЕР
+// ===================================================================
+const audioPlayers = {};
+
+function createAudioPlayerHTML(msgId, audioSrc, duration, mime) {
+    const safeDuration = duration || 0;
+    const displayTime = formatAudioTime(safeDuration);
+    let waveBars = '';
+    for (let i = 0; i < 24; i++) {
+        const h = 4 + Math.floor(Math.random() * 14);
+        waveBars += `<span style="height:${h}px"></span>`;
+    }
+    return `
+        <div class="audio-container" data-audio-id="${msgId}">
+            <button class="audio-play-btn" onclick="toggleAudioPlayback(${msgId})">▶</button>
+            <div class="audio-info">
+                <div class="audio-wave" id="wave-${msgId}">${waveBars}</div>
+                <div class="audio-progress" id="progress-${msgId}" onclick="seekAudio(event, ${msgId})">
+                    <div class="audio-progress-fill" id="progress-fill-${msgId}"></div>
+                </div>
+            </div>
+            <span class="audio-time" id="time-${msgId}">${displayTime}</span>
+            <audio id="audio-${msgId}" src="${audioSrc}" preload="metadata" style="display:none"></audio>
+        </div>
+    `;
+}
+
+function initAudioPlayers() {
+    document.querySelectorAll('.audio-container').forEach(container => {
+        const msgId = container.dataset.audioId;
+        if (!msgId || audioPlayers[msgId]) return;
+        const audio = document.getElementById(`audio-${msgId}`);
+        if (!audio) return;
+        const btn = container.querySelector('.audio-play-btn');
+        const progressFill = document.getElementById(`progress-fill-${msgId}`);
+        const timeEl = document.getElementById(`time-${msgId}`);
+        const waveEl = document.getElementById(`wave-${msgId}`);
+        audioPlayers[msgId] = { audio, btn, progressFill, timeEl, waveEl, isPlaying: false };
+        audio.addEventListener('timeupdate', () => {
+            if (audio.duration && isFinite(audio.duration)) {
+                const pct = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = pct + '%';
+                const remaining = Math.max(0, audio.duration - audio.currentTime);
+                timeEl.textContent = formatAudioTime(remaining);
+            }
+        });
+        audio.addEventListener('loadedmetadata', () => {
+            if (audio.duration && isFinite(audio.duration)) timeEl.textContent = formatAudioTime(audio.duration);
+        });
+        audio.addEventListener('ended', () => {
+            btn.textContent = '▶';
+            audio.currentTime = 0;
+            progressFill.style.width = '0%';
+            timeEl.textContent = formatAudioTime(audio.duration || 0);
+            waveEl.classList.remove('playing');
+            audioPlayers[msgId].isPlaying = false;
+        });
+        audio.addEventListener('error', () => {
+            timeEl.textContent = 'ошибка';
+            btn.textContent = '⚠';
+            btn.disabled = true;
+        });
+    });
+}
+
+function toggleAudioPlayback(msgId) {
+    const player = audioPlayers[msgId];
+    if (!player) return;
+    Object.keys(audioPlayers).forEach(id => {
+        if (id !== String(msgId)) {
+            const p = audioPlayers[id];
+            if (p && p.isPlaying) {
+                p.audio.pause();
+                p.audio.currentTime = 0;
+                p.btn.textContent = '▶';
+                p.progressFill.style.width = '0%';
+                p.waveEl.classList.remove('playing');
+                p.isPlaying = false;
+                if (p.audio.duration) p.timeEl.textContent = formatAudioTime(p.audio.duration);
+            }
+        }
+    });
+    if (player.isPlaying) {
+        player.audio.pause();
+        player.btn.textContent = '▶';
+        player.waveEl.classList.remove('playing');
+        player.isPlaying = false;
+    } else {
+        const playPromise = player.audio.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                player.btn.textContent = '⏸';
+                player.waveEl.classList.add('playing');
+                player.isPlaying = true;
+            }).catch(err => {
+                console.error('Ошибка воспроизведения:', err);
+                showToast('❌ Не удалось воспроизвести аудио', 2000);
+                player.btn.textContent = '▶';
+                player.isPlaying = false;
+            });
+        }
+    }
+}
+
+function seekAudio(event, msgId) {
+    const player = audioPlayers[msgId];
+    if (!player || !player.audio.duration) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    player.audio.currentTime = pct * player.audio.duration;
+}
+
+// ===================================================================
 //  РЕНДЕРИНГ
 // ===================================================================
 function renderMessages(messages) {
     if (!state.isAuthorized) {
-        // Никогда не показываем историю неавторизованным
         messagesInner.innerHTML = `<div class="message system locked">🔒 История недоступна</div>`;
         return;
     }
@@ -1225,6 +1556,10 @@ function renderMessages(messages) {
         `;
         return;
     }
+    Object.keys(audioPlayers).forEach(id => {
+        try { audioPlayers[id].audio.pause(); } catch (e) {}
+        delete audioPlayers[id];
+    });
     let html = '', lastDate = '';
     messages.forEach((msg) => {
         const msgDate = formatDate(msg.time);
@@ -1232,11 +1567,8 @@ function renderMessages(messages) {
         const isOwn = msg.username === state.username && state.isAuthorized;
         const senderName = msg.username || 'Аноним';
         const fullTime = formatFullTime(msg.time);
-
         let content = '';
-        if (msg.text) {
-            content += `<span class="text">${escapeHtml(msg.text)}</span>`;
-        }
+        if (msg.text) content += `<span class="text">${escapeHtml(msg.text)}</span>`;
         if (msg.image) {
             content += `
                 <div class="image-container" onclick="openImageModal('${msg.image}')">
@@ -1244,7 +1576,7 @@ function renderMessages(messages) {
                 </div>
             `;
         }
-
+        if (msg.audio) content += createAudioPlayerHTML(msg.id, msg.audio, msg.audioDuration, msg.audioMime);
         html += `
             <div class="message-wrapper ${isOwn ? 'own' : 'other'}">
                 <div class="message">
@@ -1257,7 +1589,11 @@ function renderMessages(messages) {
         `;
     });
     messagesInner.innerHTML = html;
-    scrollToBottom();
+    setTimeout(initAudioPlayers, 0);
+    setTimeout(() => {
+        scrollState.isAtBottom = isNearBottom();
+        updateScrollButton();
+    }, 0);
 }
 
 // ===================================================================
@@ -1268,29 +1604,30 @@ async function pollUpdates() {
     state.isPolling = true;
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
-        if (!networkState.isOnline) {
-            networkState.isOnline = true;
-            showToast('🌐 Соединение восстановлено', 2000);
-        }
+        if (!networkState.isOnline) { networkState.isOnline = true; showToast('🌐 Соединение восстановлено', 2000); }
         if (!result.exists) return;
         if (result.sha !== state.sha) {
             const newMessages = result.content || [];
             if (newMessages.length > state.lastMessageCount) {
                 const newMessagesArray = newMessages.slice(state.lastMessageCount);
-                const hasOwnMessage = newMessagesArray.some(msg =>
-                    msg.username === state.username &&
-                    msg.id === state._lastSentMessageId
-                );
+                const hasOwnMessage = newMessagesArray.some(msg => msg.username === state.username && msg.id === state._lastSentMessageId);
+                const wasAtBottom = scrollState.isAtBottom;
+                const addedCount = newMessagesArray.length;
+
                 state.messages = newMessages;
                 state.sha = result.sha;
                 state.lastMessageCount = newMessages.length;
                 renderMessages(newMessages);
-                scrollToBottom();
-                if (!hasOwnMessage) {
-                    soundManager.play('receive');
+
+                if (wasAtBottom) {
+                    scrollToBottom(true);
                 } else {
-                    state._lastSentMessageId = null;
+                    scrollState.unreadCount += addedCount;
+                    updateScrollBadge();
+                    updateScrollButton();
                 }
+                if (!hasOwnMessage) soundManager.play('receive');
+                else state._lastSentMessageId = null;
             } else {
                 state.sha = result.sha;
                 state.messages = newMessages;
@@ -1299,28 +1636,14 @@ async function pollUpdates() {
         }
     } catch (error) {
         console.error('Polling error:', error);
-        const isNetworkError =
-            !navigator.onLine ||
-            error.name === 'AbortError' ||
-            error.name === 'TypeError' ||
-            error.message.includes('Failed to fetch') ||
-            error.message.includes('NetworkError');
+        const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('NetworkError');
         if (isNetworkError) {
-            if (networkState.isOnline) {
-                networkState.isOnline = false;
-                showToast('📵 Соединение потеряно', 2500);
-            }
-            state.isPolling = false;
-            return;
+            if (networkState.isOnline) { networkState.isOnline = false; showToast('📵 Соединение потеряно', 2500); }
+            state.isPolling = false; return;
         }
-        if (error.message.includes('403') || error.message.includes('401')) {
-            lockChatUI('Сессия истекла. Токен больше не действителен.');
-        }
-    } finally {
-        state.isPolling = false;
-    }
+        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла. Токен больше не действителен.');
+    } finally { state.isPolling = false; }
 }
-
 function startPolling() {
     if (window._pollInterval) clearInterval(window._pollInterval);
     window._pollInterval = setInterval(pollUpdates, CONFIG.pollInterval);
@@ -1334,48 +1657,22 @@ function setTokenHint(message, type = 'error') {
     tokenHint.classList.add('show');
     tokenHint.style.color = type === 'error' ? '#ff6b6b' : '#feca57';
 }
-function clearTokenHint() {
-    tokenHint.textContent = '';
-    tokenHint.classList.remove('show');
-}
-
-function setAuthError(message) {
-    authError.textContent = '❌ ' + message;
-    authError.classList.add('show');
-}
-function clearAuthError() {
-    authError.classList.remove('show');
-}
+function clearTokenHint() { tokenHint.textContent = ''; tokenHint.classList.remove('show'); }
+function setAuthError(message) { authError.textContent = '❌ ' + message; authError.classList.add('show'); }
+function clearAuthError() { authError.classList.remove('show'); }
 
 async function login() {
-    // Проверка блокировки
     const lock = isLockedOut();
-    if (lock.locked) {
-        setAuthError(`Слишком много попыток. Повторите через ${lock.secondsLeft} сек.`);
-        return;
-    }
-
+    if (lock.locked) { setAuthError(`Слишком много попыток. Повторите через ${lock.secondsLeft} сек.`); return; }
     const username = usernameInput.value.trim();
     const rawToken = tokenInput.value;
-
-    clearAuthError();
-    clearTokenHint();
+    clearAuthError(); clearTokenHint();
     tokenInput.classList.remove('invalid', 'valid');
 
-    if (!username) {
-        setAuthError('Введите имя пользователя');
-        return;
-    }
-    if (username.length < 2) {
-        setAuthError('Имя должно содержать минимум 2 символа');
-        return;
-    }
-    if (username.length > 20) {
-        setAuthError('Имя слишком длинное (макс. 20 символов)');
-        return;
-    }
+    if (!username) { setAuthError('Введите имя пользователя'); return; }
+    if (username.length < 2) { setAuthError('Имя должно содержать минимум 2 символа'); return; }
+    if (username.length > 20) { setAuthError('Имя слишком длинное (макс. 20 символов)'); return; }
 
-    // 1. Проверка формата токена
     const formatCheck = validateTokenFormat(rawToken);
     if (!formatCheck.ok) {
         tokenInput.classList.add('invalid');
@@ -1390,14 +1687,11 @@ async function login() {
         soundManager.play('error');
         return;
     }
-
-    // 2. Проверка реального доступа к репозиторию
     loginBtn.disabled = true;
     loginBtn.textContent = '⏳ Проверка доступа...';
     setTokenHint('Проверяем доступ к репозиторию...', 'warning');
 
     const accessCheck = await validateTokenAccess(rawToken.trim());
-
     if (!accessCheck.ok) {
         tokenInput.classList.add('invalid');
         setTokenHint(accessCheck.message, 'error');
@@ -1413,8 +1707,6 @@ async function login() {
         soundManager.play('error');
         return;
     }
-
-    // 3. Токен прошёл проверку — пускаем в чат
     resetFailedAttempts();
     tokenInput.classList.add('valid');
     tokenInput.classList.remove('invalid');
@@ -1435,6 +1727,7 @@ async function login() {
     messageInput.disabled = false;
     sendBtn.disabled = false;
     fileBtn.disabled = false;
+    micBtn.disabled = false;
 
     showInputBar();
     await loadMessages(true);
@@ -1446,26 +1739,32 @@ async function login() {
 }
 
 function logout() {
+    if (audioRecorder.isRecording) audioRecorder.cancel();
     if (window._pollInterval) clearInterval(window._pollInterval);
+    Object.keys(audioPlayers).forEach(id => {
+        try { audioPlayers[id].audio.pause(); } catch (e) {}
+        delete audioPlayers[id];
+    });
     state.isPolling = false;
     state.isAuthorized = false;
     state._lastSentMessageId = null;
-    state.messages = [];
-    state.sha = null;
-    state.lastMessageCount = 0;
+    state.messages = []; state.sha = null; state.lastMessageCount = 0;
 
     authScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
-    clearAuthError();
-    clearTokenHint();
+    clearAuthError(); clearTokenHint();
     tokenInput.classList.remove('valid', 'invalid');
     closeImageModal();
     hideInputBar();
     floatingKeyboardBtn.classList.remove('show');
+    scrollDownBtn.classList.remove('show');
+    scrollState.unreadCount = 0;
+    updateScrollBadge();
 
     messageInput.disabled = false;
     sendBtn.disabled = false;
     fileBtn.disabled = false;
+    micBtn.disabled = false;
 
     showToast('👋 Вы вышли из чата', 1500);
 }
@@ -1477,37 +1776,18 @@ loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
 
-// Живая валидация формата токена при вводе
 tokenInput.addEventListener('input', () => {
     const raw = tokenInput.value;
-    if (!raw) {
-        tokenInput.classList.remove('invalid', 'valid');
-        clearTokenHint();
-        return;
-    }
+    if (!raw) { tokenInput.classList.remove('invalid', 'valid'); clearTokenHint(); return; }
     const check = validateTokenFormat(raw);
-    if (check.ok) {
-        tokenInput.classList.add('valid');
-        tokenInput.classList.remove('invalid');
-        clearTokenHint();
-    } else {
-        // Не показываем ошибку на каждый символ, только лёгкая индикация
-        tokenInput.classList.remove('valid');
-        if (raw.length > 5) {
-            tokenInput.classList.add('invalid');
-        }
-    }
+    if (check.ok) { tokenInput.classList.add('valid'); tokenInput.classList.remove('invalid'); clearTokenHint(); }
+    else { tokenInput.classList.remove('valid'); if (raw.length > 5) tokenInput.classList.add('invalid'); }
 });
 
-// Защита от вставки токена с пробелами/переносами
 tokenInput.addEventListener('paste', (e) => {
     const pasted = (e.clipboardData || window.clipboardData).getData('text');
     if (pasted && /[\s\n\r]/.test(pasted.trim()) === false && pasted.trim() !== pasted) {
-        // Если в буфере есть лишние пробелы — подскажем
-        setTimeout(() => {
-            tokenInput.value = tokenInput.value.trim();
-            showToast('✂️ Лишние пробелы удалены из токена', 1500);
-        }, 0);
+        setTimeout(() => { tokenInput.value = tokenInput.value.trim(); showToast('✂️ Лишние пробелы удалены из токена', 1500); }, 0);
     }
 });
 
@@ -1544,13 +1824,11 @@ fileBtn.addEventListener('click', () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
-        if (e.target.files.length > 0) handleFileUpload(e.target.files[0]);
-        input.remove();
-    };
+    input.onchange = (e) => { if (e.target.files.length > 0) handleFileUpload(e.target.files[0]); input.remove(); };
     input.click();
 });
 
+micBtn.addEventListener('click', handleMicClick);
 exitBtn.addEventListener('click', logout);
 
 clearDataBtn.addEventListener('click', () => {
@@ -1560,29 +1838,29 @@ clearDataBtn.addEventListener('click', () => {
         usernameInput.value = '';
         tokenInput.value = '';
         tokenInput.classList.remove('valid', 'invalid');
-        clearAuthError();
-        clearTokenHint();
+        clearAuthError(); clearTokenHint();
         showToast('🗑️ Данные очищены', 1500);
     }
 });
 
 floatingKeyboardBtn.addEventListener('click', showInputBar);
-closePanelBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    hideInputBar();
+closePanelBtn.addEventListener('click', (e) => { e.stopPropagation(); hideInputBar(); });
+
+scrollDownBtn.addEventListener('click', () => {
+    scrollToBottomNow();
+    soundManager.play('click');
 });
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        if (audioRecorder.isRecording) { audioRecorder.cancel(); showToast('🎤 Запись отменена', 1200); }
         closeImageModal();
         if (!inputBar.classList.contains('hidden')) hideInputBar();
     }
 });
 
 closeModalBtn.addEventListener('click', closeImageModal);
-imageModal.addEventListener('click', (e) => {
-    if (e.target === imageModal) closeImageModal();
-});
+imageModal.addEventListener('click', (e) => { if (e.target === imageModal) closeImageModal(); });
 
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'm') {
@@ -1603,7 +1881,6 @@ async function restoreSession() {
     if (savedToken) tokenInput.value = savedToken;
 
     if (savedUsername && savedToken) {
-        // При восстановлении сессии тоже строго проверяем токен
         const formatCheck = validateTokenFormat(savedToken);
         if (!formatCheck.ok) {
             console.log('Автовход не удался: неверный формат токена');
@@ -1632,6 +1909,7 @@ async function restoreSession() {
             messageInput.disabled = false;
             sendBtn.disabled = false;
             fileBtn.disabled = false;
+            micBtn.disabled = false;
 
             showInputBar();
             await loadMessages(true);
@@ -1650,7 +1928,7 @@ async function restoreSession() {
 //  ЗАПУСК
 // ===================================================================
 restoreSession();
-messageInput.addEventListener('focus', scrollToBottom);
+messageInput.addEventListener('focus', () => { scrollToBottom(); });
 
 setInterval(() => {
     if (chatScreen.style.display === 'flex' && state.isAuthorized) {
@@ -1666,6 +1944,8 @@ console.log('📱 Название: SMS Чат');
 console.log('⌨️ Нажмите на кнопку-клавиатуру, чтобы показать панель ввода');
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
+console.log('🎤 Для отправки аудио нажмите 🎤 (макс. 7 сек, нажмите ещё раз для отправки)');
+console.log('⬇️ Кнопка вниз появляется при прокрутке истории, с бейджем непрочитанных');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
 console.log('🛡️ Токен проверяется: формат + реальные права push в репозиторий');
 </script>
