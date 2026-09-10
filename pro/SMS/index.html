@@ -3,24 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-
-
-
-<link rel="manifest" href="manifest.json">
-
-    <!-- Иконки PWA -->
+    <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-    <!-- Мета-теги для PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-
-
-
-
     <title>SMS Чат</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,14 +22,12 @@
             overflow: hidden;
         }
 
-        /* ===== ФОРМА ВХОДА С ФИКСИРОВАННОЙ ШАПКОЙ ===== */
         #authScreen {
             display: flex;
             flex-direction: column;
             height: 100vh;
             background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
         }
-        
         .auth-header {
             padding: 16px 20px;
             background: rgba(255,255,255,0.04);
@@ -69,23 +55,6 @@
             font-size: 28px;
             -webkit-text-fill-color: initial;
         }
-        .auth-header .exit-from-auth-btn {
-            background: rgba(255,107,107,0.15);
-            border: 1px solid rgba(255,107,107,0.2);
-            color: #ff6b6b;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-            display: none;
-            align-items: center;
-            gap: 6px;
-        }
-        .auth-header .exit-from-auth-btn:hover { background: rgba(255,107,107,0.25); }
-        .auth-header .exit-from-auth-btn:active { transform: scale(0.95); }
-        .auth-header .exit-from-auth-btn.show { display: flex; }
 
         .auth-content {
             flex: 1;
@@ -104,7 +73,7 @@
             margin-bottom: 8px;
         }
         .auth-content .subtitle { color: #888; margin-bottom: 30px; font-size: 14px; }
-        
+
         .auth-form {
             width: 100%;
             max-width: 380px;
@@ -147,7 +116,6 @@
         .btn-secondary { background: rgba(255,255,255,0.08); color: #aaa; margin-top: 10px; }
         .error-msg { color: #ff6b6b; font-size: 13px; margin-top: -10px; margin-bottom: 12px; display: none; }
 
-        /* ===== ЧАТ ===== */
         #chatScreen {
             display: none;
             flex-direction: column;
@@ -176,12 +144,7 @@
             font-weight: 700; font-size: 18px; color: #fff;
         }
         .chat-header .info h2 { font-size: 17px; font-weight: 600; }
-        .chat-header .info .status { font-size: 12px; color: #00b894; display: flex; align-items: center; gap: 5px; }
-        .chat-header .info .status .dot {
-            width: 7px; height: 7px; border-radius: 50%; background: #00b894;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
         .chat-header .exit-btn {
             background: rgba(255,255,255,0.06); border: none; color: #888;
             width: 38px; height: 38px; border-radius: 50%; font-size: 20px;
@@ -197,20 +160,29 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            scroll-behavior: smooth;
+            scroll-behavior: auto;
             -webkit-overflow-scrolling: touch;
             min-height: 0;
+            justify-content: flex-end;
         }
+        .messages-container > .messages-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+
         .message-wrapper {
             display: flex;
             flex-direction: column;
             max-width: 82%;
             animation: fadeIn 0.3s ease;
             position: relative;
+            flex-shrink: 0;
         }
         .message-wrapper.own { align-self: flex-end; }
         .message-wrapper.other { align-self: flex-start; }
-        
+
         .message {
             padding: 10px 14px;
             border-radius: 18px;
@@ -219,14 +191,14 @@
         }
         .message-wrapper.own .message { background: linear-gradient(135deg, #6c5ce7, #4a3f8f); border-bottom-right-radius: 4px; }
         .message-wrapper.other .message { background: rgba(255,255,255,0.07); border-bottom-left-radius: 4px; }
-        
+
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         .message .sender { font-size: 12px; font-weight: 600; color: #6c5ce7; margin-bottom: 3px; display: block; }
         .message-wrapper.own .sender { color: #a78bfa; }
         .message .text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
         .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
         .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
-        
+
         .message .image-container {
             margin: 6px 0 4px;
             border-radius: 12px;
@@ -245,7 +217,7 @@
             transition: transform 0.2s;
         }
         .message .image-container img:active { transform: scale(0.98); }
-        
+
         .delete-btn {
             position: absolute;
             top: -6px;
@@ -492,14 +464,12 @@
 </head>
 <body>
 
-<!-- ===== ЭКРАН ВХОДА ===== -->
 <div id="authScreen">
     <div class="auth-header">
         <div class="brand">
             <span class="brand-icon">📱</span>
             <span>SMS Чат</span>
         </div>
-        <button class="exit-from-auth-btn" id="exitFromAuthBtn">🚪 Выйти</button>
     </div>
     <div class="auth-content">
         <h1>💬 Добро пожаловать</h1>
@@ -517,23 +487,23 @@
     </div>
 </div>
 
-<!-- ===== ЭКРАН ЧАТА ===== -->
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
             <div class="avatar" id="userAvatar">?</div>
             <div class="info">
                 <h2 id="chatTitle">Общий чат</h2>
-                <div class="status"><span class="dot"></span><span id="onlineStatus">онлайн</span></div>
             </div>
         </div>
         <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
     </div>
 
     <div class="messages-container" id="messagesContainer">
-        <div class="skeleton other"></div>
-        <div class="skeleton own"></div>
-        <div class="skeleton other"></div>
+        <div class="messages-inner" id="messagesInner">
+            <div class="skeleton other"></div>
+            <div class="skeleton own"></div>
+            <div class="skeleton other"></div>
+        </div>
     </div>
 
     <div class="input-bar" id="inputBar">
@@ -582,7 +552,7 @@ class SoundManager {
         this.sounds.receive = this.createBeep(800, 0.15);
         this.sounds.error = this.createBeep(300, 0.3);
         this.sounds.delete = this.createBeep(400, 0.1);
-        this.sounds.click = this.createBeep(500, 0.05); // Короткий клик
+        this.sounds.click = this.createBeep(500, 0.05);
     }
     createBeep(freq, duration) {
         return {
@@ -599,7 +569,7 @@ class SoundManager {
                     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
                     osc.start(ctx.currentTime);
                     osc.stop(ctx.currentTime + duration);
-                } catch (e) { /* игнорируем ошибки аудио */ }
+                } catch (e) { /* игнорируем */ }
             }
         };
     }
@@ -629,6 +599,10 @@ let state = {
     _lastSentMessageId: null,
 };
 
+let networkState = {
+    isOnline: navigator.onLine,
+};
+
 // ===================================================================
 //  DOM
 // ===================================================================
@@ -640,8 +614,8 @@ const tokenInput = $('tokenInput');
 const loginBtn = $('loginBtn');
 const authError = $('authError');
 const clearDataBtn = $('clearDataBtn');
-const exitFromAuthBtn = $('exitFromAuthBtn');
 const messagesContainer = $('messagesContainer');
+const messagesInner = $('messagesInner');
 const messageInput = $('messageInput');
 const sendBtn = $('sendBtn');
 const fileBtn = $('fileBtn');
@@ -664,7 +638,7 @@ function showInputBar() {
     floatingKeyboardBtn.classList.remove('show');
     setTimeout(() => {
         messageInput.focus();
-        inputBar.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        scrollToBottom();
     }, 100);
 }
 function hideInputBar() {
@@ -694,19 +668,68 @@ function showToast(text, duration = 2000) {
     clearTimeout(toast._timeout);
     toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
 }
+
 function scrollToBottom() {
-    setTimeout(() => {
-        const container = messagesContainer;
-        if (container.scrollHeight > container.clientHeight) {
-            container.scrollTop = container.scrollHeight;
+    requestAnimationFrame(() => {
+        if (messagesContainer.scrollHeight > messagesContainer.clientHeight) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-    }, 50);
+    });
 }
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ===================================================================
+//  ПРОВЕРКА СЕТИ
+// ===================================================================
+async function checkNetwork() {
+    if (!navigator.onLine) {
+        networkState.isOnline = false;
+        return false;
+    }
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch('https://api.github.com/rate_limit', {
+            method: 'GET',
+            signal: controller.signal,
+            cache: 'no-store'
+        });
+        clearTimeout(timeoutId);
+        if (response.ok || response.status === 403 || response.status === 401) {
+            networkState.isOnline = true;
+            return true;
+        }
+        networkState.isOnline = false;
+        return false;
+    } catch (error) {
+        networkState.isOnline = false;
+        return false;
+    }
+}
+
+window.addEventListener('online', async () => {
+    const ok = await checkNetwork();
+    if (ok) {
+        showToast('🌐 Соединение восстановлено', 2000);
+        await pollUpdates();
+    }
+});
+
+window.addEventListener('offline', () => {
+    networkState.isOnline = false;
+    showToast('📵 Нет подключения к интернету', 2500);
+});
+
+setInterval(() => {
+    if (chatScreen.style.display === 'flex' && state.isAuthorized) {
+        checkNetwork();
+    }
+}, 15000);
 
 // ===================================================================
 //  РАБОТА С ИЗОБРАЖЕНИЯМИ
@@ -768,8 +791,8 @@ function base64ToUtf8(base64) {
 //  GITHUB API
 // ===================================================================
 function getHeaders(token) {
-    return { 
-        'Authorization': `token ${token}`, 
+    return {
+        'Authorization': `token ${token}`,
         'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json'
     };
@@ -777,31 +800,42 @@ function getHeaders(token) {
 
 async function fetchFile(token, owner, repo, path) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    const response = await fetch(url, { headers: getHeaders(token) });
-    if (response.status === 404) return { exists: false };
-    if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
-    const data = await response.json();
-    const content = JSON.parse(base64ToUtf8(data.content));
-    return { exists: true, sha: data.sha, content: content };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    try {
+        const response = await fetch(url, {
+            headers: getHeaders(token),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.status === 404) return { exists: false };
+        if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
+        const data = await response.json();
+        const content = JSON.parse(base64ToUtf8(data.content));
+        return { exists: true, sha: data.sha, content: content };
+    } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+    }
 }
 
 async function saveFile(token, owner, repo, path, content, sha) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
     const jsonString = JSON.stringify(content, null, 2);
     const encoded = utf8ToBase64(jsonString);
-    const body = { 
+    const body = {
         message: `💬 Обновление чата`,
         content: encoded
     };
     if (sha) body.sha = sha;
-    const response = await fetch(url, { 
-        method: 'PUT', 
-        headers: getHeaders(token), 
-        body: JSON.stringify(body) 
+    const response = await fetch(url, {
+        method: 'PUT',
+        headers: getHeaders(token),
+        body: JSON.stringify(body)
     });
-    if (!response.ok) { 
-        const error = await response.json(); 
-        throw new Error(error.message || `HTTP ${response.status}`); 
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || `HTTP ${response.status}`);
     }
     const data = await response.json();
     return data.content.sha;
@@ -812,7 +846,7 @@ async function saveFile(token, owner, repo, path, content, sha) {
 // ===================================================================
 async function loadMessages(showLoading = true) {
     if (!state.isAuthorized) {
-        messagesContainer.innerHTML = `
+        messagesInner.innerHTML = `
             <div class="message system">🔒 Доступ закрыт</div>
             <div class="message system" style="font-size:12px;color:#555;">Неверный токен или недостаточно прав</div>
         `;
@@ -820,7 +854,7 @@ async function loadMessages(showLoading = true) {
     }
     try {
         if (showLoading) {
-            messagesContainer.innerHTML = `
+            messagesInner.innerHTML = `
                 <div class="skeleton other"></div>
                 <div class="skeleton own"></div>
                 <div class="skeleton other"></div>
@@ -843,7 +877,7 @@ async function loadMessages(showLoading = true) {
     } catch (error) {
         console.error('Ошибка загрузки:', error);
         state.isAuthorized = false;
-        messagesContainer.innerHTML = `
+        messagesInner.innerHTML = `
             <div class="message system">⚠️ Ошибка доступа</div>
             <div class="message system" style="font-size:12px;color:#555;">${error.message}</div>
         `;
@@ -856,50 +890,65 @@ async function sendMessage(text, imageData = null) {
         showToast('❌ Нет доступа для отправки', 2000);
         return;
     }
+    if (!navigator.onLine || !networkState.isOnline) {
+        showToast('📵 Нет подключения к интернету', 2500);
+        soundManager.play('error');
+        return;
+    }
     const hasText = text && text.trim();
     const hasImage = imageData !== null;
     if ((!hasText && !hasImage) || state.isSending) return;
-    
+
     state.isSending = true;
     sendBtn.disabled = true;
-    
+
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         let messages = result.exists ? (result.content || []) : [];
         let sha = result.exists ? result.sha : null;
-        
+
         const messageId = Date.now();
-        const newMessage = { 
-            id: messageId, 
-            username: state.username, 
-            text: hasText ? text.trim() : '', 
+        const newMessage = {
+            id: messageId,
+            username: state.username,
+            text: hasText ? text.trim() : '',
             time: new Date().toISOString()
         };
         if (hasImage) newMessage.image = imageData;
-        
+
         state._lastSentMessageId = messageId;
-        
+
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
-        
+
         const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, messages, sha);
         state.messages = messages;
         state.sha = newSha;
         state.lastMessageCount = messages.length;
-        
+
         messageInput.value = '';
         messageInput.style.height = 'auto';
         renderMessages(messages);
         scrollToBottom();
-        
-        // Звук отправки + тактильный клик
-        soundManager.play('click'); // Короткий клик для тактильности
+
+        soundManager.play('click');
         soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
     } catch (error) {
         console.error('Ошибка:', error);
         soundManager.play('error');
-        showToast('❌ Ошибка: ' + error.message, 3000);
+        const isNetworkError =
+            !navigator.onLine ||
+            error.name === 'AbortError' ||
+            error.name === 'TypeError' ||
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError');
+        if (isNetworkError) {
+            networkState.isOnline = false;
+            showToast('📵 Соединение потеряно', 2500);
+        } else {
+            showToast('❌ Ошибка: ' + error.message, 3000);
+        }
         if (error.message.includes('403') || error.message.includes('401')) {
             state.isAuthorized = false;
             loadMessages(false);
@@ -917,8 +966,11 @@ async function deleteMessage(messageId) {
         showToast('❌ Нет доступа', 1500);
         return;
     }
+    if (!navigator.onLine || !networkState.isOnline) {
+        showToast('📵 Нет подключения к интернету', 2500);
+        return;
+    }
     if (!confirm('Удалить это сообщение?')) return;
-    
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         if (!result.exists) return;
@@ -940,7 +992,17 @@ async function deleteMessage(messageId) {
     } catch (error) {
         console.error('Ошибка удаления:', error);
         soundManager.play('error');
-        showToast('❌ Ошибка: ' + error.message, 3000);
+        const isNetworkError =
+            !navigator.onLine ||
+            error.name === 'AbortError' ||
+            error.name === 'TypeError' ||
+            error.message.includes('Failed to fetch');
+        if (isNetworkError) {
+            networkState.isOnline = false;
+            showToast('📵 Соединение потеряно', 2500);
+        } else {
+            showToast('❌ Ошибка: ' + error.message, 3000);
+        }
         if (error.message.includes('403') || error.message.includes('401')) {
             state.isAuthorized = false;
             loadMessages(false);
@@ -951,6 +1013,10 @@ async function deleteMessage(messageId) {
 async function handleFileUpload(file) {
     if (!file) return;
     if (!state.isAuthorized) { showToast('❌ Нет доступа', 2000); return; }
+    if (!navigator.onLine || !networkState.isOnline) {
+        showToast('📵 Нет подключения к интернету', 2500);
+        return;
+    }
     if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение', 2000); return; }
     if (file.size > CONFIG.maxImageSize) {
         showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000);
@@ -971,7 +1037,7 @@ async function handleFileUpload(file) {
 // ===================================================================
 function renderMessages(messages) {
     if (!messages || messages.length === 0) {
-        messagesContainer.innerHTML = `
+        messagesInner.innerHTML = `
             <div class="message system">💬 История пуста</div>
             <div class="message system" style="font-size:12px;color:#555;">Напишите первое сообщение!</div>
         `;
@@ -984,7 +1050,7 @@ function renderMessages(messages) {
         const isOwn = msg.username === state.username && state.isAuthorized;
         const senderName = msg.username || 'Аноним';
         const fullTime = formatFullTime(msg.time);
-        
+
         let content = '';
         if (msg.text) {
             content += `<span class="text">${escapeHtml(msg.text)}</span>`;
@@ -996,7 +1062,7 @@ function renderMessages(messages) {
                 </div>
             `;
         }
-        
+
         html += `
             <div class="message-wrapper ${isOwn ? 'own' : 'other'}">
                 <div class="message">
@@ -1008,34 +1074,36 @@ function renderMessages(messages) {
             </div>
         `;
     });
-    messagesContainer.innerHTML = html;
+    messagesInner.innerHTML = html;
     scrollToBottom();
 }
 
 // ===================================================================
-//  ПОЛЛИНГ (с проверкой на свои сообщения)
+//  ПОЛЛИНГ
 // ===================================================================
 async function pollUpdates() {
     if (state.isPolling || !state.token || !state.isAuthorized) return;
     state.isPolling = true;
     try {
         const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        if (!networkState.isOnline) {
+            networkState.isOnline = true;
+            showToast('🌐 Соединение восстановлено', 2000);
+        }
         if (!result.exists) return;
         if (result.sha !== state.sha) {
             const newMessages = result.content || [];
             if (newMessages.length > state.lastMessageCount) {
                 const newMessagesArray = newMessages.slice(state.lastMessageCount);
-                const hasOwnMessage = newMessagesArray.some(msg => 
-                    msg.username === state.username && 
+                const hasOwnMessage = newMessagesArray.some(msg =>
+                    msg.username === state.username &&
                     msg.id === state._lastSentMessageId
                 );
-                
                 state.messages = newMessages;
                 state.sha = result.sha;
                 state.lastMessageCount = newMessages.length;
                 renderMessages(newMessages);
                 scrollToBottom();
-                
                 if (!hasOwnMessage) {
                     soundManager.play('receive');
                 } else {
@@ -1049,6 +1117,20 @@ async function pollUpdates() {
         }
     } catch (error) {
         console.error('Polling error:', error);
+        const isNetworkError =
+            !navigator.onLine ||
+            error.name === 'AbortError' ||
+            error.name === 'TypeError' ||
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError');
+        if (isNetworkError) {
+            if (networkState.isOnline) {
+                networkState.isOnline = false;
+                showToast('📵 Соединение потеряно', 2500);
+            }
+            state.isPolling = false;
+            return;
+        }
         if (error.message.includes('403') || error.message.includes('401')) {
             state.isAuthorized = false;
             loadMessages(false);
@@ -1072,7 +1154,7 @@ async function login() {
     if (!username) { authError.textContent = '❌ Введите имя'; authError.style.display = 'block'; return; }
     if (!token) { authError.textContent = '❌ Введите GitHub токен'; authError.style.display = 'block'; return; }
     authError.style.display = 'none';
-    
+
     try {
         const test = await fetchFile(token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
         state.username = username;
@@ -1080,15 +1162,15 @@ async function login() {
         state.isAuthorized = true;
         localStorage.setItem('chathub_username', username);
         localStorage.setItem('chathub_token', token);
-        
+
         authScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
-        exitFromAuthBtn.classList.remove('show');
         userAvatar.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
         showInputBar();
         await loadMessages(true);
         startPolling();
+        await checkNetwork();
     } catch (error) {
         console.error('Ошибка доступа:', error);
         authError.textContent = '❌ Неверный токен или нет доступа к репозиторию';
@@ -1102,17 +1184,15 @@ function logout() {
     state.isPolling = false;
     state.isAuthorized = false;
     state._lastSentMessageId = null;
-    
+
     authScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
-    exitFromAuthBtn.classList.add('show');
     authError.style.display = 'none';
     state.messages = [];
     state.sha = null;
     state.lastMessageCount = 0;
     closeImageModal();
     hideInputBar();
-    
     showToast('👋 Вы вышли из чата', 1500);
 }
 
@@ -1123,20 +1203,9 @@ loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
 
-exitFromAuthBtn.addEventListener('click', () => {
-    localStorage.removeItem('chathub_username');
-    localStorage.removeItem('chathub_token');
-    usernameInput.value = '';
-    tokenInput.value = '';
-    exitFromAuthBtn.classList.remove('show');
-    authError.style.display = 'none';
-    showToast('🗑️ Данные очищены', 1500);
-});
-
 sendBtn.addEventListener('click', () => {
     const text = messageInput.value;
     if (text.trim()) {
-        // Визуальный фидбек при нажатии
         sendBtn.classList.add('clicked');
         setTimeout(() => sendBtn.classList.remove('clicked'), 200);
         sendMessage(text);
@@ -1144,8 +1213,8 @@ sendBtn.addEventListener('click', () => {
 });
 
 messageInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { 
-        e.preventDefault(); 
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
         const text = messageInput.value;
         if (text.trim()) {
             sendBtn.classList.add('clicked');
@@ -1179,7 +1248,6 @@ clearDataBtn.addEventListener('click', () => {
         localStorage.removeItem('chathub_token');
         usernameInput.value = '';
         tokenInput.value = '';
-        exitFromAuthBtn.classList.remove('show');
         showToast('🗑️ Данные очищены', 1500);
     }
 });
@@ -1226,16 +1294,15 @@ async function restoreSession() {
             state.isAuthorized = true;
             authScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
-            exitFromAuthBtn.classList.remove('show');
             userAvatar.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
             showInputBar();
             await loadMessages(true);
             startPolling();
+            await checkNetwork();
         } catch (error) {
             console.log('Автовход не удался, ждём ручного входа');
             state.isAuthorized = false;
-            exitFromAuthBtn.classList.add('show');
         }
     }
 }
@@ -1259,7 +1326,6 @@ console.log('⌨️ Нажмите на кнопку-клавиатуру, чт�
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
-console.log('🚪 Для выхода из чата нажмите ✕ в шапке или кнопку "Выйти" в шапке входа');
 </script>
 </body>
 </html>
