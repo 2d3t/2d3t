@@ -55,23 +55,6 @@
             font-size: 28px;
             -webkit-text-fill-color: initial;
         }
-        .auth-header .exit-from-auth-btn {
-            background: rgba(255,107,107,0.15);
-            border: 1px solid rgba(255,107,107,0.2);
-            color: #ff6b6b;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-            display: none;
-            align-items: center;
-            gap: 6px;
-        }
-        .auth-header .exit-from-auth-btn:hover { background: rgba(255,107,107,0.25); }
-        .auth-header .exit-from-auth-btn:active { transform: scale(0.95); }
-        .auth-header .exit-from-auth-btn.show { display: flex; }
 
         .auth-content {
             flex: 1;
@@ -170,7 +153,6 @@
         }
         .chat-header .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
 
-        /* ===== ИЗМЕНЕНО: контейнер сообщений ===== */
         .messages-container {
             flex: 1;
             overflow-y: auto;
@@ -178,14 +160,11 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            /* Новые сообщения добавляются в конец, скроллим вниз */
-            scroll-behavior: auto; /* было smooth — убрали, чтобы не дёргалось */
+            scroll-behavior: auto;
             -webkit-overflow-scrolling: touch;
             min-height: 0;
-            /* Прижимаем контент к низу, когда сообщений мало */
             justify-content: flex-end;
         }
-        /* Обёртка для скролла — контент идёт сверху вниз */
         .messages-container > .messages-inner {
             display: flex;
             flex-direction: column;
@@ -491,7 +470,6 @@
             <span class="brand-icon">📱</span>
             <span>SMS Чат</span>
         </div>
-        
     </div>
     <div class="auth-content">
         <h1>💬 Добро пожаловать</h1>
@@ -636,7 +614,6 @@ const tokenInput = $('tokenInput');
 const loginBtn = $('loginBtn');
 const authError = $('authError');
 const clearDataBtn = $('clearDataBtn');
-const exitFromAuthBtn = $('exitFromAuthBtn');
 const messagesContainer = $('messagesContainer');
 const messagesInner = $('messagesInner');
 const messageInput = $('messageInput');
@@ -692,9 +669,7 @@ function showToast(text, duration = 2000) {
     toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
 }
 
-// ===== ИЗМЕНЕНО: мгновенный скролл вниз =====
 function scrollToBottom() {
-    // requestAnimationFrame гарантирует, что DOM уже обновлён
     requestAnimationFrame(() => {
         if (messagesContainer.scrollHeight > messagesContainer.clientHeight) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -943,7 +918,6 @@ async function sendMessage(text, imageData = null) {
 
         state._lastSentMessageId = messageId;
 
-        // Новое сообщение в конец — оно будет самым нижним
         messages.push(newMessage);
         if (messages.length > CONFIG.maxMessages) messages = messages.slice(-CONFIG.maxMessages);
 
@@ -1191,7 +1165,6 @@ async function login() {
 
         authScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
-        exitFromAuthBtn.classList.remove('show');
         userAvatar.textContent = getInitials(username);
         chatTitle.textContent = `Чат (${username})`;
         showInputBar();
@@ -1214,7 +1187,6 @@ function logout() {
 
     authScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
-    exitFromAuthBtn.classList.add('show');
     authError.style.display = 'none';
     state.messages = [];
     state.sha = null;
@@ -1230,16 +1202,6 @@ function logout() {
 loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
 tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
-
-exitFromAuthBtn.addEventListener('click', () => {
-    localStorage.removeItem('chathub_username');
-    localStorage.removeItem('chathub_token');
-    usernameInput.value = '';
-    tokenInput.value = '';
-    exitFromAuthBtn.classList.remove('show');
-    authError.style.display = 'none';
-    showToast('🗑️ Данные очищены', 1500);
-});
 
 sendBtn.addEventListener('click', () => {
     const text = messageInput.value;
@@ -1286,7 +1248,6 @@ clearDataBtn.addEventListener('click', () => {
         localStorage.removeItem('chathub_token');
         usernameInput.value = '';
         tokenInput.value = '';
-        exitFromAuthBtn.classList.remove('show');
         showToast('🗑️ Данные очищены', 1500);
     }
 });
@@ -1333,7 +1294,6 @@ async function restoreSession() {
             state.isAuthorized = true;
             authScreen.style.display = 'none';
             chatScreen.style.display = 'flex';
-            exitFromAuthBtn.classList.remove('show');
             userAvatar.textContent = getInitials(savedUsername);
             chatTitle.textContent = `Чат (${savedUsername})`;
             showInputBar();
@@ -1343,7 +1303,6 @@ async function restoreSession() {
         } catch (error) {
             console.log('Автовход не удался, ждём ручного входа');
             state.isAuthorized = false;
-            exitFromAuthBtn.classList.add('show');
         }
     }
 }
