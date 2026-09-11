@@ -729,11 +729,11 @@
         <div class="recording-indicator" id="recordingIndicator">
             <span class="recording-dot"></span>
             <span id="recordingTime">0.0 с</span>
-            <span style="opacity:0.6;font-size:12px;">(макс. 10 с)</span>
+            <span style="opacity:0.6;font-size:12px;">(макс. 7 с)</span>
         </div>
         <div class="action-buttons">
             <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
-            <button class="mic-btn" id="micBtn" title="Записать аудио (до 10 сек)">🎤</button>
+            <button class="mic-btn" id="micBtn" title="Записать аудио (до 7 сек)">🎤</button>
             <button class="send-btn" id="sendBtn">➤</button>
         </div>
     </div>
@@ -762,11 +762,11 @@ const CONFIG = {
     repoName: '2d3t',
     filePath: 'pro/SMS/chat2.json',
     pollInterval: 5000,
-    maxMessages: 12,
+    maxMessages: 24,
     maxImageSize: 8 * 1024 * 1024,
-    maxAudioDuration: 10000,
+    maxAudioDuration: 7000,
     audioMimeType: 'audio/webm;codecs=opus',
-    audioBitsPerSecond: 16000,
+    audioBitsPerSecond: 8000,
 };
 
 // ===================================================================
@@ -1356,7 +1356,7 @@ class AudioRecorder {
             recordingIndicator.classList.add('active');
             this.startTimer();
             this.autoStopTimeout = setTimeout(() => {
-                if (this.isRecording) { showToast('⏱️ Максимум 10 секунд', 1200); this.stop(); }
+                if (this.isRecording) { showToast('⏱️ Максимум 7 секунд', 1200); this.stop(); }
             }, CONFIG.maxAudioDuration);
             return true;
         } catch (error) {
@@ -2296,7 +2296,7 @@ console.log('🔐 E2E-шифрование: AES-256-GCM + PBKDF2 (200k итер�
 console.log('⌨️ Нажмите на кнопку-клавиатуру, чтобы показать панель ввода');
 console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
 console.log('🖼️ Для отправки фото нажмите кнопку 📎');
-console.log('🎤 Для отправки аудио нажмите 🎤 (макс. 10 сек, нажмите ещё раз для отправки)');
+console.log('🎤 Для отправки аудио нажмите 🎤 (макс. 7 сек, нажмите ещё раз для отправки)');
 console.log('⬇️ Кнопка вниз появляется при прокрутке истории, с бейджем непрочитанных');
 console.log('🔒 Только авторизованные пользователи могут читать и писать');
 console.log('🛡️ Токен проверяется: формат + реальные права push в репозиторий');
