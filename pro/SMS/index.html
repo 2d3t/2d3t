@@ -15,114 +15,82 @@
     <title>SMS Чат</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            height: 100%;
-            overflow: hidden;
-        }
+        html, body { height: 100%; overflow: hidden; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a0f;
             color: #e0e0e0;
-            height: 100vh;
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            height: 100vh; height: 100dvh;
+            display: flex; flex-direction: column; overflow: hidden;
         }
 
-        #authScreen {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            height: 100dvh;
+        #authScreen, #chatsScreen {
+            display: flex; flex-direction: column;
+            height: 100vh; height: 100dvh;
             background: linear-gradient(135deg, #0a0a0f, #1a1a2e);
         }
+        #chatsScreen { display: none; }
+
         .auth-header {
             padding: 16px 20px;
             background: rgba(255,255,255,0.04);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0; position: sticky; top: 0; z-index: 10;
         }
         .auth-header .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 20px;
-            font-weight: 700;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 20px; font-weight: 700;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .auth-header .brand-icon {
-            font-size: 28px;
-            -webkit-text-fill-color: initial;
-        }
+        .auth-header .brand-icon { font-size: 28px; -webkit-text-fill-color: initial; }
 
         .auth-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            overflow-y: auto;
+            flex: 1; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 20px; overflow-y: auto;
         }
         .auth-content h1 {
-            font-size: 36px;
-            font-weight: 700;
+            font-size: 36px; font-weight: 700;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
         }
         .auth-content .subtitle { color: #888; margin-bottom: 30px; font-size: 14px; }
 
         .auth-form {
-            width: 100%;
-            max-width: 380px;
+            width: 100%; max-width: 380px;
             background: rgba(255,255,255,0.05);
-            border-radius: 20px;
-            padding: 28px 24px;
+            border-radius: 20px; padding: 28px 24px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.08);
         }
         .auth-form label { display: block; font-size: 13px; color: #999; margin-bottom: 6px; font-weight: 500; }
         .auth-form input[type="text"],
         .auth-form input[type="password"] {
-            width: 100%;
-            padding: 14px 16px;
+            width: 100%; padding: 14px 16px;
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            color: #fff;
-            font-size: 16px;
-            transition: all 0.3s;
-            margin-bottom: 16px;
-            outline: none;
+            border-radius: 12px; color: #fff; font-size: 16px;
+            transition: all 0.3s; margin-bottom: 16px; outline: none;
         }
         .auth-form input[type="text"]:focus,
-        .auth-form input[type="password"]:focus { border-color: #6c5ce7; background: rgba(255,255,255,0.08); box-shadow: 0 0 0 3px rgba(108,92,231,0.15); }
+        .auth-form input[type="password"]:focus {
+            border-color: #6c5ce7; background: rgba(255,255,255,0.08);
+            box-shadow: 0 0 0 3px rgba(108,92,231,0.15);
+        }
         .auth-form input::placeholder { color: #666; }
         .auth-form input.invalid { border-color: #ff6b6b; box-shadow: 0 0 0 3px rgba(255,107,107,0.15); }
         .auth-form input.valid { border-color: #00b894; box-shadow: 0 0 0 3px rgba(0,184,148,0.15); }
         .auth-form .help-text { font-size: 12px; color: #666; margin-bottom: 18px; line-height: 1.5; }
         .auth-form .help-text a { color: #6c5ce7; text-decoration: none; }
+
         .btn {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+            width: 100%; padding: 14px; border: none;
+            border-radius: 12px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
             color: #fff;
         }
@@ -134,386 +102,337 @@
         .hint-msg { color: #feca57; font-size: 12px; margin-top: -8px; margin-bottom: 10px; display: none; }
         .hint-msg.show { display: block; }
 
+        /* ─── ЭКРАН ЧАТОВ ─── */
+        .chats-list {
+            width: 100%; max-width: 420px;
+            display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;
+        }
+        .chat-list-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chat-list-item:hover { background: rgba(255,255,255,0.08); }
+        .chat-list-item:active { transform: scale(0.98); }
+        .chat-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, #6c5ce7, #00b894);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; color: #fff; flex-shrink: 0;
+        }
+        .chat-name {
+            font-size: 15px; font-weight: 600; color: #fff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .chat-file {
+            font-size: 12px; color: #666;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .chat-delete-btn {
+            background: rgba(255,107,107,0.1);
+            border: 1px solid rgba(255,107,107,0.2);
+            color: #ff6b6b; width: 32px; height: 32px;
+            border-radius: 50%; cursor: pointer; font-size: 14px;
+            flex-shrink: 0; margin-left: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .chat-delete-btn:active { transform: scale(0.9); }
+        .empty-chats {
+            text-align: center; padding: 30px 20px; color: #666;
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            border: 1px dashed rgba(255,255,255,0.1);
+        }
+        .empty-chats .emoji { font-size: 40px; margin-bottom: 10px; }
+
+        /* ─── ЧАТ ─── */
         #chatScreen {
-            display: none;
-            flex-direction: column;
-            height: 100vh;
-            height: 100dvh;
-            background: #0a0a0f;
-            position: relative;
-            overflow: hidden;
+            display: none; flex-direction: column;
+            height: 100vh; height: 100dvh;
+            background: #0a0a0f; position: relative; overflow: hidden;
         }
         .chat-header {
             padding: 14px 20px;
             background: rgba(255,255,255,0.04);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0; z-index: 10;
         }
-        .chat-header .left { display: flex; align-items: center; gap: 12px; }
+        .chat-header .left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
         .chat-header .avatar {
             width: 40px; height: 40px; border-radius: 50%;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
             display: flex; align-items: center; justify-content: center;
-            font-weight: 700; font-size: 18px; color: #fff;
+            font-weight: 700; font-size: 18px; color: #fff; flex-shrink: 0;
         }
-        .chat-header .info h2 { font-size: 17px; font-weight: 600; }
+        .chat-header .info { min-width: 0; }
+        .chat-header .info h2 {
+            font-size: 17px; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
 
-        .chat-header .exit-btn {
+        .exit-btn {
             background: rgba(255,255,255,0.06); border: none; color: #888;
-            width: 38px; height: 38px; border-radius: 50%; font-size: 20px;
+            width: 38px; height: 38px; border-radius: 50%; font-size: 18px;
             cursor: pointer; transition: all 0.3s;
             display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
         }
-        .chat-header .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
+        .exit-btn:active { background: rgba(255,255,255,0.12); transform: scale(0.9); }
 
         .messages-container {
-            flex: 1 1 auto;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 16px 14px 8px;
-            display: block;
-            scroll-behavior: auto;
+            flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;
+            padding: 16px 14px 8px; display: block;
             -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-            min-height: 0;
-            max-height: 100%;
+            overscroll-behavior: contain; min-height: 0; max-height: 100%;
         }
         .messages-container > .messages-inner {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            width: 100%;
-            min-height: 100%;
-            justify-content: flex-end;
+            display: flex; flex-direction: column; gap: 6px;
+            width: 100%; min-height: 100%; justify-content: flex-end;
         }
 
         .message-wrapper {
-            display: flex;
-            flex-direction: column;
-            max-width: 82%;
-            animation: fadeIn 0.3s ease;
-            position: relative;
-            flex-shrink: 0;
+            display: flex; flex-direction: column;
+            max-width: 82%; animation: fadeIn 0.3s ease;
+            position: relative; flex-shrink: 0;
         }
         .message-wrapper.own { align-self: flex-end; }
         .message-wrapper.other { align-self: flex-start; }
 
         .message {
-            padding: 10px 14px;
-            border-radius: 18px;
-            word-wrap: break-word;
-            position: relative;
+            padding: 10px 14px; border-radius: 18px;
+            word-wrap: break-word; position: relative;
         }
-        .message-wrapper.own .message { background: linear-gradient(135deg, #6c5ce7, #4a3f8f); border-bottom-right-radius: 4px; }
-        .message-wrapper.other .message { background: rgba(255,255,255,0.07); border-bottom-left-radius: 4px; }
+        .message-wrapper.own .message {
+            background: linear-gradient(135deg, #6c5ce7, #4a3f8f);
+            border-bottom-right-radius: 4px;
+        }
+        .message-wrapper.other .message {
+            background: rgba(255,255,255,0.07);
+            border-bottom-left-radius: 4px;
+        }
 
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         .message .sender { font-size: 12px; font-weight: 600; color: #6c5ce7; margin-bottom: 3px; display: block; }
         .message-wrapper.own .sender { color: #a78bfa; }
         .message .text { font-size: 15px; line-height: 1.45; white-space: pre-wrap; }
         .message .time { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; display: block; text-align: right; }
-        .message.system { align-self: center; background: rgba(255,255,255,0.04); border-radius: 30px; padding: 6px 18px; font-size: 12px; color: #666; max-width: 90%; }
-        .message.system.locked { background: rgba(255,107,107,0.1); color: #ff6b6b; border: 1px solid rgba(255,107,107,0.2); }
+        .message.system {
+            align-self: center; background: rgba(255,255,255,0.04);
+            border-radius: 30px; padding: 6px 18px; font-size: 12px;
+            color: #666; max-width: 90%;
+        }
+        .message.system.locked {
+            background: rgba(255,107,107,0.1); color: #ff6b6b;
+            border: 1px solid rgba(255,107,107,0.2);
+        }
 
         .message .image-container {
-            margin: 6px 0 4px;
-            border-radius: 12px;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-            background: rgba(0,0,0,0.2);
-            max-width: 100%;
+            margin: 6px 0 4px; border-radius: 12px;
+            overflow: hidden; cursor: pointer; position: relative;
+            background: rgba(0,0,0,0.2); max-width: 100%;
         }
         .message .image-container img {
-            display: block;
-            width: 100%;
-            max-height: 300px;
-            object-fit: contain;
-            border-radius: 12px;
-            transition: transform 0.2s;
+            display: block; width: 100%; max-height: 300px;
+            object-fit: contain; border-radius: 12px; transition: transform 0.2s;
         }
         .message .image-container img:active { transform: scale(0.98); }
 
         .message .audio-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 30px;
-            padding: 6px 14px 6px 6px;
-            margin: 6px 0 2px;
-            min-width: 180px;
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(0,0,0,0.2); border-radius: 30px;
+            padding: 6px 14px 6px 6px; margin: 6px 0 2px; min-width: 180px;
         }
         .message-wrapper.own .audio-container { background: rgba(0,0,0,0.25); }
         .audio-play-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
+            width: 36px; height: 36px; border-radius: 50%; border: none;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
-            color: #fff;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: transform 0.2s;
+            color: #fff; font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0; transition: transform 0.2s;
         }
         .audio-play-btn:active { transform: scale(0.9); }
-        .audio-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .audio-wave {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            height: 20px;
-        }
+        .audio-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .audio-wave { display: flex; align-items: center; gap: 2px; height: 20px; }
         .audio-wave span {
-            display: block;
-            width: 3px;
-            background: rgba(255,255,255,0.4);
-            border-radius: 2px;
-            transition: height 0.15s, background 0.15s;
+            display: block; width: 3px; background: rgba(255,255,255,0.4);
+            border-radius: 2px; transition: height 0.15s, background 0.15s;
         }
         .audio-wave.playing span {
-            background: #fff;
-            animation: waveAnim 1s infinite ease-in-out;
+            background: #fff; animation: waveAnim 1s infinite ease-in-out;
         }
         .audio-wave.playing span:nth-child(odd) { animation-delay: 0.1s; }
         .audio-wave.playing span:nth-child(3n) { animation-delay: 0.2s; }
         .audio-wave.playing span:nth-child(4n) { animation-delay: 0.3s; }
-        @keyframes waveAnim {
-            0%, 100% { transform: scaleY(1); }
-            50% { transform: scaleY(1.8); }
-        }
+        @keyframes waveAnim { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.8); } }
         .audio-time {
-            font-size: 11px;
-            color: rgba(255,255,255,0.5);
-            font-variant-numeric: tabular-nums;
-            min-width: 34px;
+            font-size: 11px; color: rgba(255,255,255,0.5);
+            font-variant-numeric: tabular-nums; min-width: 34px;
         }
         .audio-progress {
-            width: 100%;
-            height: 3px;
-            background: rgba(255,255,255,0.15);
-            border-radius: 3px;
-            overflow: hidden;
-            cursor: pointer;
+            width: 100%; height: 3px; background: rgba(255,255,255,0.15);
+            border-radius: 3px; overflow: hidden; cursor: pointer;
         }
         .audio-progress-fill {
-            height: 100%;
-            width: 0%;
+            height: 100%; width: 0%;
             background: linear-gradient(90deg, #6c5ce7, #00b894);
-            border-radius: 3px;
-            transition: width 0.1s linear;
+            border-radius: 3px; transition: width 0.1s linear;
         }
 
         .recording-indicator {
-            display: none;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 16px;
-            background: rgba(255,107,107,0.15);
+            display: none; align-items: center; gap: 10px;
+            padding: 8px 16px; background: rgba(255,107,107,0.15);
             border: 1px solid rgba(255,107,107,0.3);
-            border-radius: 30px;
-            color: #ff6b6b;
-            font-size: 14px;
-            font-weight: 500;
-            margin-right: 4px;
+            border-radius: 30px; color: #ff6b6b; font-size: 14px;
+            font-weight: 500; margin-right: 4px;
             animation: pulseRec 1s infinite;
-            white-space: nowrap;
-            flex-shrink: 0;
+            white-space: nowrap; flex-shrink: 0;
         }
         .recording-indicator.active { display: flex; }
         .recording-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #ff6b6b;
-            animation: blink 0.8s infinite;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #ff6b6b; animation: blink 0.8s infinite;
         }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
         @keyframes pulseRec { 0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.3)} 50%{box-shadow:0 0 0 6px rgba(255,107,107,0)} }
 
         .input-bar .mic-btn {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255,255,255,0.06);
-            color: #888;
-            font-size: 22px;
-            cursor: pointer;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 48px; height: 48px; border-radius: 50%; border: none;
+            background: rgba(255,255,255,0.06); color: #888; font-size: 22px;
+            cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
             transition: all 0.3s;
         }
         .input-bar .mic-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
         .input-bar .mic-btn.recording {
-            background: rgba(255,107,107,0.25);
-            color: #ff6b6b;
+            background: rgba(255,107,107,0.25); color: #ff6b6b;
             animation: pulseMic 1s infinite;
         }
         @keyframes pulseMic { 0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.4)} 50%{box-shadow:0 0 0 8px rgba(255,107,107,0)} }
 
         .delete-btn {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255,255,255,0.85);
-            color: #1a1a2e;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            z-index: 10;
-            padding: 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            line-height: 1;
+            position: absolute; top: -6px; right: -6px;
+            width: 22px; height: 22px; border-radius: 50%; border: none;
+            background: rgba(255,255,255,0.85); color: #1a1a2e;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+            display: none; align-items: center; justify-content: center;
+            transition: all 0.2s ease; z-index: 10; padding: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3); line-height: 1;
         }
         .delete-btn:hover { background: #ffffff; transform: scale(1.05); }
         .delete-btn:active { transform: scale(0.85); }
         .message-wrapper.own .delete-btn { display: flex; }
         .message-wrapper:hover .delete-btn,
-        .message-wrapper:active .delete-btn {
-            display: flex;
-        }
+        .message-wrapper:active .delete-btn { display: flex; }
 
+        /* ─── МОДАЛКИ ─── */
         .image-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            animation: fadeInModal 0.3s ease;
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92); backdrop-filter: blur(10px);
+            z-index: 1000; justify-content: center; align-items: center;
+            padding: 20px; animation: fadeInModal 0.3s ease;
         }
         @keyframes fadeInModal { from { opacity:0; } to { opacity:1; } }
         .image-modal.active { display: flex; }
         .image-modal img {
-            max-width: 100%;
-            max-height: 90vh;
-            object-fit: contain;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            max-width: 100%; max-height: 90vh; object-fit: contain;
+            border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
             animation: zoomIn 0.3s ease;
         }
         @keyframes zoomIn { from { transform: scale(0.8); opacity:0; } to { transform: scale(1); opacity:1; } }
         .image-modal .close-modal {
-            position: absolute;
-            top: 20px; right: 20px;
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #fff;
-            width: 44px; height: 44px;
-            border-radius: 50%;
-            font-size: 28px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.1); border: none; color: #fff;
+            width: 44px; height: 44px; border-radius: 50%; font-size: 28px;
+            cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; justify-content: center;
         }
         .image-modal .close-modal:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
 
+        /* ─── МОДАЛКА ФОРМЫ ─── */
+        .form-modal-content {
+            background: #1a1a2e; border-radius: 20px; padding: 24px;
+            max-width: 400px; width: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .form-modal-content h2 { margin-bottom: 16px; font-size: 20px; }
+        .form-modal-content label {
+            font-size: 13px; color: #999; display: block; margin-bottom: 6px;
+        }
+        .form-modal-content input[type="text"],
+        .form-modal-content input[type="password"] {
+            width: 100%; padding: 12px 14px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px; color: #fff; font-size: 15px;
+            margin-bottom: 14px; outline: none;
+        }
+        .form-modal-content input:focus { border-color: #6c5ce7; }
+        .form-modal-content .file-preview {
+            font-size: 12px; color: #888; margin-bottom: 14px;
+        }
+        .form-modal-content .warn-box {
+            font-size: 12px; color: #feca57;
+            background: rgba(254,202,87,0.08);
+            padding: 10px; border-radius: 10px;
+            border: 1px solid rgba(254,202,87,0.2);
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+        .form-modal-content .modal-actions {
+            display: flex; gap: 10px;
+        }
+        .form-modal-content .modal-actions .btn { margin: 0; }
+
+        /* ─── INPUT BAR ─── */
         .input-bar {
             padding: 10px 14px 14px;
             background: rgba(255,255,255,0.03);
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.06);
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            flex-shrink: 0;
-            min-height: 70px;
-            flex: 0 0 auto;
-            position: relative;
-            z-index: 5;
-            transition: all 0.3s ease;
+            display: flex; gap: 10px; align-items: flex-end;
+            flex-shrink: 0; min-height: 70px; flex: 0 0 auto;
+            position: relative; z-index: 5; transition: all 0.3s ease;
         }
-        .input-bar.hidden {
-            display: none !important;
-        }
+        .input-bar.hidden { display: none !important; }
         .input-bar textarea {
-            flex: 1;
-            padding: 12px 16px;
+            flex: 1; padding: 12px 16px;
             background: rgba(255,255,255,0.06);
             border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 22px;
-            color: #fff;
-            font-size: 16px;
-            resize: none;
-            outline: none;
-            font-family: inherit;
-            min-height: 44px;
-            max-height: 120px;
-            line-height: 1.4;
-            transition: border 0.3s;
+            border-radius: 22px; color: #fff; font-size: 16px;
+            resize: none; outline: none; font-family: inherit;
+            min-height: 44px; max-height: 120px;
+            line-height: 1.4; transition: border 0.3s;
         }
         .input-bar textarea:focus { border-color: #6c5ce7; }
         .input-bar textarea::placeholder { color: #555; }
         .input-bar .action-buttons {
-            display: flex;
-            gap: 8px;
-            align-items: center;
+            display: flex; gap: 8px; align-items: center;
         }
         .input-bar .file-btn {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255,255,255,0.06);
-            color: #888;
-            font-size: 22px;
-            cursor: pointer;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 48px; height: 48px; border-radius: 50%; border: none;
+            background: rgba(255,255,255,0.06); color: #888; font-size: 22px;
+            cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
             transition: all 0.3s;
         }
         .input-bar .file-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.12); }
         .input-bar .send-btn {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            border: none;
+            width: 48px; height: 48px; border-radius: 50%; border: none;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
-            color: #fff;
-            font-size: 22px;
-            cursor: pointer;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            position: relative;
+            color: #fff; font-size: 22px;
+            cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; position: relative;
         }
         .input-bar .send-btn:active { transform: scale(0.85); }
         .input-bar .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .input-bar .send-btn.clicked {
-            animation: clickFeedback 0.15s ease;
-        }
+        .input-bar .send-btn.clicked { animation: clickFeedback 0.15s ease; }
         @keyframes clickFeedback {
             0% { transform: scale(1); }
             50% { transform: scale(0.85); background: linear-gradient(135deg, #5a4ad7, #00a87a); }
@@ -521,61 +440,40 @@
         }
 
         .floating-keyboard-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
+            position: fixed; bottom: 30px; right: 30px;
+            width: 64px; height: 64px; border-radius: 50%;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
-            border: none;
-            color: #fff;
-            font-size: 30px;
-            cursor: pointer;
+            border: none; color: #fff; font-size: 30px; cursor: pointer;
             box-shadow: 0 8px 30px rgba(108, 92, 231, 0.4);
-            z-index: 50;
-            display: none;
-            align-items: center;
-            justify-content: center;
+            z-index: 50; display: none;
+            align-items: center; justify-content: center;
             transition: all 0.3s ease;
             animation: pulseBtn 2s infinite;
         }
         .floating-keyboard-btn:active { transform: scale(0.85); }
         .floating-keyboard-btn.show { display: flex; }
-        @keyframes pulseBtn {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
+        @keyframes pulseBtn { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
         .close-panel-btn {
-            position: absolute;
-            top: -12px;
-            right: 12px;
+            position: absolute; top: -12px; right: 12px;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.1);
-            color: #888;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            font-size: 14px;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
+            color: #888; width: 28px; height: 28px;
+            border-radius: 50%; font-size: 14px; cursor: pointer;
+            display: none; align-items: center; justify-content: center;
             transition: all 0.3s;
         }
         .close-panel-btn:hover { background: rgba(255,255,255,0.2); }
         .close-panel-btn:active { transform: scale(0.85); }
         .input-bar:hover .close-panel-btn,
-        .input-bar:active .close-panel-btn {
-            display: flex;
-        }
+        .input-bar:active .close-panel-btn { display: flex; }
 
         .toast {
             position: fixed; bottom: 100px; left: 50%;
             transform: translateX(-50%);
             background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-            padding: 10px 22px; border-radius: 30px; font-size: 14px; color: #fff;
+            padding: 10px 22px; border-radius: 30px;
+            font-size: 14px; color: #fff;
             border: 1px solid rgba(255,255,255,0.08);
             z-index: 999; display: none;
             animation: slideUp 0.3s ease; white-space: nowrap;
@@ -584,31 +482,19 @@
 
         .skeleton {
             background: rgba(255,255,255,0.04);
-            border-radius: 18px;
-            height: 50px;
-            width: 60%;
-            animation: shimmer 1.5s infinite;
-            margin-bottom: 6px;
+            border-radius: 18px; height: 50px; width: 60%;
+            animation: shimmer 1.5s infinite; margin-bottom: 6px;
         }
         @keyframes shimmer { 0%{opacity:0.4} 50%{opacity:0.8} 100%{opacity:0.4} }
         .skeleton.own { align-self: flex-end; }
         .skeleton.other { align-self: flex-start; }
 
         .scroll-down-btn {
-            position: fixed;
-            right: 20px;
-            bottom: 100px;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: none;
+            position: fixed; right: 20px; bottom: 100px;
+            width: 48px; height: 48px; border-radius: 50%; border: none;
             background: linear-gradient(135deg, #6c5ce7, #00b894);
-            color: #fff;
-            font-size: 22px;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
+            color: #fff; font-size: 22px; cursor: pointer;
+            display: none; align-items: center; justify-content: center;
             box-shadow: 0 6px 24px rgba(108, 92, 231, 0.45);
             z-index: 60;
             transition: transform 0.2s ease, opacity 0.2s ease;
@@ -616,27 +502,14 @@
         }
         .scroll-down-btn.show { display: flex; }
         .scroll-down-btn:active { transform: scale(0.88); }
-        @keyframes fadeInBtn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeInBtn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .scroll-badge {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            min-width: 20px;
-            height: 20px;
-            padding: 0 5px;
-            border-radius: 10px;
-            background: #ff6b6b;
-            color: #fff;
-            font-size: 11px;
-            font-weight: 700;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-            line-height: 1;
+            position: absolute; top: -6px; right: -6px;
+            min-width: 20px; height: 20px; padding: 0 5px;
+            border-radius: 10px; background: #ff6b6b; color: #fff;
+            font-size: 11px; font-weight: 700;
+            display: none; align-items: center; justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35); line-height: 1;
         }
         .scroll-badge.show { display: flex; }
 
@@ -659,12 +532,14 @@
             .floating-keyboard-btn { width: 56px; height: 56px; font-size: 26px; bottom: 20px; right: 20px; }
             .recording-indicator { padding: 6px 12px; font-size: 12px; }
             .scroll-down-btn { right: 14px; bottom: 84px; width: 44px; height: 44px; font-size: 20px; }
+            .form-modal-content { padding: 20px 16px; }
         }
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
 </head>
 <body>
 
+<!-- ═══════════ ЭКРАН АВТОРИЗАЦИИ ═══════════ -->
 <div id="authScreen">
     <div class="auth-header">
         <div class="brand">
@@ -682,17 +557,12 @@
             <input type="password" id="tokenInput" placeholder="Вставьте токен доступа" autocomplete="off" spellcheck="false">
             <div class="hint-msg" id="tokenHint"></div>
             <div class="help-text"><a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener">Создать токен</a> (права <strong>repo</strong>)</div>
-            <label>🔐 Пароль чата</label>
-            <input type="password" id="chatPasswordInput" placeholder="Пароль для расшифровки" autocomplete="off" spellcheck="false">
-            <div class="help-text" style="margin-top:-8px;color:#feca57;">
-                ⚠️ Без этого пароля история будет нечитаемой. Запомните его — восстановления нет.
-            </div>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px;margin-bottom:14px;font-size:14px;color:#ccc;user-select:none;">
                 <input type="checkbox" id="rememberMeInput" style="width:18px;height:18px;accent-color:#6c5ce7;cursor:pointer;margin:0;">
                 <span>Запомнить меня на этом устройстве</span>
             </label>
             <div class="help-text" id="rememberWarning" style="display:none;color:#ff9f43;background:rgba(255,159,67,0.08);padding:10px 12px;border-radius:10px;border:1px solid rgba(255,159,67,0.2);margin-bottom:14px;margin-top:-8px;line-height:1.5;">
-                ⚠️ Токен и пароль будут сохранены в браузере <strong>в открытом виде</strong>. Не включайте на чужом устройстве.
+                ⚠️ Токен будет сохранён в браузере <strong>в открытом виде</strong>. Не включайте на чужом устройстве.
             </div>
             <div class="error-msg" id="authError">❌ Неверный токен или нет доступа</div>
             <button class="btn" id="loginBtn">🚀 Войти</button>
@@ -701,16 +571,43 @@
     </div>
 </div>
 
+<!-- ═══════════ ЭКРАН ЧАТОВ ═══════════ -->
+<div id="chatsScreen">
+    <div class="auth-header">
+        <div class="brand">
+            <span class="brand-icon">📱</span>
+            <span>SMS Чат</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span id="chatsUserLabel" style="font-size:13px;color:#888;"></span>
+            <button class="exit-btn" id="chatsLogoutBtn" title="Выйти">✕</button>
+        </div>
+    </div>
+    <div class="auth-content" style="justify-content:flex-start;padding-top:24px;">
+        <h1 style="font-size:24px;margin-bottom:4px;">💬 Мои чаты</h1>
+        <p class="subtitle" style="margin-bottom:20px;">Выберите чат или создайте новый</p>
+
+        <div id="chatsList" class="chats-list"></div>
+
+        <div style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:10px;">
+            <button class="btn" id="createChatBtn">➕ Создать чат</button>
+            <button class="btn btn-secondary" id="joinChatBtn">🔗 Присоединиться к чату</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ ЭКРАН ЧАТА ═══════════ -->
 <div id="chatScreen">
     <div class="chat-header">
         <div class="left">
             <div class="avatar" id="userAvatar">?</div>
             <div class="info">
-                <h2 id="chatTitle">Общий чат</h2>
+                <h2 id="chatTitle">Чат</h2>
             </div>
         </div>
         <div style="display:flex;align-items:center;">
-            <button class="exit-btn" id="forgetBtn" title="Забыть это устройство" style="margin-right:8px;">🔓</button>
+            <button class="exit-btn" id="backToChatsBtn" title="К списку чатов" style="margin-right:8px;">←</button>
+            <button class="exit-btn" id="forgetBtn" title="Забыть пароль этого чата" style="margin-right:8px;">🔓</button>
             <button class="exit-btn" id="exitBtn" title="Выйти">✕</button>
         </div>
     </div>
@@ -729,26 +626,81 @@
         <div class="recording-indicator" id="recordingIndicator">
             <span class="recording-dot"></span>
             <span id="recordingTime">0.0 с</span>
-            <span style="opacity:0.6;font-size:12px;">(макс. 7 с)</span>
+            <span style="opacity:0.6;font-size:12px;">(макс. 10 с)</span>
         </div>
         <div class="action-buttons">
             <button class="file-btn" id="fileBtn" title="Прикрепить изображение">📎</button>
-            <button class="mic-btn" id="micBtn" title="Записать аудио (до 7 сек)">🎤</button>
+            <button class="mic-btn" id="micBtn" title="Записать аудио (до 10 сек)">🎤</button>
             <button class="send-btn" id="sendBtn">➤</button>
         </div>
     </div>
 </div>
 
+<!-- ═══════════ ПЛАВАЮЩАЯ КНОПКА ═══════════ -->
 <button class="floating-keyboard-btn" id="floatingKeyboardBtn" title="Показать панель ввода">⌨️</button>
 
+<!-- ═══════════ КНОПКА ВНИЗ ═══════════ -->
 <button class="scroll-down-btn" id="scrollDownBtn" title="Вниз">
     ↓
     <span class="scroll-badge" id="scrollBadge">0</span>
 </button>
 
+<!-- ═══════════ МОДАЛКА ПРОСМОТРА ФОТО ═══════════ -->
 <div class="image-modal" id="imageModal">
     <button class="close-modal" id="closeModalBtn">✕</button>
     <img id="modalImage" src="" alt="Увеличенное изображение">
+</div>
+
+<!-- ═══════════ МОДАЛКА СОЗДАНИЯ ЧАТА ═══════════ -->
+<div class="image-modal" id="createChatModal">
+    <div class="form-modal-content">
+        <h2>➕ Новый чат</h2>
+        <label>Название чата</label>
+        <input type="text" id="newChatNameInput" placeholder="Например: Семья" maxlength="40">
+        <div class="file-preview" id="chatFilePreview">Файл: —</div>
+        <label>Пароль чата</label>
+        <input type="password" id="newChatPasswordInput" placeholder="Минимум 6 символов">
+        <div class="warn-box">⚠️ Запомните пароль — без него сообщения не расшифруются. Восстановления нет.</div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="cancelCreateChatBtn">Отмена</button>
+            <button class="btn" id="confirmCreateChatBtn">Создать</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ МОДАЛКА ВХОДА В ЧАТ ═══════════ -->
+<div class="image-modal" id="openChatModal">
+    <div class="form-modal-content">
+        <h2 id="openChatTitle">🔓 Вход в чат</h2>
+        <label>Пароль чата</label>
+        <input type="password" id="openChatPasswordInput" placeholder="Введите пароль">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#ccc;margin-bottom:16px;cursor:pointer;">
+            <input type="checkbox" id="rememberChatPassword" style="width:16px;height:16px;accent-color:#6c5ce7;">
+            <span>Запомнить пароль для этого чата</span>
+        </label>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="cancelOpenChatBtn">Отмена</button>
+            <button class="btn" id="confirmOpenChatBtn">Войти</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ МОДАЛКА ПРИСОЕДИНЕНИЯ ═══════════ -->
+<div class="image-modal" id="joinChatModal">
+    <div class="form-modal-content">
+        <h2>🔗 Присоединиться</h2>
+        <label>Имя файла чата</label>
+        <input type="text" id="joinChatFileInput" placeholder="например: family">
+        <div class="file-preview">Только латиница, цифры, _ и -</div>
+        <label>Отображаемое имя</label>
+        <input type="text" id="joinChatNameInput" placeholder="Например: Семья" maxlength="40">
+        <label>Пароль чата</label>
+        <input type="password" id="joinChatPasswordInput" placeholder="Пароль для расшифровки">
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="cancelJoinChatBtn">Отмена</button>
+            <button class="btn" id="confirmJoinChatBtn">Войти</button>
+        </div>
+    </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -760,17 +712,17 @@
 const CONFIG = {
     repoOwner: '2d3t',
     repoName: '2d3t',
-    filePath: 'pro/SMS/chat5.json',
+    chatsPath: 'pro/SMS/chats/',
     pollInterval: 5000,
-    maxMessages: 18,
+    maxMessages: 15,
     maxImageSize: 8 * 1024 * 1024,
-    maxAudioDuration: 7000,
+    maxAudioDuration: 10000,
     audioMimeType: 'audio/webm;codecs=opus',
-    audioBitsPerSecond: 48000,
+    audioBitsPerSecond: 32000,
 };
 
 // ===================================================================
-//  E2E-ШИФРОВАНИЕ (AES-GCM + PBKDF2)
+//  E2E-ШИФРОВАНИЕ
 // ===================================================================
 const CRYPTO = {
     VERSION: 2,
@@ -786,43 +738,27 @@ function arrayBufferToBase64(buffer) {
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary);
 }
-
 function base64ToArrayBuffer(base64) {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return bytes.buffer;
 }
-
-function generateSalt() {
-    return crypto.getRandomValues(new Uint8Array(CRYPTO.SALT_BYTES));
-}
-
-function generateIV() {
-    return crypto.getRandomValues(new Uint8Array(CRYPTO.IV_BYTES));
-}
+function generateSalt() { return crypto.getRandomValues(new Uint8Array(CRYPTO.SALT_BYTES)); }
+function generateIV() { return crypto.getRandomValues(new Uint8Array(CRYPTO.IV_BYTES)); }
 
 async function deriveKey(password, saltBase64) {
     const enc = new TextEncoder();
     const salt = new Uint8Array(base64ToArrayBuffer(saltBase64));
     const baseKey = await crypto.subtle.importKey(
-        'raw',
-        enc.encode(password),
-        { name: 'PBKDF2' },
-        false,
-        ['deriveKey']
+        'raw', enc.encode(password),
+        { name: 'PBKDF2' }, false, ['deriveKey']
     );
     return crypto.subtle.deriveKey(
-        {
-            name: 'PBKDF2',
-            salt: salt,
-            iterations: CRYPTO.PBKDF2_ITERATIONS,
-            hash: 'SHA-256'
-        },
+        { name: 'PBKDF2', salt, iterations: CRYPTO.PBKDF2_ITERATIONS, hash: 'SHA-256' },
         baseKey,
         { name: 'AES-GCM', length: 256 },
-        false,
-        ['encrypt', 'decrypt']
+        false, ['encrypt', 'decrypt']
     );
 }
 
@@ -830,25 +766,14 @@ async function encryptObject(obj, key) {
     const iv = generateIV();
     const enc = new TextEncoder();
     const plaintext = enc.encode(JSON.stringify(obj));
-    const ciphertext = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv: iv },
-        key,
-        plaintext
-    );
-    return {
-        iv: arrayBufferToBase64(iv),
-        data: arrayBufferToBase64(ciphertext)
-    };
+    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
+    return { iv: arrayBufferToBase64(iv), data: arrayBufferToBase64(ciphertext) };
 }
 
 async function decryptObject(ivBase64, dataBase64, key) {
     const iv = new Uint8Array(base64ToArrayBuffer(ivBase64));
     const ciphertext = base64ToArrayBuffer(dataBase64);
-    const plaintext = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: iv },
-        key,
-        ciphertext
-    );
+    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
     return JSON.parse(new TextDecoder().decode(plaintext));
 }
 
@@ -857,12 +782,9 @@ async function decryptObject(ivBase64, dataBase64, key) {
 // ===================================================================
 const TOKEN_SECURITY = {
     allowedPrefixes: ['ghp_', 'github_pat_', 'gho_', 'ghu_', 'ghs_', 'ghr_'],
-    minLength: 20,
-    maxLength: 255,
-    maxAttempts: 5,
-    lockoutTime: 30000,
-    _failedAttempts: 0,
-    _lockedUntil: 0,
+    minLength: 20, maxLength: 255,
+    maxAttempts: 5, lockoutTime: 30000,
+    _failedAttempts: 0, _lockedUntil: 0,
 };
 
 function validateTokenFormat(rawToken) {
@@ -892,8 +814,9 @@ async function validateTokenAccess(token) {
         if (response.status === 404) return { ok: false, status: 404, message: 'Репозиторий не найден или нет доступа (404)' };
         if (!response.ok) return { ok: false, status: response.status, message: `Ошибка GitHub API: ${response.status}` };
         const data = await response.json();
-        const canPush = data.permissions && data.permissions.push === true;
-        if (!canPush) return { ok: false, status: 200, message: 'У токена нет прав на запись (push)' };
+        if (!data.permissions || data.permissions.push !== true) {
+            return { ok: false, status: 200, message: 'У токена нет прав на запись (push)' };
+        }
         return { ok: true, status: 200, message: 'Доступ разрешён' };
     } catch (error) {
         clearTimeout(timeoutId);
@@ -913,7 +836,6 @@ function isLockedOut() {
     }
     return { locked: false, secondsLeft: 0 };
 }
-
 function registerFailedAttempt() {
     TOKEN_SECURITY._failedAttempts++;
     if (TOKEN_SECURITY._failedAttempts >= TOKEN_SECURITY.maxAttempts) {
@@ -923,7 +845,6 @@ function registerFailedAttempt() {
     }
     return false;
 }
-
 function resetFailedAttempts() {
     TOKEN_SECURITY._failedAttempts = 0;
     TOKEN_SECURITY._lockedUntil = 0;
@@ -970,19 +891,23 @@ let state = {
     messages: [], sha: null,
     isPolling: false, isSending: false, lastMessageCount: 0,
     isAuthorized: false, _lastSentMessageId: null,
+    chatFile: null, chatName: null,
+    chats: [], savedPasswords: {},
+    currentScreen: 'auth',
 };
 
 let networkState = { isOnline: navigator.onLine };
+let pendingOpenChat = null;
 
 // ===================================================================
 //  DOM
 // ===================================================================
 const $ = id => document.getElementById(id);
 const authScreen = $('authScreen');
+const chatsScreen = $('chatsScreen');
 const chatScreen = $('chatScreen');
 const usernameInput = $('usernameInput');
 const tokenInput = $('tokenInput');
-const chatPasswordInput = $('chatPasswordInput');
 const rememberMeInput = $('rememberMeInput');
 const rememberWarning = $('rememberWarning');
 const loginBtn = $('loginBtn');
@@ -1012,61 +937,88 @@ const scrollDownBtn = $('scrollDownBtn');
 const scrollBadge = $('scrollBadge');
 
 // ===================================================================
+//  УТИЛИТЫ ЧАТОВ
+// ===================================================================
+function sanitizeChatFile(input) {
+    const cleaned = String(input).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    if (cleaned.length < 3) return null;
+    if (cleaned.length > 40) return null;
+    return cleaned;
+}
+function getChatPath(file) { return `${CONFIG.chatsPath}${file}.json`; }
+
+function loadChatsList() {
+    try {
+        const raw = localStorage.getItem('chathub_chats');
+        state.chats = raw ? JSON.parse(raw) : [];
+    } catch (e) { state.chats = []; }
+}
+function saveChatsList() {
+    localStorage.setItem('chathub_chats', JSON.stringify(state.chats));
+}
+function loadSavedPasswords() {
+    try {
+        const raw = localStorage.getItem('chathub_saved_passwords');
+        state.savedPasswords = raw ? JSON.parse(raw) : {};
+    } catch (e) { state.savedPasswords = {}; }
+}
+function saveSavedPasswords() {
+    localStorage.setItem('chathub_saved_passwords', JSON.stringify(state.savedPasswords));
+}
+
+async function chatExistsOnGitHub(file) {
+    try {
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, getChatPath(file));
+        return result.exists;
+    } catch (e) {
+        if (e.message.includes('401') || e.message.includes('403')) throw e;
+        return false;
+    }
+}
+
+// ===================================================================
 //  УМНЫЙ СКРОЛЛ
 // ===================================================================
 const SCROLL_THRESHOLD = 80;
 const SCROLL_BTN_SHOW = 150;
-
 let scrollState = { isAtBottom: true, unreadCount: 0 };
 
 function isNearBottom() {
     const diff = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
     return diff <= SCROLL_THRESHOLD;
 }
-
 function updateScrollButton() {
     const diff = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
-    if (diff > SCROLL_BTN_SHOW) {
-        scrollDownBtn.classList.add('show');
-    } else {
+    if (diff > SCROLL_BTN_SHOW) scrollDownBtn.classList.add('show');
+    else {
         scrollDownBtn.classList.remove('show');
         scrollState.unreadCount = 0;
         updateScrollBadge();
     }
 }
-
 function updateScrollBadge() {
     if (scrollState.unreadCount > 0) {
         scrollBadge.textContent = scrollState.unreadCount > 99 ? '99+' : scrollState.unreadCount;
         scrollBadge.classList.add('show');
-    } else {
-        scrollBadge.classList.remove('show');
-    }
+    } else scrollBadge.classList.remove('show');
 }
-
 function scrollToBottom(force = false) {
     if (!force && !scrollState.isAtBottom) return;
-
     requestAnimationFrame(() => {
         void messagesContainer.scrollHeight;
-
         requestAnimationFrame(() => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             scrollState.unreadCount = 0;
             scrollState.isAtBottom = true;
             updateScrollBadge();
             updateScrollButton();
-
             setTimeout(() => {
-                if (scrollState.isAtBottom) {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
+                if (scrollState.isAtBottom) messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 updateScrollButton();
             }, 50);
         });
     });
 }
-
 function scrollToBottomNow() {
     messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
     scrollState.unreadCount = 0;
@@ -1074,21 +1026,17 @@ function scrollToBottomNow() {
     scrollState.isAtBottom = true;
     setTimeout(updateScrollButton, 300);
 }
-
 messagesContainer.addEventListener('scroll', () => {
     scrollState.isAtBottom = isNearBottom();
-    if (scrollState.isAtBottom) {
-        scrollState.unreadCount = 0;
-        updateScrollBadge();
-    }
+    if (scrollState.isAtBottom) { scrollState.unreadCount = 0; updateScrollBadge(); }
     updateScrollButton();
 }, { passive: true });
 
 // ===================================================================
-//  УПРАВЛЕНИЕ ПАНЕЛЬЮ ВВОДА
+//  ПАНЕЛЬ ВВОДА
 // ===================================================================
 function showInputBar() {
-    if (!state.isAuthorized) return;
+    if (!state.isAuthorized || !state.chatFile) return;
     inputBar.classList.remove('hidden');
     floatingKeyboardBtn.classList.remove('show');
     setTimeout(() => { messageInput.focus(); scrollToBottom(); }, 100);
@@ -1098,14 +1046,11 @@ function hideInputBar() {
     floatingKeyboardBtn.classList.add('show');
     messageInput.blur();
 }
-function toggleInputBar() {
-    if (inputBar.classList.contains('hidden')) showInputBar(); else hideInputBar();
-}
 
 // ===================================================================
 //  ВСПОМОГАТЕЛЬНЫЕ
 // ===================================================================
-function getInitials(name) { return name.charAt(0).toUpperCase(); }
+function getInitials(name) { return (name || '?').charAt(0).toUpperCase(); }
 function formatDate(iso) { return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }); }
 function formatFullTime(iso) {
     const date = new Date(iso);
@@ -1147,18 +1092,18 @@ async function checkNetwork() {
 }
 window.addEventListener('online', async () => {
     const ok = await checkNetwork();
-    if (ok) { showToast('🌐 Соединение восстановлено', 2000); await pollUpdates(); }
+    if (ok) { showToast('🌐 Соединение восстановлено', 2000); if (state.chatFile) await pollUpdates(); }
 });
 window.addEventListener('offline', () => {
     networkState.isOnline = false;
     showToast('📵 Нет подключения к интернету', 2500);
 });
 setInterval(() => {
-    if (chatScreen.style.display === 'flex' && state.isAuthorized) checkNetwork();
+    if (chatScreen.style.display === 'flex' && state.isAuthorized && state.chatFile) checkNetwork();
 }, 15000);
 
 // ===================================================================
-//  РАБОТА С ИЗОБРАЖЕНИЯМИ
+//  ИЗОБРАЖЕНИЯ
 // ===================================================================
 function compressImage(file, maxWidth = 600, maxHeight = 600, quality = 0.6) {
     return new Promise((resolve) => {
@@ -1209,13 +1154,10 @@ function base64ToUtf8(base64) {
 }
 
 // ===================================================================
-//  ШИФРОВАННОЕ ХРАНИЛИЩЕ
+//  ШИФРОВАННЫЕ СООБЩЕНИЯ
 // ===================================================================
 async function encryptMessage(msg) {
-    const payload = {
-        username: msg.username,
-        text: msg.text || '',
-    };
+    const payload = { username: msg.username, text: msg.text || '' };
     if (msg.image) payload.image = msg.image;
     if (msg.audio) {
         payload.audio = msg.audio;
@@ -1223,23 +1165,12 @@ async function encryptMessage(msg) {
         payload.audioMime = msg.audioMime || 'audio/webm';
     }
     const encrypted = await encryptObject(payload, CRYPTO._key);
-    return {
-        id: msg.id,
-        time: msg.time,
-        iv: encrypted.iv,
-        data: encrypted.data
-    };
+    return { id: msg.id, time: msg.time, iv: encrypted.iv, data: encrypted.data };
 }
-
 async function decryptMessage(encMsg) {
     try {
         const payload = await decryptObject(encMsg.iv, encMsg.data, CRYPTO._key);
-        const msg = {
-            id: encMsg.id,
-            time: encMsg.time,
-            username: payload.username,
-            text: payload.text || ''
-        };
+        const msg = { id: encMsg.id, time: encMsg.time, username: payload.username, text: payload.text || '' };
         if (payload.image) msg.image = payload.image;
         if (payload.audio) {
             msg.audio = payload.audio;
@@ -1248,11 +1179,10 @@ async function decryptMessage(encMsg) {
         }
         return msg;
     } catch (e) {
-        console.error('Не удалось расшифровать сообщение', encMsg.id, e);
+        console.error('Не удалось расшифровать', encMsg.id, e);
         return null;
     }
 }
-
 async function loadAndDecrypt(saltBase64, encMessages) {
     const key = await deriveKey(state.chatPassword, saltBase64);
     CRYPTO._key = key;
@@ -1287,40 +1217,39 @@ async function fetchFile(token, owner, repo, path) {
         if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
         const data = await response.json();
         const content = JSON.parse(base64ToUtf8(data.content));
-        return { exists: true, sha: data.sha, content: content };
+        return { exists: true, sha: data.sha, content };
     } catch (error) { clearTimeout(timeoutId); throw error; }
 }
 async function saveFile(token, owner, repo, path, content, sha) {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-    const jsonString = JSON.stringify(content, null, 2);
+    const jsonString = JSON.stringify(content);  // ← без pretty-print
     const encoded = utf8ToBase64(jsonString);
     const body = { message: `💬 Обновление чата`, content: encoded };
     if (sha) body.sha = sha;
     const response = await fetch(url, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) });
-    if (!response.ok) { const error = await response.json(); throw new Error(error.message || `HTTP ${response.status}`); }
+    if (response.status === 409) throw new Error('409 CONFLICT');
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || `HTTP ${response.status}`);
+    }
     const data = await response.json();
     return data.content.sha;
 }
 
 // ===================================================================
-//  ЗАПИСЬ АУДИО
+//  АУДИО-ЗАПИСЬ
 // ===================================================================
 class AudioRecorder {
     constructor() {
-        this.mediaRecorder = null;
-        this.chunks = [];
-        this.stream = null;
-        this.isRecording = false;
-        this.startTime = 0;
-        this.timerInterval = null;
-        this.autoStopTimeout = null;
+        this.mediaRecorder = null; this.chunks = []; this.stream = null;
+        this.isRecording = false; this.startTime = 0;
+        this.timerInterval = null; this.autoStopTimeout = null;
         this.onStopCallback = null;
     }
     async start() {
         if (this.isRecording) return false;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showToast('❌ Микрофон не поддерживается', 2500);
-            return false;
+            showToast('❌ Микрофон не поддерживается', 2500); return false;
         }
         try {
             this.stream = await navigator.mediaDevices.getUserMedia({
@@ -1342,12 +1271,9 @@ class AudioRecorder {
                 micBtn.classList.remove('recording');
                 recordingIndicator.classList.remove('active');
                 const audioBlob = new Blob(this.chunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+                const cb = this.onStopCallback;
                 this.cleanup();
-                if (this.onStopCallback) {
-                    const cb = this.onStopCallback;
-                    this.onStopCallback = null;
-                    await cb(audioBlob);
-                }
+                if (cb) { this.onStopCallback = null; await cb(audioBlob); }
             };
             this.mediaRecorder.start(100);
             this.isRecording = true;
@@ -1356,11 +1282,11 @@ class AudioRecorder {
             recordingIndicator.classList.add('active');
             this.startTimer();
             this.autoStopTimeout = setTimeout(() => {
-                if (this.isRecording) { showToast('⏱️ Максимум 7 секунд', 1200); this.stop(); }
+                if (this.isRecording) { showToast('⏱️ Максимум 10 секунд', 1200); this.stop(); }
             }, CONFIG.maxAudioDuration);
             return true;
         } catch (error) {
-            console.error('Ошибка доступа к микрофону:', error);
+            console.error('Микрофон:', error);
             if (error.name === 'NotAllowedError') showToast('🚫 Разрешите доступ к микрофону', 3000);
             else if (error.name === 'NotFoundError') showToast('🎤 Микрофон не найден', 2500);
             else showToast('❌ Ошибка записи: ' + error.message, 3000);
@@ -1382,22 +1308,20 @@ class AudioRecorder {
     stop() {
         if (!this.isRecording || !this.mediaRecorder) return;
         this.stopTimer();
-        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) { console.error(e); }
+        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) {}
     }
     cancel() {
         if (!this.isRecording || !this.mediaRecorder) return;
         this.onStopCallback = null;
         this.stopTimer();
-        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) { console.error(e); }
+        try { if (this.mediaRecorder.state !== 'inactive') this.mediaRecorder.stop(); } catch (e) {}
         this.cleanup();
         micBtn.classList.remove('recording');
         recordingIndicator.classList.remove('active');
     }
     cleanup() {
-        if (this.stream) { this.stream.getTracks().forEach(track => track.stop()); this.stream = null; }
-        this.mediaRecorder = null;
-        this.chunks = [];
-        this.stopTimer();
+        if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
+        this.mediaRecorder = null; this.chunks = []; this.stopTimer();
     }
     getDuration() {
         if (!this.startTime) return 0;
@@ -1414,132 +1338,34 @@ function blobToBase64(blob) {
         reader.readAsDataURL(blob);
     });
 }
-
 async function handleMicClick() {
-    if (!state.isAuthorized) { showToast('🔒 Требуется авторизация', 1500); return; }
-    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); return; }
+    if (!state.isAuthorized || !state.chatFile) { showToast('🔒 Требуется вход в чат', 1500); return; }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения', 2500); return; }
     if (audioRecorder.isRecording) {
         audioRecorder.onStopCallback = async (blob) => {
             if (!blob || blob.size === 0) { showToast('❌ Пустая запись', 2000); return; }
             const duration = audioRecorder.getDuration();
-            if (duration < 0.5) { showToast('⏱️ Слишком короткая запись', 1500); return; }
+            if (duration < 0.5) { showToast('⏱️ Слишком короткая', 1500); return; }
             try {
                 showToast('⏳ Отправка аудио...', 1500);
                 const base64 = await blobToBase64(blob);
-                await sendMessage('', null, {
-                    data: base64,
-                    duration: Math.min(duration, CONFIG.maxAudioDuration / 1000),
-                    mime: blob.type || 'audio/webm'
-                });
-            } catch (err) {
-                console.error('Ошибка отправки аудио:', err);
-                showToast('❌ Ошибка отправки аудио', 2500);
-            }
+                await sendMessage('', null, { data: base64, duration: Math.min(duration, CONFIG.maxAudioDuration / 1000), mime: blob.type || 'audio/webm' });
+            } catch (err) { console.error(err); showToast('❌ Ошибка отправки', 2500); }
         };
         audioRecorder.stop();
         soundManager.play('click');
     } else {
         const started = await audioRecorder.start();
-        if (started) {
-            soundManager.play('click');
-            showToast('🎤 Запись... нажмите ещё раз для отправки', 2000);
-        }
+        if (started) { soundManager.play('click'); showToast('🎤 Запись... нажмите ещё раз для отправки', 2000); }
     }
 }
 
 // ===================================================================
-//  ЗАГРУЗКА / ОТПРАВКА / УДАЛЕНИЕ
+//  ОТПРАВКА / УДАЛЕНИЕ
 // ===================================================================
-async function loadMessages(showLoading = true) {
-    if (!state.isAuthorized) { lockChatUI('Доступ закрыт. Войдите с корректным токеном.'); return; }
-    try {
-        if (showLoading) {
-            messagesInner.innerHTML = `
-                <div class="skeleton other"></div>
-                <div class="skeleton own"></div>
-                <div class="skeleton other"></div>
-                <div class="skeleton own"></div>
-            `;
-        }
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
-
-        if (!result.exists) {
-            const saltBytes = generateSalt();
-            state.salt = arrayBufferToBase64(saltBytes);
-            CRYPTO._key = await deriveKey(state.chatPassword, state.salt);
-            state.messages = [];
-            state.sha = null;
-            state.lastMessageCount = 0;
-            renderMessages([]);
-            showToast('🆕 Чат создан. Пароль установлен.', 2500);
-            return;
-        }
-
-        const content = result.content;
-
-        if (!content || typeof content !== 'object' || content.v !== CRYPTO.VERSION || !content.salt) {
-            throw new Error('Файл чата в старом (незашифрованном) формате. Требуется очистка репозитория.');
-        }
-
-        state.salt = content.salt;
-        const encMessages = Array.isArray(content.messages) ? content.messages : [];
-
-        const decrypted = await loadAndDecrypt(content.salt, encMessages);
-
-        if (encMessages.length > 0 && decrypted.length === 0) {
-            throw new Error('Неверный пароль чата');
-        }
-
-        state.messages = decrypted;
-        state.sha = result.sha;
-        state.lastMessageCount = decrypted.length;
-        renderMessages(state.messages);
-        scrollToBottom(true);
-    } catch (error) {
-        console.error('Ошибка загрузки:', error);
-        if (error.message.includes('Неверный пароль')) {
-            showToast('🔐 Неверный пароль чата', 3000);
-            soundManager.play('error');
-            state.isAuthorized = false;
-            state.token = '';
-            state.chatPassword = '';
-            CRYPTO._key = null;
-            if (window._pollInterval) clearInterval(window._pollInterval);
-            authScreen.style.display = 'flex';
-            chatScreen.style.display = 'none';
-            setAuthError('Неверный пароль чата');
-            return;
-        }
-        state.isAuthorized = false;
-        lockChatUI('⚠️ Ошибка доступа: ' + error.message);
-        showToast('❌ Ошибка доступа к репозиторию', 3000);
-        soundManager.play('error');
-    }
-}
-
-function lockChatUI(reason) {
-    state.isAuthorized = false;
-    state.messages = []; state.sha = null; state.lastMessageCount = 0;
-    CRYPTO._key = null;
-    if (window._pollInterval) clearInterval(window._pollInterval);
-    messagesInner.innerHTML = `
-        <div class="message system locked">🔒 ${reason || 'Доступ закрыт'}</div>
-        <div class="message system" style="font-size:12px;color:#555;">История чата недоступна. Проверьте токен и войдите снова.</div>
-    `;
-    messageInput.disabled = true;
-    sendBtn.disabled = true;
-    fileBtn.disabled = true;
-    micBtn.disabled = true;
-    hideInputBar();
-    floatingKeyboardBtn.classList.remove('show');
-    scrollDownBtn.classList.remove('show');
-    scrollState.unreadCount = 0;
-    updateScrollBadge();
-}
-
 async function sendMessage(text, imageData = null, audioData = null) {
-    if (!state.isAuthorized) { showToast('❌ Нет доступа для отправки', 2000); soundManager.play('error'); return; }
-    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); soundManager.play('error'); return; }
+    if (!state.isAuthorized || !state.chatFile) { showToast('❌ Нет доступа', 2000); soundManager.play('error'); return; }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения', 2500); soundManager.play('error'); return; }
     const hasText = text && text.trim();
     const hasImage = imageData !== null;
     const hasAudio = audioData !== null;
@@ -1550,7 +1376,8 @@ async function sendMessage(text, imageData = null, audioData = null) {
     micBtn.disabled = true;
 
     try {
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        const path = getChatPath(state.chatFile);
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, path);
         let fileContent, sha;
 
         if (!result.exists) {
@@ -1562,9 +1389,7 @@ async function sendMessage(text, imageData = null, audioData = null) {
         } else {
             fileContent = result.content;
             sha = result.sha;
-            if (fileContent.v !== CRYPTO.VERSION) {
-                throw new Error('Формат файла не поддерживается');
-            }
+            if (fileContent.v !== CRYPTO.VERSION) throw new Error('Формат файла не поддерживается');
             if (fileContent.salt !== state.salt) {
                 state.salt = fileContent.salt;
                 CRYPTO._key = await deriveKey(state.chatPassword, state.salt);
@@ -1573,8 +1398,7 @@ async function sendMessage(text, imageData = null, audioData = null) {
 
         const messageId = Date.now();
         const plainMsg = {
-            id: messageId,
-            username: state.username,
+            id: messageId, username: state.username,
             text: hasText ? text.trim() : '',
             time: new Date().toISOString()
         };
@@ -1584,7 +1408,6 @@ async function sendMessage(text, imageData = null, audioData = null) {
             plainMsg.audioDuration = audioData.duration || 0;
             plainMsg.audioMime = audioData.mime || 'audio/webm';
         }
-
         state._lastSentMessageId = messageId;
 
         const encMsg = await encryptMessage(plainMsg);
@@ -1593,7 +1416,7 @@ async function sendMessage(text, imageData = null, audioData = null) {
             fileContent.messages = fileContent.messages.slice(-CONFIG.maxMessages);
         }
 
-        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, fileContent, sha);
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, path, fileContent, sha);
 
         state.messages.push(plainMsg);
         if (state.messages.length > CONFIG.maxMessages) {
@@ -1608,7 +1431,6 @@ async function sendMessage(text, imageData = null, audioData = null) {
 
         renderMessages(state.messages);
         scrollToBottom(true);
-
         soundManager.play('click');
         soundManager.play('send');
         showToast('✅ Отправлено!', 1000);
@@ -1618,67 +1440,67 @@ async function sendMessage(text, imageData = null, audioData = null) {
         const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('NetworkError');
         if (isNetworkError) { networkState.isOnline = false; showToast('📵 Соединение потеряно', 2500); }
         else { showToast('❌ Ошибка: ' + error.message, 3000); }
-        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла. Токен больше не действителен.');
+        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла');
         state._lastSentMessageId = null;
     } finally {
         state.isSending = false;
         sendBtn.disabled = !state.isAuthorized;
         micBtn.disabled = !state.isAuthorized;
-        if (state.isAuthorized) messageInput.focus();
+        if (state.isAuthorized && state.chatFile) messageInput.focus();
     }
 }
 
 async function deleteMessage(messageId) {
-    if (!state.isAuthorized) { showToast('❌ Нет доступа', 1500); return; }
-    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); return; }
+    if (!state.isAuthorized || !state.chatFile) { showToast('❌ Нет доступа', 1500); return; }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения', 2500); return; }
     if (!confirm('Удалить это сообщение?')) return;
     try {
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        const path = getChatPath(state.chatFile);
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, path);
         if (!result.exists) return;
         const fileContent = result.content;
         if (fileContent.v !== CRYPTO.VERSION) { showToast('❌ Формат не поддерживается', 2000); return; }
 
         const encMessages = fileContent.messages || [];
-        const messageIndex = encMessages.findIndex(m => m.id === messageId);
-        if (messageIndex === -1) { showToast('❌ Сообщение не найдено', 1500); return; }
+        const idx = encMessages.findIndex(m => m.id === messageId);
+        if (idx === -1) { showToast('❌ Сообщение не найдено', 1500); return; }
 
-        const plain = await decryptMessage(encMessages[messageIndex]);
-        if (!plain) { showToast('❌ Не удалось прочитать сообщение', 2000); return; }
-        if (plain.username !== state.username) { showToast('❌ Можно удалять только свои сообщения', 1500); return; }
+        const plain = await decryptMessage(encMessages[idx]);
+        if (!plain) { showToast('❌ Не удалось прочитать', 2000); return; }
+        if (plain.username !== state.username) { showToast('❌ Только свои сообщения', 1500); return; }
 
-        encMessages.splice(messageIndex, 1);
+        encMessages.splice(idx, 1);
         fileContent.messages = encMessages;
+        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, path, fileContent, result.sha);
 
-        const newSha = await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath, fileContent, result.sha);
         state.messages = state.messages.filter(m => m.id !== messageId);
         state.sha = newSha;
         state.lastMessageCount = state.messages.length;
         renderMessages(state.messages);
         soundManager.play('delete');
-        showToast('🗑️ Сообщение удалено', 1000);
+        showToast('🗑️ Удалено', 1000);
     } catch (error) {
         console.error('Ошибка удаления:', error);
         soundManager.play('error');
-        const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch');
+        const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.message.includes('Failed to fetch');
         if (isNetworkError) { networkState.isOnline = false; showToast('📵 Соединение потеряно', 2500); }
-        else { showToast('❌ Ошибка: ' + error.message, 3000); }
-        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла. Токен больше не действителен.');
+        else showToast('❌ Ошибка: ' + error.message, 3000);
     }
 }
 
 async function handleFileUpload(file) {
     if (!file) return;
-    if (!state.isAuthorized) { showToast('❌ Нет доступа', 2000); return; }
-    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения к интернету', 2500); return; }
-    if (!file.type.startsWith('image/')) { showToast('❌ Пожалуйста, выберите изображение', 2000); return; }
-    if (file.size > CONFIG.maxImageSize) { showToast(`❌ Изображение слишком большое (макс. ${CONFIG.maxImageSize / 1024 / 1024}MB)`, 3000); return; }
+    if (!state.isAuthorized || !state.chatFile) { showToast('❌ Нет доступа', 2000); return; }
+    if (!navigator.onLine || !networkState.isOnline) { showToast('📵 Нет подключения', 2500); return; }
+    if (!file.type.startsWith('image/')) { showToast('❌ Только изображения', 2000); return; }
+    if (file.size > CONFIG.maxImageSize) { showToast(`❌ Файл слишком большой`, 3000); return; }
     try {
-        showToast('⏳ Обработка изображения...', 1500);
-        const compressedImage = await compressImage(file, 800, 800, 0.8);
+        showToast('⏳ Обработка...', 1500);
+        const compressedImage = await compressImage(file, 600, 600, 0.6);
         await sendMessage('', compressedImage);
     } catch (error) {
-        console.error('Ошибка загрузки изображения:', error);
-        showToast('❌ Ошибка при обработке изображения', 3000);
+        console.error(error);
+        showToast('❌ Ошибка обработки', 3000);
     }
 }
 
@@ -1686,7 +1508,6 @@ async function handleFileUpload(file) {
 //  АУДИО-ПЛЕЕР
 // ===================================================================
 const audioPlayers = {};
-
 function createAudioPlayerHTML(msgId, audioSrc, duration, mime) {
     const safeDuration = duration || 0;
     const displayTime = formatAudioTime(safeDuration);
@@ -1709,7 +1530,6 @@ function createAudioPlayerHTML(msgId, audioSrc, duration, mime) {
         </div>
     `;
 }
-
 function initAudioPlayers() {
     document.querySelectorAll('.audio-container').forEach(container => {
         const msgId = container.dataset.audioId;
@@ -1723,10 +1543,8 @@ function initAudioPlayers() {
         audioPlayers[msgId] = { audio, btn, progressFill, timeEl, waveEl, isPlaying: false };
         audio.addEventListener('timeupdate', () => {
             if (audio.duration && isFinite(audio.duration)) {
-                const pct = (audio.currentTime / audio.duration) * 100;
-                progressFill.style.width = pct + '%';
-                const remaining = Math.max(0, audio.duration - audio.currentTime);
-                timeEl.textContent = formatAudioTime(remaining);
+                progressFill.style.width = (audio.currentTime / audio.duration) * 100 + '%';
+                timeEl.textContent = formatAudioTime(Math.max(0, audio.duration - audio.currentTime));
             }
         });
         audio.addEventListener('loadedmetadata', () => {
@@ -1741,13 +1559,10 @@ function initAudioPlayers() {
             audioPlayers[msgId].isPlaying = false;
         });
         audio.addEventListener('error', () => {
-            timeEl.textContent = 'ошибка';
-            btn.textContent = '⚠';
-            btn.disabled = true;
+            timeEl.textContent = 'ошибка'; btn.textContent = '⚠'; btn.disabled = true;
         });
     });
 }
-
 function toggleAudioPlayback(msgId) {
     const player = audioPlayers[msgId];
     if (!player) return;
@@ -1755,38 +1570,30 @@ function toggleAudioPlayback(msgId) {
         if (id !== String(msgId)) {
             const p = audioPlayers[id];
             if (p && p.isPlaying) {
-                p.audio.pause();
-                p.audio.currentTime = 0;
-                p.btn.textContent = '▶';
-                p.progressFill.style.width = '0%';
-                p.waveEl.classList.remove('playing');
-                p.isPlaying = false;
+                p.audio.pause(); p.audio.currentTime = 0;
+                p.btn.textContent = '▶'; p.progressFill.style.width = '0%';
+                p.waveEl.classList.remove('playing'); p.isPlaying = false;
                 if (p.audio.duration) p.timeEl.textContent = formatAudioTime(p.audio.duration);
             }
         }
     });
     if (player.isPlaying) {
-        player.audio.pause();
-        player.btn.textContent = '▶';
-        player.waveEl.classList.remove('playing');
-        player.isPlaying = false;
+        player.audio.pause(); player.btn.textContent = '▶';
+        player.waveEl.classList.remove('playing'); player.isPlaying = false;
     } else {
-        const playPromise = player.audio.play();
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
+        const promise = player.audio.play();
+        if (promise !== undefined) {
+            promise.then(() => {
                 player.btn.textContent = '⏸';
                 player.waveEl.classList.add('playing');
                 player.isPlaying = true;
             }).catch(err => {
-                console.error('Ошибка воспроизведения:', err);
-                showToast('❌ Не удалось воспроизвести аудио', 2000);
-                player.btn.textContent = '▶';
-                player.isPlaying = false;
+                console.error(err); showToast('❌ Не удалось воспроизвести', 2000);
+                player.btn.textContent = '▶'; player.isPlaying = false;
             });
         }
     }
 }
-
 function seekAudio(event, msgId) {
     const player = audioPlayers[msgId];
     if (!player || !player.audio.duration) return;
@@ -1796,7 +1603,7 @@ function seekAudio(event, msgId) {
 }
 
 // ===================================================================
-//  РЕНДЕРИНГ
+//  РЕНДЕРИНГ СООБЩЕНИЙ
 // ===================================================================
 function renderMessages(messages) {
     if (!state.isAuthorized) {
@@ -1824,11 +1631,7 @@ function renderMessages(messages) {
         let content = '';
         if (msg.text) content += `<span class="text">${escapeHtml(msg.text)}</span>`;
         if (msg.image) {
-            content += `
-                <div class="image-container" onclick="openImageModal('${msg.image}')">
-                    <img src="${msg.image}" alt="Изображение" loading="lazy">
-                </div>
-            `;
+            content += `<div class="image-container" onclick="openImageModal('${msg.image}')"><img src="${msg.image}" alt="Изображение" loading="lazy"></div>`;
         }
         if (msg.audio) content += createAudioPlayerHTML(msg.id, msg.audio, msg.audioDuration, msg.audioMime);
         html += `
@@ -1844,11 +1647,8 @@ function renderMessages(messages) {
     });
     messagesInner.innerHTML = html;
     setTimeout(initAudioPlayers, 0);
-
     setTimeout(() => {
-        if (scrollState.isAtBottom) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
+        if (scrollState.isAtBottom) messagesContainer.scrollTop = messagesContainer.scrollHeight;
         updateScrollButton();
     }, 0);
 }
@@ -1857,27 +1657,23 @@ function renderMessages(messages) {
 //  ПОЛЛИНГ
 // ===================================================================
 async function pollUpdates() {
-    if (state.isPolling || !state.token || !state.isAuthorized || !CRYPTO._key) return;
+    if (state.isPolling || !state.token || !state.isAuthorized || !CRYPTO._key || !state.chatFile) return;
     state.isPolling = true;
     try {
-        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, CONFIG.filePath);
+        const path = getChatPath(state.chatFile);
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, path);
         if (!networkState.isOnline) { networkState.isOnline = true; showToast('🌐 Соединение восстановлено', 2000); }
         if (!result.exists) return;
         if (result.sha === state.sha) return;
 
         const content = result.content;
         if (!content || content.v !== CRYPTO.VERSION) return;
-
         if (content.salt !== state.salt) {
             state.salt = content.salt;
             CRYPTO._key = await deriveKey(state.chatPassword, state.salt);
         }
-
         const encMessages = content.messages || [];
-        if (encMessages.length <= state.lastMessageCount) {
-            state.sha = result.sha;
-            return;
-        }
+        if (encMessages.length <= state.lastMessageCount) { state.sha = result.sha; return; }
 
         const newEncMessages = encMessages.slice(state.lastMessageCount);
         const newPlainMessages = [];
@@ -1897,27 +1693,21 @@ async function pollUpdates() {
         }
         state.sha = result.sha;
         state.lastMessageCount = encMessages.length;
-
         scrollState.isAtBottom = wasAtBottom;
         renderMessages(state.messages);
 
-        if (wasAtBottom) {
-            scrollToBottom(true);
-        } else {
-            scrollState.unreadCount += addedCount;
-            updateScrollBadge();
-            updateScrollButton();
-        }
+        if (wasAtBottom) scrollToBottom(true);
+        else { scrollState.unreadCount += addedCount; updateScrollBadge(); updateScrollButton(); }
         if (!hasOwnMessage) soundManager.play('receive');
         else state._lastSentMessageId = null;
     } catch (error) {
         console.error('Polling error:', error);
-        const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch') || error.message.includes('NetworkError');
+        const isNetworkError = !navigator.onLine || error.name === 'AbortError' || error.name === 'TypeError' || error.message.includes('Failed to fetch');
         if (isNetworkError) {
             if (networkState.isOnline) { networkState.isOnline = false; showToast('📵 Соединение потеряно', 2500); }
             state.isPolling = false; return;
         }
-        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла. Токен больше не действителен.');
+        if (error.message.includes('403') || error.message.includes('401')) lockChatUI('Сессия истекла');
     } finally { state.isPolling = false; }
 }
 function startPolling() {
@@ -1926,7 +1716,317 @@ function startPolling() {
 }
 
 // ===================================================================
-//  АВТОРИЗАЦИЯ И ВЫХОД
+//  ЭКРАНЫ
+// ===================================================================
+function showAuthScreen() {
+    state.currentScreen = 'auth';
+    chatsScreen.style.display = 'none';
+    chatScreen.style.display = 'none';
+    authScreen.style.display = 'flex';
+}
+function showChatsScreen() {
+    state.currentScreen = 'chats';
+    authScreen.style.display = 'none';
+    chatScreen.style.display = 'none';
+    chatsScreen.style.display = 'flex';
+    $('chatsUserLabel').textContent = state.username;
+    renderChatsList();
+}
+function showChatScreen() {
+    state.currentScreen = 'chat';
+    authScreen.style.display = 'none';
+    chatsScreen.style.display = 'none';
+    chatScreen.style.display = 'flex';
+}
+
+// ===================================================================
+//  СПИСОК ЧАТОВ
+// ===================================================================
+function renderChatsList() {
+    const container = $('chatsList');
+    if (state.chats.length === 0) {
+        container.innerHTML = `
+            <div class="empty-chats">
+                <div class="emoji">💬</div>
+                <div style="font-size:14px;">У вас пока нет чатов</div>
+                <div style="font-size:12px;margin-top:4px;">Создайте первый или присоединитесь</div>
+            </div>
+        `;
+        return;
+    }
+    container.innerHTML = state.chats.map(c => `
+        <div class="chat-list-item" data-file="${c.file}">
+            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+                <div class="chat-avatar">${(c.name || c.file).charAt(0).toUpperCase()}</div>
+                <div style="min-width:0;flex:1;">
+                    <div class="chat-name">${escapeHtml(c.name || c.file)}</div>
+                    <div class="chat-file">${escapeHtml(c.file)}</div>
+                </div>
+            </div>
+            <button class="chat-delete-btn" data-file="${c.file}" title="Убрать из списка">✕</button>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.chat-list-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target.closest('.chat-delete-btn')) return;
+            openChatFlow(el.dataset.file);
+        });
+    });
+    container.querySelectorAll('.chat-delete-btn').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeChatFromList(el.dataset.file);
+        });
+    });
+}
+
+function removeChatFromList(file) {
+    if (!confirm('Убрать чат из списка? Файл в GitHub останется.')) return;
+    state.chats = state.chats.filter(c => c.file !== file);
+    saveChatsList();
+    delete state.savedPasswords[file];
+    saveSavedPasswords();
+    renderChatsList();
+    showToast('🗑️ Чат убран из списка', 1200);
+}
+
+// ===================================================================
+//  СОЗДАНИЕ ЧАТА
+// ===================================================================
+function openCreateChatModal() {
+    $('newChatNameInput').value = '';
+    $('newChatPasswordInput').value = '';
+    $('chatFilePreview').textContent = 'Файл: —';
+    $('chatFilePreview').style.color = '#888';
+    $('createChatModal').classList.add('active');
+    setTimeout(() => $('newChatNameInput').focus(), 100);
+}
+
+$('newChatNameInput').addEventListener('input', () => {
+    const raw = $('newChatNameInput').value;
+    const file = sanitizeChatFile(raw);
+    $('chatFilePreview').textContent = file ? `Файл: ${CONFIG.chatsPath}${file}.json` : 'Файл: —';
+    $('chatFilePreview').style.color = file ? '#00b894' : '#888';
+});
+
+async function confirmCreateChat() {
+    const rawName = $('newChatNameInput').value.trim();
+    const password = $('newChatPasswordInput').value;
+
+    if (!rawName) { showToast('❌ Введите название', 1500); return; }
+    const file = sanitizeChatFile(rawName);
+    if (!file) { showToast('❌ Имя: латиница/цифры/_/-, мин. 3', 2500); return; }
+    if (!password || password.length < 6) { showToast('❌ Пароль мин. 6 символов', 2000); return; }
+
+    const btn = $('confirmCreateChatBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Проверка...';
+
+    try {
+        const exists = await chatExistsOnGitHub(file);
+        if (exists) {
+            showToast('⚠️ Чат с таким именем уже существует', 3000);
+            $('chatFilePreview').textContent = '⚠️ Файл уже занят — выберите другое имя';
+            $('chatFilePreview').style.color = '#ff6b6b';
+            btn.disabled = false;
+            btn.textContent = 'Создать';
+            return;
+        }
+
+        btn.textContent = '⏳ Создание...';
+        const saltBytes = generateSalt();
+        const salt = arrayBufferToBase64(saltBytes);
+        await deriveKey(password, salt); // предварительная проверка
+
+        const content = { v: CRYPTO.VERSION, salt, messages: [] };
+        await saveFile(state.token, CONFIG.repoOwner, CONFIG.repoName, getChatPath(file), content, null);
+
+        state.chats.push({ name: rawName, file, createdAt: new Date().toISOString() });
+        saveChatsList();
+        state.savedPasswords[file] = password;
+        saveSavedPasswords();
+
+        $('createChatModal').classList.remove('active');
+        await enterChat(file, rawName, password);
+        showToast('✅ Чат создан!', 1500);
+    } catch (e) {
+        console.error('Ошибка создания:', e);
+        showToast('❌ Ошибка: ' + e.message, 3000);
+        soundManager.play('error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Создать';
+    }
+}
+
+// ===================================================================
+//  ВХОД В ЧАТ
+// ===================================================================
+function openChatFlow(file) {
+    const chat = state.chats.find(c => c.file === file);
+    const name = chat ? chat.name : file;
+
+    if (state.savedPasswords[file]) {
+        enterChat(file, name, state.savedPasswords[file]);
+        return;
+    }
+
+    pendingOpenChat = { file, name };
+    $('openChatTitle').textContent = `🔓 Вход в «${name}»`;
+    $('openChatPasswordInput').value = '';
+    $('rememberChatPassword').checked = false;
+    $('openChatModal').classList.add('active');
+    setTimeout(() => $('openChatPasswordInput').focus(), 100);
+}
+
+async function confirmOpenChat() {
+    if (!pendingOpenChat) return;
+    const password = $('openChatPasswordInput').value;
+    if (!password) { showToast('❌ Введите пароль', 1500); return; }
+
+    const remember = $('rememberChatPassword').checked;
+    if (remember) {
+        state.savedPasswords[pendingOpenChat.file] = password;
+        saveSavedPasswords();
+    }
+    $('openChatModal').classList.remove('active');
+    const { file, name } = pendingOpenChat;
+    pendingOpenChat = null;
+    await enterChat(file, name, password);
+}
+
+async function enterChat(file, name, password) {
+    // ─── Сброс предыдущего ───
+    if (window._pollInterval) clearInterval(window._pollInterval);
+    Object.keys(audioPlayers).forEach(id => {
+        try { audioPlayers[id].audio.pause(); } catch (e) {}
+        delete audioPlayers[id];
+    });
+    state.messages = []; state.sha = null; state.lastMessageCount = 0;
+    state._lastSentMessageId = null; CRYPTO._key = null; state.salt = null;
+
+    // ─── Установка нового ───
+    state.chatFile = file;
+    state.chatName = name;
+    state.chatPassword = password;
+
+    chatTitle.textContent = `Чат: ${name}`;
+    userAvatar.textContent = getInitials(state.username);
+
+    showChatScreen();
+    showInputBar();
+
+    try {
+        const path = getChatPath(file);
+        const result = await fetchFile(state.token, CONFIG.repoOwner, CONFIG.repoName, path);
+
+        if (!result.exists) {
+            const saltBytes = generateSalt();
+            state.salt = arrayBufferToBase64(saltBytes);
+            CRYPTO._key = await deriveKey(password, state.salt);
+            state.messages = [];
+            state.sha = null;
+            state.lastMessageCount = 0;
+            renderMessages([]);
+            startPolling();
+            return;
+        }
+
+        const content = result.content;
+        if (!content || content.v !== CRYPTO.VERSION || !content.salt) {
+            throw new Error('Неверный формат файла');
+        }
+
+        state.salt = content.salt;
+        const encMessages = Array.isArray(content.messages) ? content.messages : [];
+        const decrypted = await loadAndDecrypt(content.salt, encMessages);
+
+        if (encMessages.length > 0 && decrypted.length === 0) {
+            throw new Error('Неверный пароль чата');
+        }
+
+        state.messages = decrypted;
+        state.sha = result.sha;
+        state.lastMessageCount = decrypted.length;
+
+        renderMessages(state.messages);
+        scrollToBottom(true);
+        startPolling();
+    } catch (e) {
+        console.error('Ошибка входа в чат:', e);
+        if (e.message.includes('Неверный пароль')) {
+            showToast('🔐 Неверный пароль чата', 3000);
+            soundManager.play('error');
+            delete state.savedPasswords[file];
+            saveSavedPasswords();
+            state.chatFile = null; state.chatName = null;
+            CRYPTO._key = null;
+            showChatsScreen();
+            return;
+        }
+        showToast('❌ Ошибка: ' + e.message, 3000);
+        soundManager.play('error');
+        state.chatFile = null; state.chatName = null;
+        CRYPTO._key = null;
+        showChatsScreen();
+    }
+}
+
+// ===================================================================
+//  ПРИСОЕДИНЕНИЕ К ЧАТУ
+// ===================================================================
+function openJoinChatModal() {
+    $('joinChatFileInput').value = '';
+    $('joinChatNameInput').value = '';
+    $('joinChatPasswordInput').value = '';
+    $('joinChatModal').classList.add('active');
+    setTimeout(() => $('joinChatFileInput').focus(), 100);
+}
+
+async function confirmJoinChat() {
+    const rawFile = $('joinChatFileInput').value.trim();
+    const name = $('joinChatNameInput').value.trim();
+    const password = $('joinChatPasswordInput').value;
+
+    const file = sanitizeChatFile(rawFile);
+    if (!file) { showToast('❌ Неверное имя файла', 2000); return; }
+    if (!name) { showToast('❌ Введите отображаемое имя', 1500); return; }
+    if (!password) { showToast('❌ Введите пароль', 1500); return; }
+
+    const btn = $('confirmJoinChatBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Проверка...';
+
+    try {
+        const exists = await chatExistsOnGitHub(file);
+        if (!exists) {
+            showToast('❌ Чат не найден в репозитории', 3000);
+            btn.disabled = false;
+            btn.textContent = 'Войти';
+            return;
+        }
+
+        if (!state.chats.find(c => c.file === file)) {
+            state.chats.push({ name, file, createdAt: new Date().toISOString() });
+            saveChatsList();
+        }
+        state.savedPasswords[file] = password;
+        saveSavedPasswords();
+
+        $('joinChatModal').classList.remove('active');
+        await enterChat(file, name, password);
+    } catch (e) {
+        console.error('Ошибка присоединения:', e);
+        showToast('❌ Ошибка: ' + e.message, 3000);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+    }
+}
+
+// ===================================================================
+//  АВТОРИЗАЦИЯ
 // ===================================================================
 function setTokenHint(message, type = 'error') {
     tokenHint.textContent = message;
@@ -1940,17 +2040,15 @@ function clearAuthError() { authError.classList.remove('show'); }
 async function login() {
     const lock = isLockedOut();
     if (lock.locked) { setAuthError(`Слишком много попыток. Повторите через ${lock.secondsLeft} сек.`); return; }
+
     const username = usernameInput.value.trim();
     const rawToken = tokenInput.value;
-    const chatPassword = chatPasswordInput.value;
     clearAuthError(); clearTokenHint();
     tokenInput.classList.remove('invalid', 'valid');
 
     if (!username) { setAuthError('Введите имя пользователя'); return; }
-    if (username.length < 2) { setAuthError('Имя должно содержать минимум 2 символа'); return; }
-    if (username.length > 20) { setAuthError('Имя слишком длинное (макс. 20 символов)'); return; }
-    if (!chatPassword) { setAuthError('Введите пароль чата'); return; }
-    if (chatPassword.length < 6) { setAuthError('Пароль чата — минимум 6 символов'); return; }
+    if (username.length < 2) { setAuthError('Имя минимум 2 символа'); return; }
+    if (username.length > 20) { setAuthError('Имя максимум 20 символов'); return; }
 
     const formatCheck = validateTokenFormat(rawToken);
     if (!formatCheck.ok) {
@@ -1959,15 +2057,16 @@ async function login() {
         setAuthError(formatCheck.reason);
         const locked = registerFailedAttempt();
         if (locked) {
-            setAuthError(`Слишком много неудачных попыток. Вход заблокирован на ${TOKEN_SECURITY.lockoutTime / 1000} сек.`);
+            setAuthError(`Много неудач. Блок на ${TOKEN_SECURITY.lockoutTime / 1000} сек.`);
             loginBtn.disabled = true;
             setTimeout(() => { loginBtn.disabled = false; }, TOKEN_SECURITY.lockoutTime);
         }
         soundManager.play('error');
         return;
     }
+
     loginBtn.disabled = true;
-    loginBtn.textContent = '⏳ Проверка доступа...';
+    loginBtn.textContent = '⏳ Проверка...';
     setTokenHint('Проверяем доступ к репозиторию...', 'warning');
 
     const accessCheck = await validateTokenAccess(rawToken.trim());
@@ -1977,7 +2076,7 @@ async function login() {
         setAuthError(accessCheck.message);
         const locked = registerFailedAttempt();
         if (locked) {
-            setAuthError(`Слишком много неудачных попыток. Вход заблокирован на ${TOKEN_SECURITY.lockoutTime / 1000} сек.`);
+            setAuthError(`Много неудач. Блок на ${TOKEN_SECURITY.lockoutTime / 1000} сек.`);
             loginBtn.disabled = true;
             setTimeout(() => { loginBtn.disabled = false; }, TOKEN_SECURITY.lockoutTime);
         }
@@ -1986,50 +2085,29 @@ async function login() {
         soundManager.play('error');
         return;
     }
+
     resetFailedAttempts();
     tokenInput.classList.add('valid');
-    tokenInput.classList.remove('invalid');
     clearTokenHint();
 
     state.username = username;
     state.token = rawToken.trim();
-    state.chatPassword = chatPassword;
     state.isAuthorized = true;
+
+    loadChatsList();
+    loadSavedPasswords();
 
     if (rememberMeInput.checked) {
         localStorage.setItem('chathub_username', username);
         localStorage.setItem('chathub_token', state.token);
-        localStorage.setItem('chathub_password', state.chatPassword);
         localStorage.setItem('chathub_remember', '1');
     } else {
         localStorage.setItem('chathub_username', username);
         localStorage.removeItem('chathub_token');
-        localStorage.removeItem('chathub_password');
         localStorage.removeItem('chathub_remember');
     }
 
-    authScreen.style.display = 'none';
-    chatScreen.style.display = 'flex';
-    userAvatar.textContent = getInitials(username);
-    chatTitle.textContent = `Чат (${username})`;
-
-    messageInput.disabled = false;
-    sendBtn.disabled = false;
-    fileBtn.disabled = false;
-    micBtn.disabled = false;
-
-    showInputBar();
-    await loadMessages(true);
-    if (state.isAuthorized) {
-        startPolling();
-        await checkNetwork();
-    }
-
-    if (localStorage.getItem('chathub_remember') === '1') {
-        rememberMeInput.checked = true;
-        rememberWarning.style.display = 'block';
-    }
-
+    showChatsScreen();
     loginBtn.disabled = false;
     loginBtn.textContent = '🚀 Войти';
 }
@@ -2041,28 +2119,25 @@ function logout() {
         try { audioPlayers[id].audio.pause(); } catch (e) {}
         delete audioPlayers[id];
     });
+
     state.isPolling = false;
     state.isAuthorized = false;
     state._lastSentMessageId = null;
     state.messages = []; state.sha = null; state.lastMessageCount = 0;
-
-    state.chatPassword = '';
-    state.salt = null;
+    state.chatPassword = ''; state.salt = null;
+    state.chatFile = null; state.chatName = null;
     CRYPTO._key = null;
 
     if (localStorage.getItem('chathub_remember') !== '1') {
-        chatPasswordInput.value = '';
+        tokenInput.value = '';
         localStorage.removeItem('chathub_token');
-        localStorage.removeItem('chathub_password');
     } else {
         tokenInput.value = localStorage.getItem('chathub_token') || '';
-        chatPasswordInput.value = localStorage.getItem('chathub_password') || '';
         rememberMeInput.checked = true;
         rememberWarning.style.display = 'block';
     }
 
-    authScreen.style.display = 'flex';
-    chatScreen.style.display = 'none';
+    showAuthScreen();
     clearAuthError(); clearTokenHint();
     tokenInput.classList.remove('valid', 'invalid');
     closeImageModal();
@@ -2077,7 +2152,44 @@ function logout() {
     fileBtn.disabled = false;
     micBtn.disabled = false;
 
-    showToast('👋 Вы вышли из чата', 1500);
+    showToast('👋 Вы вышли', 1500);
+}
+
+function lockChatUI(reason) {
+    state.isAuthorized = false;
+    state.messages = []; state.sha = null; state.lastMessageCount = 0;
+    CRYPTO._key = null;
+    if (window._pollInterval) clearInterval(window._pollInterval);
+    messagesInner.innerHTML = `
+        <div class="message system locked">🔒 ${reason || 'Доступ закрыт'}</div>
+    `;
+    messageInput.disabled = true;
+    sendBtn.disabled = true;
+    fileBtn.disabled = true;
+    micBtn.disabled = true;
+    hideInputBar();
+    floatingKeyboardBtn.classList.remove('show');
+    scrollDownBtn.classList.remove('show');
+    scrollState.unreadCount = 0;
+    updateScrollBadge();
+}
+
+// ===================================================================
+//  ВОЗВРАТ К СПИСКУ ЧАТОВ
+// ===================================================================
+function backToChats() {
+    if (audioRecorder.isRecording) audioRecorder.cancel();
+    if (window._pollInterval) clearInterval(window._pollInterval);
+    Object.keys(audioPlayers).forEach(id => {
+        try { audioPlayers[id].audio.pause(); } catch (e) {}
+        delete audioPlayers[id];
+    });
+    state.messages = []; state.sha = null; state.lastMessageCount = 0;
+    state._lastSentMessageId = null;
+    state.chatFile = null; state.chatName = null;
+    state.chatPassword = ''; state.salt = null;
+    CRYPTO._key = null;
+    showChatsScreen();
 }
 
 // ===================================================================
@@ -2085,8 +2197,7 @@ function logout() {
 // ===================================================================
 loginBtn.addEventListener('click', login);
 usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tokenInput.focus(); });
-tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') chatPasswordInput.focus(); });
-chatPasswordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
+tokenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') login(); });
 
 tokenInput.addEventListener('input', () => {
     const raw = tokenInput.value;
@@ -2096,23 +2207,22 @@ tokenInput.addEventListener('input', () => {
     else { tokenInput.classList.remove('valid'); if (raw.length > 5) tokenInput.classList.add('invalid'); }
 });
 
-tokenInput.addEventListener('paste', (e) => {
-    const pasted = (e.clipboardData || window.clipboardData).getData('text');
-    if (pasted && /[\s\n\r]/.test(pasted.trim()) === false && pasted.trim() !== pasted) {
-        setTimeout(() => { tokenInput.value = tokenInput.value.trim(); showToast('✂️ Лишние пробелы удалены из токена', 1500); }, 0);
-    }
+tokenInput.addEventListener('paste', () => {
+    setTimeout(() => {
+        const trimmed = tokenInput.value.trim();
+        if (trimmed !== tokenInput.value) {
+            tokenInput.value = trimmed;
+            showToast('✂️ Лишние пробелы удалены', 1500);
+        }
+    }, 0);
 });
 
 rememberMeInput.addEventListener('change', () => {
-    if (rememberMeInput.checked) {
-        rememberWarning.style.display = 'block';
-    } else {
-        rememberWarning.style.display = 'none';
-    }
+    rememberWarning.style.display = rememberMeInput.checked ? 'block' : 'none';
 });
 
 sendBtn.addEventListener('click', () => {
-    if (!state.isAuthorized) { showToast('🔒 Требуется авторизация', 1500); return; }
+    if (!state.isAuthorized || !state.chatFile) { showToast('🔒 Требуется вход в чат', 1500); return; }
     const text = messageInput.value;
     if (text.trim()) {
         sendBtn.classList.add('clicked');
@@ -2140,7 +2250,7 @@ messageInput.addEventListener('input', () => {
 });
 
 fileBtn.addEventListener('click', () => {
-    if (!state.isAuthorized) { showToast('🔒 Требуется авторизация', 1500); return; }
+    if (!state.isAuthorized || !state.chatFile) { showToast('🔒 Требуется вход в чат', 1500); return; }
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -2150,31 +2260,24 @@ fileBtn.addEventListener('click', () => {
 
 micBtn.addEventListener('click', handleMicClick);
 exitBtn.addEventListener('click', logout);
+$('backToChatsBtn').addEventListener('click', backToChats);
 
 forgetBtn.addEventListener('click', () => {
-    if (!localStorage.getItem('chathub_remember')) {
-        showToast('ℹ️ Запоминание не включено', 1500);
-        return;
-    }
-    if (confirm('Удалить сохранённые токен и пароль с этого устройства?')) {
-        localStorage.removeItem('chathub_token');
-        localStorage.removeItem('chathub_password');
-        localStorage.removeItem('chathub_remember');
-        rememberMeInput.checked = false;
-        rememberWarning.style.display = 'none';
-        showToast('🔓 Данные удалены с устройства', 1500);
+    if (!state.chatFile) return;
+    if (confirm(`Забыть пароль для чата «${state.chatName}»?`)) {
+        delete state.savedPasswords[state.chatFile];
+        saveSavedPasswords();
+        showToast('🔓 Пароль забыт', 1500);
     }
 });
 
 clearDataBtn.addEventListener('click', () => {
-    if (confirm('Очистить сохранённые данные (токен и пароль)?')) {
+    if (confirm('Очистить сохранённые данные (токен)?')) {
         localStorage.removeItem('chathub_username');
         localStorage.removeItem('chathub_token');
-        localStorage.removeItem('chathub_password');
         localStorage.removeItem('chathub_remember');
         usernameInput.value = '';
         tokenInput.value = '';
-        chatPasswordInput.value = '';
         tokenInput.classList.remove('valid', 'invalid');
         rememberMeInput.checked = false;
         rememberWarning.style.display = 'none';
@@ -2183,18 +2286,38 @@ clearDataBtn.addEventListener('click', () => {
     }
 });
 
+// ─── Экран чатов ───
+$('chatsLogoutBtn').addEventListener('click', logout);
+$('createChatBtn').addEventListener('click', openCreateChatModal);
+$('joinChatBtn').addEventListener('click', openJoinChatModal);
+
+$('cancelCreateChatBtn').addEventListener('click', () => $('createChatModal').classList.remove('active'));
+$('confirmCreateChatBtn').addEventListener('click', confirmCreateChat);
+$('newChatPasswordInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmCreateChat(); });
+
+$('cancelOpenChatBtn').addEventListener('click', () => {
+    $('openChatModal').classList.remove('active');
+    pendingOpenChat = null;
+});
+$('confirmOpenChatBtn').addEventListener('click', confirmOpenChat);
+$('openChatPasswordInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmOpenChat(); });
+
+$('cancelJoinChatBtn').addEventListener('click', () => $('joinChatModal').classList.remove('active'));
+$('confirmJoinChatBtn').addEventListener('click', confirmJoinChat);
+$('joinChatPasswordInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmJoinChat(); });
+
+// ─── Прочее ───
 floatingKeyboardBtn.addEventListener('click', showInputBar);
 closePanelBtn.addEventListener('click', (e) => { e.stopPropagation(); hideInputBar(); });
-
-scrollDownBtn.addEventListener('click', () => {
-    scrollToBottomNow();
-    soundManager.play('click');
-});
+scrollDownBtn.addEventListener('click', () => { scrollToBottomNow(); soundManager.play('click'); });
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        if (audioRecorder.isRecording) { audioRecorder.cancel(); showToast('🎤 Запись отменена', 1200); }
+        if (audioRecorder.isRecording) { audioRecorder.cancel(); showToast('🎤 Отменено', 1200); }
         closeImageModal();
+        $('createChatModal').classList.remove('active');
+        $('openChatModal').classList.remove('active');
+        $('joinChatModal').classList.remove('active');
         if (!inputBar.classList.contains('hidden')) hideInputBar();
     }
 });
@@ -2217,72 +2340,45 @@ async function restoreSession() {
     const savedUsername = localStorage.getItem('chathub_username');
     const remember = localStorage.getItem('chathub_remember') === '1';
     const savedToken = remember ? localStorage.getItem('chathub_token') : null;
-    const savedPassword = remember ? localStorage.getItem('chathub_password') : null;
 
     if (savedUsername) usernameInput.value = savedUsername;
 
-    if (!remember || !savedToken || !savedPassword) {
-        return;
-    }
+    if (!remember || !savedToken) return;
 
     tokenInput.value = savedToken;
-    chatPasswordInput.value = savedPassword;
     rememberMeInput.checked = true;
     rememberWarning.style.display = 'block';
 
     const formatCheck = validateTokenFormat(savedToken);
-    if (!formatCheck.ok) {
-        console.log('Автовход: неверный формат токена');
-        localStorage.removeItem('chathub_token');
-        return;
-    }
+    if (!formatCheck.ok) { localStorage.removeItem('chathub_token'); return; }
 
     try {
         const accessCheck = await validateTokenAccess(savedToken.trim());
         if (!accessCheck.ok) {
-            console.log('Автовход: токен недействителен —', accessCheck.message);
-            setTokenHint('Сохранённый токен недействителен. Введите новый.', 'error');
+            setTokenHint('Сохранённый токен недействителен', 'error');
             return;
         }
-    } catch (e) {
-        console.log('Автовход: ошибка проверки токена');
-        return;
-    }
+    } catch (e) { return; }
 
     state.username = savedUsername;
     state.token = savedToken.trim();
-    state.chatPassword = savedPassword;
     state.isAuthorized = true;
 
-    authScreen.style.display = 'none';
-    chatScreen.style.display = 'flex';
-    userAvatar.textContent = getInitials(savedUsername);
-    chatTitle.textContent = `Чат (${savedUsername})`;
+    loadChatsList();
+    loadSavedPasswords();
+
+    showChatsScreen();
     tokenInput.classList.add('valid');
-
-    messageInput.disabled = false;
-    sendBtn.disabled = false;
-    fileBtn.disabled = false;
-    micBtn.disabled = false;
-
-    showInputBar();
-
-    await loadMessages(true);
-
-    if (state.isAuthorized) {
-        startPolling();
-        await checkNetwork();
-    }
 }
 
 // ===================================================================
 //  ЗАПУСК
 // ===================================================================
 restoreSession();
-messageInput.addEventListener('focus', () => { scrollToBottom(); });
+messageInput.addEventListener('focus', () => { if (state.chatFile) scrollToBottom(); });
 
 setInterval(() => {
-    if (chatScreen.style.display === 'flex' && state.isAuthorized) {
+    if (chatScreen.style.display === 'flex' && state.isAuthorized && state.chatFile) {
         if (inputBar.classList.contains('hidden')) floatingKeyboardBtn.classList.add('show');
         else floatingKeyboardBtn.classList.remove('show');
     } else {
@@ -2290,18 +2386,13 @@ setInterval(() => {
     }
 }, 1000);
 
-console.log('✅ SMS Чат загружен!');
-console.log('📱 Название: SMS Чат');
-console.log('🔐 E2E-шифрование: AES-256-GCM + PBKDF2 (200k итераций)');
-console.log('⌨️ Нажмите на кнопку-клавиатуру, чтобы показать панель ввода');
-console.log('🔊 Звуки: Ctrl+M - вкл/выкл');
-console.log('🖼️ Для отправки фото нажмите кнопку 📎');
-console.log('🎤 Для отправки аудио нажмите 🎤 (макс. 7 сек, нажмите ещё раз для отправки)');
-console.log('⬇️ Кнопка вниз появляется при прокрутке истории, с бейджем непрочитанных');
-console.log('🔒 Только авторизованные пользователи могут читать и писать');
-console.log('🛡️ Токен проверяется: формат + реальные права push в репозиторий');
-console.log('🔑 Пароль чата обязателен — без него chat.json нечитаем');
-console.log('💾 Запоминание пароля — опционально (галочка в форме входа)');
+console.log('✅ SMS Чат (мульти-чат) загружен!');
+console.log('📱 Создание неограниченного количества изолированных чатов');
+console.log('🔐 E2E: AES-256-GCM + PBKDF2 (200k)');
+console.log('📂 Чаты хранятся в ' + CONFIG.chatsPath);
+console.log('🎤 Аудио: макс. 10 сек, 32 kbps');
+console.log('🖼️ Картинки: 600×600, quality 0.6');
+console.log('💬 Лимит: 15 сообщений на чат');
 </script>
 </body>
 </html>
