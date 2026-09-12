@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Захват звука → WAV → MP3 с обрезкой</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e1a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: -apple-system, system-ui, sans-serif;
+            padding: 20px;
+            color: #e8edff;
+        }
+        .app { max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 16px; }
+        .card {
+            background: #141c2b;
+            padding: 28px 24px;
+            border-radius: 40px;
+            border: 1px solid #263040;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+        .card h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7c9aff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .sub { font-size: 0.85rem; opacity: 0.4; margin-bottom: 16px; }
+        .warning {
+            background: #1a1528;
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin: 0 0 14px 0;
+            font-size: 0.85rem;
+            border-left: 4px solid #fbbf24;
+            color: #c8d0f0;
+            line-height: 1.5;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+        }
+        .warning .icon { font-size: 1.6rem; flex-shrink: 0; }
+        .warning strong { color: #fcd34d; }
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #0f1625;
+            padding: 10px 18px;
+            border-radius: 40px;
+            border: 1px solid #253040;
+            margin-bottom: 12px;
+        }
+        .dot {
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #4a5568; transition: 0.3s; flex-shrink: 0;
+        }
+        .dot.recording { background: #48bb78; box-shadow: 0 0 20px #48bb7855; animation: pulse 1s infinite; }
+        .dot.error { background: #fc8181; box-shadow: 0 0 20px #fc818155; }
+        .dot.processing { background: #f6ad55; box-shadow: 0 0 20px #f6ad5555; animation: pulse 0.6s infinite; }
+        .dot.done { background: #a78bfa; box-shadow: 0 0 20px #a78bfa55; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
+        .status-text { font-size: 0.95rem; color: #bcc6e3; flex: 1; text-align: left; }
+        .timer { font-family: 'SF Mono', monospace; font-size: 1.2rem; font-weight: 600; color: #7c9aff; }
+        .meter-wrap {
+            background: #0b111f; height: 6px; border-radius: 20px;
+            margin: 0 0 16px 0; overflow: hidden;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+        }
+        .meter-bar {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6);
+            border-radius: 20px; transition: width 0.06s ease;
+        }
+        .btn-main {
+            width: 100%; padding: 18px; border: none; border-radius: 60px;
+            font-size: 1.2rem; font-weight: 700; color: #fff; cursor: pointer;
+            transition: 0.1s linear; position: relative;
+            background: #3b5bdb; border: 1px solid #5f7dfa;
+            box-shadow: 0 6px 0 #1f2e7a; letter-spacing: 0.5px;
+        }
+        .btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #1f2e7a; }
+        .btn-main:disabled {
+            opacity: 0.4; transform: translateY(4px);
+            box-shadow: 0 2px 0 #1f2e7a; pointer-events: none;
+        }
+        .btn-main.recording { background: #b53b4a; border-color: #d95a6a; box-shadow: 0 6px 0 #6e1f2b; }
+        .btn-main.recording:active { transform: translateY(4px); box-shadow: 0 2px 0 #6e1f2b; }
+        .btn-main.processing { background: #4a5a7a; border-color: #5f7a9a; box-shadow: 0 6px 0 #2a3a5a; }
+        .btn-main.done { background: #2d8f5c; border-color: #4aad7a; box-shadow: 0 6px 0 #1a5a3a; }
+        .settings-row {
+            display: flex; align-items: center; justify-content: center;
+            gap: 12px; flex-wrap: wrap; background: #0f1625;
+            padding: 10px 16px; border-radius: 40px;
+            border: 1px solid #1f2a4a; margin-top: 12px;
+        }
+        .settings-row label {
+            font-size: 0.8rem; color: #8a9abb;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .settings-row input[type="range"] {
+            width: 80px; accent-color: #7c9aff; background: #1f2840;
+            height: 4px; border-radius: 10px; outline: none;
+        }
+        .settings-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 14px; height: 14px; border-radius: 50%;
+            background: #7c9aff; cursor: pointer;
+        }
+        .settings-row .value {
+            color: #7c9aff; font-weight: 600; min-width: 30px;
+            text-align: center; font-size: 0.8rem;
+        }
+        .settings-row .toggle-btn {
+            background: #2a3550; border: 1px solid #4a5a7a;
+            color: #b0c4f0; padding: 4px 14px; border-radius: 30px;
+            cursor: pointer; font-size: 0.7rem; font-weight: 600;
+            transition: 0.15s;
+        }
+        .settings-row .toggle-btn:hover { background: #36466b; }
+        .settings-row .toggle-btn.active {
+            background: #1f2a4a; border-color: #7c9aff; color: #7c9aff;
+        }
+        .settings-row .toggle-btn.inactive {
+            background: #2a1a1a; border-color: #6a4a4a; color: #b08080;
+        }
+        .status-msg {
+            font-size: 0.85rem; color: #8a9abb;
+            margin-top: 10px; min-height: 24px;
+        }
+        .status-msg.success { color: #a1d6a8; }
+        .status-msg.error { color: #f7a9a9; }
+        .footer {
+            font-size: 0.65rem; color: #4a5a7a; text-align: center;
+            margin-top: 4px; border-top: 1px solid #1f2840; padding-top: 12px;
+        }
+        .save-area {
+            margin-top: 12px; display: none; gap: 10px; flex-wrap: wrap;
+        }
+        .save-area.show { display: flex; }
+        .save-area .btn-save {
+            flex: 1; padding: 12px 18px; border: none; border-radius: 40px;
+            font-weight: 600; color: #fff; background: #2d8f5c;
+            border: 1px solid #4aad7a; cursor: pointer;
+            box-shadow: 0 4px 0 #1a5a3a; transition: 0.06s linear;
+            font-size: 0.9rem; min-width: 100px;
+        }
+        .save-area .btn-save:active { transform: translateY(4px); box-shadow: 0 0px 0 #1a5a3a; }
+        .save-area .btn-save:disabled {
+            opacity: 0.4; transform: translateY(2px);
+            box-shadow: 0 2px 0 #1a5a3a; pointer-events: none;
+        }
+        .save-area .btn-reset {
+            padding: 12px 18px; border: 1px solid #495478;
+            background: transparent; color: #a8b4d4;
+            border-radius: 40px; cursor: pointer;
+            font-weight: 450; font-size: 0.9rem;
+        }
+        .save-area .btn-reset:hover { background: #2d3650; border-color: #6b7da3; color: #d6def5; }
+        .file-name-display {
+            font-size: 0.75rem; color: #7a88b0; word-break: break-all;
+            padding: 6px 12px; background: #0f1625;
+            border-radius: 30px; border: 1px solid #1f2a4a;
+            flex: 1; min-width: 100px;
+        }
+        .file-name-display .highlight { color: #7c9aff; font-weight: 600; }
+        .trim-info {
+            font-size: 0.7rem; color: #6a7a9a; margin-top: 6px; display: none;
+            line-height: 1.6;
+        }
+        .trim-info.show { display: block; }
+        .trim-info .highlight { color: #48bb78; font-weight: 600; }
+        .trim-info .start { color: #7c9aff; }
+        .progress-bar {
+            width: 100%; height: 4px; background: #0b111f;
+            border-radius: 20px; margin-top: 10px; overflow: hidden;
+            display: none;
+        }
+        .progress-bar.show { display: block; }
+        .progress-bar-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #4f7aff, #a78bfa);
+            transition: width 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="card">
+        <h1>🎧 Захват звука</h1>
+        <div class="sub">PCM → обрезка → MP3 320 kbps</div>
+
+        <div class="warning">
+            <span class="icon">🔊</span>
+            <div><strong>Важно!</strong> Установите громкость в захватываемой вкладке на <strong>максимум</strong></div>
+        </div>
+
+        <div class="status-row">
+            <span class="dot" id="statusDot"></span>
+            <span class="status-text" id="statusText">Готов</span>
+            <span class="timer" id="timerDisplay">00:00</span>
+        </div>
+
+        <div class="meter-wrap"><div class="meter-bar" id="meterBar"></div></div>
+
+        <button class="btn-main" id="mainBtn">▶ Захват</button>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+
+        <div class="status-msg" id="statusMsg">Нажмите «Захват» и выберите вкладку с звуком</div>
+        <div class="trim-info" id="trimInfo">
+            ✂️ Обрезано в начале: <span class="start" id="trimStartInfo">0.00</span> сек<br>
+            ✂️ Обрезано в конце: <span class="highlight" id="trimEndInfo">0.00</span> сек
+        </div>
+
+        <div class="settings-row">
+            <label>
+                ⏹ Авто-стоп:
+                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="0.6">
+                <span class="value" id="thresholdValue">0.6</span>с
+            </label>
+            <button class="toggle-btn active" id="autoStopToggle">Вкл</button>
+        </div>
+
+        <div class="save-area" id="saveArea">
+            <span class="file-name-display">📁 <span class="highlight" id="finalFileName">audio.mp3</span></span>
+            <button class="btn-save" id="saveBtn">💾 Сохранить</button>
+            <button class="btn-reset" id="resetBtn">⟳</button>
+        </div>
+
+        <div class="footer">PCM 48 кГц / стерео · обрезка тишины · MP3 320 kbps · всё локально</div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        // ====== ЭЛЕМЕНТЫ ======
+        const mainBtn = document.getElementById('mainBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const statusMsg = document.getElementById('statusMsg');
+        const meterBar = document.getElementById('meterBar');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const silenceThreshold = document.getElementById('silenceThreshold');
+        const thresholdValue = document.getElementById('thresholdValue');
+        const autoStopToggle = document.getElementById('autoStopToggle');
+        const saveArea = document.getElementById('saveArea');
+        const finalFileName = document.getElementById('finalFileName');
+        const saveBtn = document.getElementById('saveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const trimInfo = document.getElementById('trimInfo');
+        const trimStartInfo = document.getElementById('trimStartInfo');
+        const trimEndInfo = document.getElementById('trimEndInfo');
+        const progressBar = document.getElementById('progressBar');
+        const progressBarFill = document.getElementById('progressBarFill');
+
+        // ====== СОСТОЯНИЕ ======
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationId = null;
+        let mediaStream = null;
+        let source = null;
+        let workletNode = null;
+        let isRecording = false;
+        let startTime = 0;
+        let timerInterval = null;
+        let autoStopEnabled = true;
+        let silenceStartTime = null;
+        let isAutoStopping = false;
+        let isManualStop = false;
+        let isAutoSaveDone = false;
+
+        // PCM буфер в памяти
+        let pcmChunksL = [];     // массив Float32Array (левый канал)
+        let pcmChunksR = [];     // массив Float32Array (правый канал), если стерео
+        let pcmChannels = 2;
+        let pcmSampleRate = 48000;
+        let pcmTotalFrames = 0;
+        let pcmMemoryBytes = 0;
+
+        // Финальные данные
+        let convertedBlob = null;
+        let convertedFileName = '';
+
+        // Worklet URL
+        let workletUrl = null;
+
+        // ====== ЗВУКОВЫЕ СИГНАЛЫ ======
+        function playBeep(frequency = 880, duration = 200, type = 'sine') {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = ctx.createOscillator();
+                const gain = ctx.createGain();
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+                oscillator.connect(gain);
+                gain.connect(ctx.destination);
+                oscillator.start();
+                oscillator.stop(ctx.currentTime + duration / 1000);
+                setTimeout(() => ctx.close(), duration + 100);
+            } catch (e) {}
+        }
+
+        function playEndSound() {
+            playBeep(523, 150);
+            setTimeout(() => playBeep(659, 150), 180);
+            setTimeout(() => playBeep(784, 250), 360);
+        }
+
+        function playSaveSound() {
+            playBeep(880, 100);
+            setTimeout(() => playBeep(1100, 150), 120);
+        }
+
+        // ====== ВСПОМОГАТЕЛЬНЫЕ ======
+        function setStatus(text, state, msg = '') {
+            statusText.textContent = text;
+            statusDot.className = 'dot';
+            if (state === 'recording') statusDot.classList.add('recording');
+            else if (state === 'error') statusDot.classList.add('error');
+            else if (state === 'processing') statusDot.classList.add('processing');
+            else if (state === 'done') statusDot.classList.add('done');
+
+            if (msg) statusMsg.textContent = msg;
+            statusMsg.className = 'status-msg';
+            if (state === 'error') statusMsg.classList.add('error');
+            else if (state === 'done') statusMsg.classList.add('success');
+        }
+
+        function formatTime(seconds) {
+            if (!seconds || seconds < 0) return '0:00';
+            const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+            const s = String(Math.floor(seconds % 60)).padStart(2, '0');
+            return m + ':' + s;
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' Б';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+            return (bytes / 1024 / 1024).toFixed(1) + ' МБ';
+        }
+
+        function updateMainBtn(text, state) {
+            mainBtn.textContent = text;
+            mainBtn.className = 'btn-main';
+            if (state === 'recording') mainBtn.classList.add('recording');
+            else if (state === 'processing') mainBtn.classList.add('processing');
+            else if (state === 'done') mainBtn.classList.add('done');
+        }
+
+        function setProgress(percent) {
+            if (percent <= 0) {
+                progressBar.classList.remove('show');
+                progressBarFill.style.width = '0%';
+            } else {
+                progressBar.classList.add('show');
+                progressBarFill.style.width = Math.min(100, percent) + '%';
+            }
+        }
+
+        function loadLameJs() {
+            return new Promise((resolve, reject) => {
+                if (typeof lamejs !== 'undefined') { resolve(); return; }
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error('Не удалось загрузить lamejs'));
+                document.head.appendChild(script);
+            });
+        }
+
+        // ====== WORKLET ======
+        const workletCode = `
+        class PCMCollector extends AudioWorkletProcessor {
+            constructor() {
+                super();
+                this._running = true;
+                this.port.onmessage = (e) => {
+                    if (e.data === 'stop') this._running = false;
+                };
+            }
+            process(inputs) {
+                if (!this._running) return false;
+                const input = inputs[0];
+                if (!input || input.length === 0 || input[0].length === 0) return true;
+                const chans = [];
+                for (let ch = 0; ch < input.length; ch++) {
+                    chans.push(new Float32Array(input[ch]));
+                }
+                this.port.postMessage({ channels: chans }, chans.map(a => a.buffer));
+                return true;
+            }
+        }
+        registerProcessor('pcm-collector', PCMCollector);
+        `;
+
+        async function createWorkletModule(ctx) {
+            const blob = new Blob([workletCode], { type: 'application/javascript' });
+            workletUrl = URL.createObjectURL(blob);
+            await ctx.audioWorklet.addModule(workletUrl);
+        }
+
+        function onPCMChunk(channels) {
+            if (!channels || channels.length === 0) return;
+            const left = channels[0];
+            const right = channels.length > 1 ? channels[1] : null;
+            const frames = left.length;
+
+            pcmChunksL.push(left);
+            if (right) pcmChunksR.push(right);
+            pcmTotalFrames += frames;
+            pcmMemoryBytes += frames * 4 * (right ? 2 : 1);
+        }
+
+        // ====== АНАЛИЗ ТИШИНЫ ======
+        function findSoundBounds(left, right, threshold = 0.005) {
+            // Возвращает { startFrame, endFrame } в общем массиве фреймов
+            const total = left.length;
+            let startFrame = -1;
+            let endFrame = -1;
+
+            // Ищем первый звук
+            for (let i = 0; i < total; i++) {
+                if (Math.abs(left[i]) > threshold || (right && Math.abs(right[i]) > threshold)) {
+                    startFrame = i;
+                    break;
+                }
+            }
+            if (startFrame === -1) return { startFrame: 0, endFrame: total };
+
+            // Ищем последний звук
+            for (let i = total - 1; i >= startFrame; i--) {
+                if (Math.abs(left[i]) > threshold || (right && Math.abs(right[i]) > threshold)) {
+                    endFrame = i;
+                    break;
+                }
+            }
+            if (endFrame === -1) endFrame = total - 1;
+
+            return { startFrame, endFrame };
+        }
+
+        // ====== СБОРКА PCM БУФЕРА ======
+        function concatFloat32(chunks, totalFrames) {
+            if (chunks.length === 1) return chunks[0];
+            const out = new Float32Array(totalFrames);
+            let offset = 0;
+            for (const c of chunks) {
+                out.set(c, offset);
+                offset += c.length;
+            }
+            return out;
+        }
+
+        // ====== MP3 ENCODE ======
+        function encodeToMp3(leftF32, rightF32, sampleRate, channels, bitrate, onProgress) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const frames = leftF32.length;
+                    const encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
+                    const mp3Chunks = [];
+                    const blockSize = 1152;
+                    let idx = 0;
+
+                    while (idx < frames) {
+                        const chunkSize = Math.min(blockSize, frames - idx);
+                        const leftI16 = new Int16Array(chunkSize);
+                        for (let i = 0; i < chunkSize; i++) {
+                            const s = Math.max(-1, Math.min(1, leftF32[idx + i]));
+                            leftI16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                        }
+                        let rightI16 = null;
+                        if (channels > 1 && rightF32) {
+                            rightI16 = new Int16Array(chunkSize);
+                            for (let i = 0; i < chunkSize; i++) {
+                                const s = Math.max(-1, Math.min(1, rightF32[idx + i]));
+                                rightI16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                            }
+                        }
+                        let mp3buf;
+                        if (rightI16) mp3buf = encoder.encodeBuffer(leftI16, rightI16);
+                        else mp3buf = encoder.encodeBuffer(leftI16);
+                        if (mp3buf.length > 0) mp3Chunks.push(new Uint8Array(mp3buf));
+                        idx += chunkSize;
+
+                        if (onProgress && (idx % (blockSize * 50) === 0)) {
+                            onProgress((idx / frames) * 100);
+                        }
+                    }
+
+                    const tail = encoder.flush();
+                    if (tail.length > 0) mp3Chunks.push(new Uint8Array(tail));
+
+                    const totalLen = mp3Chunks.reduce((acc, a) => acc + a.length, 0);
+                    const result = new Uint8Array(totalLen);
+                    let offset = 0;
+                    for (const part of mp3Chunks) { result.set(part, offset); offset += part.length; }
+                    resolve(new Blob([result], { type: 'audio/mpeg' }));
+                } catch (e) { reject(e); }
+            });
+        }
+
+        // ====== ЗАХВАТ ======
+        function resetCaptureUI() {
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            meterBar.style.width = '0%';
+            timerDisplay.textContent = '00:00';
+            silenceStartTime = null;
+            isAutoStopping = false;
+            isManualStop = false;
+            isAutoSaveDone = false;
+            trimInfo.classList.remove('show');
+            setProgress(0);
+
+            if (workletNode) {
+                try { workletNode.port.postMessage('stop'); } catch (_) {}
+                try { workletNode.disconnect(); } catch (_) {}
+                workletNode = null;
+            }
+            if (source) { try { source.disconnect(); } catch (_) {} source = null; }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+            audioContext = null;
+            analyser = null;
+            dataArray = null;
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(t => t.stop());
+                mediaStream = null;
+            }
+            isRecording = false;
+            updateMainBtn('▶ Захват', '');
+            setStatus('Готов', '', 'Нажмите «Захват» и выберите вкладку с звуком');
+            mainBtn.disabled = false;
+        }
+
+        function updateMeter() {
+            if (!analyser || !isRecording) {
+                if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+                return;
+            }
+            analyser.getByteTimeDomainData(dataArray);
+            let max = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const val = (dataArray[i] - 128) / 128;
+                const abs = Math.abs(val);
+                if (abs > max) max = abs;
+            }
+            const percent = Math.min(max * 100, 100);
+            meterBar.style.width = percent + '%';
+
+            if (isRecording && !isAutoStopping && autoStopEnabled && !isManualStop) {
+                const threshold = parseFloat(silenceThreshold.value);
+                const isSilent = percent < 1.5;
+
+                if (isSilent) {
+                    if (silenceStartTime === null) silenceStartTime = Date.now();
+                    const silenceDuration = (Date.now() - silenceStartTime) / 1000;
+                    if (silenceDuration >= threshold) {
+                        isAutoStopping = true;
+                        setStatus('Авто-стоп...', 'processing', '⏹ Запись остановлена (тишина ' + threshold + 'с)');
+                        stopCapture(false);
+                        return;
+                    }
+                } else {
+                    silenceStartTime = null;
+                }
+            }
+
+            animationId = requestAnimationFrame(updateMeter);
+        }
+
+        async function startCapture() {
+            if (isRecording) return;
+            try {
+                mediaStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        sampleRate: 48000,
+                        channelCount: 2,
+                    }
+                });
+                const audioTracks = mediaStream.getAudioTracks();
+                if (audioTracks.length === 0) throw new Error('Нет аудио-дорожки');
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+                if (audioContext.state === 'suspended') await audioContext.resume();
+                pcmSampleRate = audioContext.sampleRate;
+                const settings = audioTracks[0].getSettings();
+                pcmChannels = Math.min(2, settings.channelCount || 2);
+
+                // Сброс PCM буфера
+                pcmChunksL = [];
+                pcmChunksR = [];
+                pcmTotalFrames = 0;
+                pcmMemoryBytes = 0;
+
+                // Загрузка lamejs заранее
+                if (typeof lamejs === 'undefined') {
+                    setStatus('Подготовка...', 'processing', '⏳ Загрузка аудиокодека...');
+                    await loadLameJs();
+                }
+
+                // Worklet
+                await createWorkletModule(audioContext);
+                workletNode = new AudioWorkletNode(audioContext, 'pcm-collector', {
+                    numberOfInputs: 1,
+                    numberOfOutputs: 0,
+                    channelCount: pcmChannels,
+                    channelCountMode: 'explicit',
+                    channelInterpretation: 'speakers'
+                });
+                workletNode.port.onmessage = (e) => {
+                    if (e.data && e.data.channels) onPCMChunk(e.data.channels);
+                };
+
+                source = audioContext.createMediaStreamSource(mediaStream);
+                source.connect(workletNode);
+
+                // Анализатор для метра
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                source.connect(analyser);
+
+                isRecording = true;
+                isManualStop = false;
+                silenceStartTime = null;
+                isAutoStopping = false;
+                isAutoSaveDone = false;
+                startTime = Date.now();
+                timerInterval = setInterval(() => {
+                    if (!isRecording) return;
+                    timerDisplay.textContent = formatTime((Date.now() - startTime) / 1000);
+                }, 500);
+
+                updateMainBtn('⏹ Остановить', 'recording');
+                setStatus('Запись...', 'recording', '⏺ PCM захват в память');
+                mainBtn.disabled = false;
+
+                if (animationId) cancelAnimationFrame(animationId);
+                updateMeter();
+
+                mediaStream.getVideoTracks()[0]?.addEventListener('ended', () => {
+                    if (isRecording) {
+                        isManualStop = true;
+                        stopCapture(true);
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                let msg = err.message || 'Ошибка захвата';
+                if (msg.includes('Permission') || msg.includes('denied')) msg = '❌ Разрешение отклонено';
+                else if (msg.includes('not supported')) msg = '❌ Браузер не поддерживает захват';
+                setStatus('Ошибка', 'error', msg);
+                updateMainBtn('▶ Захват', '');
+                mainBtn.disabled = false;
+                if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            }
+        }
+
+        function stopCapture(isManual = true) {
+            if (!isRecording) return;
+            isRecording = false;
+            isManualStop = isManual;
+
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+
+            if (workletNode) {
+                try { workletNode.port.postMessage('stop'); } catch (_) {}
+            }
+            if (source) { try { source.disconnect(); } catch (_) {} source = null; }
+            if (workletNode) { try { workletNode.disconnect(); } catch (_) {} workletNode = null; }
+            if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+            audioContext = null;
+            analyser = null;
+            dataArray = null;
+            meterBar.style.width = '0%';
+
+            updateMainBtn('⏳ Обработка...', 'processing');
+            setStatus('Обработка...', 'processing', '🔍 Обрезка тишины и кодирование MP3...');
+            mainBtn.disabled = true;
+
+            // Даём worklet'у время доставить последние чанки
+            setTimeout(() => {
+                processRecordedPCM(isManual);
+            }, 150);
+        }
+
+        // ====== ОБРАБОТКА ======
+        async function processRecordedPCM(isManual) {
+            try {
+                if (pcmTotalFrames === 0) {
+                    setStatus('Ошибка', 'error', '❌ Не записано ни одного сэмпла');
+                    updateMainBtn('▶ Захват', '');
+                    mainBtn.disabled = false;
+                    setProgress(0);
+                    return;
+                }
+
+                setStatus('Обработка...', 'processing', '🔗 Сборка PCM...');
+                setProgress(5);
+                await new Promise(r => setTimeout(r, 30));
+
+                // Собираем единый Float32Array
+                const leftAll = concatFloat32(pcmChunksL, pcmTotalFrames);
+                let rightAll = null;
+                if (pcmChannels > 1 && pcmChunksR.length > 0) {
+                    rightAll = concatFloat32(pcmChunksR, pcmTotalFrames);
+                }
+                pcmChunksL = [];
+                pcmChunksR = [];
+
+                // Анализ границ звука
+                setStatus('Обработка...', 'processing', '🔍 Поиск границ звука...');
+                setProgress(15);
+                await new Promise(r => setTimeout(r, 30));
+
+                const { startFrame, endFrame } = findSoundBounds(leftAll, rightAll, 0.005);
+                const startSec = startFrame / pcmSampleRate;
+                const endSec = endFrame / pcmSampleRate;
+                const origDuration = pcmTotalFrames / pcmSampleRate;
+
+                // Обрезаем
+                const trimmedFrames = endFrame - startFrame + 1;
+                const trimmedLeft = leftAll.subarray(startFrame, startFrame + trimmedFrames);
+                const trimmedRight = rightAll ? rightAll.subarray(startFrame, startFrame + trimmedFrames) : null;
+
+                const startSaved = startSec;
+                const endSaved = origDuration - endSec;
+
+                if (startSaved > 0.05 || endSaved > 0.05) {
+                    trimInfo.classList.add('show');
+                    trimStartInfo.textContent = startSaved.toFixed(2);
+                    trimEndInfo.textContent = endSaved.toFixed(2);
+                }
+
+                // Кодируем MP3
+                setStatus('Обработка...', 'processing', '🎵 Кодирование MP3 (320 kbps)...');
+                setProgress(20);
+                await new Promise(r => setTimeout(r, 30));
+
+                const bitrate = 320;
+                const blob = await encodeToMp3(
+                    trimmedLeft,
+                    trimmedRight,
+                    pcmSampleRate,
+                    pcmChannels,
+                    bitrate,
+                    (p) => setProgress(20 + p * 0.75)
+                );
+
+                setProgress(98);
+                await new Promise(r => setTimeout(r, 50));
+
+                convertedBlob = blob;
+                const baseName = 'audio_' + new Date().toISOString().slice(0,19).replace(/[:-]/g, '');
+                convertedFileName = baseName + '.mp3';
+                finalFileName.textContent = convertedFileName;
+
+                saveArea.classList.add('show');
+                updateMainBtn('✅ Готово!', 'done');
+                setProgress(100);
+
+                const realDuration = trimmedFrames / pcmSampleRate;
+                setStatus('Готово!', 'done',
+                    '✅ MP3 ' + realDuration.toFixed(1) + 'с · ' + formatBytes(blob.size) +
+                    ' · обрезано ' + (startSaved + endSaved).toFixed(2) + 'с');
+
+                setTimeout(() => setProgress(0), 1500);
+                playEndSound();
+
+                if (!isAutoSaveDone) {
+                    isAutoSaveDone = true;
+                    setTimeout(() => { autoSaveWithName(); }, 500);
+                }
+
+                setTimeout(() => {
+                    if (!isRecording) {
+                        mainBtn.textContent = '▶ Захват';
+                        mainBtn.className = 'btn-main';
+                    }
+                }, 3000);
+
+            } catch (err) {
+                console.error(err);
+                setStatus('Ошибка', 'error', '❌ Ошибка: ' + err.message);
+                updateMainBtn('▶ Захват', '');
+                mainBtn.disabled = false;
+                setProgress(0);
+            }
+        }
+
+        // ====== АВТОСОХРАНЕНИЕ ======
+        function autoSaveWithName() {
+            if (!convertedBlob) return;
+            const defaultName = convertedFileName || 'audio.mp3';
+            const userFileName = prompt('💾 Введите название для MP3 файла:', defaultName.replace(/\.mp3$/, ''));
+
+            let finalName;
+            if (userFileName === null) {
+                finalName = defaultName;
+            } else {
+                finalName = userFileName.trim() || defaultName;
+                if (!finalName.toLowerCase().endsWith('.mp3')) finalName += '.mp3';
+            }
+
+            const url = URL.createObjectURL(convertedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            playSaveSound();
+            setStatus('✅ Сохранено!', 'done', '✅ Файл сохранён: ' + finalName);
+        }
+
+        function saveFile() {
+            if (!convertedBlob) {
+                setStatus('Ошибка', 'error', '❌ Нет файла для сохранения');
+                return;
+            }
+            const defaultName = convertedFileName || 'audio.mp3';
+            const userFileName = prompt('💾 Введите название для MP3 файла:', defaultName.replace(/\.mp3$/, ''));
+            if (userFileName === null) return;
+            let finalName = userFileName.trim() || defaultName;
+            if (!finalName.toLowerCase().endsWith('.mp3')) finalName += '.mp3';
+
+            const url = URL.createObjectURL(convertedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            playSaveSound();
+            setStatus('✅ Сохранено!', 'done', '✅ Файл сохранён: ' + finalName);
+        }
+
+        // ====== СБРОС ======
+        function resetAll() {
+            resetCaptureUI();
+            saveArea.classList.remove('show');
+            trimInfo.classList.remove('show');
+            setProgress(0);
+            convertedBlob = null;
+            convertedFileName = '';
+            pcmChunksL = [];
+            pcmChunksR = [];
+            pcmTotalFrames = 0;
+            pcmMemoryBytes = 0;
+            isAutoSaveDone = false;
+            if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+            setStatus('Готов', '', 'Нажмите «Захват» и выберите вкладку с звуком');
+            updateMainBtn('▶ Захват', '');
+            mainBtn.disabled = false;
+        }
+
+        // ====== НАСТРОЙКИ ======
+        silenceThreshold.addEventListener('input', () => {
+            thresholdValue.textContent = parseFloat(silenceThreshold.value).toFixed(1);
+        });
+
+        autoStopToggle.addEventListener('click', () => {
+            autoStopEnabled = !autoStopEnabled;
+            autoStopToggle.textContent = autoStopEnabled ? 'Вкл' : 'Выкл';
+            autoStopToggle.className = 'toggle-btn' + (autoStopEnabled ? ' active' : ' inactive');
+        });
+
+        // ====== СОБЫТИЯ ======
+        mainBtn.addEventListener('click', () => {
+            if (isRecording) {
+                isManualStop = true;
+                stopCapture(true);
+            } else {
+                startCapture();
+            }
+        });
+
+        saveBtn.addEventListener('click', saveFile);
+        resetBtn.addEventListener('click', resetAll);
+
+        // ====== ПЛЕЕР ======
+        let audioPlayer = null;
+        statusMsg.addEventListener('dblclick', () => {
+            if (!convertedBlob) return;
+            if (audioPlayer) { audioPlayer.pause(); audioPlayer = null; }
+            const url = URL.createObjectURL(convertedBlob);
+            audioPlayer = new Audio(url);
+            audioPlayer.controls = true;
+            audioPlayer.style.width = '100%';
+            audioPlayer.style.marginTop = '8px';
+            audioPlayer.play();
+            audioPlayer.onended = () => URL.revokeObjectURL(url);
+            document.querySelector('.card').appendChild(audioPlayer);
+        });
+
+        resetAll();
+    })();
+</script>
+</body>
+</html>
