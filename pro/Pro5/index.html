@@ -803,17 +803,17 @@ function doSaveCode(format){
     let fileName = fileNameInput ? fileNameInput.value.trim() : 'code';
     if(!fileName) fileName = 'code';
 
+    // Убираем возможное расширение из имени
     fileName = fileName.replace(/\.(txt|html|json)$/i, '');
 
     const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
     if(modal) modal.remove();
 
-    let blob, fullFilename, mimeType;
+    let blob, fullFilename;
 
     if(format === 'txt'){
         blob = new Blob([code], {type:'text/plain;charset=utf-8'});
         fullFilename = fileName + '.txt';
-        mimeType = 'text/plain';
     } else if(format === 'json'){
         let jsonContent = code.trim();
         try {
@@ -824,7 +824,6 @@ function doSaveCode(format){
         }
         blob = new Blob([jsonContent], {type:'application/json;charset=utf-8'});
         fullFilename = fileName + '.json';
-        mimeType = 'application/json';
     } else {
         let htmlContent = code.trim();
         if(!htmlContent.toLowerCase().startsWith('<!doctype') && !htmlContent.toLowerCase().startsWith('<html')){
@@ -832,23 +831,9 @@ function doSaveCode(format){
         }
         blob = new Blob([htmlContent], {type:'text/html;charset=utf-8'});
         fullFilename = fileName + '.html';
-        mimeType = 'text/html';
     }
 
-    const file = new File([blob], fullFilename, {type: mimeType, lastModified: Date.now()});
-
-    if(navigator.share){
-        const shareData = { files: [file] };
-        if(navigator.canShare && navigator.canShare(shareData)){
-            navigator.share(shareData).catch((err) => {
-                if(err.name !== 'AbortError'){
-                    console.error('Ошибка отправки:', err);
-                    fallbackDownload(blob, fullFilename);
-                }
-            });
-            return;
-        }
-    }
+    // Всегда скачиваем на устройство, без меню "Поделиться"
     fallbackDownload(blob, fullFilename);
 }
 
