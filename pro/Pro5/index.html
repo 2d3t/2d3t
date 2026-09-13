@@ -803,7 +803,6 @@ function doSaveCode(format){
     let fileName = fileNameInput ? fileNameInput.value.trim() : 'code';
     if(!fileName) fileName = 'code';
 
-    // Убираем возможное расширение из имени
     fileName = fileName.replace(/\.(txt|html|json)$/i, '');
 
     const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
@@ -819,9 +818,7 @@ function doSaveCode(format){
         try {
             const parsed = JSON.parse(jsonContent);
             jsonContent = JSON.stringify(parsed, null, 2);
-        } catch(e) {
-            // не валидный JSON — сохраняем как есть
-        }
+        } catch(e) {}
         blob = new Blob([jsonContent], {type:'application/json;charset=utf-8'});
         fullFilename = fileName + '.json';
     } else {
@@ -833,8 +830,16 @@ function doSaveCode(format){
         fullFilename = fileName + '.html';
     }
 
-    // Всегда скачиваем на устройство, без меню "Поделиться"
-    fallbackDownload(blob, fullFilename);
+    // Всегда скачиваем напрямую, без системного меню "Поделиться"
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fullFilename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
 }
 
 // ============ QR ============
@@ -858,7 +863,7 @@ function openQRScanner(){
     window.open('/2d3t/pro/Pro6/','_blank');
 }
 
-// ============ ПОДЕЛИТЬСЯ ФАЙЛОМ ============
+// ============ ПОДЕЛИТЬСЯ ФАЙЛОМ (кнопка «Поделиться») ============
 function shareFile(){
     const code=textarea.value;
     if(!code.trim()){alert('⚠️ Нет текста для отправки!');return;}
