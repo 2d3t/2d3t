@@ -331,7 +331,6 @@ let activeLineNumber=null;
     const exitLabel = document.getElementById('exitLabel');
     let isDragging = false, startX, startY, startRight, startTop;
     
-    // Начало перетаскивания
     function startDrag(e) {
         const ev = e.touches ? e.touches[0] : e;
         isDragging = true;
@@ -353,7 +352,6 @@ let activeLineNumber=null;
         document.addEventListener('touchend', stopDrag, { passive: false });
     }
     
-    // Процесс перетаскивания
     function onDrag(e) {
         if (!isDragging) return;
         const ev = e.touches ? e.touches[0] : e;
@@ -362,7 +360,6 @@ let activeLineNumber=null;
         let newRight = startRight - dx;
         let newTop = startTop + dy;
         
-        // Ограничения
         const maxRight = window.innerWidth - btn.offsetWidth - 10;
         const maxTop = window.innerHeight - btn.offsetHeight - 10;
         newRight = Math.max(10, Math.min(maxRight, newRight));
@@ -376,7 +373,6 @@ let activeLineNumber=null;
         e.preventDefault();
     }
     
-    // Остановка перетаскивания
     function stopDrag(e) {
         if (isDragging) {
             isDragging = false;
@@ -391,19 +387,16 @@ let activeLineNumber=null;
         }
     }
     
-    // Клик по кнопке выхода
     function handleExitClick(e) {
         if (!isDragging && !e.target.closest('.drag-handle')) {
             forceExitFullscreen();
         }
     }
     
-    // Привязываем события
     handle.addEventListener('mousedown', startDrag);
     handle.addEventListener('touchstart', startDrag, { passive: false });
     exitLabel.addEventListener('click', handleExitClick);
     
-    // Запрещаем стандартное перетаскивание
     btn.addEventListener('dragstart', (e) => e.preventDefault());
     
     console.log('✅ Drag handler initialized');
@@ -721,12 +714,142 @@ function handleFileWithFullscreenRestore(event){
     reader.readAsText(file,'UTF-8');
 }
 
+// ============ СОХРАНЕНИЕ С ВЫБОРОМ ФОРМАТА ============
 function shareCode(){
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([textarea.value],{type:'text/plain'}));
-    a.download='code.html';
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),100);
+    const code = textarea.value;
+    if(!code.trim()){alert('⚠️ Нет текста для сохранения!');return;}
+    showSaveFormatDialog(code);
+}
+
+function showSaveFormatDialog(code){
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .25s ease;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#141a24;border-radius:24px;padding:24px;max-width:420px;width:100%;border:1px solid #2a3340;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);';
+
+    const trimmed = code.trim().toLowerCase();
+    let suggestedExt = 'txt';
+    if(trimmed.startsWith('<!doctype') || trimmed.startsWith('<html') || trimmed.includes('<body') || trimmed.includes('<div')) {
+        suggestedExt = 'html';
+    } else if((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try { JSON.parse(code); suggestedExt = 'json'; } catch(e) {}
+    }
+
+    card.innerHTML = `
+        <h3 style="color:#e2e8f0;margin:0 0 8px 0;">💾 Сохранить файл</h3>
+        <p style="color:#94a3b8;font-size:14px;margin:0 0 16px 0;">Введите имя и выберите формат</p>
+        <div style="margin-bottom:16px;">
+            <input type="text" id="saveFileNameInput" value="code" 
+                style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid #2a3340;background:#0d1117;color:#e2e8f0;font-size:16px;box-sizing:border-box;outline:none;transition:border-color .2s;" 
+                placeholder="Имя файла"
+                onfocus="this.style.borderColor='#3b4de0'" 
+                onblur="this.style.borderColor='#2a3340'">
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;">
+            <button onclick="doSaveCode('txt')" 
+                style="flex:1;min-width:90px;background:${suggestedExt==='txt'?'#3b4de0':'#1e2630'};color:${suggestedExt==='txt'?'white':'#94a3b8'};border:1px solid ${suggestedExt==='txt'?'#3b4de0':'#2a3340'};border-radius:12px;padding:14px 16px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;"
+                onmouseover="this.style.transform='scale(1.03)'" 
+                onmouseout="this.style.transform='scale(1)'">
+                📄 TXT
+                ${suggestedExt==='txt'?'<div style="font-size:10px;font-weight:400;opacity:0.8;margin-top:2px;">рекомендуется</div>':''}
+            </button>
+            <button onclick="doSaveCode('html')" 
+                style="flex:1;min-width:90px;background:${suggestedExt==='html'?'#b8860b':'#1e2630'};color:${suggestedExt==='html'?'white':'#94a3b8'};border:1px solid ${suggestedExt==='html'?'#b8860b':'#2a3340'};border-radius:12px;padding:14px 16px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;"
+                onmouseover="this.style.transform='scale(1.03)'" 
+                onmouseout="this.style.transform='scale(1)'">
+                🌐 HTML
+                ${suggestedExt==='html'?'<div style="font-size:10px;font-weight:400;opacity:0.8;margin-top:2px;">рекомендуется</div>':''}
+            </button>
+            <button onclick="doSaveCode('json')" 
+                style="flex:1;min-width:90px;background:${suggestedExt==='json'?'#27ae60':'#1e2630'};color:${suggestedExt==='json'?'white':'#94a3b8'};border:1px solid ${suggestedExt==='json'?'#27ae60':'#2a3340'};border-radius:12px;padding:14px 16px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;"
+                onmouseover="this.style.transform='scale(1.03)'" 
+                onmouseout="this.style.transform='scale(1)'">
+                📋 JSON
+                ${suggestedExt==='json'?'<div style="font-size:10px;font-weight:400;opacity:0.8;margin-top:2px;">рекомендуется</div>':''}
+            </button>
+        </div>
+        <button onclick="this.closest('div[style*=\\'position: fixed\\']').remove()" 
+            style="background:#1e2630;color:#94a3b8;border:1px solid #2a3340;border-radius:40px;padding:8px 24px;font-size:14px;cursor:pointer;transition:background .2s;"
+            onmouseover="this.style.background='#2a3340'" 
+            onmouseout="this.style.background='#1e2630'">
+            ✕ Отмена
+        </button>
+    `;
+
+    modal.appendChild(card);
+    document.body.appendChild(modal);
+
+    setTimeout(() => {
+        const input = document.getElementById('saveFileNameInput');
+        if(input){ input.focus(); input.select(); }
+    }, 100);
+
+    modal.addEventListener('click', (e) => { if(e.target === modal) modal.remove(); });
+
+    document.addEventListener('keydown', function escapeHandler(e){
+        if(e.key === 'Escape'){
+            modal.remove();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    });
+}
+
+function doSaveCode(format){
+    const code = textarea.value;
+    if(!code.trim()){ alert('⚠️ Нет данных!'); return; }
+
+    const fileNameInput = document.getElementById('saveFileNameInput');
+    let fileName = fileNameInput ? fileNameInput.value.trim() : 'code';
+    if(!fileName) fileName = 'code';
+
+    fileName = fileName.replace(/\.(txt|html|json)$/i, '');
+
+    const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
+    if(modal) modal.remove();
+
+    let blob, fullFilename, mimeType;
+
+    if(format === 'txt'){
+        blob = new Blob([code], {type:'text/plain;charset=utf-8'});
+        fullFilename = fileName + '.txt';
+        mimeType = 'text/plain';
+    } else if(format === 'json'){
+        let jsonContent = code.trim();
+        try {
+            const parsed = JSON.parse(jsonContent);
+            jsonContent = JSON.stringify(parsed, null, 2);
+        } catch(e) {
+            // не валидный JSON — сохраняем как есть
+        }
+        blob = new Blob([jsonContent], {type:'application/json;charset=utf-8'});
+        fullFilename = fileName + '.json';
+        mimeType = 'application/json';
+    } else {
+        let htmlContent = code.trim();
+        if(!htmlContent.toLowerCase().startsWith('<!doctype') && !htmlContent.toLowerCase().startsWith('<html')){
+            htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + fileName + '</title>\n<style>\n    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }\n</style>\n</head>\n<body>\n' + code + '\n</body>\n</html>';
+        }
+        blob = new Blob([htmlContent], {type:'text/html;charset=utf-8'});
+        fullFilename = fileName + '.html';
+        mimeType = 'text/html';
+    }
+
+    const file = new File([blob], fullFilename, {type: mimeType, lastModified: Date.now()});
+
+    if(navigator.share){
+        const shareData = { files: [file] };
+        if(navigator.canShare && navigator.canShare(shareData)){
+            navigator.share(shareData).catch((err) => {
+                if(err.name !== 'AbortError'){
+                    console.error('Ошибка отправки:', err);
+                    fallbackDownload(blob, fullFilename);
+                }
+            });
+            return;
+        }
+    }
+    fallbackDownload(blob, fullFilename);
 }
 
 // ============ QR ============
@@ -1057,7 +1180,6 @@ function clearFloatingText(){
     }
 }
 
-// Перетаскивание фрейма
 (function(){
     const header=document.getElementById('floatingFrameHeader');
     const frame=document.getElementById('floatingFrame');
