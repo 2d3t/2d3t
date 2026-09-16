@@ -3,6 +3,7 @@
   "short_name": "DOCX to PDF",
   "description": "DOCX в PDF легко!",
   "start_url": "/2d3t/pro/DOCXtoPDF/index.html",
+  "scope": "/2d3t/pro/DOCXtoPDF/",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#111111",
@@ -19,6 +20,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/2d3t/pro/DOCXtoPDF/index.html",
+      "accept": {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"]
+      }
     }
   ]
 }
