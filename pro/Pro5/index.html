@@ -107,6 +107,23 @@ body.theme-ocean .clear-url-btn:hover{background:#2471a3}
 body.theme-graphite .clear-url-btn{background:#666}
 body.theme-graphite .clear-url-btn:hover{background:#555}
 
+/* ============ ПОИСК И ЗАМЕНА ============ */
+.search-bar{display:flex;gap:4px;align-items:center;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:4px 8px;border-radius:8px;flex:1 1 480px;min-width:340px}
+#searchInput,#replaceInput{padding:6px 10px;font-size:14px;border-radius:5px;border:1px solid #666;background:#444;color:#fff;outline:none;transition:background .2s,border-color .2s,color .2s;box-sizing:border-box}
+#searchInput{flex:1 1 200px;min-width:140px}
+#replaceInput{flex:1 1 200px;min-width:140px}
+#searchInput:focus,#replaceInput:focus{border-color:#3b4de0;box-shadow:0 0 0 2px rgba(59,77,224,0.25)}
+#searchCounter{font-size:13px;min-width:52px;display:inline-block;text-align:center;font-weight:bold;color:inherit}
+#replaceBar{display:none;gap:4px;align-items:center;flex-wrap:wrap;background:rgba(0,0,0,0.15);padding:4px 8px;border-radius:8px;flex:1 1 480px;min-width:340px}
+#caseToggleBtn{background:#555;min-width:36px}
+#caseToggleBtn.active{background:#3b4de0}
+#replaceToggleBtn.active{background:#3b4de0}
+body.theme-light .search-bar,body.theme-light #replaceBar{background:rgba(0,0,0,0.06)}
+body.theme-light #searchInput,body.theme-light #replaceInput{background:#fff;color:#111;border-color:#bbb}
+body.theme-green #searchInput,body.theme-green #replaceInput{background:#2a4a36;color:#e2f0dc;border-color:#3e6b4e}
+body.theme-ocean #searchInput,body.theme-ocean #replaceInput{background:#112240;color:#cfe9ff;border-color:#2a4c7a}
+body.theme-graphite #searchInput,body.theme-graphite #replaceInput{background:#3a3a3c;color:#f0f0f0;border-color:#555}
+
 .library-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .library-overlay.active{display:flex}
 .library-modal{background:#1e1e2f;border-radius:16px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);border:1px solid #2a3340;color:#e2e8f0}
@@ -211,11 +228,21 @@ body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-co
 <button onclick="goToLine()">Перейти 🔀</button>
 <button onclick="clearLineNumber()">🗑️</button>
 
-<input type="text" id="searchInput" placeholder="Поиск 🔎" style="width:120px;">
-<button onclick="findNext()">Найти ▶️</button>
-<button onclick="findPrev()">Назад ◀️</button>
-<button onclick="clearSearch()">🗑️</button>
-<span id="searchCounter" style="font-size:14px;min-width:40px;display:inline-block;text-align:center;font-weight:bold;color:inherit;"></span>
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Поиск 🔎 (Enter — далее, Shift+Enter — назад)">
+  <button onclick="findPrev()" title="Предыдущее (Shift+Enter)">◀️</button>
+  <button onclick="findNext()" title="Следующее (Enter)">▶️</button>
+  <span id="searchCounter">0/0</span>
+</div>
+
+<div id="replaceBar">
+  <input type="text" id="replaceInput" placeholder="Заменить на 🔁 (Enter — заменить, Shift+Enter — все)">
+  <button onclick="replaceCurrent()" title="Заменить текущее (Enter)">1️⃣ Заменить</button>
+  <button onclick="replaceAll()" title="Заменить все (Shift+Enter)">🔁 Все</button>
+</div>
+
+<button id="replaceToggleBtn" onclick="toggleReplaceBar()" title="Показать/скрыть замену">🔁</button>
+<button id="caseToggleBtn" onclick="toggleCaseSensitive()" title="Учитывать регистр">Aa</button>
 
 <button onclick="sendToQR()">📤 QR</button>
 <button onclick="openQRScanner()">📷 QR</button>
@@ -330,7 +357,7 @@ let activeLineNumber=null;
     const handle = document.getElementById('dragHandle');
     const exitLabel = document.getElementById('exitLabel');
     let isDragging = false, startX, startY, startRight, startTop;
-    
+
     function startDrag(e) {
         const ev = e.touches ? e.touches[0] : e;
         isDragging = true;
@@ -342,16 +369,16 @@ let activeLineNumber=null;
         btn.style.transition = 'none';
         btn.style.cursor = 'grabbing';
         handle.style.cursor = 'grabbing';
-        
+
         e.preventDefault();
         e.stopPropagation();
-        
+
         document.addEventListener('mousemove', onDrag, { passive: false });
         document.addEventListener('mouseup', stopDrag, { passive: false });
         document.addEventListener('touchmove', onDrag, { passive: false });
         document.addEventListener('touchend', stopDrag, { passive: false });
     }
-    
+
     function onDrag(e) {
         if (!isDragging) return;
         const ev = e.touches ? e.touches[0] : e;
@@ -359,20 +386,20 @@ let activeLineNumber=null;
         const dy = ev.clientY - startY;
         let newRight = startRight - dx;
         let newTop = startTop + dy;
-        
+
         const maxRight = window.innerWidth - btn.offsetWidth - 10;
         const maxTop = window.innerHeight - btn.offsetHeight - 10;
         newRight = Math.max(10, Math.min(maxRight, newRight));
         newTop = Math.max(10, Math.min(maxTop, newTop));
-        
+
         btn.style.right = newRight + 'px';
         btn.style.top = newTop + 'px';
         btn.style.left = 'auto';
         btn.style.bottom = 'auto';
-        
+
         e.preventDefault();
     }
-    
+
     function stopDrag(e) {
         if (isDragging) {
             isDragging = false;
@@ -386,19 +413,19 @@ let activeLineNumber=null;
             e.preventDefault && e.preventDefault();
         }
     }
-    
+
     function handleExitClick(e) {
         if (!isDragging && !e.target.closest('.drag-handle')) {
             forceExitFullscreen();
         }
     }
-    
+
     handle.addEventListener('mousedown', startDrag);
     handle.addEventListener('touchstart', startDrag, { passive: false });
     exitLabel.addEventListener('click', handleExitClick);
-    
+
     btn.addEventListener('dragstart', (e) => e.preventDefault());
-    
+
     console.log('✅ Drag handler initialized');
 })();
 
@@ -484,8 +511,12 @@ function clearLineNumber(){document.getElementById('lineNumber').value='';docume
 function clearSearch(){searchInput.value='';lastSearch='';searchResults=[];currentResult=-1;updateSearchCounter();searchInput.focus();}
 
 function updateSearchCounter(){
-    if(searchResults.length===0){searchCounter.textContent='';}
-    else{const idx=currentResult===-1?0:currentResult;searchCounter.textContent=(idx+1)+'/'+searchResults.length;}
+    if(searchResults.length === 0){
+        searchCounter.textContent = '0/0';
+        return;
+    }
+    const idx = currentResult === -1 ? 0 : currentResult;
+    searchCounter.textContent = (idx + 1) + '/' + searchResults.length;
 }
 
 function saveState(){
@@ -520,69 +551,183 @@ function redo(){
     }
 }
 
+// ============ ПОИСК С ЗАМЕНОЙ ============
+let caseSensitive = false;
+
+function toggleCaseSensitive(){
+    caseSensitive = !caseSensitive;
+    const btn = document.getElementById('caseToggleBtn');
+    if(btn){
+        btn.classList.toggle('active', caseSensitive);
+        btn.title = caseSensitive ? 'Регистр учитывается (вкл)' : 'Регистр не учитывается (выкл)';
+    }
+    runSearch(true);
+}
+
+function toggleReplaceBar(){
+    const bar = document.getElementById('replaceBar');
+    const btn = document.getElementById('replaceToggleBtn');
+    const visible = bar.style.display !== 'none' && bar.style.display !== '';
+    bar.style.display = visible ? 'none' : 'flex';
+    if(btn) btn.classList.toggle('active', !visible);
+    if(!visible) document.getElementById('replaceInput').focus();
+}
+
+// Поиск всех совпадений
 function findAll(term){
     searchResults=[];
     currentResult=-1;
     if(!term)return;
-    let i=textarea.value.indexOf(term);
-    while(i!==-1){searchResults.push(i);i=textarea.value.indexOf(term,i+term.length);}
+    const haystack = caseSensitive ? textarea.value : textarea.value.toLowerCase();
+    const needle = caseSensitive ? term : term.toLowerCase();
+    let i = haystack.indexOf(needle);
+    while(i !== -1){
+        searchResults.push(i);
+        i = haystack.indexOf(needle, i + needle.length);
+    }
     updateSearchCounter();
 }
 
+// Найти ближайшее совпадение к текущей позиции курсора (или начать сначала)
+function findNearestIndex(){
+    if(!searchResults.length) return -1;
+    const cur = textarea.selectionStart || 0;
+    // если курсор уже стоит на каком-то совпадении — берём его
+    for(let i=0;i<searchResults.length;i++){
+        if(searchResults[i] >= cur) return i;
+    }
+    return 0;
+}
+
+// Подсветить текущее совпадение
 function highlightMatch(){
-    if(!searchResults.length)return;
-    const pos=searchResults[currentResult],term=searchInput.value;
+    if(!searchResults.length){ updateSearchCounter(); return; }
+    if(currentResult < 0 || currentResult >= searchResults.length) currentResult = 0;
+    const pos = searchResults[currentResult];
+    const term = searchInput.value;
     textarea.focus();
-    textarea.setSelectionRange(pos,pos+term.length);
-    const h=parseFloat(getComputedStyle(textarea).lineHeight);
-    const line=textarea.value.substring(0,pos).split('\n').length;
-    textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2);
+    textarea.setSelectionRange(pos, pos + term.length);
+    const h = parseFloat(getComputedStyle(textarea).lineHeight);
+    const line = textarea.value.substring(0, pos).split('\n').length;
+    textarea.scrollTop = Math.max(0, (line - 1) * h - textarea.clientHeight / 2);
     updateSearchCounter();
+}
+
+// Универсальная функция поиска + опционально сразу выделить ближайшее
+function runSearch(highlight){
+    const term = searchInput.value;
+    findAll(term);
+    lastSearch = term;
+    if(highlight && searchResults.length){
+        currentResult = findNearestIndex();
+        highlightMatch();
+    } else {
+        updateSearchCounter();
+    }
 }
 
 function findNext(){
-    const term=searchInput.value;
-    if(!term)return;
-    if(term!==lastSearch){findAll(term);lastSearch=term;}
-    if(!searchResults.length)return;
-    currentResult=(currentResult+1)%searchResults.length;
+    const term = searchInput.value;
+    if(!term){ return; }
+    if(term !== lastSearch){ runSearch(true); return; }
+    if(!searchResults.length) return;
+    currentResult = (currentResult + 1) % searchResults.length;
     highlightMatch();
 }
 
 function findPrev(){
-    const term=searchInput.value;
-    if(!term)return;
-    if(term!==lastSearch){findAll(term);lastSearch=term;}
-    if(!searchResults.length)return;
-    currentResult=(currentResult-1+searchResults.length)%searchResults.length;
+    const term = searchInput.value;
+    if(!term){ return; }
+    if(term !== lastSearch){ runSearch(true); return; }
+    if(!searchResults.length) return;
+    currentResult = (currentResult - 1 + searchResults.length) % searchResults.length;
     highlightMatch();
 }
 
-// ============ ЗАГРУЗКА ============
-async function fetchWebsiteCode(){
-    let url=urlInput.value.trim();
-    if(!url)return;
-    if(!/^https?:\/\//i.test(url))url='https://'+url;
-    const old=fetchButton.textContent;
-    fetchButton.textContent='Загрузка... ⏳';
-    fetchButton.classList.add('fetch-loading');
-    fetchButton.disabled=true;
-    try{
-        const r=await fetch(url);
-        if(!r.ok)throw new Error('HTTP '+r.status);
-        const html=await r.text();
-        if(!html)throw new Error('Пустой ответ');
-        saveState();
-        textarea.value=html;
-        updateLineNumbers();
-        activeLineNumber=null;
-        highlightActiveLine();
-        lastSearch='';
-        searchResults=[];
-        currentResult=-1;
+// ---- ЗАМЕНА ----
+// Заменить текущее выделенное совпадение и перейти к следующему
+function replaceCurrent(){
+    const term = searchInput.value;
+    const replacement = document.getElementById('replaceInput').value;
+    if(!term) return;
+
+    // Если поиск устарел — обновим
+    if(term !== lastSearch){
+        findAll(term);
+        lastSearch = term;
+        if(!searchResults.length){ updateSearchCounter(); return; }
+        currentResult = findNearestIndex();
+    }
+    if(!searchResults.length){ updateSearchCounter(); return; }
+    if(currentResult < 0 || currentResult >= searchResults.length) currentResult = 0;
+
+    const pos = searchResults[currentResult];
+    saveState();
+
+    // Заменяем в тексте
+    const before = textarea.value.substring(0, pos);
+    const after  = textarea.value.substring(pos + term.length);
+    textarea.value = before + replacement + after;
+
+    // Ставим курсор сразу после вставленного фрагмента
+    const newPos = pos + replacement.length;
+    textarea.setSelectionRange(newPos, newPos);
+
+    updateLineNumbers();
+
+    // Пересчитываем поиск ЗАНОВО и ищем следующее после курсора
+    findAll(term);
+    lastSearch = term;
+
+    if(searchResults.length){
+        // первое совпадение, которое начинается на позиции >= newPos
+        let idx = searchResults.findIndex(p => p >= newPos);
+        if(idx === -1) idx = 0; // дошли до конца — с начала
+        currentResult = idx;
+        highlightMatch();
+    } else {
+        currentResult = -1;
         updateSearchCounter();
-    }catch(e){console.error('Ошибка загрузки:',e);}
-    finally{fetchButton.textContent=old;fetchButton.classList.remove('fetch-loading');fetchButton.disabled=false;}
+    }
+}
+
+// Заменить все совпадения
+function replaceAll(){
+    const term = searchInput.value;
+    const replacement = document.getElementById('replaceInput').value;
+    if(!term) return;
+
+    const haystack = caseSensitive ? textarea.value : textarea.value.toLowerCase();
+    const needle   = caseSensitive ? term : term.toLowerCase();
+
+    // Собираем все позиции
+    const positions = [];
+    let i = haystack.indexOf(needle);
+    while(i !== -1){
+        positions.push(i);
+        i = haystack.indexOf(needle, i + needle.length);
+    }
+    if(!positions.length){ updateSearchCounter(); return; }
+
+    saveState();
+
+    // Собираем новый текст "с конца к началу", чтобы не сбить индексы
+    let result = textarea.value;
+    for(let k = positions.length - 1; k >= 0; k--){
+        const p = positions[k];
+        result = result.substring(0, p) + replacement + result.substring(p + term.length);
+    }
+    textarea.value = result;
+    updateLineNumbers();
+
+    // Пересчитываем поиск
+    findAll(term);
+    lastSearch = term;
+    currentResult = -1;
+
+    const counter = document.getElementById('searchCounter');
+    counter.textContent = '✅ ' + positions.length;
+    setTimeout(() => { runSearch(true); }, 800);
 }
 
 // ============ ПРОСМОТР ============
@@ -830,7 +975,6 @@ function doSaveCode(format){
         fullFilename = fileName + '.html';
     }
 
-    // Всегда скачиваем напрямую, без системного меню "Поделиться"
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1252,7 +1396,33 @@ document.addEventListener('DOMContentLoaded',keepScreenAwake);
 // ============ ИНИЦИАЛИЗАЦИЯ ============
 document.addEventListener('input',function(e){if(e.target.id==='floatingTextArea'){floatingTextContent=e.target.value;updateFloatingCharCount();}});
 
-searchInput.addEventListener('input',()=>{lastSearch='';searchResults=[];currentResult=-1;updateSearchCounter();});
+// Автопоиск при вводе
+searchInput.addEventListener('input', () => {
+    lastSearch = '';
+    runSearch(true);
+});
+// Enter — следующее, Shift+Enter — предыдущее, Esc — очистить
+searchInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+        e.preventDefault();
+        if(e.shiftKey) findPrev(); else findNext();
+    } else if(e.key === 'Escape'){
+        e.preventDefault();
+        clearSearch();
+    }
+});
+
+// Enter в поле замены — заменить, Shift+Enter — заменить все
+document.getElementById('replaceInput').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+        e.preventDefault();
+        if(e.shiftKey) replaceAll(); else replaceCurrent();
+    } else if(e.key === 'Escape'){
+        e.preventDefault();
+        toggleReplaceBar();
+    }
+});
+
 urlInput.addEventListener('keypress',e=>{if(e.key==='Enter'){e.preventDefault();fetchWebsiteCode();}});
 document.getElementById('lineNumber').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();goToLine();}});
 
