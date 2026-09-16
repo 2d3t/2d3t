@@ -323,6 +323,24 @@ pdfBtn.addEventListener('click', async () => {
     pdfBtn.textContent = '💾 Сохранить как PDF';
   }
 });
+
+// ============================================================
+// Приём файла, переданного системой через file_handlers
+// (работает, когда файл открывают "с помощью" приложения)
+// ============================================================
+if ('launchQueue' in window) {
+  launchQueue.setConsumer(async (launchParams) => {
+    if (!launchParams.files || !launchParams.files.length) return;
+    try {
+      const fileHandle = launchParams.files[0];
+      const file = await fileHandle.getFile();
+      processFile(file);
+    } catch (err) {
+      console.error('Ошибка чтения переданного файла:', err);
+      showError('Не удалось открыть файл из системы');
+    }
+  });
+}
 </script>
 </body>
 </html>
