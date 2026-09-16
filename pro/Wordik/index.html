@@ -17,7 +17,7 @@
   }
   body { display: flex; flex-direction: column; }
 
-  /* ============ ВЕРХНЯЯ ПАНЕЛЬ (сетка в 2 ряда) ============ */
+  /* ============ ВЕРХНЯЯ ПАНЕЛЬ (сетка) ============ */
   #toolbar {
     background: #2c3e50;
     color: #fff;
@@ -79,8 +79,13 @@
   }
   #toolbar .menu-btn:active { background: #d35400; }
 
+  #toolbar .push-btn {
+    background: #8e44ad;
+    border-color: #6c3483;
+  }
+  #toolbar .push-btn:active { background: #6c3483; }
+
   #toolbar .sep { display: none; }
-  #toolbar .wide { grid-column: span 2; }
 
   /* ============ СКРЫТИЕ НУМЕРАЦИИ СТРАНИЦ ============ */
   body.no-page-numbers .page::after {
@@ -295,6 +300,9 @@
   <button onclick="cmd('insertOrderedList')"   title="Нумерованный">1.</button>
   <button onclick="indent()"  title="Отступ вправо">⇥</button>
   <button onclick="outdent()" title="Отступ влево">⇤</button>
+  <button class="push-btn" onclick="pushBlockRight()" title="Прижать вправо">⇥→</button>
+  <button class="push-btn" onclick="pushBlockLeft()"  title="Вернуть влево">←⇤</button>
+
   <button onclick="selectAllPages()" title="Выделить весь текст">☑</button>
   <button onclick="togglePageNumbers()" title="Нумерация страниц" id="pageNumToolbarBtn">🔢</button>
 </div>
@@ -403,6 +411,10 @@
     <div class="row">
       <button onclick="insertPageBreak()">⎯ Разрыв страницы</button>
       <button onclick="clearFormatting()">Очистить формат</button>
+    </div>
+    <div class="row">
+      <button onclick="pushBlockRight()" style="background:#8e44ad">⇥→ Прижать вправо</button>
+      <button onclick="pushBlockLeft()"  style="background:#8e44ad">←⇤ Вернуть влево</button>
     </div>
     <div class="row">
       <button id="pageNumToggle" onclick="togglePageNumbers()" style="background:#34495e">
@@ -639,6 +651,113 @@ function deselectAll() {
 }
 
 /* =========================================================
+   ПРИЖАТЬ БЛОК ВПРАВО / ВЕРНУТЬ ВЛЕВО
+   ========================================================= */
+function getSelectedBlocks() {
+  const sel = window.getSelection();
+
+  // Нет выделения — работаем с абзацем под курсором
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+    const anchor = sel?.anchorNode;
+    if (!anchor) return [];
+    let node = anchor;
+    if (node.nodeType === 3) node = node.parentElement;
+    const content = node?.closest('.page-content');
+    if (!content) return [];
+    let block = node;
+    while (block && block.parentElement !== content) block = block.parentElement;
+    return block ? [block] : [];
+  }
+
+  const range = sel.getRangeAt(0);
+  const startEl = range.startContainer.nodeType === 1
+    ? range.startContainer
+    : range.startContainer.parentElement;
+  const endEl = range.endContainer.nodeType === 1
+    ? range.endContainer
+    : range.endContainer.parentElement;
+
+  const startContent = startEl?.closest('.page-content');
+  const endContent = endEl?.closest('.page-content');
+  if (!startContent || !endContent) return [];
+
+  const blocks = [];
+  const pages = [...document.querySelectorAll('.page-content')];
+  const startPageIdx = pages.indexOf(startContent);
+  const endPageIdx = pages.indexOf(endContent);
+
+  for (let pi = startPageIdx; pi <= endPageIdx; pi++) {
+    const content = pages[pi];
+    for (const child of content.children) {
+      try {
+        if (range.intersectsNode(child)) blocks.push(child);
+      } catch (e) {}
+    }
+  }
+  return blocks;
+}
+
+function pushBlockRight() {
+  const blocks = getSelectedBlocks();
+  if (blocks.length === 0) return;
+
+  const pageContent = blocks[0].closest('.page-content');
+  if (!pageContent) return;
+
+  const contentStyle = getComputedStyle(pageContent);
+  const contentWidth = pageContent.clientWidth
+    - parseFloat(contentStyle.paddingLeft)
+    - parseFloat(contentStyle.paddingRight);
+
+  // Измеряем фактическую ширину каждого блока по тексту
+  const widths = blocks.map(block => {
+    const savedStyle = block.getAttribute('style') || '';
+    block.style.width = 'fit-content';
+    block.style.marginLeft = '0';
+    block.style.marginRight = '0';
+    block.style.display = 'block';
+    // Принудительный reflow
+    const w = block.getBoundingClientRect().width;
+    // Восстанавливаем как было
+    if (savedStyle) block.setAttribute('style', savedStyle);
+    else block.removeAttribute('style');
+    return w;
+  });
+
+  const maxWidth = Math.max(...widths);
+
+  let marginLeft = 0;
+  if (maxWidth < contentWidth) {
+    marginLeft = Math.round(contentWidth - maxWidth);
+  }
+
+  blocks.forEach(block => {
+    block.style.marginLeft = marginLeft + 'px';
+    block.style.marginRight = '0';
+    block.style.textAlign = 'left';
+  });
+
+  // Сохраняем выделение и пересобираем страницы
+  saveSelection();
+  clearTimeout(repaginateTimer);
+  repaginateTimer = setTimeout(repaginate, 500);
+}
+
+function pushBlockLeft() {
+  const blocks = getSelectedBlocks();
+  if (blocks.length === 0) return;
+
+  blocks.forEach(block => {
+    block.style.marginLeft = '0';
+    block.style.marginRight = '';
+  });
+
+  saveSelection();
+  clearTimeout(repaginateTimer);
+  repaginateTimer = setTimeout(repaginate, 500);
+}
+
+/* =========================================================
    ПАГИНАЦИЯ
    ========================================================= */
 function collectBlocks() {
@@ -744,12 +863,10 @@ function newPageEl() {
 }
 
 function repaginate() {
-  // Запоминаем позицию курсора, чтобы восстановить после пересборки
   const cursorPos = captureCursor();
-
   const blocks = collectBlocks();
 
-  // Гарантируем пустой абзац в самом конце — чтобы всегда было куда печатать
+  // Гарантируем пустой абзац в самом конце
   const lastBlock = blocks[blocks.length - 1];
   const lastIsEmptyP = lastBlock
     && lastBlock.tagName === 'P'
@@ -808,7 +925,6 @@ function repaginate() {
   document.querySelectorAll('.page').forEach((p, i) => { p.dataset.page = i + 1; });
   fitToScreen();
 
-  // Восстанавливаем курсор там, где он был
   if (cursorPos) {
     restoreCursor(cursorPos);
     saveSelection();
@@ -857,13 +973,12 @@ function fitToScreen() {
 }
 
 /* =========================================================
-   ВВОД — с увеличенным дебаунсом в конце документа
+   ВВОД
    ========================================================= */
 let repaginateTimer = null;
 function onContentInput() {
   clearTimeout(repaginateTimer);
 
-  // Проверим: курсор на последней странице?
   const sel = window.getSelection();
   let atEnd = false;
   if (sel && sel.rangeCount > 0) {
