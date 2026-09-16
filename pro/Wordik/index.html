@@ -2,72 +2,122 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Редактор документов с разбивкой на страницы</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2c3e50">
+<title>Редактор документов</title>
 <style>
-  * { box-sizing: border-box; }
-  body {
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
     margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: #e8eaed;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #cfd3d8;
+    overscroll-behavior: none;
   }
+  body { display: flex; flex-direction: column; }
+
+  /* ============ ВЕРХНЯЯ ПАНЕЛЬ (сетка в 2 ряда) ============ */
   #toolbar {
     background: #2c3e50;
     color: #fff;
-    padding: 8px 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,.2);
-    z-index: 10;
+    padding: 6px 6px;
+    padding-top: calc(6px + env(safe-area-inset-top, 0));
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.3);
+    z-index: 20;
+    flex-shrink: 0;
   }
-  #toolbar button, #toolbar select, #toolbar input[type=number], #toolbar input[type=color] {
+
+  #toolbar button,
+  #toolbar .size-btn,
+  #toolbar #sizeIndicator,
+  #toolbar .menu-btn {
     background: #34495e;
     color: #fff;
     border: 1px solid #4a6278;
-    border-radius: 4px;
-    padding: 5px 8px;
+    border-radius: 8px;
+    height: 40px;
+    padding: 0;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 15px;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .1s;
+    user-select: none;
+    -webkit-user-select: none;
+    min-width: 0;
+    width: 100%;
   }
-  #toolbar button:hover { background: #4a6278; }
-  #toolbar button.active { background: #3498db; border-color: #3498db; }
-  #toolbar .sep { width: 1px; height: 24px; background: #4a6278; margin: 0 4px; }
-  #toolbar label { font-size: 12px; display:flex; align-items:center; gap:4px; }
-  #toolbar input[type=number] { width: 55px; }
-  #toolbar input[type=color] { padding: 0; width: 30px; height: 28px; border: none; }
 
+  #toolbar button:active,
+  #toolbar .size-btn:active { background: #3498db; }
+  #toolbar button.active { background: #3498db; }
+
+  #toolbar #sizeIndicator {
+    background: #1a252f;
+    border-color: #1a252f;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+  #toolbar #sizeIndicator::after { content: 'pt'; opacity: .5; margin-left: 1px; font-size: 10px; }
+
+  #toolbar .size-btn {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  #toolbar .menu-btn {
+    background: #e67e22;
+    border-color: #d35400;
+  }
+  #toolbar .menu-btn:active { background: #d35400; }
+
+  #toolbar .sep { display: none; }
+  #toolbar .wide { grid-column: span 2; }
+
+  /* ============ СКРЫТИЕ НУМЕРАЦИИ СТРАНИЦ ============ */
+  body.no-page-numbers .page::after {
+    display: none !important;
+  }
+
+  /* ============ РАБОЧАЯ ОБЛАСТЬ ============ */
   #workspace {
     flex: 1;
     overflow: auto;
-    padding: 30px;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
   }
-
-  /* Скрытый измеритель */
   #measurer {
     position: absolute;
     visibility: hidden;
     pointer-events: none;
-    top: -10000px;
-    left: -10000px;
+    top: -10000px; left: -10000px;
   }
 
-  /* Каждая страница = отдельный лист A4 */
+  .page-wrap { position: relative; flex-shrink: 0; }
+
   .page {
     background: #fff;
     width: 210mm;
     min-height: 297mm;
+    height: 297mm;
     padding: var(--pad, 20mm);
-    box-shadow: 0 0 15px rgba(0,0,0,.3);
-    position: relative;
+    box-shadow: 0 0 12px rgba(0,0,0,.35);
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: top left;
     font-family: 'Times New Roman', serif;
     font-size: 14pt;
     line-height: 1.4;
@@ -77,154 +127,520 @@
   .page::after {
     content: attr(data-page);
     position: absolute;
-    bottom: 8mm;
-    right: 12mm;
-    font-size: 10pt;
-    color: #999;
+    bottom: 6mm; right: 10mm;
+    font-size: 9pt; color: #aaa;
     font-family: Arial, sans-serif;
   }
-  /* Нижний колонтитул с номером страницы */
-  .page-footer {
-    position: absolute;
-    bottom: 8mm;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 10pt;
-    color: #666;
-    font-family: Arial, sans-serif;
-    pointer-events: none;
-  }
-
-  /* Контент внутри страницы — редактируемый */
   .page-content {
     outline: none;
     min-height: 1px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .page.focused {
+    box-shadow: 0 0 0 2px #3498db, 0 0 12px rgba(52,152,219,.5);
   }
 
-  .page-content:focus { outline: none; }
+  /* ============ НИЖНЯЯ ПАНЕЛЬ ============ */
+  #bottomBar {
+    display: flex;
+    background: #2c3e50;
+    padding: 6px 4px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0));
+    gap: 4px;
+    z-index: 20;
+    flex-shrink: 0;
+    box-shadow: 0 -2px 6px rgba(0,0,0,.25);
+  }
+  #bottomBar button {
+    flex: 1;
+    background: transparent;
+    color: #fff;
+    border: none;
+    padding: 6px 4px;
+    min-height: 50px;
+    border-radius: 8px;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1.1;
+  }
+  #bottomBar button:active { background: #34495e; }
+  #bottomBar button .ico { font-size: 20px; line-height: 1; }
+  #bottomBar button.primary { background: #27ae60; }
+  #bottomBar button.primary:active { background: #1e8449; }
 
-  /* Активная страница подсвечена */
-  .page.focused { box-shadow: 0 0 0 2px #3498db, 0 0 15px rgba(52,152,219,.4); }
+  /* ============ МОДАЛЬНОЕ МЕНЮ ============ */
+  #menuOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 100;
+    display: none; opacity: 0;
+    transition: opacity .2s;
+  }
+  #menuOverlay.open { display: block; opacity: 1; }
+  #menuSheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #2c3e50;
+    border-radius: 16px 16px 0 0;
+    padding: 16px 12px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
+    max-height: 85vh;
+    overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform .25s ease;
+    color: #fff;
+  }
+  #menuOverlay.open #menuSheet { transform: translateY(0); }
+  #menuSheet h3 {
+    margin: 4px 0 10px 4px;
+    font-size: 12px; color: #95a5a6;
+    font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #menuSheet .row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 16px;
+  }
+  #menuSheet .row:last-child { margin-bottom: 0; }
+  #menuSheet button, #menuSheet select, #menuSheet input {
+    background: #34495e;
+    color: #fff;
+    border: 1px solid #4a6278;
+    border-radius: 10px;
+    min-height: 46px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    flex: 1 1 auto;
+  }
+  #menuSheet input[type=number] { width: 70px; flex: 0 0 auto; text-align: center; }
+  #menuSheet input[type=color] { padding: 2px; width: 60px; flex: 0 0 auto; }
+  #menuSheet label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; flex: 1 1 45%;
+  }
+
+  #sizeGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+  #sizeGrid button {
+    min-height: 46px;
+    padding: 4px 2px;
+    font-size: 14px;
+    flex: initial;
+  }
+  #sizeGrid button.current {
+    background: #3498db;
+    border-color: #3498db;
+    font-weight: 700;
+  }
 
   @media print {
-    body { background: #fff; height: auto; overflow: visible; display: block; }
-    #toolbar, #measurer { display: none !important; }
+    html, body { height: auto; overflow: visible; display: block; background: #fff; }
+    #toolbar, #bottomBar, #measurer, #menuOverlay { display: none !important; }
     #workspace { padding: 0; gap: 0; overflow: visible; display: block; }
-    .page {
-      box-shadow: none;
-      margin: 0;
+    .page-wrap {
+      width: auto !important;
+      height: auto !important;
       page-break-after: always;
+    }
+    .page-wrap:last-child { page-break-after: auto; }
+    .page {
+      position: relative;
+      transform: none !important;
+      box-shadow: none;
       width: 210mm;
       height: 297mm;
-      min-height: 297mm;
+      page-break-after: always;
     }
-    .page:last-child { page-break-after: auto; }
+    .page-wrap:last-child .page { page-break-after: auto; }
     .page.focused { box-shadow: none; }
+    body.no-page-numbers .page::after { display: none !important; }
   }
 </style>
 </head>
 <body>
 
+<!-- =====================================================
+     ВЕРХНЯЯ ПАНЕЛЬ
+     ===================================================== -->
 <div id="toolbar">
   <button onclick="cmd('undo')" title="Отменить">↶</button>
   <button onclick="cmd('redo')" title="Повторить">↷</button>
-  <div class="sep"></div>
-
-  <select onchange="cmd('fontName', this.value)" title="Шрифт">
-    <option value="Times New Roman" selected>Times New Roman</option>
-    <option value="Arial">Arial</option>
-    <option value="Calibri">Calibri</option>
-    <option value="Georgia">Georgia</option>
-    <option value="Courier New">Courier New</option>
-    <option value="Verdana">Verdana</option>
-  </select>
-
-  <select onchange="cmd('fontSize', this.value)" title="Размер">
-    <option value="1">8</option>
-    <option value="2">10</option>
-    <option value="3" selected>12</option>
-    <option value="4">14</option>
-    <option value="5">18</option>
-    <option value="6">24</option>
-    <option value="7">36</option>
-  </select>
-
-  <input type="color" oninput="cmd('foreColor', this.value)" title="Цвет текста" value="#000000">
-  <button onclick="cmd('hiliteColor','yellow')" title="Выделить жёлтым">🖍</button>
-  <div class="sep"></div>
-
+  <button class="size-btn" onclick="stepFontSize(-2)" title="Меньше">A−</button>
+  <span id="sizeIndicator">14</span>
+  <button class="size-btn" onclick="stepFontSize(2)" title="Больше">A+</button>
   <button onclick="cmd('bold')" title="Жирный"><b>Ж</b></button>
   <button onclick="cmd('italic')" title="Курсив"><i>К</i></button>
   <button onclick="cmd('underline')" title="Подчёркнутый"><u>П</u></button>
   <button onclick="cmd('strikeThrough')" title="Зачёркнутый"><s>З</s></button>
-  <div class="sep"></div>
+  <button class="menu-btn" onclick="openMenu()" title="Ещё">⋯</button>
 
-  <button onclick="cmd('justifyLeft')" title="По левому краю">⯇</button>
-  <button onclick="cmd('justifyCenter')" title="По центру">≡</button>
-  <button onclick="cmd('justifyRight')" title="По правому краю">⯈</button>
-  <button onclick="cmd('justifyFull')" title="По ширине">☰</button>
-  <div class="sep"></div>
-
-  <button onclick="cmd('insertUnorderedList')" title="Маркированный список">•≡</button>
-  <button onclick="cmd('insertOrderedList')" title="Нумерованный список">1≡</button>
-  <button onclick="indent()" title="Увеличить отступ">⇥</button>
-  <button onclick="outdent()" title="Уменьшить отступ">⇤</button>
-  <div class="sep"></div>
-
-  <label>Строки: <input type="number" id="lineHeight" min="1" max="3" step="0.1" value="1.4" onchange="applyLineHeight()"></label>
-  <label>Абзац ↓: <input type="number" id="paraSpace" min="0" max="100" value="8" onchange="applyParaSpace()">пт</label>
-  <div class="sep"></div>
-
-  <label>Поля (мм):
-    <input type="number" id="marginTop" value="20" min="0" max="100" style="width:45px">
-    <input type="number" id="marginRight" value="20" min="0" max="100" style="width:45px">
-    <input type="number" id="marginBottom" value="20" min="0" max="100" style="width:45px">
-    <input type="number" id="marginLeft" value="20" min="0" max="100" style="width:45px">
-  </label>
-  <button onclick="applyMargins()">Применить</button>
-  <div class="sep"></div>
-
-  <button onclick="insertPageBreak()" title="Разрыв страницы">⎯ Разрыв</button>
-  <button onclick="clearFormatting()" title="Очистить формат">Очистить</button>
-  <div class="sep"></div>
-
-  <button onclick="saveAsDoc()" style="background:#27ae60">💾 Сохранить .doc</button>
-  <button onclick="window.print()" style="background:#2980b9">🖨 Печать</button>
-  <button onclick="openDoc()" style="background:#8e44ad">📂 Открыть .doc/.docx</button>
-  <input type="file" id="fileInput" accept=".doc,.docx,.html,.htm" style="display:none" onchange="loadFile(event)">
+  <button onclick="cmd('justifyLeft')"   title="Влево">⯇</button>
+  <button onclick="cmd('justifyCenter')" title="Центр">≡</button>
+  <button onclick="cmd('justifyRight')"  title="Вправо">⯈</button>
+  <button onclick="cmd('justifyFull')"   title="По ширине">☰</button>
+  <button onclick="cmd('insertUnorderedList')" title="Маркированный">•</button>
+  <button onclick="cmd('insertOrderedList')"   title="Нумерованный">1.</button>
+  <button onclick="indent()"  title="Отступ вправо">⇥</button>
+  <button onclick="outdent()" title="Отступ влево">⇤</button>
+  <button onclick="selectAllPages()" title="Выделить весь текст">☑</button>
+  <button onclick="togglePageNumbers()" title="Нумерация страниц" id="pageNumToolbarBtn">🔢</button>
 </div>
 
-<div id="workspace">
-  <div class="page" data-page="1">
-    <div class="page-content" contenteditable="true" spellcheck="false">
-      <p>Начните печатать здесь… Текст будет автоматически перетекать на следующую страницу, когда достигнет нижнего края листа.</p>
+<!-- =====================================================
+     РАБОЧАЯ ОБЛАСТЬ
+     ===================================================== -->
+<div id="workspace"></div>
+
+<!-- Скрытый измеритель -->
+<div id="measurer"></div>
+
+<!-- =====================================================
+     НИЖНЯЯ ПАНЕЛЬ
+     ===================================================== -->
+<div id="bottomBar">
+  <button onclick="openDoc()">
+    <span class="ico">📂</span>
+    <span>Открыть</span>
+  </button>
+  <button onclick="saveAsDoc()" class="primary">
+    <span class="ico">💾</span>
+    <span>Сохранить</span>
+  </button>
+  <button onclick="window.print()">
+    <span class="ico">🖨</span>
+    <span>Печать</span>
+  </button>
+  <button onclick="openMenu()">
+    <span class="ico">⚙</span>
+    <span>Ещё</span>
+  </button>
+</div>
+
+<!-- =====================================================
+     МОДАЛЬНОЕ МЕНЮ
+     ===================================================== -->
+<div id="menuOverlay" onclick="closeMenuOutside(event)">
+  <div id="menuSheet" onclick="event.stopPropagation()">
+    <h3>Выделение</h3>
+    <div class="row">
+      <button onclick="selectAllPages()" style="background:#3498db">☑ Выделить весь текст</button>
+      <button onclick="deselectAll()">✕ Снять выделение</button>
+    </div>
+
+    <h3>Размер шрифта</h3>
+    <div class="row">
+      <div id="sizeGrid">
+        <button data-size="10" onclick="applyFontSize(10)">10</button>
+        <button data-size="11" onclick="applyFontSize(11)">11</button>
+        <button data-size="12" onclick="applyFontSize(12)">12</button>
+        <button data-size="13" onclick="applyFontSize(13)">13</button>
+        <button data-size="14" onclick="applyFontSize(14)">14</button>
+        <button data-size="16" onclick="applyFontSize(16)">16</button>
+        <button data-size="18" onclick="applyFontSize(18)">18</button>
+        <button data-size="20" onclick="applyFontSize(20)">20</button>
+        <button data-size="24" onclick="applyFontSize(24)">24</button>
+        <button data-size="28" onclick="applyFontSize(28)">28</button>
+        <button data-size="36" onclick="applyFontSize(36)">36</button>
+        <button data-size="48" onclick="applyFontSize(48)">48</button>
+      </div>
+    </div>
+
+    <h3>Шрифт</h3>
+    <div class="row">
+      <select onchange="cmd('fontName', this.value)">
+        <option value="Times New Roman" selected>Times New Roman</option>
+        <option value="Arial">Arial</option>
+        <option value="Calibri">Calibri</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Courier New">Courier New</option>
+        <option value="Verdana">Verdana</option>
+      </select>
+    </div>
+
+    <h3>Цвет</h3>
+    <div class="row">
+      <label>Текст: <input type="color" value="#000000" oninput="cmd('foreColor', this.value)"></label>
+      <button onclick="cmd('hiliteColor','yellow')">🖍 Жёлтый фон</button>
+    </div>
+
+    <h3>Интервалы</h3>
+    <div class="row">
+      <label>Строки:
+        <input type="number" id="lineHeight" min="1" max="3" step="0.1" value="1.4" onchange="applyLineHeight()">
+      </label>
+      <label>Абзац, пт:
+        <input type="number" id="paraSpace" min="0" max="100" value="8" onchange="applyParaSpace()">
+      </label>
+    </div>
+
+    <h3>Поля страницы (мм)</h3>
+    <div class="row">
+      <label>Верх: <input type="number" id="marginTop" value="20" min="0" max="100"></label>
+      <label>Низ:  <input type="number" id="marginBottom" value="20" min="0" max="100"></label>
+    </div>
+    <div class="row">
+      <label>Лево: <input type="number" id="marginLeft" value="20" min="0" max="100"></label>
+      <label>Право:<input type="number" id="marginRight" value="20" min="0" max="100"></label>
+    </div>
+    <div class="row">
+      <button onclick="applyMargins()" style="background:#3498db">Применить поля</button>
+    </div>
+
+    <h3>Действия</h3>
+    <div class="row">
+      <button onclick="insertPageBreak()">⎯ Разрыв страницы</button>
+      <button onclick="clearFormatting()">Очистить формат</button>
+    </div>
+    <div class="row">
+      <button id="pageNumToggle" onclick="togglePageNumbers()" style="background:#34495e">
+        🔢 Нумерация страниц: вкл
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Скрытый измеритель той же ширины, что и контент страницы -->
-<div id="measurer"></div>
+<input type="file" id="fileInput" accept=".doc,.docx,.html,.htm" style="display:none" onchange="loadFile(event)">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script>
 /* =========================================================
-   КОНСТАНТЫ ФОРМАТА A4
+   КОНСТАНТЫ
    ========================================================= */
-const MM_TO_PX = 96 / 25.4; // ≈3.7795
-const A4_W = 210, A4_H = 297; // мм
-const PAD_DEFAULT = { top: 20, right: 20, bottom: 20, left: 20 };
+const MM_TO_PX = 96 / 25.4;
+const A4_W = 210, A4_H = 297;
+const PAGE_W_PX = A4_W * MM_TO_PX;
+const PAGE_H_PX = A4_H * MM_TO_PX;
 
-let margins = { ...PAD_DEFAULT };
+let margins = { top: 20, right: 20, bottom: 20, left: 20 };
+let currentScale = 1;
+let globalFontSizePt = null;
+let globalLineHeight = null;
+let showPageNumbers = true;
 
 const workspace = document.getElementById('workspace');
 const measurer  = document.getElementById('measurer');
 
 /* =========================================================
-   РАБОТА С ПАГИНАЦИЕЙ
+   СОХРАНЕНИЕ / ВОССТАНОВЛЕНИЕ ВЫДЕЛЕНИЯ
    ========================================================= */
+let savedRange = null;
+let savedActiveContent = null;
 
-// Прочитать все блоки со всех страниц в один плоский массив
+function saveSelection() {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const el = container.nodeType === 1 ? container : container.parentElement;
+    if (el && el.closest('.page-content')) {
+      savedRange = range.cloneRange();
+      savedActiveContent = el.closest('.page-content');
+      return true;
+    }
+  }
+  return false;
+}
+
+function restoreSelection() {
+  if (!savedRange) return false;
+  try {
+    if (!document.contains(savedRange.startContainer)) return false;
+    if (savedActiveContent && document.contains(savedActiveContent)) {
+      savedActiveContent.focus({ preventScroll: true });
+    }
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+    return true;
+  } catch (e) { return false; }
+}
+
+/* =========================================================
+   СОХРАНЕНИЕ / ВОССТАНОВЛЕНИЕ КУРСОРА ПРИ ПАГИНАЦИИ
+   ========================================================= */
+function captureCursor() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  const range = sel.getRangeAt(0);
+  const container = range.startContainer;
+  const el = container.nodeType === 1 ? container : container.parentElement;
+  const content = el?.closest('.page-content');
+  if (!content) return null;
+
+  const pages = [...document.querySelectorAll('.page-content')];
+  const pageIndex = pages.indexOf(content);
+  if (pageIndex < 0) return null;
+
+  let blockIndex = 0;
+  for (let i = 0; i < pageIndex; i++) {
+    blockIndex += pages[i].children.length;
+  }
+  let node = container;
+  while (node && node.parentElement !== content) node = node.parentElement;
+  if (!node) return null;
+  blockIndex += [...content.children].indexOf(node);
+
+  let charsFromBlockStart = 0;
+  try {
+    const preRange = document.createRange();
+    preRange.setStart(node, 0);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    charsFromBlockStart = preRange.toString().length;
+  } catch (e) {
+    return null;
+  }
+
+  return { blockIndex, charsFromBlockStart };
+}
+
+function restoreCursor(pos) {
+  if (!pos) return false;
+  const contents = [...document.querySelectorAll('.page-content')];
+  if (contents.length === 0) return false;
+
+  let remaining = pos.blockIndex;
+  let targetBlock = null;
+  for (const c of contents) {
+    if (remaining < c.children.length) {
+      targetBlock = c.children[remaining];
+      break;
+    }
+    remaining -= c.children.length;
+  }
+  if (!targetBlock) {
+    const last = contents[contents.length - 1];
+    if (!last || last.children.length === 0) return false;
+    targetBlock = last.children[last.children.length - 1];
+  }
+
+  const walker = document.createTreeWalker(targetBlock, NodeFilter.SHOW_TEXT, null);
+  let node;
+  let charsSeen = 0;
+  let placed = false;
+  while ((node = walker.nextNode())) {
+    const len = node.nodeValue.length;
+    if (charsSeen + len >= pos.charsFromBlockStart) {
+      const offset = pos.charsFromBlockStart - charsSeen;
+      const r = document.createRange();
+      r.setStart(node, Math.min(offset, len));
+      r.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      placed = true;
+      break;
+    }
+    charsSeen += len;
+  }
+
+  if (!placed) {
+    const r = document.createRange();
+    r.selectNodeContents(targetBlock);
+    r.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+
+  targetBlock.closest('.page-content')?.focus({ preventScroll: true });
+  return true;
+}
+
+/* =========================================================
+   НУМЕРАЦИЯ СТРАНИЦ
+   ========================================================= */
+function togglePageNumbers() {
+  showPageNumbers = !showPageNumbers;
+  applyPageNumbers();
+  try {
+    localStorage.setItem('showPageNumbers', showPageNumbers ? '1' : '0');
+  } catch (e) {}
+}
+
+function applyPageNumbers() {
+  document.body.classList.toggle('no-page-numbers', !showPageNumbers);
+  const btn = document.getElementById('pageNumToggle');
+  if (btn) {
+    btn.textContent = '🔢 Нумерация страниц: ' + (showPageNumbers ? 'вкл' : 'выкл');
+    btn.style.background = showPageNumbers ? '#34495e' : '#7f8c8d';
+  }
+  const tbtn = document.getElementById('pageNumToolbarBtn');
+  if (tbtn) {
+    tbtn.style.opacity = showPageNumbers ? '1' : '0.4';
+  }
+}
+
+/* =========================================================
+   ВЫДЕЛЕНИЕ ВСЕГО ТЕКСТА
+   ========================================================= */
+function selectAllPages() {
+  const contents = [...document.querySelectorAll('.page-content')];
+  if (contents.length === 0) return;
+
+  function firstTextNode(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    return walker.nextNode();
+  }
+  function lastTextNode(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let node, last = null;
+    while ((node = walker.nextNode())) last = node;
+    return last;
+  }
+
+  let startNode = null, endNode = null;
+  for (const c of contents) {
+    const f = firstTextNode(c);
+    if (f) { startNode = f; break; }
+  }
+  for (let i = contents.length - 1; i >= 0; i--) {
+    const l = lastTextNode(contents[i]);
+    if (l) { endNode = l; break; }
+  }
+
+  if (!startNode || !endNode) return;
+
+  const range = document.createRange();
+  range.setStart(startNode, 0);
+  range.setEnd(endNode, endNode.nodeValue.length);
+
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  savedRange = range.cloneRange();
+  savedActiveContent = startNode.parentElement.closest('.page-content');
+
+  contents.forEach(c => c.closest('.page').classList.add('focused'));
+  closeMenu();
+  updateSizeIndicator();
+}
+
+function deselectAll() {
+  const sel = window.getSelection();
+  if (sel) sel.removeAllRanges();
+  savedRange = null;
+  savedActiveContent = null;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('focused'));
+  closeMenu();
+}
+
+/* =========================================================
+   ПАГИНАЦИЯ
+   ========================================================= */
 function collectBlocks() {
   const blocks = [];
   document.querySelectorAll('.page .page-content').forEach(content => {
@@ -233,24 +649,21 @@ function collectBlocks() {
   return blocks;
 }
 
-// Настроить измеритель под текущие поля — ширина та же, что у content внутри листа
 function prepareMeasurer() {
   measurer.style.width = (A4_W - margins.left - margins.right) + 'mm';
   measurer.style.fontFamily = "'Times New Roman', serif";
-  measurer.style.fontSize = '14pt';
-  measurer.style.lineHeight = document.getElementById('lineHeight').value;
+  measurer.style.fontSize = (globalFontSizePt || 14) + 'pt';
+  measurer.style.lineHeight = globalLineHeight
+    || document.getElementById('lineHeight')?.value
+    || '1.4';
   measurer.innerHTML = '';
 }
 
-// Высота доступного контента на странице (px)
 function contentHeightPx() {
   return (A4_H - margins.top - margins.bottom) * MM_TO_PX;
 }
 
-// Разбить один блок, если он выше страницы (например, огромный список или таблица)
-// Возвращает массив блоков, каждый из которых гарантированно ≤ доступной высоты
 function splitOversizedBlock(block, availablePx) {
-  // Если это список — режем по <li>
   const tag = block.tagName;
   if (tag === 'UL' || tag === 'OL') {
     const items = [...block.children];
@@ -273,7 +686,6 @@ function splitOversizedBlock(block, availablePx) {
     if (current.children.length) result.push(current);
     return result.length ? result : [block];
   }
-  // Если это таблица — режем по строкам
   if (tag === 'TABLE') {
     const rows = [...block.querySelectorAll('tr')];
     const result = [];
@@ -299,61 +711,81 @@ function splitOversizedBlock(block, availablePx) {
     if (tbody.children.length) result.push(current);
     return result.length ? result : [block];
   }
-  // Обычный абзац, слишком длинный — оставляем как есть, пусть переносится визуально.
-  // (Разбивка по строкам внутри одного <p> — отдельная сложная задача, здесь упрощаем.)
   return [block];
 }
 
-// Главная функция: разложить все блоки по страницам заново
+function newPageEl() {
+  const wrap = document.createElement('div');
+  wrap.className = 'page-wrap';
+
+  const pageEl = document.createElement('div');
+  pageEl.className = 'page';
+  pageEl.style.setProperty('--pad',
+    `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`);
+
+  const content = document.createElement('div');
+  content.className = 'page-content';
+  content.contentEditable = 'true';
+  content.spellcheck = false;
+
+  if (globalFontSizePt) content.style.fontSize = globalFontSizePt + 'pt';
+  if (globalLineHeight) content.style.lineHeight = globalLineHeight;
+
+  pageEl.appendChild(content);
+  wrap.appendChild(pageEl);
+
+  content.addEventListener('focus', () => {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('focused'));
+    pageEl.classList.add('focused');
+  });
+  content.addEventListener('input', onContentInput);
+
+  return { wrap, pageEl, content };
+}
+
 function repaginate() {
+  // Запоминаем позицию курсора, чтобы восстановить после пересборки
+  const cursorPos = captureCursor();
+
   const blocks = collectBlocks();
-  workspace.innerHTML = '';
 
-  const availPx = contentHeightPx();
-  prepareMeasurer();
-
-  let pageContent = null;
-  let pageEl = null;
-  let usedPx = 0;
-  let pageNum = 1;
-
-  function newPage() {
-    pageEl = document.createElement('div');
-    pageEl.className = 'page';
-    pageEl.dataset.page = pageNum++;
-    pageEl.style.setProperty('--pad',
-      `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`);
-    pageContent = document.createElement('div');
-    pageContent.className = 'page-content';
-    pageContent.contentEditable = 'true';
-    pageContent.spellcheck = false;
-    pageEl.appendChild(pageContent);
-    workspace.appendChild(pageEl);
-    usedPx = 0;
-    // Навешиваем фокус
-    pageContent.addEventListener('focus', () => {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('focused'));
-      pageEl.classList.add('focused');
-    });
-    pageContent.addEventListener('input', onContentInput);
-    return pageContent;
+  // Гарантируем пустой абзац в самом конце — чтобы всегда было куда печатать
+  const lastBlock = blocks[blocks.length - 1];
+  const lastIsEmptyP = lastBlock
+    && lastBlock.tagName === 'P'
+    && !lastBlock.textContent.trim()
+    && !lastBlock.querySelector('img, table, hr');
+  if (!lastIsEmptyP) {
+    const emptyP = document.createElement('p');
+    emptyP.appendChild(document.createElement('br'));
+    blocks.push(emptyP);
   }
 
-  newPage();
+  workspace.innerHTML = '';
+  prepareMeasurer();
+
+  const availPx = contentHeightPx();
+  let pageObj = newPageEl();
+  workspace.appendChild(pageObj.wrap);
+  let usedPx = 0;
+
+  function ensureNewPage() {
+    pageObj = newPageEl();
+    workspace.appendChild(pageObj.wrap);
+    usedPx = 0;
+  }
 
   blocks.forEach(block => {
-    // Принудительный разрыв страницы
     if (block.hasAttribute && block.hasAttribute('data-page-break')) {
-      newPage();
+      ensureNewPage();
       return;
     }
 
     const clone = block.cloneNode(true);
     measurer.innerHTML = '';
     measurer.appendChild(clone);
-    let blockPx = measurer.getBoundingClientRect().height;
+    const blockPx = measurer.getBoundingClientRect().height;
 
-    // Если блок больше страницы — пробуем разрезать
     if (blockPx > availPx) {
       const parts = splitOversizedBlock(block, availPx);
       parts.forEach(part => {
@@ -361,74 +793,273 @@ function repaginate() {
         measurer.innerHTML = '';
         measurer.appendChild(c);
         const partPx = measurer.getBoundingClientRect().height;
-        if (usedPx + partPx > availPx && usedPx > 0) {
-          newPage();
-        }
-        pageContent.appendChild(part);
+        if (usedPx + partPx > availPx && usedPx > 0) ensureNewPage();
+        pageObj.content.appendChild(part);
         usedPx += partPx;
       });
       return;
     }
 
-    // Обычный блок: если не влезает — новая страница
-    if (usedPx + blockPx > availPx && usedPx > 0) {
-      newPage();
-    }
-    pageContent.appendChild(block);
+    if (usedPx + blockPx > availPx && usedPx > 0) ensureNewPage();
+    pageObj.content.appendChild(block);
     usedPx += blockPx;
   });
 
-  // Пронумеровать и добавить колонтитул
-  document.querySelectorAll('.page').forEach((p, i) => {
-    p.dataset.page = (i + 1);
-  });
+  document.querySelectorAll('.page').forEach((p, i) => { p.dataset.page = i + 1; });
+  fitToScreen();
 
-  // Обновить курсор — поставить в первую страницу, если ничего не выбрано
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) {
-    const first = document.querySelector('.page-content');
-    if (first) {
-      first.focus();
-      const r = document.createRange();
-      r.selectNodeContents(first);
-      r.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(r);
+  // Восстанавливаем курсор там, где он был
+  if (cursorPos) {
+    restoreCursor(cursorPos);
+    saveSelection();
+  } else {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      const first = document.querySelector('.page-content');
+      if (first) {
+        first.focus({ preventScroll: true });
+        const r = document.createRange();
+        r.selectNodeContents(first);
+        r.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        saveSelection();
+      }
     }
   }
 }
 
 /* =========================================================
-   ВВОД КОНТЕНТА
+   МАСШТАБ ПОД ЭКРАН
    ========================================================= */
+function fitToScreen() {
+  const padding = 24;
+  const availW = workspace.clientWidth - padding;
+  const availH = workspace.clientHeight - padding;
 
+  const scaleW = availW / PAGE_W_PX;
+  let scale = Math.min(scaleW, 1);
+
+  if (availW > 900) {
+    const scaleH = availH / PAGE_H_PX;
+    scale = Math.max(Math.min(scaleW, scaleH), 0.4);
+  }
+
+  currentScale = scale;
+
+  document.querySelectorAll('.page-wrap').forEach(wrap => {
+    wrap.style.width  = (PAGE_W_PX * scale) + 'px';
+    wrap.style.height = (PAGE_H_PX * scale) + 'px';
+  });
+  document.querySelectorAll('.page').forEach(page => {
+    page.style.transform = `scale(${scale})`;
+  });
+}
+
+/* =========================================================
+   ВВОД — с увеличенным дебаунсом в конце документа
+   ========================================================= */
 let repaginateTimer = null;
-function onContentInput(e) {
-  // Дебаунс, чтобы не тормозить при наборе
+function onContentInput() {
   clearTimeout(repaginateTimer);
-  repaginateTimer = setTimeout(() => {
-    repaginate();
-  }, 400);
+
+  // Проверим: курсор на последней странице?
+  const sel = window.getSelection();
+  let atEnd = false;
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    const container = range.startContainer;
+    const el = container.nodeType === 1 ? container : container.parentElement;
+    const contents = [...document.querySelectorAll('.page-content')];
+    const lastContent = contents[contents.length - 1];
+    if (lastContent && el?.closest('.page-content') === lastContent) atEnd = true;
+  }
+
+  const delay = atEnd ? 900 : 600;
+  repaginateTimer = setTimeout(repaginate, delay);
 }
 
 /* =========================================================
    КОМАНДЫ ФОРМАТИРОВАНИЯ
    ========================================================= */
-
 function cmd(command, value = null) {
-  document.execCommand(command, false, value);
-  const active = document.activeElement;
-  if (active && !active.isContentEditable) {
-    const el = document.querySelector('.page.focused .page-content') ||
-               document.querySelector('.page-content');
-    el && el.focus();
+  if (!restoreSelection()) {
+    const el = document.querySelector('.page.focused .page-content')
+            || document.querySelector('.page-content');
+    if (el) el.focus({ preventScroll: true });
   }
+  document.execCommand(command, false, value);
+  saveSelection();
   updateActive();
+  updateSizeIndicator();
 }
 
-function indent()  { document.execCommand('indent', false, null); }
-function outdent() { document.execCommand('outdent', false, null); }
+function indent()  { cmd('indent'); }
+function outdent() { cmd('outdent'); }
 
+function updateActive() {
+  document.querySelectorAll('#toolbar button').forEach(b => b.classList.remove('active'));
+  ['bold','italic','underline','strikeThrough','justifyLeft','justifyCenter','justifyRight','justifyFull',
+   'insertUnorderedList','insertOrderedList'].forEach(c => {
+    if (document.queryCommandState(c)) {
+      const btn = [...document.querySelectorAll('#toolbar button')]
+        .find(b => b.getAttribute('onclick')?.includes(`'${c}'`));
+      if (btn) btn.classList.add('active');
+    }
+  });
+}
+
+/* =========================================================
+   РАЗМЕР ШРИФТА
+   ========================================================= */
+function getEffectiveFontSizePt(el) {
+  if (!el) return 14;
+  const px = parseFloat(getComputedStyle(el).fontSize);
+  return Math.round(px * 72 / 96);
+}
+
+function hasExplicitSize(node) {
+  let el = node;
+  while (el && !(el.classList && el.classList.contains('page-content'))) {
+    if (el.style && el.style.fontSize) return true;
+    if (el.tagName === 'FONT' && el.getAttribute('size')) return true;
+    const inline = el.getAttribute && el.getAttribute('style');
+    if (inline && /font-size/i.test(inline)) return true;
+    el = el.parentElement;
+  }
+  return false;
+}
+
+function getCurrentSizePt() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) {
+    if (globalFontSizePt) return globalFontSizePt;
+    const c = document.querySelector('.page.focused .page-content')
+           || document.querySelector('.page-content');
+    if (c && c.style.fontSize) return Math.round(parseFloat(c.style.fontSize));
+    return 14;
+  }
+  let node = sel.getRangeAt(0).startContainer;
+  if (node.nodeType === 3) node = node.parentElement;
+  if (!node) return globalFontSizePt || 14;
+  if (node.closest('.page-content') && !hasExplicitSize(node)) {
+    if (globalFontSizePt) return globalFontSizePt;
+    const c = node.closest('.page-content');
+    if (c && c.style.fontSize) return Math.round(parseFloat(c.style.fontSize));
+    return 14;
+  }
+  return getEffectiveFontSizePt(node);
+}
+
+function updateSizeIndicator() {
+  const ind = document.getElementById('sizeIndicator');
+  if (!ind) return;
+  const pt = getCurrentSizePt();
+  ind.textContent = pt;
+  document.querySelectorAll('#sizeGrid button').forEach(b => {
+    b.classList.toggle('current', parseInt(b.dataset.size, 10) === pt);
+  });
+}
+
+function applyFontSize(pt) {
+  if ((!window.getSelection() || window.getSelection().rangeCount === 0) && savedRange) {
+    restoreSelection();
+  }
+  const s = window.getSelection();
+  if (!s || s.rangeCount === 0) return;
+
+  const range = s.getRangeAt(0);
+
+  const startContent = (range.startContainer.nodeType === 1
+    ? range.startContainer
+    : range.startContainer.parentElement)?.closest('.page-content');
+  const endContent = (range.endContainer.nodeType === 1
+    ? range.endContainer
+    : range.endContainer.parentElement)?.closest('.page-content');
+
+  const multiPage = startContent && endContent && startContent !== endContent;
+
+  if (multiPage) {
+    applyFontSizeToAll(pt);
+    return;
+  }
+
+  if (range.collapsed) {
+    const span = document.createElement('span');
+    span.style.fontSize = pt + 'pt';
+    span.appendChild(document.createTextNode('\u200B'));
+    range.insertNode(span);
+    const newRange = document.createRange();
+    newRange.setStart(span.firstChild, 1);
+    newRange.collapse(true);
+    s.removeAllRanges();
+    s.addRange(newRange);
+    savedRange = newRange.cloneRange();
+    updateSizeIndicator();
+    return;
+  }
+
+  const fragment = range.extractContents();
+  fragment.querySelectorAll?.('*').forEach(el => {
+    if (el.style && el.style.fontSize) el.style.fontSize = '';
+    if (el.tagName === 'FONT') el.removeAttribute('size');
+  });
+
+  const wrapper = document.createElement('span');
+  wrapper.style.fontSize = pt + 'pt';
+  wrapper.appendChild(fragment);
+  range.insertNode(wrapper);
+
+  const newRange = document.createRange();
+  newRange.selectNodeContents(wrapper);
+  s.removeAllRanges();
+  s.addRange(newRange);
+  savedRange = newRange.cloneRange();
+
+  updateSizeIndicator();
+  clearTimeout(repaginateTimer);
+  repaginateTimer = setTimeout(repaginate, 500);
+}
+
+function applyFontSizeToAll(pt) {
+  globalFontSizePt = pt;
+  document.querySelectorAll('.page-content').forEach(content => {
+    content.style.fontSize = pt + 'pt';
+    content.querySelectorAll('*').forEach(el => {
+      if (el.style && el.style.fontSize) el.style.fontSize = '';
+      if (el.tagName === 'FONT') el.removeAttribute('size');
+    });
+  });
+  updateSizeIndicator();
+  clearTimeout(repaginateTimer);
+  repaginateTimer = setTimeout(repaginate, 500);
+}
+
+function stepFontSize(delta) {
+  const cur = getCurrentSizePt();
+  const next = Math.max(6, Math.min(96, cur + delta));
+
+  const s = window.getSelection();
+  if (s && s.rangeCount > 0) {
+    const range = s.getRangeAt(0);
+    const startContent = (range.startContainer.nodeType === 1
+      ? range.startContainer
+      : range.startContainer.parentElement)?.closest('.page-content');
+    const endContent = (range.endContainer.nodeType === 1
+      ? range.endContainer
+      : range.endContainer.parentElement)?.closest('.page-content');
+    if (startContent && endContent && startContent !== endContent) {
+      applyFontSizeToAll(next);
+      return;
+    }
+  }
+
+  applyFontSize(next);
+}
+
+/* =========================================================
+   ПРОЧИЕ НАСТРОЙКИ
+   ========================================================= */
 function applyMargins() {
   margins = {
     top:    parseFloat(document.getElementById('marginTop').value)    || 0,
@@ -436,12 +1067,15 @@ function applyMargins() {
     bottom: parseFloat(document.getElementById('marginBottom').value) || 0,
     left:   parseFloat(document.getElementById('marginLeft').value)   || 0,
   };
+  closeMenu();
   repaginate();
 }
 
 function applyLineHeight() {
   const v = document.getElementById('lineHeight').value;
+  globalLineHeight = v;
   document.querySelectorAll('.page-content').forEach(c => c.style.lineHeight = v);
+  closeMenu();
   repaginate();
 }
 
@@ -450,58 +1084,56 @@ function applyParaSpace() {
   document.querySelectorAll('.page-content p, .page-content div').forEach(el => {
     el.style.marginBottom = v;
   });
+  closeMenu();
   repaginate();
 }
 
 function insertPageBreak() {
-  // Вставляем маркер разрыва, repaginate его увидит
-  document.execCommand('insertHTML', false,
-    '<div data-page-break="1" style="height:0;overflow:hidden"></div><p><br></p>');
+  cmd('insertHTML', '<div data-page-break="1" style="height:0;overflow:hidden"></div><p><br></p>');
+  closeMenu();
   repaginate();
 }
 
 function clearFormatting() {
-  document.execCommand('removeFormat', false, null);
-  document.querySelectorAll('.page-content *').forEach(el => {
-    el.style.background = '';
-    el.style.color = '';
-  });
+  cmd('removeFormat');
+  closeMenu();
 }
 
-function updateActive() {
-  document.querySelectorAll('#toolbar button').forEach(b => b.classList.remove('active'));
-  ['bold','italic','underline','strikeThrough','justifyLeft','justifyCenter','justifyRight','justifyFull',
-   'insertUnorderedList','insertOrderedList'].forEach(c => {
-    if (document.queryCommandState(c)) {
-      const btn = [...document.querySelectorAll('#toolbar button')]
-        .find(b => b.getAttribute('onclick')?.includes(c));
-      if (btn) btn.classList.add('active');
-    }
-  });
+/* =========================================================
+   МЕНЮ
+   ========================================================= */
+function openMenu() {
+  saveSelection();
+  updateSizeIndicator();
+  document.getElementById('menuOverlay').classList.add('open');
 }
-document.addEventListener('selectionchange', updateActive);
+function closeMenu() {
+  document.getElementById('menuOverlay').classList.remove('open');
+}
+function closeMenuOutside(e) {
+  if (e.target.id === 'menuOverlay') closeMenu();
+}
 
 /* =========================================================
    СОХРАНЕНИЕ / ОТКРЫТИЕ
    ========================================================= */
-
 function saveAsDoc() {
-  // Собираем все страницы в один документ, вставляя разрывы страниц
   const pages = [...document.querySelectorAll('.page-content')];
   let body = '';
   pages.forEach((p, i) => {
     body += p.innerHTML;
-    if (i < pages.length - 1) {
-      body += '<div style="page-break-after: always"></div>';
-    }
+    if (i < pages.length - 1) body += '<div style="page-break-after: always"></div>';
   });
 
+  const bodyFontSize = globalFontSizePt || 14;
   const styles = `
     <style>
       @page { size: A4; margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm; }
-      body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; }
+      body { font-family: 'Times New Roman', serif; font-size: ${bodyFontSize}pt; line-height: ${globalLineHeight || 1.4}; }
       p { margin: 0 0 8pt 0; }
-      h1 { font-size: 24pt; } h2 { font-size: 20pt; } h3 { font-size: 16pt; }
+      h1 { font-size: ${bodyFontSize * 1.7}pt; } 
+      h2 { font-size: ${bodyFontSize * 1.4}pt; } 
+      h3 { font-size: ${bodyFontSize * 1.15}pt; }
       ul, ol { margin: 0 0 8pt 0; }
     </style>`;
 
@@ -509,11 +1141,7 @@ function saveAsDoc() {
     <html xmlns:o="urn:schemas-microsoft-com:office:office"
           xmlns:w="urn:schemas-microsoft-com:office:word"
           xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-      <meta charset="utf-8">
-      <title>Документ</title>
-      ${styles}
-    </head>
+    <head><meta charset="utf-8"><title>Документ</title>${styles}</head>
     <body>${body}</body>
     </html>`;
 
@@ -535,19 +1163,21 @@ function loadFile(e) {
   if (!file) return;
   const name = file.name.toLowerCase();
 
+  globalFontSizePt = null;
+  globalLineHeight = null;
+
   if (name.endsWith('.docx')) {
-    // Используем mammoth для .docx
     const reader = new FileReader();
     reader.onload = ev => {
       mammoth.convertToHtml({ arrayBuffer: ev.target.result })
         .then(result => {
           const content = document.querySelector('.page-content');
           content.innerHTML = result.value || '<p></p>';
+          content.style.fontSize = '';
           repaginate();
+          updateSizeIndicator();
         })
-        .catch(err => {
-          alert('Не удалось прочитать .docx: ' + err.message);
-        });
+        .catch(err => alert('Не удалось прочитать .docx: ' + err.message));
     };
     reader.readAsArrayBuffer(file);
     e.target.value = '';
@@ -555,20 +1185,19 @@ function loadFile(e) {
   }
 
   if (name.endsWith('.doc')) {
-    // Старый бинарный .doc в браузере не разобрать.
-    // Пробуем прочитать как текст (иногда срабатывает, если .doc — это на самом деле HTML)
     const reader = new FileReader();
     reader.onload = ev => {
       const text = ev.target.result;
-      // Проверим, есть ли HTML-теги
       if (/<\w+[^>]*>/.test(text)) {
         const match = text.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
         const content = document.querySelector('.page-content');
         content.innerHTML = match ? match[1] : text;
+        content.style.fontSize = '';
         repaginate();
+        updateSizeIndicator();
       } else {
         alert('Формат .doc (старый бинарный Word) не поддерживается в браузере.\n' +
-              'Откройте его в Word/LibreOffice и сохраните как .docx — тогда всё загрузится.');
+              'Откройте его в Word/LibreOffice и сохраните как .docx.');
       }
     };
     reader.readAsText(file, 'UTF-8');
@@ -576,14 +1205,15 @@ function loadFile(e) {
     return;
   }
 
-  // HTML
   const reader = new FileReader();
   reader.onload = ev => {
     const text = ev.target.result;
     const match = text.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     const content = document.querySelector('.page-content');
     content.innerHTML = match ? match[1] : text;
+    content.style.fontSize = '';
     repaginate();
+    updateSizeIndicator();
   };
   reader.readAsText(file, 'UTF-8');
   e.target.value = '';
@@ -599,16 +1229,60 @@ document.addEventListener('keydown', e => {
     if (e.key === 'u') { e.preventDefault(); cmd('underline'); }
     if (e.key === 's') { e.preventDefault(); saveAsDoc(); }
     if (e.key === 'p') { e.preventDefault(); window.print(); }
-    if (e.key === 'Enter') { e.preventDefault(); repaginate(); }
   }
+});
+
+/* =========================================================
+   ОТСЛЕЖИВАНИЕ ВЫДЕЛЕНИЯ
+   ========================================================= */
+document.addEventListener('selectionchange', () => {
+  updateActive();
+  updateSizeIndicator();
+  saveSelection();
+});
+
+/* =========================================================
+   РЕСАЙЗ
+   ========================================================= */
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(fitToScreen, 150);
+});
+window.addEventListener('orientationchange', () => {
+  setTimeout(fitToScreen, 300);
 });
 
 /* =========================================================
    СТАРТ
    ========================================================= */
 window.addEventListener('load', () => {
+  try {
+    const saved = localStorage.getItem('showPageNumbers');
+    if (saved !== null) showPageNumbers = saved === '1';
+  } catch (e) {}
+  applyPageNumbers();
+
+  const initial = newPageEl();
+  initial.content.innerHTML =
+    '<p>Начните печатать… Текст будет автоматически перетекать на следующую страницу.</p>';
+  workspace.appendChild(initial.wrap);
   repaginate();
+  updateSizeIndicator();
+
+  document.querySelectorAll('#toolbar button, #bottomBar button, #menuSheet button')
+    .forEach(btn => {
+      btn.addEventListener('mousedown', e => e.preventDefault());
+      btn.addEventListener('touchstart', () => { saveSelection(); }, { passive: true });
+    });
+
+  document.querySelectorAll('#menuSheet select, #menuSheet input')
+    .forEach(el => {
+      el.addEventListener('mousedown', () => saveSelection());
+      el.addEventListener('touchstart', () => saveSelection(), { passive: true });
+    });
 });
+
 window.addEventListener('beforeprint', () => repaginate());
 </script>
 </body>
