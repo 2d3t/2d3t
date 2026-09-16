@@ -27,75 +27,71 @@
   }
   body { display: flex; flex-direction: column; }
 
-  /* ============ ВЕРХНЯЯ ПАНЕЛЬ (сетка в 2 ряда) ============ */
+  /* ============ ВЕРХНЯЯ ПАНЕЛЬ ============ */
   #toolbar {
     background: #2c3e50;
     color: #fff;
-    padding: 6px 6px;
+    padding: 6px 8px;
     padding-top: calc(6px + env(safe-area-inset-top, 0));
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 4px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     box-shadow: 0 2px 6px rgba(0,0,0,.3);
     z-index: 20;
     flex-shrink: 0;
   }
+  #toolbar::-webkit-scrollbar { display: none; }
 
-  #toolbar button,
-  #toolbar .size-btn,
-  #toolbar #sizeIndicator,
-  #toolbar .menu-btn {
+  #toolbar button, #toolbar select, #toolbar input[type=color] {
     background: #34495e;
     color: #fff;
     border: 1px solid #4a6278;
     border-radius: 8px;
-    height: 40px;
-    padding: 0;
+    padding: 0 12px;
+    min-width: 44px;
+    height: 44px;
     cursor: pointer;
     font-size: 15px;
-    font-family: inherit;
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background .1s;
-    user-select: none;
-    -webkit-user-select: none;
-    min-width: 0;
-    width: 100%;
+    font-family: inherit;
   }
-
-  #toolbar button:active,
-  #toolbar .size-btn:active { background: #3498db; }
+  #toolbar button:active { background: #3498db; }
   #toolbar button.active { background: #3498db; }
-
-  #toolbar #sizeIndicator {
-    background: #1a252f;
-    border-color: #1a252f;
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-    cursor: default;
+  #toolbar .sep {
+    width: 1px; height: 28px; background: #4a6278;
+    margin: 0 2px; flex-shrink: 0;
   }
-  #toolbar #sizeIndicator::after { content: 'pt'; opacity: .5; margin-left: 1px; font-size: 10px; }
-
-  #toolbar .size-btn {
+  #toolbar button.size-btn {
     font-family: Georgia, serif;
-    font-weight: 700;
-    font-size: 16px;
+    font-weight: 600;
+    font-size: 17px;
+    padding: 0 10px;
   }
-
-  #toolbar .menu-btn {
-    background: #e67e22;
-    border-color: #d35400;
+  #sizeIndicator {
+    background: #1a252f;
+    color: #ecf0f1;
+    border: 1px solid #4a6278;
+    border-radius: 8px;
+    height: 44px;
+    min-width: 48px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
   }
-  #toolbar .menu-btn:active { background: #d35400; }
-
-  #toolbar .sep { display: none; }
-  #toolbar .wide { grid-column: span 2; }
-
-  /* ============ СКРЫТИЕ НУМЕРАЦИИ СТРАНИЦ ============ */
-  body.no-page-numbers .page::after {
-    display: none !important;
-  }
+  #sizeIndicator::after { content: 'pt'; opacity: .5; margin-left: 2px; font-size: 11px; }
 
   /* ============ РАБОЧАЯ ОБЛАСТЬ ============ */
   #workspace {
@@ -147,6 +143,9 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
+.page-content > *:last-child {
+  margin-bottom: 0 !important;
+}
   .page.focused {
     box-shadow: 0 0 0 2px #3498db, 0 0 12px rgba(52,152,219,.5);
   }
@@ -276,7 +275,6 @@
     }
     .page-wrap:last-child .page { page-break-after: auto; }
     .page.focused { box-shadow: none; }
-    body.no-page-numbers .page::after { display: none !important; }
   }
 </style>
 </head>
@@ -288,25 +286,32 @@
 <div id="toolbar">
   <button onclick="cmd('undo')" title="Отменить">↶</button>
   <button onclick="cmd('redo')" title="Повторить">↷</button>
+  <div class="sep"></div>
+
   <button class="size-btn" onclick="stepFontSize(-2)" title="Меньше">A−</button>
   <span id="sizeIndicator">14</span>
   <button class="size-btn" onclick="stepFontSize(2)" title="Больше">A+</button>
+  <div class="sep"></div>
+
   <button onclick="cmd('bold')" title="Жирный"><b>Ж</b></button>
   <button onclick="cmd('italic')" title="Курсив"><i>К</i></button>
   <button onclick="cmd('underline')" title="Подчёркнутый"><u>П</u></button>
   <button onclick="cmd('strikeThrough')" title="Зачёркнутый"><s>З</s></button>
-  <button class="menu-btn" onclick="openMenu()" title="Ещё">⋯</button>
+  <div class="sep"></div>
 
   <button onclick="cmd('justifyLeft')"   title="Влево">⯇</button>
   <button onclick="cmd('justifyCenter')" title="Центр">≡</button>
   <button onclick="cmd('justifyRight')"  title="Вправо">⯈</button>
   <button onclick="cmd('justifyFull')"   title="По ширине">☰</button>
+  <div class="sep"></div>
+
   <button onclick="cmd('insertUnorderedList')" title="Маркированный">•</button>
   <button onclick="cmd('insertOrderedList')"   title="Нумерованный">1.</button>
   <button onclick="indent()"  title="Отступ вправо">⇥</button>
   <button onclick="outdent()" title="Отступ влево">⇤</button>
-  <button onclick="selectAllPages()" title="Выделить весь текст">☑</button>
-  <button onclick="togglePageNumbers()" title="Нумерация страниц" id="pageNumToolbarBtn">🔢</button>
+  <div class="sep"></div>
+
+  <button onclick="openMenu()" title="Ещё" style="background:#e67e22">⋯</button>
 </div>
 
 <!-- =====================================================
@@ -414,11 +419,6 @@
       <button onclick="insertPageBreak()">⎯ Разрыв страницы</button>
       <button onclick="clearFormatting()">Очистить формат</button>
     </div>
-    <div class="row">
-      <button id="pageNumToggle" onclick="togglePageNumbers()" style="background:#34495e">
-        🔢 Нумерация страниц: вкл
-      </button>
-    </div>
   </div>
 </div>
 
@@ -438,7 +438,6 @@ let margins = { top: 20, right: 20, bottom: 20, left: 20 };
 let currentScale = 1;
 let globalFontSizePt = null;
 let globalLineHeight = null;
-let showPageNumbers = true;
 
 const workspace = document.getElementById('workspace');
 const measurer  = document.getElementById('measurer');
@@ -479,122 +478,7 @@ function restoreSelection() {
 }
 
 /* =========================================================
-   СОХРАНЕНИЕ / ВОССТАНОВЛЕНИЕ КУРСОРА ПРИ ПАГИНАЦИИ
-   ========================================================= */
-function captureCursor() {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return null;
-  const range = sel.getRangeAt(0);
-  const container = range.startContainer;
-  const el = container.nodeType === 1 ? container : container.parentElement;
-  const content = el?.closest('.page-content');
-  if (!content) return null;
-
-  const pages = [...document.querySelectorAll('.page-content')];
-  const pageIndex = pages.indexOf(content);
-  if (pageIndex < 0) return null;
-
-  let blockIndex = 0;
-  for (let i = 0; i < pageIndex; i++) {
-    blockIndex += pages[i].children.length;
-  }
-  let node = container;
-  while (node && node.parentElement !== content) node = node.parentElement;
-  if (!node) return null;
-  blockIndex += [...content.children].indexOf(node);
-
-  let charsFromBlockStart = 0;
-  try {
-    const preRange = document.createRange();
-    preRange.setStart(node, 0);
-    preRange.setEnd(range.startContainer, range.startOffset);
-    charsFromBlockStart = preRange.toString().length;
-  } catch (e) {
-    return null;
-  }
-
-  return { blockIndex, charsFromBlockStart };
-}
-
-function restoreCursor(pos) {
-  if (!pos) return false;
-  const contents = [...document.querySelectorAll('.page-content')];
-  if (contents.length === 0) return false;
-
-  let remaining = pos.blockIndex;
-  let targetBlock = null;
-  for (const c of contents) {
-    if (remaining < c.children.length) {
-      targetBlock = c.children[remaining];
-      break;
-    }
-    remaining -= c.children.length;
-  }
-  if (!targetBlock) {
-    const last = contents[contents.length - 1];
-    if (!last || last.children.length === 0) return false;
-    targetBlock = last.children[last.children.length - 1];
-  }
-
-  const walker = document.createTreeWalker(targetBlock, NodeFilter.SHOW_TEXT, null);
-  let node;
-  let charsSeen = 0;
-  let placed = false;
-  while ((node = walker.nextNode())) {
-    const len = node.nodeValue.length;
-    if (charsSeen + len >= pos.charsFromBlockStart) {
-      const offset = pos.charsFromBlockStart - charsSeen;
-      const r = document.createRange();
-      r.setStart(node, Math.min(offset, len));
-      r.collapse(true);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(r);
-      placed = true;
-      break;
-    }
-    charsSeen += len;
-  }
-
-  if (!placed) {
-    const r = document.createRange();
-    r.selectNodeContents(targetBlock);
-    r.collapse(false);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(r);
-  }
-
-  targetBlock.closest('.page-content')?.focus({ preventScroll: true });
-  return true;
-}
-
-/* =========================================================
-   НУМЕРАЦИЯ СТРАНИЦ
-   ========================================================= */
-function togglePageNumbers() {
-  showPageNumbers = !showPageNumbers;
-  applyPageNumbers();
-  try {
-    localStorage.setItem('showPageNumbers', showPageNumbers ? '1' : '0');
-  } catch (e) {}
-}
-
-function applyPageNumbers() {
-  document.body.classList.toggle('no-page-numbers', !showPageNumbers);
-  const btn = document.getElementById('pageNumToggle');
-  if (btn) {
-    btn.textContent = '🔢 Нумерация страниц: ' + (showPageNumbers ? 'вкл' : 'выкл');
-    btn.style.background = showPageNumbers ? '#34495e' : '#7f8c8d';
-  }
-  const tbtn = document.getElementById('pageNumToolbarBtn');
-  if (tbtn) {
-    tbtn.style.opacity = showPageNumbers ? '1' : '0.4';
-  }
-}
-
-/* =========================================================
-   ВЫДЕЛЕНИЕ ВСЕГО ТЕКСТА
+   ВЫДЕЛЕНИЕ ВСЕГО ТЕКСТА (по всем страницам)
    ========================================================= */
 function selectAllPages() {
   const contents = [...document.querySelectorAll('.page-content')];
@@ -635,6 +519,7 @@ function selectAllPages() {
   savedActiveContent = startNode.parentElement.closest('.page-content');
 
   contents.forEach(c => c.closest('.page').classList.add('focused'));
+
   closeMenu();
   updateSizeIndicator();
 }
@@ -738,8 +623,13 @@ function newPageEl() {
   content.contentEditable = 'true';
   content.spellcheck = false;
 
-  if (globalFontSizePt) content.style.fontSize = globalFontSizePt + 'pt';
-  if (globalLineHeight) content.style.lineHeight = globalLineHeight;
+  // Переносим глобальный размер и интервал на новую страницу
+  if (globalFontSizePt) {
+    content.style.fontSize = globalFontSizePt + 'pt';
+  }
+  if (globalLineHeight) {
+    content.style.lineHeight = globalLineHeight;
+  }
 
   pageEl.appendChild(content);
   wrap.appendChild(pageEl);
@@ -754,23 +644,7 @@ function newPageEl() {
 }
 
 function repaginate() {
-  // Запоминаем позицию курсора, чтобы восстановить после пересборки
-  const cursorPos = captureCursor();
-
   const blocks = collectBlocks();
-
-  // Гарантируем пустой абзац в самом конце — чтобы всегда было куда печатать
-  const lastBlock = blocks[blocks.length - 1];
-  const lastIsEmptyP = lastBlock
-    && lastBlock.tagName === 'P'
-    && !lastBlock.textContent.trim()
-    && !lastBlock.querySelector('img, table, hr');
-  if (!lastIsEmptyP) {
-    const emptyP = document.createElement('p');
-    emptyP.appendChild(document.createElement('br'));
-    blocks.push(emptyP);
-  }
-
   workspace.innerHTML = '';
   prepareMeasurer();
 
@@ -818,23 +692,17 @@ function repaginate() {
   document.querySelectorAll('.page').forEach((p, i) => { p.dataset.page = i + 1; });
   fitToScreen();
 
-  // Восстанавливаем курсор там, где он был
-  if (cursorPos) {
-    restoreCursor(cursorPos);
-    saveSelection();
-  } else {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) {
-      const first = document.querySelector('.page-content');
-      if (first) {
-        first.focus({ preventScroll: true });
-        const r = document.createRange();
-        r.selectNodeContents(first);
-        r.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(r);
-        saveSelection();
-      }
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) {
+    const first = document.querySelector('.page-content');
+    if (first) {
+      first.focus({ preventScroll: true });
+      const r = document.createRange();
+      r.selectNodeContents(first);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+      saveSelection();
     }
   }
 }
@@ -867,26 +735,12 @@ function fitToScreen() {
 }
 
 /* =========================================================
-   ВВОД — с увеличенным дебаунсом в конце документа
+   ВВОД
    ========================================================= */
 let repaginateTimer = null;
 function onContentInput() {
   clearTimeout(repaginateTimer);
-
-  // Проверим: курсор на последней странице?
-  const sel = window.getSelection();
-  let atEnd = false;
-  if (sel && sel.rangeCount > 0) {
-    const range = sel.getRangeAt(0);
-    const container = range.startContainer;
-    const el = container.nodeType === 1 ? container : container.parentElement;
-    const contents = [...document.querySelectorAll('.page-content')];
-    const lastContent = contents[contents.length - 1];
-    if (lastContent && el?.closest('.page-content') === lastContent) atEnd = true;
-  }
-
-  const delay = atEnd ? 900 : 600;
-  repaginateTimer = setTimeout(repaginate, delay);
+  repaginateTimer = setTimeout(repaginate, 600);
 }
 
 /* =========================================================
@@ -920,7 +774,7 @@ function updateActive() {
 }
 
 /* =========================================================
-   РАЗМЕР ШРИФТА
+   РАЗМЕР ШРИФТА — через Range
    ========================================================= */
 function getEffectiveFontSizePt(el) {
   if (!el) return 14;
@@ -1033,6 +887,7 @@ function applyFontSize(pt) {
 
 function applyFontSizeToAll(pt) {
   globalFontSizePt = pt;
+
   document.querySelectorAll('.page-content').forEach(content => {
     content.style.fontSize = pt + 'pt';
     content.querySelectorAll('*').forEach(el => {
@@ -1040,6 +895,7 @@ function applyFontSizeToAll(pt) {
       if (el.tagName === 'FONT') el.removeAttribute('size');
     });
   });
+
   updateSizeIndicator();
   clearTimeout(repaginateTimer);
   repaginateTimer = setTimeout(repaginate, 500);
@@ -1173,6 +1029,7 @@ function loadFile(e) {
   if (!file) return;
   const name = file.name.toLowerCase();
 
+  // Сбрасываем глобальный размер при загрузке нового файла
   globalFontSizePt = null;
   globalLineHeight = null;
 
@@ -1267,12 +1124,6 @@ window.addEventListener('orientationchange', () => {
    СТАРТ
    ========================================================= */
 window.addEventListener('load', () => {
-  try {
-    const saved = localStorage.getItem('showPageNumbers');
-    if (saved !== null) showPageNumbers = saved === '1';
-  } catch (e) {}
-  applyPageNumbers();
-
   const initial = newPageEl();
   initial.content.innerHTML =
     '<p>Начните печатать… Текст будет автоматически перетекать на следующую страницу.</p>';
@@ -1280,6 +1131,7 @@ window.addEventListener('load', () => {
   repaginate();
   updateSizeIndicator();
 
+  // Не даём кнопкам красть фокус у текста
   document.querySelectorAll('#toolbar button, #bottomBar button, #menuSheet button')
     .forEach(btn => {
       btn.addEventListener('mousedown', e => e.preventDefault());
@@ -1295,158 +1147,10 @@ window.addEventListener('load', () => {
 
 window.addEventListener('beforeprint', () => repaginate());
 </script>
-<script>
-(function() {
-    "use strict";
 
-    // ============================================================
-    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
-    // ============================================================
-    function openGame(url, title) {
-        const oldOverlay = document.querySelector('.transition-overlay');
-        if (oldOverlay) {
-            oldOverlay.remove();
-        }
 
-        const overlay = document.createElement('div');
-        overlay.className = 'transition-overlay';
 
-        const topBar = document.createElement('div');
-        topBar.className = 'transition-topbar';
-
-        const backBtn = document.createElement('button');
-        backBtn.className = 'transition-back';
-        backBtn.textContent = '← Назад';
-        backBtn.onclick = function() {
-            overlay.remove();
-        };
-
-        const titleEl = document.createElement('span');
-        titleEl.className = 'transition-title';
-        titleEl.textContent = title || '🌐 Загрузка...';
-
-        topBar.appendChild(backBtn);
-        topBar.appendChild(titleEl);
-        overlay.appendChild(topBar);
-
-        const iframe = document.createElement('iframe');
-        iframe.className = 'transition-iframe';
-        iframe.src = url;
-        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
-        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
-
-        overlay.appendChild(iframe);
-        document.body.appendChild(overlay);
-
-        const escapeHandler = function(e) {
-            if (e.key === 'Escape') {
-                overlay.remove();
-                document.removeEventListener('keydown', escapeHandler);
-            }
-        };
-        document.addEventListener('keydown', escapeHandler);
-
-        iframe.onload = function() {
-            try {
-                const frameTitle = iframe.contentDocument?.title;
-                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
-                    titleEl.textContent = frameTitle;
-                }
-            } catch (e) {}
-        };
-
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) {
-                overlay.remove();
-            }
-        });
-
-        // ============================================================
-        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
-        // ============================================================
-        window.addEventListener('message', function(event) {
-            if (event.source !== iframe.contentWindow) return;
-            const data = event.data;
-            if (data && data.type === 'download') {
-                handleDownload(data.content, data.filename, data.mimeType);
-            }
-        });
-
-        return overlay;
-    }
-
-    // ============================================================
-    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
-    // ============================================================
-    function handleDownload(content, filename, mimeType) {
-        try {
-            if (typeof content === 'string' && content.startsWith('http')) {
-                const a = document.createElement('a');
-                a.href = content;
-                a.download = filename || 'download';
-                a.target = '_blank';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                showNotification('✅ Скачивание началось!', 'success');
-                return;
-            }
-
-            let blob;
-            if (typeof content === 'string') {
-                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
-            } else if (content instanceof Blob) {
-                blob = content;
-            } else {
-                throw new Error('Неподдерживаемый формат данных');
-            }
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename || 'download';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            setTimeout(function() {
-                URL.revokeObjectURL(url);
-            }, 5000);
-
-            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
-        } catch (error) {
-            console.error('Ошибка скачивания:', error);
-            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
-        }
-    }
-
-    // ============================================================
-    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
-    // ============================================================
-    function showNotification(message, type) {
-        const old = document.querySelector('.download-notification');
-        if (old) old.remove();
-
-        const notification = document.createElement('div');
-        notification.className = 'download-notification ' + (type || '');
-        notification.textContent = message;
-        document.body.appendChild(notification);
-
-        setTimeout(function() {
-            notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.5s';
-            setTimeout(function() {
-                notification.remove();
-            }, 500);
-        }, 3000);
-    }
-
-    // Делаем функции глобальными
-    window.openGame = openGame;
-    window.handleDownload = handleDownload;
-    window.showNotification = showNotification;
-
-    // ============================================================
+// ============================================================
     // ОФЛАЙН-ФУНКЦИОНАЛ
     // ============================================================
 
@@ -1513,5 +1217,6 @@ window.addEventListener('beforeprint', () => repaginate());
 
 })();
 </script>
+
 </body>
 </html>
