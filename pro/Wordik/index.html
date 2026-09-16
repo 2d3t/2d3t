@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Редактор документов Word</title>
+<title>Редактор документов с разбивкой на страницы</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -36,12 +36,7 @@
   }
   #toolbar button:hover { background: #4a6278; }
   #toolbar button.active { background: #3498db; border-color: #3498db; }
-  #toolbar .sep {
-    width: 1px;
-    height: 24px;
-    background: #4a6278;
-    margin: 0 4px;
-  }
+  #toolbar .sep { width: 1px; height: 24px; background: #4a6278; margin: 0 4px; }
   #toolbar label { font-size: 12px; display:flex; align-items:center; gap:4px; }
   #toolbar input[type=number] { width: 55px; }
   #toolbar input[type=color] { padding: 0; width: 30px; height: 28px; border: none; }
@@ -51,39 +46,81 @@
     overflow: auto;
     padding: 30px;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
   }
-  #page {
+
+  /* Скрытый измеритель */
+  #measurer {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    top: -10000px;
+    left: -10000px;
+  }
+
+  /* Каждая страница = отдельный лист A4 */
+  .page {
     background: #fff;
     width: 210mm;
     min-height: 297mm;
-    padding: 20mm;
+    padding: var(--pad, 20mm);
     box-shadow: 0 0 15px rgba(0,0,0,.3);
-    outline: none;
+    position: relative;
     font-family: 'Times New Roman', serif;
     font-size: 14pt;
     line-height: 1.4;
     color: #000;
+    overflow: hidden;
   }
-  #page:focus { box-shadow: 0 0 15px rgba(52,152,219,.6); }
+  .page::after {
+    content: attr(data-page);
+    position: absolute;
+    bottom: 8mm;
+    right: 12mm;
+    font-size: 10pt;
+    color: #999;
+    font-family: Arial, sans-serif;
+  }
+  /* Нижний колонтитул с номером страницы */
+  .page-footer {
+    position: absolute;
+    bottom: 8mm;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 10pt;
+    color: #666;
+    font-family: Arial, sans-serif;
+    pointer-events: none;
+  }
 
-  #page p { margin: 0 0 8px 0; }
-  #page h1 { font-size: 24pt; margin: 0 0 12px 0; }
-  #page h2 { font-size: 20pt; margin: 0 0 10px 0; }
-  #page h3 { font-size: 16pt; margin: 0 0 8px 0; }
-  #page ul, #page ol { margin: 0 0 8px 0; padding-left: 30px; }
+  /* Контент внутри страницы — редактируемый */
+  .page-content {
+    outline: none;
+    min-height: 1px;
+  }
+
+  .page-content:focus { outline: none; }
+
+  /* Активная страница подсвечена */
+  .page.focused { box-shadow: 0 0 0 2px #3498db, 0 0 15px rgba(52,152,219,.4); }
 
   @media print {
-    body { background: #fff; height: auto; overflow: visible; }
-    #toolbar { display: none; }
-    #workspace { padding: 0; overflow: visible; display: block; }
-    #page {
+    body { background: #fff; height: auto; overflow: visible; display: block; }
+    #toolbar, #measurer { display: none !important; }
+    #workspace { padding: 0; gap: 0; overflow: visible; display: block; }
+    .page {
       box-shadow: none;
-      width: auto;
-      min-height: 0;
       margin: 0;
-      padding: 0;
+      page-break-after: always;
+      width: 210mm;
+      height: 297mm;
+      min-height: 297mm;
     }
+    .page:last-child { page-break-after: auto; }
+    .page.focused { box-shadow: none; }
   }
 </style>
 </head>
@@ -131,8 +168,8 @@
 
   <button onclick="cmd('insertUnorderedList')" title="Маркированный список">•≡</button>
   <button onclick="cmd('insertOrderedList')" title="Нумерованный список">1≡</button>
-  <button onclick="outdent()" title="Уменьшить отступ">⇤</button>
   <button onclick="indent()" title="Увеличить отступ">⇥</button>
+  <button onclick="outdent()" title="Уменьшить отступ">⇤</button>
   <div class="sep"></div>
 
   <label>Строки: <input type="number" id="lineHeight" min="1" max="3" step="0.1" value="1.4" onchange="applyLineHeight()"></label>
@@ -154,154 +191,425 @@
 
   <button onclick="saveAsDoc()" style="background:#27ae60">💾 Сохранить .doc</button>
   <button onclick="window.print()" style="background:#2980b9">🖨 Печать</button>
-  <button onclick="openDoc()" style="background:#8e44ad">📂 Открыть .doc</button>
-  <input type="file" id="fileInput" accept=".doc,.html,.htm" style="display:none" onchange="loadFile(event)">
+  <button onclick="openDoc()" style="background:#8e44ad">📂 Открыть .doc/.docx</button>
+  <input type="file" id="fileInput" accept=".doc,.docx,.html,.htm" style="display:none" onchange="loadFile(event)">
 </div>
 
 <div id="workspace">
-  <div id="page" contenteditable="true">
-    <p>Начните печатать здесь…</p>
+  <div class="page" data-page="1">
+    <div class="page-content" contenteditable="true" spellcheck="false">
+      <p>Начните печатать здесь… Текст будет автоматически перетекать на следующую страницу, когда достигнет нижнего края листа.</p>
+    </div>
   </div>
 </div>
 
+<!-- Скрытый измеритель той же ширины, что и контент страницы -->
+<div id="measurer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script>
-  const page = document.getElementById('page');
+/* =========================================================
+   КОНСТАНТЫ ФОРМАТА A4
+   ========================================================= */
+const MM_TO_PX = 96 / 25.4; // ≈3.7795
+const A4_W = 210, A4_H = 297; // мм
+const PAD_DEFAULT = { top: 20, right: 20, bottom: 20, left: 20 };
 
-  function cmd(command, value = null) {
-    document.execCommand(command, false, value);
-    page.focus();
-    updateActive();
-  }
+let margins = { ...PAD_DEFAULT };
 
-  function indent() { document.execCommand('indent', false, null); }
-  function outdent() { document.execCommand('outdent', false, null); }
+const workspace = document.getElementById('workspace');
+const measurer  = document.getElementById('measurer');
 
-  // Применить поля страницы
-  function applyMargins() {
-    const t = document.getElementById('marginTop').value;
-    const r = document.getElementById('marginRight').value;
-    const b = document.getElementById('marginBottom').value;
-    const l = document.getElementById('marginLeft').value;
-    page.style.padding = `${t}mm ${r}mm ${b}mm ${l}mm`;
-  }
+/* =========================================================
+   РАБОТА С ПАГИНАЦИЕЙ
+   ========================================================= */
 
-  // Межстрочный интервал
-  function applyLineHeight() {
-    const v = document.getElementById('lineHeight').value;
-    page.style.lineHeight = v;
-  }
+// Прочитать все блоки со всех страниц в один плоский массив
+function collectBlocks() {
+  const blocks = [];
+  document.querySelectorAll('.page .page-content').forEach(content => {
+    [...content.children].forEach(el => blocks.push(el.cloneNode(true)));
+  });
+  return blocks;
+}
 
-  // Отступ после абзацев
-  function applyParaSpace() {
-    const v = document.getElementById('paraSpace').value + 'pt';
-    page.querySelectorAll('p, div').forEach(el => {
-      el.style.marginBottom = v;
-    });
-  }
+// Настроить измеритель под текущие поля — ширина та же, что у content внутри листа
+function prepareMeasurer() {
+  measurer.style.width = (A4_W - margins.left - margins.right) + 'mm';
+  measurer.style.fontFamily = "'Times New Roman', serif";
+  measurer.style.fontSize = '14pt';
+  measurer.style.lineHeight = document.getElementById('lineHeight').value;
+  measurer.innerHTML = '';
+}
 
-  // Разрыв страницы
-  function insertPageBreak() {
-    document.execCommand('insertHTML', false,
-      '<div style="page-break-after: always; border-top: 1px dashed #ccc; margin: 10px 0;"></div>');
-  }
+// Высота доступного контента на странице (px)
+function contentHeightPx() {
+  return (A4_H - margins.top - margins.bottom) * MM_TO_PX;
+}
 
-  function clearFormatting() {
-    document.execCommand('removeFormat', false, null);
-    page.querySelectorAll('*').forEach(el => {
-      el.style.background = '';
-      el.style.color = '';
-    });
-  }
-
-  // Индикация активных кнопок
-  function updateActive() {
-    document.querySelectorAll('#toolbar button').forEach(btn => btn.classList.remove('active'));
-    ['bold','italic','underline','strikeThrough','justifyLeft','justifyCenter','justifyRight','justifyFull',
-     'insertUnorderedList','insertOrderedList'].forEach(c => {
-      if (document.queryCommandState(c)) {
-        const btn = [...document.querySelectorAll('#toolbar button')]
-          .find(b => b.getAttribute('onclick')?.includes(c));
-        if (btn) btn.classList.add('active');
+// Разбить один блок, если он выше страницы (например, огромный список или таблица)
+// Возвращает массив блоков, каждый из которых гарантированно ≤ доступной высоты
+function splitOversizedBlock(block, availablePx) {
+  // Если это список — режем по <li>
+  const tag = block.tagName;
+  if (tag === 'UL' || tag === 'OL') {
+    const items = [...block.children];
+    const result = [];
+    let current = block.cloneNode(false);
+    measurer.innerHTML = '';
+    measurer.appendChild(current);
+    items.forEach(li => {
+      const clone = li.cloneNode(true);
+      current.appendChild(clone);
+      if (measurer.getBoundingClientRect().height > availablePx && current.children.length > 1) {
+        current.removeChild(clone);
+        result.push(current);
+        current = block.cloneNode(false);
+        current.appendChild(clone);
+        measurer.innerHTML = '';
+        measurer.appendChild(current);
       }
     });
+    if (current.children.length) result.push(current);
+    return result.length ? result : [block];
   }
-  document.addEventListener('selectionchange', updateActive);
+  // Если это таблица — режем по строкам
+  if (tag === 'TABLE') {
+    const rows = [...block.querySelectorAll('tr')];
+    const result = [];
+    let current = block.cloneNode(false);
+    let tbody = document.createElement('tbody');
+    current.appendChild(tbody);
+    measurer.innerHTML = '';
+    measurer.appendChild(current);
+    rows.forEach(tr => {
+      const clone = tr.cloneNode(true);
+      tbody.appendChild(clone);
+      if (measurer.getBoundingClientRect().height > availablePx && tbody.children.length > 1) {
+        tbody.removeChild(clone);
+        result.push(current);
+        current = block.cloneNode(false);
+        tbody = document.createElement('tbody');
+        current.appendChild(tbody);
+        tbody.appendChild(clone);
+        measurer.innerHTML = '';
+        measurer.appendChild(current);
+      }
+    });
+    if (tbody.children.length) result.push(current);
+    return result.length ? result : [block];
+  }
+  // Обычный абзац, слишком длинный — оставляем как есть, пусть переносится визуально.
+  // (Разбивка по строкам внутри одного <p> — отдельная сложная задача, здесь упрощаем.)
+  return [block];
+}
 
-  // Сохранение как .doc (Word откроет HTML-файл с расширением .doc)
-  function saveAsDoc() {
-    const content = page.innerHTML;
+// Главная функция: разложить все блоки по страницам заново
+function repaginate() {
+  const blocks = collectBlocks();
+  workspace.innerHTML = '';
 
-    const styles = `
-      <style>
-        @page { size: A4; margin: 20mm; }
-        body {
-          font-family: 'Times New Roman', serif;
-          font-size: 12pt;
-          line-height: 1.4;
+  const availPx = contentHeightPx();
+  prepareMeasurer();
+
+  let pageContent = null;
+  let pageEl = null;
+  let usedPx = 0;
+  let pageNum = 1;
+
+  function newPage() {
+    pageEl = document.createElement('div');
+    pageEl.className = 'page';
+    pageEl.dataset.page = pageNum++;
+    pageEl.style.setProperty('--pad',
+      `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`);
+    pageContent = document.createElement('div');
+    pageContent.className = 'page-content';
+    pageContent.contentEditable = 'true';
+    pageContent.spellcheck = false;
+    pageEl.appendChild(pageContent);
+    workspace.appendChild(pageEl);
+    usedPx = 0;
+    // Навешиваем фокус
+    pageContent.addEventListener('focus', () => {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('focused'));
+      pageEl.classList.add('focused');
+    });
+    pageContent.addEventListener('input', onContentInput);
+    return pageContent;
+  }
+
+  newPage();
+
+  blocks.forEach(block => {
+    // Принудительный разрыв страницы
+    if (block.hasAttribute && block.hasAttribute('data-page-break')) {
+      newPage();
+      return;
+    }
+
+    const clone = block.cloneNode(true);
+    measurer.innerHTML = '';
+    measurer.appendChild(clone);
+    let blockPx = measurer.getBoundingClientRect().height;
+
+    // Если блок больше страницы — пробуем разрезать
+    if (blockPx > availPx) {
+      const parts = splitOversizedBlock(block, availPx);
+      parts.forEach(part => {
+        const c = part.cloneNode(true);
+        measurer.innerHTML = '';
+        measurer.appendChild(c);
+        const partPx = measurer.getBoundingClientRect().height;
+        if (usedPx + partPx > availPx && usedPx > 0) {
+          newPage();
         }
-        p { margin: 0 0 8pt 0; }
-        h1 { font-size: 24pt; }
-        h2 { font-size: 20pt; }
-        h3 { font-size: 16pt; }
-        ul, ol { margin: 0 0 8pt 0; }
-      </style>
-    `;
+        pageContent.appendChild(part);
+        usedPx += partPx;
+      });
+      return;
+    }
 
-    const html = `
-      <html xmlns:o="urn:schemas-microsoft-com:office:office"
-            xmlns:w="urn:schemas-microsoft-com:office:word"
-            xmlns="http://www.w3.org/TR/REC-html40">
-      <head>
-        <meta charset="utf-8">
-        <title>Документ</title>
-        ${styles}
-      </head>
-      <body>
-        ${content}
-      </body>
-      </html>
-    `;
+    // Обычный блок: если не влезает — новая страница
+    if (usedPx + blockPx > availPx && usedPx > 0) {
+      newPage();
+    }
+    pageContent.appendChild(block);
+    usedPx += blockPx;
+  });
 
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'документ_' + new Date().toISOString().slice(0,10) + '.doc';
-    a.click();
-    URL.revokeObjectURL(url);
+  // Пронумеровать и добавить колонтитул
+  document.querySelectorAll('.page').forEach((p, i) => {
+    p.dataset.page = (i + 1);
+  });
+
+  // Обновить курсор — поставить в первую страницу, если ничего не выбрано
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) {
+    const first = document.querySelector('.page-content');
+    if (first) {
+      first.focus();
+      const r = document.createRange();
+      r.selectNodeContents(first);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
   }
+}
 
-  // Открытие .doc/.html
-  function openDoc() {
-    document.getElementById('fileInput').click();
+/* =========================================================
+   ВВОД КОНТЕНТА
+   ========================================================= */
+
+let repaginateTimer = null;
+function onContentInput(e) {
+  // Дебаунс, чтобы не тормозить при наборе
+  clearTimeout(repaginateTimer);
+  repaginateTimer = setTimeout(() => {
+    repaginate();
+  }, 400);
+}
+
+/* =========================================================
+   КОМАНДЫ ФОРМАТИРОВАНИЯ
+   ========================================================= */
+
+function cmd(command, value = null) {
+  document.execCommand(command, false, value);
+  const active = document.activeElement;
+  if (active && !active.isContentEditable) {
+    const el = document.querySelector('.page.focused .page-content') ||
+               document.querySelector('.page-content');
+    el && el.focus();
   }
+  updateActive();
+}
 
-  function loadFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const text = ev.target.result;
-      // Пытаемся вытащить только body, если это полный HTML
-      const match = text.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      page.innerHTML = match ? match[1] : text;
-    };
-    reader.readAsText(file, 'UTF-8');
-    e.target.value = '';
-  }
+function indent()  { document.execCommand('indent', false, null); }
+function outdent() { document.execCommand('outdent', false, null); }
 
-  // Горячие клавиши
-  document.addEventListener('keydown', e => {
-    if (e.ctrlKey || e.metaKey) {
-      if (e.key === 'b') { e.preventDefault(); cmd('bold'); }
-      if (e.key === 'i') { e.preventDefault(); cmd('italic'); }
-      if (e.key === 'u') { e.preventDefault(); cmd('underline'); }
-      if (e.key === 's') { e.preventDefault(); saveAsDoc(); }
-      if (e.key === 'p') { e.preventDefault(); window.print(); }
+function applyMargins() {
+  margins = {
+    top:    parseFloat(document.getElementById('marginTop').value)    || 0,
+    right:  parseFloat(document.getElementById('marginRight').value)  || 0,
+    bottom: parseFloat(document.getElementById('marginBottom').value) || 0,
+    left:   parseFloat(document.getElementById('marginLeft').value)   || 0,
+  };
+  repaginate();
+}
+
+function applyLineHeight() {
+  const v = document.getElementById('lineHeight').value;
+  document.querySelectorAll('.page-content').forEach(c => c.style.lineHeight = v);
+  repaginate();
+}
+
+function applyParaSpace() {
+  const v = document.getElementById('paraSpace').value + 'pt';
+  document.querySelectorAll('.page-content p, .page-content div').forEach(el => {
+    el.style.marginBottom = v;
+  });
+  repaginate();
+}
+
+function insertPageBreak() {
+  // Вставляем маркер разрыва, repaginate его увидит
+  document.execCommand('insertHTML', false,
+    '<div data-page-break="1" style="height:0;overflow:hidden"></div><p><br></p>');
+  repaginate();
+}
+
+function clearFormatting() {
+  document.execCommand('removeFormat', false, null);
+  document.querySelectorAll('.page-content *').forEach(el => {
+    el.style.background = '';
+    el.style.color = '';
+  });
+}
+
+function updateActive() {
+  document.querySelectorAll('#toolbar button').forEach(b => b.classList.remove('active'));
+  ['bold','italic','underline','strikeThrough','justifyLeft','justifyCenter','justifyRight','justifyFull',
+   'insertUnorderedList','insertOrderedList'].forEach(c => {
+    if (document.queryCommandState(c)) {
+      const btn = [...document.querySelectorAll('#toolbar button')]
+        .find(b => b.getAttribute('onclick')?.includes(c));
+      if (btn) btn.classList.add('active');
+    }
+  });
+}
+document.addEventListener('selectionchange', updateActive);
+
+/* =========================================================
+   СОХРАНЕНИЕ / ОТКРЫТИЕ
+   ========================================================= */
+
+function saveAsDoc() {
+  // Собираем все страницы в один документ, вставляя разрывы страниц
+  const pages = [...document.querySelectorAll('.page-content')];
+  let body = '';
+  pages.forEach((p, i) => {
+    body += p.innerHTML;
+    if (i < pages.length - 1) {
+      body += '<div style="page-break-after: always"></div>';
     }
   });
 
-  page.focus();
+  const styles = `
+    <style>
+      @page { size: A4; margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm; }
+      body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; }
+      p { margin: 0 0 8pt 0; }
+      h1 { font-size: 24pt; } h2 { font-size: 20pt; } h3 { font-size: 16pt; }
+      ul, ol { margin: 0 0 8pt 0; }
+    </style>`;
+
+  const html = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:w="urn:schemas-microsoft-com:office:word"
+          xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+      <meta charset="utf-8">
+      <title>Документ</title>
+      ${styles}
+    </head>
+    <body>${body}</body>
+    </html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'документ_' + new Date().toISOString().slice(0,10) + '.doc';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openDoc() {
+  document.getElementById('fileInput').click();
+}
+
+function loadFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const name = file.name.toLowerCase();
+
+  if (name.endsWith('.docx')) {
+    // Используем mammoth для .docx
+    const reader = new FileReader();
+    reader.onload = ev => {
+      mammoth.convertToHtml({ arrayBuffer: ev.target.result })
+        .then(result => {
+          const content = document.querySelector('.page-content');
+          content.innerHTML = result.value || '<p></p>';
+          repaginate();
+        })
+        .catch(err => {
+          alert('Не удалось прочитать .docx: ' + err.message);
+        });
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+    return;
+  }
+
+  if (name.endsWith('.doc')) {
+    // Старый бинарный .doc в браузере не разобрать.
+    // Пробуем прочитать как текст (иногда срабатывает, если .doc — это на самом деле HTML)
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target.result;
+      // Проверим, есть ли HTML-теги
+      if (/<\w+[^>]*>/.test(text)) {
+        const match = text.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        const content = document.querySelector('.page-content');
+        content.innerHTML = match ? match[1] : text;
+        repaginate();
+      } else {
+        alert('Формат .doc (старый бинарный Word) не поддерживается в браузере.\n' +
+              'Откройте его в Word/LibreOffice и сохраните как .docx — тогда всё загрузится.');
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+    return;
+  }
+
+  // HTML
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const text = ev.target.result;
+    const match = text.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const content = document.querySelector('.page-content');
+    content.innerHTML = match ? match[1] : text;
+    repaginate();
+  };
+  reader.readAsText(file, 'UTF-8');
+  e.target.value = '';
+}
+
+/* =========================================================
+   ГОРЯЧИЕ КЛАВИШИ
+   ========================================================= */
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'b') { e.preventDefault(); cmd('bold'); }
+    if (e.key === 'i') { e.preventDefault(); cmd('italic'); }
+    if (e.key === 'u') { e.preventDefault(); cmd('underline'); }
+    if (e.key === 's') { e.preventDefault(); saveAsDoc(); }
+    if (e.key === 'p') { e.preventDefault(); window.print(); }
+    if (e.key === 'Enter') { e.preventDefault(); repaginate(); }
+  }
+});
+
+/* =========================================================
+   СТАРТ
+   ========================================================= */
+window.addEventListener('load', () => {
+  repaginate();
+});
+window.addEventListener('beforeprint', () => repaginate());
 </script>
 </body>
 </html>
