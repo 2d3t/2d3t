@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'cache-git-v1';
+const CACHE_NAME = 'cache-git-v2';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/Gmanager/index.html',
