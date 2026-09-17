@@ -3,16 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
-
-    <!-- Иконки PWA -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-    <!-- Мета-теги для PWA -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
 <title>GitHub Файловый менеджер</title>
 <style>
   body {
@@ -106,6 +96,25 @@
     max-width: 600px; margin: 15px auto;
     border: 1px solid rgba(255,255,255,0.25);
   }
+
+  /* ---- Кнопки в редакторе ---- */
+  .editor-actions {
+    display: flex; gap: 10px; justify-content: center;
+    flex-wrap: wrap; margin-top: 10px;
+  }
+
+  /* ---- Посещённые ссылки ---- */
+  li a.visited {
+    color: #ffd166;
+    font-style: italic;
+  }
+  li a.visited:hover { color: #ffe08a; }
+  li a.visited::after {
+    content: " •";
+    color: #ffd166;
+    font-size: 14px;
+    font-style: normal;
+  }
 </style>
 </head>
 <body>
@@ -169,27 +178,22 @@
   <div id="editorScreen" style="display:none">
     <h2>Редактирование: <span id="editPath"></span></h2>
     <textarea id="editContent"></textarea>
-    <br>
-    <button onclick="saveEdit()">💾 Сохранить</button>
-    <button class="ghost" onclick="closeEditor()">Отмена</button>
+    <div class="editor-actions">
+      <button onclick="saveEdit()">💾 Сохранить</button>
+      <button class="ghost" onclick="clearEdit()">🧹 Очистить</button>
+      <button class="ghost" onclick="closeEditor()">⬅ Назад</button>
+    </div>
     <div class="status" id="editStatus"></div>
   </div>
 </div>
 
 <script>
 /* =====================================================
-   ХРАНИЛИЩЕ ПРОФИЛЕЙ
-   localStorage схема:
-   {
-     profiles: [
-       { id, name, owner, repo, branch, token, lastPath? },
-       ...
-     ],
-     activeId: "..." // текущий открытый профиль
-   }
+   ХРАНИЛИЩЕ
    ===================================================== */
 const LS_KEY = 'gh_fm_v2';
-const TABS_KEY = 'gh_fm_open_tabs'; // массив id открытых вкладок
+const TABS_KEY = 'gh_fm_open_tabs';
+const VISITED_KEY = 'gh_fm_visited';
 
 function loadStore() {
   try {
@@ -212,13 +216,39 @@ function uid() {
   return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 }
 
+/* -------- Посещённые пути -------- */
+function loadVisited() {
+  try { return JSON.parse(localStorage.getItem(VISITED_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveVisited(map) {
+  localStorage.setItem(VISITED_KEY, JSON.stringify(map));
+}
+function markVisited(profileId, path) {
+  if (!profileId) return;
+  const key = path || '';
+  const map = loadVisited();
+  const arr = map[profileId] || [];
+  if (!arr.includes(key)) {
+    arr.push(key);
+    if (arr.length > 500) arr.splice(0, arr.length - 500);
+    map[profileId] = arr;
+    saveVisited(map);
+  }
+}
+function isVisited(profileId, path) {
+  if (!profileId) return false;
+  const arr = loadVisited()[profileId] || [];
+  return arr.includes(path);
+}
+
 /* =====================================================
    СОСТОЯНИЕ
    ===================================================== */
 let state = {
-  activeId: null,     // id активного профиля
-  openTabs: [],       // id открытых вкладок
-  path: '',           // текущий путь в активном профиле
+  activeId: null,
+  openTabs: [],
+  path: '',
   editing: { path: '', sha: '' }
 };
 
@@ -261,7 +291,7 @@ function bytesToB64(bytes) {
 /* =====================================================
    ЭКРАН ПРОФИЛЕЙ
    ===================================================== */
-let editingProfileId = null; // если редактируем существующий
+let editingProfileId = null;
 
 function renderProfiles() {
   const store = loadStore();
@@ -351,6 +381,11 @@ function deleteProfile(id) {
   state.openTabs = state.openTabs.filter(x => x !== id);
   saveOpenTabs(state.openTabs);
 
+  // почистить посещённые пути этого профиля
+  const vmap = loadVisited();
+  delete vmap[id];
+  saveVisited(vmap);
+
   renderProfiles();
 }
 
@@ -361,7 +396,6 @@ function renderTabs() {
   const tabsEl = document.getElementById('tabs');
   tabsEl.innerHTML = '';
 
-  // подчистить вкладки, у которых профиль удалён
   state.openTabs = state.openTabs.filter(id => getProfile(id));
   saveOpenTabs(state.openTabs);
 
@@ -382,7 +416,6 @@ function renderTabs() {
     tabsEl.appendChild(t);
   }
 
-  // кнопка "+"
   const add = document.createElement('div');
   add.className = 'tab-add';
   add.textContent = '+ профиль';
@@ -400,12 +433,10 @@ function openProfile(id) {
   }
   state.activeId = id;
 
-  // обновить activeId в store (не обязательно, но пусть)
   const store = loadStore();
   store.activeId = id;
   saveStore(store);
 
-  // Переключить на manager
   document.getElementById('profilesScreen').style.display = 'none';
   document.getElementById('managerScreen').style.display = 'block';
   document.getElementById('editorScreen').style.display = 'none';
@@ -420,7 +451,6 @@ function openProfile(id) {
 
 function switchTab(id) {
   if (id === state.activeId) return;
-  // закрыть редактор, если открыт
   document.getElementById('editorScreen').style.display = 'none';
   state.activeId = id;
   const p = getProfile(id);
@@ -485,6 +515,7 @@ async function loadPath(path) {
   const cfg = getActiveProfile();
   if (!cfg) return;
   state.path = path || '';
+  markVisited(state.activeId, state.path);
   document.getElementById('currentPath').textContent = '/' + state.path;
 
   const url = path
@@ -515,10 +546,11 @@ async function loadPath(path) {
       const li = document.createElement('li');
       li.className = item.type === 'dir' ? 'folder' : 'file';
       const safePath = item.path.replace(/'/g, "\\'");
+      const visitedCls = isVisited(state.activeId, item.path) ? ' class="visited"' : '';
       if (item.type === 'dir') {
-        li.innerHTML = `<a href="#" onclick="loadPath('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
+        li.innerHTML = `<a href="#"${visitedCls} onclick="loadPath('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
       } else {
-        li.innerHTML = `<a href="#" onclick="openEditor('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
+        li.innerHTML = `<a href="#"${visitedCls} onclick="openEditor('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
       }
       list.appendChild(li);
     }
@@ -632,6 +664,8 @@ async function openEditor(filePath) {
   const cfg = getActiveProfile();
   if (!cfg) return;
 
+  markVisited(state.activeId, filePath);
+
   const url = `${apiBase(cfg)}/${encodeURI(filePath)}?ref=${encodeURIComponent(cfg.branch || 'main')}`;
   const r = await fetch(url, { headers: headers(cfg) });
   const d = await r.json();
@@ -675,6 +709,16 @@ async function saveEdit() {
   }
 }
 
+function clearEdit() {
+  const area = document.getElementById('editContent');
+  if (!area.value.trim()) return;
+  if (!confirm('Очистить содержимое поля? Изменения на GitHub не применятся, пока не нажмёте «Сохранить».')) return;
+  area.value = '';
+  const st = document.getElementById('editStatus');
+  st.textContent = '🧹 Поле очищено (не забудьте сохранить)';
+  st.className = 'status';
+}
+
 function closeEditor() {
   document.getElementById('editorScreen').style.display = 'none';
   document.getElementById('managerScreen').style.display = 'block';
@@ -698,12 +742,10 @@ function init() {
   state.openTabs = loadOpenTabs().filter(id => getProfile(id));
   saveOpenTabs(state.openTabs);
 
-  // если был активный профиль и он ещё существует — откроем его
   if (store.activeId && getProfile(store.activeId)) {
     state.activeId = store.activeId;
     openProfile(store.activeId);
   } else if (state.openTabs.length > 0) {
-    // откроем последнюю вкладку из сохранённых
     openProfile(state.openTabs[state.openTabs.length - 1]);
   } else {
     goToProfiles();
