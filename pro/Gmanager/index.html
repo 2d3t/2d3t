@@ -12,7 +12,7 @@
     color: white; font-family: Arial, sans-serif; text-align: center;
     padding: 20px; box-sizing: border-box;
   }
-  .container { max-width: 800px; margin: 0 auto; }
+  .container { max-width: 900px; margin: 0 auto; }
   input, button, textarea {
     font-size: 16px; padding: 10px; margin: 5px; border-radius: 6px;
     border: 1px solid rgba(255,255,255,0.4); box-sizing: border-box;
@@ -21,10 +21,13 @@
   input[type=file] { color: white; }
   button {
     background: #2a7fff; color: white; cursor: pointer; border: none;
-    padding: 10px 20px;
+    padding: 10px 20px; transition: background 0.2s;
   }
   button:hover { background: #1a5fcf; }
   button.danger { background: #d9534f; }
+  button.danger:hover { background: #b03a36; }
+  button.ghost { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.5); }
+  button.ghost:hover { background: rgba(0,0,0,0.7); }
   h2 { margin-top: 30px; }
   ul { list-style: none; padding: 0; }
   li { font-size: 20px; margin: 8px 0; }
@@ -40,30 +43,95 @@
     width: 100%; height: 60vh; font-family: monospace; font-size: 15px;
     background: #1e1e1e; color: #eee; resize: vertical;
   }
-  .small { font-size: 13px; opacity: 0.8; }
-  .btn-sm { font-size: 13px; padding: 4px 10px; margin-left: 8px; }
+  .small { font-size: 13px; opacity: 0.85; }
+
+  /* ---- Вкладки ---- */
+  .tabs {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    justify-content: center; margin: 15px 0;
+  }
+  .tab {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #ddeeff; padding: 8px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 15px; display: flex;
+    align-items: center; gap: 8px; user-select: none;
+  }
+  .tab:hover { background: rgba(0,0,0,0.7); }
+  .tab.active {
+    background: #2a7fff;
+    border-color: #fff;
+    color: white; font-weight: bold;
+  }
+  .tab .close-x {
+    opacity: 0.7; font-weight: bold; padding: 0 4px; border-radius: 4px;
+  }
+  .tab .close-x:hover { opacity: 1; background: rgba(255,0,0,0.5); }
+  .tab-add {
+    background: rgba(0,0,0,0.35);
+    border: 1px dashed rgba(255,255,255,0.6);
+    color: #ddeeff; padding: 8px 14px; border-radius: 8px;
+    cursor: pointer; font-size: 15px;
+  }
+  .tab-add:hover { background: rgba(0,0,0,0.6); }
+
+  /* ---- Список профилей ---- */
+  .profile-list {
+    display: flex; flex-direction: column; gap: 10px;
+    max-width: 600px; margin: 20px auto;
+  }
+  .profile-card {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(0,0,0,0.55); padding: 12px 16px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  .profile-card .info { text-align: left; }
+  .profile-card .name { font-weight: bold; font-size: 17px; }
+  .profile-card .meta { font-size: 13px; opacity: 0.85; }
+  .profile-card .actions { display: flex; gap: 6px; }
+  .profile-card button { padding: 6px 12px; font-size: 14px; }
+
+  .config-box {
+    background: rgba(0,0,0,0.5); padding: 20px; border-radius: 12px;
+    max-width: 600px; margin: 15px auto;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>GitHub Файловый менеджер</h1>
 
-  <!-- ЭКРАН НАСТРОЕК / ВВОДА ТОКЕНА -->
-  <div id="setup">
+  <!-- ЭКРАН СПИСКА ПРОФИЛЕЙ -->
+  <div id="profilesScreen">
     <div class="status small">
-      Введите данные доступа. Всё хранится только в localStorage вашего браузера.
+      Профили хранятся в localStorage этого браузера. Данные не удаляются при выходе.
     </div>
-    <input type="text" id="owner" placeholder="Владелец (owner), напр. 2d3t">
-    <input type="text" id="repo" placeholder="Репозиторий, напр. 2d3t">
-    <input type="text" id="branch" placeholder="Ветка (по умолчанию main)">
-    <input type="password" id="token" placeholder="Personal Access Token (ghp_...)">
-    <br>
-    <button onclick="saveConfig()">Сохранить</button>
-    <button class="danger" onclick="clearConfig()">Очистить</button>
+    <div class="profile-list" id="profileList"></div>
+    <button onclick="showAddForm()">➕ Добавить репозиторий</button>
+
+    <!-- Форма добавления/редактирования -->
+    <div class="config-box" id="configBox" style="display:none">
+      <h3 id="configTitle">Новый репозиторий</h3>
+      <input type="text" id="cfgName" placeholder="Название вкладки (напр. Мой сайт)">
+      <input type="text" id="owner" placeholder="Владелец (owner), напр. 2d3t">
+      <input type="text" id="repo" placeholder="Репозиторий, напр. 2d3t">
+      <input type="text" id="branch" placeholder="Ветка (по умолчанию main)">
+      <input type="password" id="token" placeholder="Personal Access Token (ghp_...)">
+      <br>
+      <button onclick="saveProfile()">💾 Сохранить</button>
+      <button class="ghost" onclick="hideAddForm()">Отмена</button>
+      <div class="status small">
+        Токен хранится локально. Рекомендуется fine-grained token
+        с доступом только к этому репозиторию (Contents: Read and write).
+      </div>
+    </div>
   </div>
 
-  <!-- ЭКРАН МЕНЕДЖЕРА -->
-  <div id="manager" style="display:none">
+  <!-- ЭКРАН МЕНЕДЖЕРА (вкладки) -->
+  <div id="managerScreen" style="display:none">
+    <div class="tabs" id="tabs"></div>
+
     <div class="status ok" id="whoami"></div>
 
     <h2>Создать папку:</h2>
@@ -82,55 +150,78 @@
     <div>
       <button onclick="loadPath('')">⬅ В корень</button>
       <button onclick="loadPath(parentPath())">⬅ Назад</button>
-      <button class="danger" onclick="logout()">Выйти</button>
+      <button class="ghost" onclick="goToProfiles()">👥 Профили</button>
     </div>
     <ul id="fileList"></ul>
   </div>
 
   <!-- ЭКРАН РЕДАКТОРА -->
-  <div id="editor" style="display:none">
+  <div id="editorScreen" style="display:none">
     <h2>Редактирование: <span id="editPath"></span></h2>
     <textarea id="editContent"></textarea>
     <br>
     <button onclick="saveEdit()">💾 Сохранить</button>
-    <button onclick="closeEditor()">Отмена</button>
+    <button class="ghost" onclick="closeEditor()">Отмена</button>
     <div class="status" id="editStatus"></div>
   </div>
 </div>
 
 <script>
-// ---------- Конфиг в localStorage ----------
-const LS_KEY = 'gh_fm_config';
+/* =====================================================
+   ХРАНИЛИЩЕ ПРОФИЛЕЙ
+   localStorage схема:
+   {
+     profiles: [
+       { id, name, owner, repo, branch, token, lastPath? },
+       ...
+     ],
+     activeId: "..." // текущий открытый профиль
+   }
+   ===================================================== */
+const LS_KEY = 'gh_fm_v2';
+const TABS_KEY = 'gh_fm_open_tabs'; // массив id открытых вкладок
 
-function getConfig() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY)) || null; }
-  catch { return null; }
-}
-function saveConfig() {
-  const cfg = {
-    owner: document.getElementById('owner').value.trim(),
-    repo:  document.getElementById('repo').value.trim(),
-    branch: document.getElementById('branch').value.trim() || 'main',
-    token: document.getElementById('token').value.trim()
-  };
-  if (!cfg.owner || !cfg.repo || !cfg.token) {
-    alert('Заполните owner, repo и token');
-    return;
-  }
-  localStorage.setItem(LS_KEY, JSON.stringify(cfg));
-  initApp();
-}
-function clearConfig() {
-  if (confirm('Удалить сохранённые данные?')) {
-    localStorage.removeItem(LS_KEY);
-    location.reload();
+function loadStore() {
+  try {
+    return JSON.parse(localStorage.getItem(LS_KEY)) || { profiles: [], activeId: null };
+  } catch {
+    return { profiles: [], activeId: null };
   }
 }
-function logout() {
-  if (confirm('Удалить токен и настройки?')) clearConfig();
+function saveStore(store) {
+  localStorage.setItem(LS_KEY, JSON.stringify(store));
+}
+function loadOpenTabs() {
+  try { return JSON.parse(localStorage.getItem(TABS_KEY)) || []; }
+  catch { return []; }
+}
+function saveOpenTabs(ids) {
+  localStorage.setItem(TABS_KEY, JSON.stringify(ids));
+}
+function uid() {
+  return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-// ---------- GitHub API helper ----------
+/* =====================================================
+   СОСТОЯНИЕ
+   ===================================================== */
+let state = {
+  activeId: null,     // id активного профиля
+  openTabs: [],       // id открытых вкладок
+  path: '',           // текущий путь в активном профиле
+  editing: { path: '', sha: '' }
+};
+
+function getProfile(id) {
+  return loadStore().profiles.find(p => p.id === id) || null;
+}
+function getActiveProfile() {
+  return getProfile(state.activeId);
+}
+
+/* =====================================================
+   GITHUB API helpers
+   ===================================================== */
 function apiBase(cfg) {
   return `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents`;
 }
@@ -140,13 +231,11 @@ function headers(cfg) {
     'Accept': 'application/vnd.github+json'
   };
 }
-// UTF-8 ⇄ base64
 function b64encode(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
 function b64decode(b64) {
-  // GitHub иногда отдаёт с переносами строк
-  const clean = b64.replace(/\n/g, '');
+  const clean = (b64 || '').replace(/\n/g, '');
   return decodeURIComponent(escape(atob(clean)));
 }
 function bytesToB64(bytes) {
@@ -159,39 +248,238 @@ function bytesToB64(bytes) {
   return btoa(bin);
 }
 
-// ---------- Глобальное состояние ----------
-let state = { path: '' };
+/* =====================================================
+   ЭКРАН ПРОФИЛЕЙ
+   ===================================================== */
+let editingProfileId = null; // если редактируем существующий
 
-// ---------- Инициализация ----------
-function initApp() {
-  const cfg = getConfig();
-  if (!cfg) {
-    document.getElementById('setup').style.display = 'block';
-    document.getElementById('manager').style.display = 'none';
+function renderProfiles() {
+  const store = loadStore();
+  const list = document.getElementById('profileList');
+  list.innerHTML = '';
+
+  if (store.profiles.length === 0) {
+    list.innerHTML = '<div class="status small">Нет сохранённых репозиториев. Добавьте первый.</div>';
     return;
   }
-  // Заполнить поля на случай редактирования
-  document.getElementById('owner').value = cfg.owner;
-  document.getElementById('repo').value = cfg.repo;
-  document.getElementById('branch').value = cfg.branch;
-  document.getElementById('token').value = cfg.token;
 
-  document.getElementById('setup').style.display = 'none';
-  document.getElementById('manager').style.display = 'block';
+  for (const p of store.profiles) {
+    const card = document.createElement('div');
+    card.className = 'profile-card';
+    card.innerHTML = `
+      <div class="info">
+        <div class="name">${escapeHtml(p.name || p.repo)}</div>
+        <div class="meta">${escapeHtml(p.owner)}/${escapeHtml(p.repo)} @ ${escapeHtml(p.branch || 'main')}</div>
+      </div>
+      <div class="actions">
+        <button onclick="openProfile('${p.id}')">Открыть</button>
+        <button class="ghost" onclick="editProfile('${p.id}')">✏</button>
+        <button class="danger" onclick="deleteProfile('${p.id}')">🗑</button>
+      </div>
+    `;
+    list.appendChild(card);
+  }
+}
+
+function showAddForm(profile = null) {
+  editingProfileId = profile ? profile.id : null;
+  document.getElementById('configTitle').textContent =
+    profile ? 'Редактировать репозиторий' : 'Новый репозиторий';
+  document.getElementById('cfgName').value = profile?.name || '';
+  document.getElementById('owner').value = profile?.owner || '';
+  document.getElementById('repo').value = profile?.repo || '';
+  document.getElementById('branch').value = profile?.branch || 'main';
+  document.getElementById('token').value = profile?.token || '';
+  document.getElementById('configBox').style.display = 'block';
+}
+function hideAddForm() {
+  document.getElementById('configBox').style.display = 'none';
+  editingProfileId = null;
+}
+function editProfile(id) {
+  const p = getProfile(id);
+  if (p) showAddForm(p);
+}
+
+function saveProfile() {
+  const name   = document.getElementById('cfgName').value.trim();
+  const owner  = document.getElementById('owner').value.trim();
+  const repo   = document.getElementById('repo').value.trim();
+  const branch = document.getElementById('branch').value.trim() || 'main';
+  const token  = document.getElementById('token').value.trim();
+
+  if (!owner || !repo || !token) {
+    alert('Заполните owner, repo и token');
+    return;
+  }
+
+  const store = loadStore();
+  if (editingProfileId) {
+    const p = store.profiles.find(x => x.id === editingProfileId);
+    if (p) { p.name = name; p.owner = owner; p.repo = repo; p.branch = branch; p.token = token; }
+  } else {
+    store.profiles.push({
+      id: uid(), name: name || repo, owner, repo, branch, token
+    });
+  }
+  saveStore(store);
+  hideAddForm();
+  renderProfiles();
+}
+
+function deleteProfile(id) {
+  const p = getProfile(id);
+  if (!p) return;
+  if (!confirm(`Удалить профиль "${p.name || p.repo}"? Токен будет стёрт.`)) return;
+
+  const store = loadStore();
+  store.profiles = store.profiles.filter(x => x.id !== id);
+  if (store.activeId === id) store.activeId = null;
+  saveStore(store);
+
+  // убрать из вкладок
+  state.openTabs = state.openTabs.filter(x => x !== id);
+  saveOpenTabs(state.openTabs);
+
+  renderProfiles();
+}
+
+/* =====================================================
+   ВКЛАДКИ
+   ===================================================== */
+function renderTabs() {
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+
+  // подчистить вкладки, у которых профиль удалён
+  state.openTabs = state.openTabs.filter(id => getProfile(id));
+  saveOpenTabs(state.openTabs);
+
+  for (const id of state.openTabs) {
+    const p = getProfile(id);
+    if (!p) continue;
+    const t = document.createElement('div');
+    t.className = 'tab' + (id === state.activeId ? ' active' : '');
+    t.innerHTML = `
+      <span>${escapeHtml(p.name || p.repo)}</span>
+      <span class="close-x" title="Закрыть вкладку">✕</span>
+    `;
+    t.querySelector('span:first-child').onclick = () => switchTab(id);
+    t.querySelector('.close-x').onclick = (e) => {
+      e.stopPropagation();
+      closeTab(id);
+    };
+    tabsEl.appendChild(t);
+  }
+
+  // кнопка "+"
+  const add = document.createElement('div');
+  add.className = 'tab-add';
+  add.textContent = '+ профиль';
+  add.onclick = goToProfiles;
+  tabsEl.appendChild(add);
+}
+
+function openProfile(id) {
+  const p = getProfile(id);
+  if (!p) return;
+
+  if (!state.openTabs.includes(id)) {
+    state.openTabs.push(id);
+    saveOpenTabs(state.openTabs);
+  }
+  state.activeId = id;
+
+  // обновить activeId в store (не обязательно, но пусть)
+  const store = loadStore();
+  store.activeId = id;
+  saveStore(store);
+
+  // Переключить на manager
+  document.getElementById('profilesScreen').style.display = 'none';
+  document.getElementById('managerScreen').style.display = 'block';
+  document.getElementById('editorScreen').style.display = 'none';
+
   document.getElementById('whoami').textContent =
-    `${cfg.owner}/${cfg.repo} @ ${cfg.branch}`;
+    `${p.owner}/${p.repo} @ ${p.branch || 'main'}`;
+
+  state.path = '';
+  renderTabs();
   loadPath('');
 }
 
-// ---------- Загрузка списка ----------
+function switchTab(id) {
+  if (id === state.activeId) return;
+  // закрыть редактор, если открыт
+  document.getElementById('editorScreen').style.display = 'none';
+  state.activeId = id;
+  const p = getProfile(id);
+  const store = loadStore();
+  store.activeId = id;
+  saveStore(store);
+
+  document.getElementById('managerScreen').style.display = 'block';
+  document.getElementById('profilesScreen').style.display = 'none';
+  document.getElementById('whoami').textContent =
+    `${p.owner}/${p.repo} @ ${p.branch || 'main'}`;
+
+  state.path = '';
+  renderTabs();
+  loadPath('');
+}
+
+function closeTab(id) {
+  state.openTabs = state.openTabs.filter(x => x !== id);
+  saveOpenTabs(state.openTabs);
+
+  if (state.activeId === id) {
+    if (state.openTabs.length > 0) {
+      state.activeId = state.openTabs[state.openTabs.length - 1];
+      const p = getProfile(state.activeId);
+      const store = loadStore();
+      store.activeId = state.activeId;
+      saveStore(store);
+
+      document.getElementById('whoami').textContent =
+        `${p.owner}/${p.repo} @ ${p.branch || 'main'}`;
+      state.path = '';
+      renderTabs();
+      loadPath('');
+    } else {
+      state.activeId = null;
+      const store = loadStore();
+      store.activeId = null;
+      saveStore(store);
+      goToProfiles();
+      return;
+    }
+  }
+  renderTabs();
+}
+
+/* =====================================================
+   ПЕРЕХОДЫ МЕЖДУ ЭКРАНАМИ
+   ===================================================== */
+function goToProfiles() {
+  document.getElementById('profilesScreen').style.display = 'block';
+  document.getElementById('managerScreen').style.display = 'none';
+  document.getElementById('editorScreen').style.display = 'none';
+  document.getElementById('configBox').style.display = 'none';
+  renderProfiles();
+}
+
+/* =====================================================
+   СПИСОК ФАЙЛОВ
+   ===================================================== */
 async function loadPath(path) {
-  const cfg = getConfig();
-  state.path = path;
-  document.getElementById('currentPath').textContent = '/' + path;
+  const cfg = getActiveProfile();
+  if (!cfg) return;
+  state.path = path || '';
+  document.getElementById('currentPath').textContent = '/' + state.path;
 
   const url = path
-    ? `${apiBase(cfg)}/${encodeURI(path)}?ref=${encodeURIComponent(cfg.branch)}`
-    : `${apiBase(cfg)}?ref=${encodeURIComponent(cfg.branch)}`;
+    ? `${apiBase(cfg)}/${encodeURI(path)}?ref=${encodeURIComponent(cfg.branch || 'main')}`
+    : `${apiBase(cfg)}?ref=${encodeURIComponent(cfg.branch || 'main')}`;
 
   const list = document.getElementById('fileList');
   list.innerHTML = '<li>Загрузка...</li>';
@@ -216,16 +504,16 @@ async function loadPath(path) {
     for (const item of items) {
       const li = document.createElement('li');
       li.className = item.type === 'dir' ? 'folder' : 'file';
-
+      const safePath = item.path.replace(/'/g, "\\'");
       if (item.type === 'dir') {
-        li.innerHTML = `<a href="#" onclick="loadPath('${item.path}');return false;">${item.name}</a>`;
+        li.innerHTML = `<a href="#" onclick="loadPath('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
       } else {
-        li.innerHTML = `<a href="#" onclick="openEditor('${item.path}');return false;">${item.name}</a>`;
+        li.innerHTML = `<a href="#" onclick="openEditor('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
       }
       list.appendChild(li);
     }
   } catch (e) {
-    list.innerHTML = `<li class="status err">${e.message}</li>`;
+    list.innerHTML = `<li class="status err">${escapeHtml(e.message)}</li>`;
   }
 }
 
@@ -236,26 +524,28 @@ function parentPath() {
   return parts.join('/');
 }
 
-// ---------- Создание папки (через .gitkeep) ----------
+/* =====================================================
+   СОЗДАНИЕ ПАПКИ
+   ===================================================== */
 async function createDir(e) {
   e.preventDefault();
-  const cfg = getConfig();
+  const cfg = getActiveProfile();
+  if (!cfg) return;
   const name = document.getElementById('dirName').value.trim();
   if (!name) return;
 
   const dirPath = state.path ? `${state.path}/${name}` : name;
   const keepPath = `${dirPath}/.gitkeep`;
-
   const url = `${apiBase(cfg)}/${encodeURI(keepPath)}`;
+
   const body = {
     message: `Create directory ${dirPath}`,
     content: b64encode(''),
-    branch: cfg.branch
+    branch: cfg.branch || 'main'
   };
 
-  // Если файл уже есть — получим sha
   try {
-    const rHead = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers: headers(cfg) });
+    const rHead = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch || 'main')}`, { headers: headers(cfg) });
     if (rHead.ok) {
       const d = await rHead.json();
       body.sha = d.sha;
@@ -277,10 +567,13 @@ async function createDir(e) {
   }
 }
 
-// ---------- Загрузка файлов ----------
+/* =====================================================
+   ЗАГРУЗКА ФАЙЛОВ
+   ===================================================== */
 async function uploadFiles(e) {
   e.preventDefault();
-  const cfg = getConfig();
+  const cfg = getActiveProfile();
+  if (!cfg) return;
   const files = document.getElementById('fileInput').files;
   if (!files.length) return;
 
@@ -293,7 +586,7 @@ async function uploadFiles(e) {
 
     let sha;
     try {
-      const rGet = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers: headers(cfg) });
+      const rGet = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch || 'main')}`, { headers: headers(cfg) });
       if (rGet.ok) {
         const d = await rGet.json();
         sha = d.sha;
@@ -303,7 +596,7 @@ async function uploadFiles(e) {
     const body = {
       message: `Upload ${filePath}`,
       content,
-      branch: cfg.branch
+      branch: cfg.branch || 'main'
     };
     if (sha) body.sha = sha;
 
@@ -322,36 +615,38 @@ async function uploadFiles(e) {
   loadPath(state.path);
 }
 
-// ---------- Редактор ----------
-let editing = { path: '', sha: '' };
-
+/* =====================================================
+   РЕДАКТОР
+   ===================================================== */
 async function openEditor(filePath) {
-  const cfg = getConfig();
-  const url = `${apiBase(cfg)}/${encodeURI(filePath)}?ref=${encodeURIComponent(cfg.branch)}`;
+  const cfg = getActiveProfile();
+  if (!cfg) return;
+
+  const url = `${apiBase(cfg)}/${encodeURI(filePath)}?ref=${encodeURIComponent(cfg.branch || 'main')}`;
   const r = await fetch(url, { headers: headers(cfg) });
   const d = await r.json();
   if (!r.ok) { alert('Ошибка: ' + (d.message || r.status)); return; }
 
-  editing.path = filePath;
-  editing.sha = d.sha;
+  state.editing = { path: filePath, sha: d.sha };
   document.getElementById('editPath').textContent = filePath;
   document.getElementById('editContent').value = b64decode(d.content || '');
-  document.getElementById('editStatus').textContent = '';
-  document.getElementById('editStatus').className = 'status';
+  const st = document.getElementById('editStatus');
+  st.textContent = ''; st.className = 'status';
 
-  document.getElementById('manager').style.display = 'none';
-  document.getElementById('editor').style.display = 'block';
+  document.getElementById('managerScreen').style.display = 'none';
+  document.getElementById('editorScreen').style.display = 'block';
 }
 
 async function saveEdit() {
-  const cfg = getConfig();
+  const cfg = getActiveProfile();
+  if (!cfg) return;
   const newContent = document.getElementById('editContent').value;
-  const url = `${apiBase(cfg)}/${encodeURI(editing.path)}`;
+  const url = `${apiBase(cfg)}/${encodeURI(state.editing.path)}`;
   const body = {
-    message: `Update ${editing.path}`,
+    message: `Update ${state.editing.path}`,
     content: b64encode(newContent),
-    sha: editing.sha,
-    branch: cfg.branch
+    sha: state.editing.sha,
+    branch: cfg.branch || 'main'
   };
   const r = await fetch(url, {
     method: 'PUT',
@@ -361,7 +656,7 @@ async function saveEdit() {
   const d = await r.json();
   const st = document.getElementById('editStatus');
   if (r.ok) {
-    editing.sha = d.content.sha;
+    state.editing.sha = d.content.sha;
     st.textContent = '✅ Сохранено';
     st.className = 'status ok';
   } else {
@@ -371,13 +666,41 @@ async function saveEdit() {
 }
 
 function closeEditor() {
-  document.getElementById('editor').style.display = 'none';
-  document.getElementById('manager').style.display = 'block';
+  document.getElementById('editorScreen').style.display = 'none';
+  document.getElementById('managerScreen').style.display = 'block';
   loadPath(state.path);
 }
 
-// ---------- Запуск ----------
-initApp();
+/* =====================================================
+   МЕЛОЧИ
+   ===================================================== */
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/* =====================================================
+   СТАРТ
+   ===================================================== */
+function init() {
+  const store = loadStore();
+  state.openTabs = loadOpenTabs().filter(id => getProfile(id));
+  saveOpenTabs(state.openTabs);
+
+  // если был активный профиль и он ещё существует — откроем его
+  if (store.activeId && getProfile(store.activeId)) {
+    state.activeId = store.activeId;
+    openProfile(store.activeId);
+  } else if (state.openTabs.length > 0) {
+    // откроем последнюю вкладку из сохранённых
+    openProfile(state.openTabs[state.openTabs.length - 1]);
+  } else {
+    goToProfiles();
+  }
+}
+
+init();
 </script>
 </body>
 </html>
