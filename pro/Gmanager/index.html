@@ -4,17 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-
 <link rel="manifest" href="manifest.json">
 
-    <!-- Иконки PWA -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<!-- Иконки PWA -->
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 
-    <!-- Мета-теги для PWA -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
+<!-- Мета-теги для PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 
 <title>GitHub Файловый менеджер</title>
 <style>
@@ -47,8 +46,8 @@
   li a { color: #aaddff; text-decoration: none; }
   li a:hover { text-decoration: underline; }
   .folder::before { content: "📁 "; }
-  .file::before { content: "📄 "; }
   .folder, .file { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .file .icon { display: inline-block; }
   .status { margin: 15px; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.5); }
   .status.ok { background: rgba(60,180,80,0.6); }
   .status.err { background: rgba(200,60,60,0.6); }
@@ -270,10 +269,7 @@ function isVisited(profileId, path) {
   return arr.includes(path);
 }
 
-/* -------- Черновики редактора --------
-   Структура: { "profileId::path": "содержимое" }
-   Хранит несохранённые правки, чтобы не терять их при выходе из редактора.
-*/
+/* -------- Черновики редактора -------- */
 function loadDrafts() {
   try { return JSON.parse(localStorage.getItem(DRAFTS_KEY)) || {}; }
   catch { return {}; }
@@ -350,6 +346,20 @@ function bytesToB64(bytes) {
     bin += String.fromCharCode.apply(null, arr.subarray(i, i + chunk));
   }
   return btoa(bin);
+}
+
+/* Иконка по расширению файла */
+function fileIcon(name) {
+  const ext = (String(name).split('.').pop() || '').toLowerCase();
+  if (['png','jpg','jpeg','gif','webp','svg','bmp','ico','avif'].includes(ext)) return '🖼';
+  if (['mp4','webm','mov','avi','mkv'].includes(ext)) return '🎬';
+  if (['mp3','wav','ogg','flac','m4a'].includes(ext)) return '🎵';
+  if (['zip','rar','7z','tar','gz'].includes(ext)) return '🗜';
+  if (['pdf'].includes(ext)) return '📕';
+  if (['json','xml','yml','yaml'].includes(ext)) return '⚙';
+  if (['js','ts','html','css','py','java','c','cpp','go','rs','php','rb','sh'].includes(ext)) return '💻';
+  if (['md','txt','log'].includes(ext)) return '📝';
+  return '📄';
 }
 
 /* =====================================================
@@ -448,7 +458,6 @@ function deleteProfile(id) {
   delete vmap[id];
   saveVisited(vmap);
 
-  // Удаляем черновики этого профиля
   const dmap = loadDrafts();
   const prefix = id + '::';
   let changed = false;
@@ -582,22 +591,25 @@ function goToProfiles() {
 /* =====================================================
    СПИСОК ФАЙЛОВ
    ===================================================== */
-async function loadPath(path) {
+async function loadPath(path, opts = {}) {
   const cfg = getActiveProfile();
   if (!cfg) return;
   state.path = path || '';
   markVisited(state.activeId, state.path);
   document.getElementById('currentPath').textContent = '/' + state.path;
 
-  const url = path
-    ? `${apiBase(cfg)}/${encodeURI(path)}?ref=${encodeURIComponent(cfg.branch || 'main')}`
-    : `${apiBase(cfg)}?ref=${encodeURIComponent(cfg.branch || 'main')}`;
+  const ts = Date.now(); // антикэш
+  const base = path
+    ? `${apiBase(cfg)}/${encodeURI(path)}?ref=${encodeURIComponent(cfg.branch || 'main')}&t=${ts}`
+    : `${apiBase(cfg)}?ref=${encodeURIComponent(cfg.branch || 'main')}&t=${ts}`;
 
   const list = document.getElementById('fileList');
-  list.innerHTML = '<li>Загрузка...</li>';
+  if (!opts.silent) {
+    list.innerHTML = '<li>Загрузка...</li>';
+  }
 
   try {
-    const r = await fetch(url, { headers: headers(cfg) });
+    const r = await fetch(base, { headers: headers(cfg), cache: 'no-store' });
     const data = await r.json();
     if (!r.ok) throw new Error(data.message || 'Ошибка загрузки');
 
@@ -621,13 +633,19 @@ async function loadPath(path) {
       if (item.type === 'dir') {
         li.innerHTML = `<a href="#"${visitedCls} onclick="loadPath('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
       } else {
-        const draftMark = hasDraft(state.activeId, item.path) ? ' <span class="draft-badge">черновик</span>' : '';
-        li.innerHTML = `<a href="#"${visitedCls} onclick="openEditor('${safePath}');return false;">${escapeHtml(item.name)}</a>${draftMark}`;
+        const draftMark = hasDraft(state.activeId, item.path)
+          ? ' <span class="draft-badge">черновик</span>' : '';
+        li.innerHTML = `<span class="icon">${fileIcon(item.name)}</span>` +
+          `<a href="#"${visitedCls} onclick="openEditor('${safePath}');return false;">${escapeHtml(item.name)}</a>${draftMark}`;
       }
       list.appendChild(li);
     }
   } catch (e) {
-    list.innerHTML = `<li class="status err">${escapeHtml(e.message)}</li>`;
+    if (!opts.silent) {
+      list.innerHTML = `<li class="status err">${escapeHtml(e.message)}</li>`;
+    } else {
+      console.warn('silent loadPath error:', e);
+    }
   }
 }
 
@@ -649,22 +667,22 @@ async function createFile(e) {
   const rawName = document.getElementById('newFileName').value.trim();
   if (!rawName) return;
 
-  // Убираем ведущие/замыкающие и двойные слэши
   const cleanName = rawName.replace(/^\/+|\/+$/g, '').replace(/\/{2,}/g, '/');
   if (!cleanName || cleanName.endsWith('/')) {
     alert('Введите имя файла (не может заканчиваться на /)');
     return;
   }
 
-  // Полный путь: текущая папка + имя (если имя не абсолютное)
   const fullPath = state.path ? `${state.path}/${cleanName}` : cleanName;
   const url = `${apiBase(cfg)}/${encodeURI(fullPath)}`;
   const branch = cfg.branch || 'main';
 
-  // Проверяем, существует ли файл — если да, нужен sha для перезаписи
   let sha = null;
   try {
-    const rHead = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers: headers(cfg) });
+    const rHead = await fetch(
+      `${url}?ref=${encodeURIComponent(branch)}&t=${Date.now()}`,
+      { headers: headers(cfg), cache: 'no-store' }
+    );
     if (rHead.ok) {
       const d = await rHead.json();
       if (d.type === 'dir') {
@@ -679,7 +697,7 @@ async function createFile(e) {
 
   const body = {
     message: `Create file ${fullPath}`,
-    content: b64encode(''),   // создаём пустой файл
+    content: b64encode(''),
     branch
   };
   if (sha) body.sha = sha;
@@ -694,7 +712,7 @@ async function createFile(e) {
     document.getElementById('newFileName').value = '';
     loadPath(state.path);
   } else {
-    const d = await r.json();
+    const d = await r.json().catch(() => ({}));
     alert('Ошибка: ' + (d.message || r.status));
   }
 }
@@ -709,42 +727,96 @@ async function uploadFiles(e) {
   const files = document.getElementById('fileInput').files;
   if (!files.length) return;
 
+  const list = document.getElementById('fileList');
   const errors = [];
+  const uploaded = [];
+
+  // Показываем процесс загрузки по каждому файлу
+  list.innerHTML = '';
+  for (const f of files) {
+    const li = document.createElement('li');
+    li.className = 'file';
+    li.textContent = `⏳ ${f.name} (загрузка...)`;
+    li.dataset.uploading = f.name;
+    list.appendChild(li);
+  }
+
   for (const file of files) {
-    const buf = await file.arrayBuffer();
-    const content = bytesToB64(buf);
-    const filePath = state.path ? `${state.path}/${file.name}` : file.name;
-    const url = `${apiBase(cfg)}/${encodeURI(filePath)}`;
-
-    let sha;
     try {
-      const rGet = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch || 'main')}`, { headers: headers(cfg) });
-      if (rGet.ok) {
-        const d = await rGet.json();
-        sha = d.sha;
+      const buf = await file.arrayBuffer();
+      const content = bytesToB64(buf);
+      const filePath = state.path ? `${state.path}/${file.name}` : file.name;
+      const url = `${apiBase(cfg)}/${encodeURI(filePath)}`;
+
+      let sha;
+      try {
+        const rGet = await fetch(
+          `${url}?ref=${encodeURIComponent(cfg.branch || 'main')}&t=${Date.now()}`,
+          { headers: headers(cfg), cache: 'no-store' }
+        );
+        if (rGet.ok) {
+          const d = await rGet.json();
+          sha = d.sha;
+        }
+      } catch {}
+
+      const body = {
+        message: `Upload ${filePath}`,
+        content,
+        branch: cfg.branch || 'main'
+      };
+      if (sha) body.sha = sha;
+
+      const r = await fetch(url, {
+        method: 'PUT',
+        headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const el = list.querySelector(`[data-uploading="${CSS.escape(file.name)}"]`);
+
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        errors.push(`${file.name}: ${d.message || r.status}`);
+        if (el) el.textContent = `❌ ${file.name}: ${d.message || r.status}`;
+      } else {
+        uploaded.push(file.name);
+        if (el) el.textContent = `✅ ${file.name}`;
       }
-    } catch {}
-
-    const body = {
-      message: `Upload ${filePath}`,
-      content,
-      branch: cfg.branch || 'main'
-    };
-    if (sha) body.sha = sha;
-
-    const r = await fetch(url, {
-      method: 'PUT',
-      headers: { ...headers(cfg), 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) {
-      const d = await r.json();
-      errors.push(`${file.name}: ${d.message || r.status}`);
+    } catch (err) {
+      errors.push(`${file.name}: ${err.message}`);
+      const el = list.querySelector(`[data-uploading="${CSS.escape(file.name)}"]`);
+      if (el) el.textContent = `❌ ${file.name}: ${err.message}`;
     }
   }
+
   document.getElementById('fileInput').value = '';
-  if (errors.length) alert('Ошибки:\n' + errors.join('\n'));
-  loadPath(state.path);
+
+  // Принудительно обновляем список — GitHub API может отдать кэш
+  await refreshAfterUpload(uploaded);
+
+  if (errors.length) {
+    alert('Ошибки:\n' + errors.join('\n'));
+  }
+}
+
+/* Несколько попыток обновления списка, пока все загруженные файлы не появятся */
+async function refreshAfterUpload(uploadedNames) {
+  const expected = new Set(uploadedNames);
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await loadPath(state.path, { silent: true });
+
+    const domFiles = new Set(
+      Array.from(document.querySelectorAll('#fileList li a'))
+        .map(a => a.textContent.trim())
+    );
+
+    const missing = [...expected].filter(name => !domFiles.has(name));
+    if (missing.length === 0) return;
+
+    await new Promise(r => setTimeout(r, 700 + attempt * 500));
+  }
 }
 
 /* =====================================================
@@ -756,8 +828,8 @@ async function openEditor(filePath) {
 
   markVisited(state.activeId, filePath);
 
-  const url = `${apiBase(cfg)}/${encodeURI(filePath)}?ref=${encodeURIComponent(cfg.branch || 'main')}`;
-  const r = await fetch(url, { headers: headers(cfg) });
+  const url = `${apiBase(cfg)}/${encodeURI(filePath)}?ref=${encodeURIComponent(cfg.branch || 'main')}&t=${Date.now()}`;
+  const r = await fetch(url, { headers: headers(cfg), cache: 'no-store' });
   const d = await r.json();
   if (!r.ok) { alert('Ошибка: ' + (d.message || r.status)); return; }
 
@@ -767,7 +839,6 @@ async function openEditor(filePath) {
   document.getElementById('editPath').textContent = filePath;
   const textarea = document.getElementById('editContent');
 
-  // Проверяем черновик — если он есть, восстанавливаем его
   const draft = getDraft(state.activeId, filePath);
   if (typeof draft === 'string' && draft !== originalContent) {
     textarea.value = draft;
@@ -782,7 +853,6 @@ async function openEditor(filePath) {
     st.textContent = ''; st.className = 'status';
   }
 
-  // Автосохранение черновика при вводе
   textarea.oninput = function() {
     const hasChanges = textarea.value !== state.editing.originalContent;
     if (hasChanges) {
@@ -820,12 +890,11 @@ async function saveEdit() {
     headers: { ...headers(cfg), 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
-  const d = await r.json();
+  const d = await r.json().catch(() => ({}));
   const st = document.getElementById('editStatus');
   if (r.ok) {
     state.editing.sha = d.content.sha;
     state.editing.originalContent = newContent;
-    // После успешного сохранения черновик больше не нужен
     removeDraft(state.activeId, state.editing.path);
     updateDraftBadge(false);
     st.textContent = '✅ Сохранено';
@@ -836,7 +905,6 @@ async function saveEdit() {
   }
 }
 
-/* -------- Копировать всё содержимое редактора -------- */
 async function copyAllEdit() {
   const textarea = document.getElementById('editContent');
   const text = textarea.value;
@@ -849,11 +917,9 @@ async function copyAllEdit() {
   }
 
   try {
-    // Современный API (требует https или localhost)
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
     } else {
-      // Фолбэк для http и старых браузеров
       const ta = document.createElement('textarea');
       ta.value = text;
       ta.style.position = 'fixed';
@@ -886,7 +952,6 @@ function clearEdit() {
   if (!area.value.trim()) return;
   if (!confirm('Очистить содержимое поля? Изменения на GitHub не применятся, пока не нажмёте «Сохранить».')) return;
   area.value = '';
-  // Обновляем черновик (теперь он пустой, но отличается от оригинала)
   setDraft(state.activeId, state.editing.path, '');
   updateDraftBadge(true);
   const st = document.getElementById('editStatus');
@@ -895,7 +960,6 @@ function clearEdit() {
 }
 
 function closeEditor() {
-  // Проверяем несохранённые изменения
   const area = document.getElementById('editContent');
   const hasChanges = area.value !== (state.editing.originalContent || '');
   if (hasChanges) {
@@ -904,7 +968,6 @@ function closeEditor() {
       setDraft(state.activeId, state.editing.path, area.value);
       updateDraftBadge(true);
     } else {
-      // Пользователь отказался — удаляем черновик
       removeDraft(state.activeId, state.editing.path);
     }
   }
