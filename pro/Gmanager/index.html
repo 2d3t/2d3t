@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GitHub Файловый менеджер</title>
+<style>
+  body {
+    margin: 0; min-height: 100vh;
+    background-image: url('https://2d3t.github.io/index.html/images/sky.webp');
+    background-size: cover; background-position: center; background-attachment: fixed;
+    color: white; font-family: Arial, sans-serif; text-align: center;
+    padding: 20px; box-sizing: border-box;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+  input, button, textarea {
+    font-size: 16px; padding: 10px; margin: 5px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.4); box-sizing: border-box;
+  }
+  input[type=text], input[type=password] { width: 80%; background: rgba(0,0,0,0.5); color: white; }
+  input[type=file] { color: white; }
+  button {
+    background: #2a7fff; color: white; cursor: pointer; border: none;
+    padding: 10px 20px;
+  }
+  button:hover { background: #1a5fcf; }
+  button.danger { background: #d9534f; }
+  h2 { margin-top: 30px; }
+  ul { list-style: none; padding: 0; }
+  li { font-size: 20px; margin: 8px 0; }
+  li a { color: #aaddff; text-decoration: none; }
+  li a:hover { text-decoration: underline; }
+  .folder::before { content: "📁 "; }
+  .file::before { content: "📄 "; }
+  .folder, .file { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+  .status { margin: 15px; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.5); }
+  .status.ok { background: rgba(60,180,80,0.6); }
+  .status.err { background: rgba(200,60,60,0.6); }
+  textarea {
+    width: 100%; height: 60vh; font-family: monospace; font-size: 15px;
+    background: #1e1e1e; color: #eee; resize: vertical;
+  }
+  .small { font-size: 13px; opacity: 0.8; }
+  .btn-sm { font-size: 13px; padding: 4px 10px; margin-left: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>GitHub Файловый менеджер</h1>
+
+  <!-- ЭКРАН НАСТРОЕК / ВВОДА ТОКЕНА -->
+  <div id="setup">
+    <div class="status small">
+      Введите данные доступа. Всё хранится только в localStorage вашего браузера.
+    </div>
+    <input type="text" id="owner" placeholder="Владелец (owner), напр. 2d3t">
+    <input type="text" id="repo" placeholder="Репозиторий, напр. 2d3t">
+    <input type="text" id="branch" placeholder="Ветка (по умолчанию main)">
+    <input type="password" id="token" placeholder="Personal Access Token (ghp_...)">
+    <br>
+    <button onclick="saveConfig()">Сохранить</button>
+    <button class="danger" onclick="clearConfig()">Очистить</button>
+  </div>
+
+  <!-- ЭКРАН МЕНЕДЖЕРА -->
+  <div id="manager" style="display:none">
+    <div class="status ok" id="whoami"></div>
+
+    <h2>Создать папку:</h2>
+    <form onsubmit="createDir(event)">
+      <input type="text" id="dirName" placeholder="Имя папки" required>
+      <button type="submit">Создать</button>
+    </form>
+
+    <h2>Загрузить файлы:</h2>
+    <form onsubmit="uploadFiles(event)">
+      <input type="file" id="fileInput" multiple required>
+      <button type="submit">Загрузить</button>
+    </form>
+
+    <h2>Содержимое: <span id="currentPath">/</span></h2>
+    <div>
+      <button onclick="loadPath('')">⬅ В корень</button>
+      <button onclick="loadPath(parentPath())">⬅ Назад</button>
+      <button class="danger" onclick="logout()">Выйти</button>
+    </div>
+    <ul id="fileList"></ul>
+  </div>
+
+  <!-- ЭКРАН РЕДАКТОРА -->
+  <div id="editor" style="display:none">
+    <h2>Редактирование: <span id="editPath"></span></h2>
+    <textarea id="editContent"></textarea>
+    <br>
+    <button onclick="saveEdit()">💾 Сохранить</button>
+    <button onclick="closeEditor()">Отмена</button>
+    <div class="status" id="editStatus"></div>
+  </div>
+</div>
+
+<script>
+// ---------- Конфиг в localStorage ----------
+const LS_KEY = 'gh_fm_config';
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || null; }
+  catch { return null; }
+}
+function saveConfig() {
+  const cfg = {
+    owner: document.getElementById('owner').value.trim(),
+    repo:  document.getElementById('repo').value.trim(),
+    branch: document.getElementById('branch').value.trim() || 'main',
+    token: document.getElementById('token').value.trim()
+  };
+  if (!cfg.owner || !cfg.repo || !cfg.token) {
+    alert('Заполните owner, repo и token');
+    return;
+  }
+  localStorage.setItem(LS_KEY, JSON.stringify(cfg));
+  initApp();
+}
+function clearConfig() {
+  if (confirm('Удалить сохранённые данные?')) {
+    localStorage.removeItem(LS_KEY);
+    location.reload();
+  }
+}
+function logout() {
+  if (confirm('Удалить токен и настройки?')) clearConfig();
+}
+
+// ---------- GitHub API helper ----------
+function apiBase(cfg) {
+  return `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents`;
+}
+function headers(cfg) {
+  return {
+    'Authorization': `token ${cfg.token}`,
+    'Accept': 'application/vnd.github+json'
+  };
+}
+// UTF-8 ⇄ base64
+function b64encode(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64decode(b64) {
+  // GitHub иногда отдаёт с переносами строк
+  const clean = b64.replace(/\n/g, '');
+  return decodeURIComponent(escape(atob(clean)));
+}
+function bytesToB64(bytes) {
+  let bin = '';
+  const arr = new Uint8Array(bytes);
+  const chunk = 0x8000;
+  for (let i = 0; i < arr.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, arr.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+// ---------- Глобальное состояние ----------
+let state = { path: '' };
+
+// ---------- Инициализация ----------
+function initApp() {
+  const cfg = getConfig();
+  if (!cfg) {
+    document.getElementById('setup').style.display = 'block';
+    document.getElementById('manager').style.display = 'none';
+    return;
+  }
+  // Заполнить поля на случай редактирования
+  document.getElementById('owner').value = cfg.owner;
+  document.getElementById('repo').value = cfg.repo;
+  document.getElementById('branch').value = cfg.branch;
+  document.getElementById('token').value = cfg.token;
+
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('manager').style.display = 'block';
+  document.getElementById('whoami').textContent =
+    `${cfg.owner}/${cfg.repo} @ ${cfg.branch}`;
+  loadPath('');
+}
+
+// ---------- Загрузка списка ----------
+async function loadPath(path) {
+  const cfg = getConfig();
+  state.path = path;
+  document.getElementById('currentPath').textContent = '/' + path;
+
+  const url = path
+    ? `${apiBase(cfg)}/${encodeURI(path)}?ref=${encodeURIComponent(cfg.branch)}`
+    : `${apiBase(cfg)}?ref=${encodeURIComponent(cfg.branch)}`;
+
+  const list = document.getElementById('fileList');
+  list.innerHTML = '<li>Загрузка...</li>';
+
+  try {
+    const r = await fetch(url, { headers: headers(cfg) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || 'Ошибка загрузки');
+
+    list.innerHTML = '';
+    const items = Array.isArray(data) ? data : [data];
+    items.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    if (items.length === 0) {
+      list.innerHTML = '<li class="small">Пусто</li>';
+      return;
+    }
+
+    for (const item of items) {
+      const li = document.createElement('li');
+      li.className = item.type === 'dir' ? 'folder' : 'file';
+
+      if (item.type === 'dir') {
+        li.innerHTML = `<a href="#" onclick="loadPath('${item.path}');return false;">${item.name}</a>`;
+      } else {
+        li.innerHTML = `<a href="#" onclick="openEditor('${item.path}');return false;">${item.name}</a>`;
+      }
+      list.appendChild(li);
+    }
+  } catch (e) {
+    list.innerHTML = `<li class="status err">${e.message}</li>`;
+  }
+}
+
+function parentPath() {
+  if (!state.path) return '';
+  const parts = state.path.split('/');
+  parts.pop();
+  return parts.join('/');
+}
+
+// ---------- Создание папки (через .gitkeep) ----------
+async function createDir(e) {
+  e.preventDefault();
+  const cfg = getConfig();
+  const name = document.getElementById('dirName').value.trim();
+  if (!name) return;
+
+  const dirPath = state.path ? `${state.path}/${name}` : name;
+  const keepPath = `${dirPath}/.gitkeep`;
+
+  const url = `${apiBase(cfg)}/${encodeURI(keepPath)}`;
+  const body = {
+    message: `Create directory ${dirPath}`,
+    content: b64encode(''),
+    branch: cfg.branch
+  };
+
+  // Если файл уже есть — получим sha
+  try {
+    const rHead = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers: headers(cfg) });
+    if (rHead.ok) {
+      const d = await rHead.json();
+      body.sha = d.sha;
+    }
+  } catch {}
+
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (r.ok) {
+    document.getElementById('dirName').value = '';
+    loadPath(state.path);
+  } else {
+    const d = await r.json();
+    alert('Ошибка: ' + (d.message || r.status));
+  }
+}
+
+// ---------- Загрузка файлов ----------
+async function uploadFiles(e) {
+  e.preventDefault();
+  const cfg = getConfig();
+  const files = document.getElementById('fileInput').files;
+  if (!files.length) return;
+
+  const errors = [];
+  for (const file of files) {
+    const buf = await file.arrayBuffer();
+    const content = bytesToB64(buf);
+    const filePath = state.path ? `${state.path}/${file.name}` : file.name;
+    const url = `${apiBase(cfg)}/${encodeURI(filePath)}`;
+
+    let sha;
+    try {
+      const rGet = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch)}`, { headers: headers(cfg) });
+      if (rGet.ok) {
+        const d = await rGet.json();
+        sha = d.sha;
+      }
+    } catch {}
+
+    const body = {
+      message: `Upload ${filePath}`,
+      content,
+      branch: cfg.branch
+    };
+    if (sha) body.sha = sha;
+
+    const r = await fetch(url, {
+      method: 'PUT',
+      headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      errors.push(`${file.name}: ${d.message || r.status}`);
+    }
+  }
+  document.getElementById('fileInput').value = '';
+  if (errors.length) alert('Ошибки:\n' + errors.join('\n'));
+  loadPath(state.path);
+}
+
+// ---------- Редактор ----------
+let editing = { path: '', sha: '' };
+
+async function openEditor(filePath) {
+  const cfg = getConfig();
+  const url = `${apiBase(cfg)}/${encodeURI(filePath)}?ref=${encodeURIComponent(cfg.branch)}`;
+  const r = await fetch(url, { headers: headers(cfg) });
+  const d = await r.json();
+  if (!r.ok) { alert('Ошибка: ' + (d.message || r.status)); return; }
+
+  editing.path = filePath;
+  editing.sha = d.sha;
+  document.getElementById('editPath').textContent = filePath;
+  document.getElementById('editContent').value = b64decode(d.content || '');
+  document.getElementById('editStatus').textContent = '';
+  document.getElementById('editStatus').className = 'status';
+
+  document.getElementById('manager').style.display = 'none';
+  document.getElementById('editor').style.display = 'block';
+}
+
+async function saveEdit() {
+  const cfg = getConfig();
+  const newContent = document.getElementById('editContent').value;
+  const url = `${apiBase(cfg)}/${encodeURI(editing.path)}`;
+  const body = {
+    message: `Update ${editing.path}`,
+    content: b64encode(newContent),
+    sha: editing.sha,
+    branch: cfg.branch
+  };
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  const st = document.getElementById('editStatus');
+  if (r.ok) {
+    editing.sha = d.content.sha;
+    st.textContent = '✅ Сохранено';
+    st.className = 'status ok';
+  } else {
+    st.textContent = '❌ ' + (d.message || r.status);
+    st.className = 'status err';
+  }
+}
+
+function closeEditor() {
+  document.getElementById('editor').style.display = 'none';
+  document.getElementById('manager').style.display = 'block';
+  loadPath(state.path);
+}
+
+// ---------- Запуск ----------
+initApp();
+</script>
+</body>
+</html>
