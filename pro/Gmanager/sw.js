@@ -1,11 +1,11 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'cache-git-v2';
+const CACHE_NAME = 'gith-pwa-v1';
 
 const FILES_TO_CACHE = [
-    '/2d3t/pro/Gmanager/index.html',
-    '/2d3t/pro/Gmanager/manifest.json',
-    '/2d3t/pro/Gmanager/icon-192.png',
-    '/2d3t/pro/Gmanager/icon-512.png'
+    '/2d3t/pro/MirrorX/index.html',
+    '/2d3t/pro/MirrorX/manifest.json',
+    '/2d3t/pro/MirrorX/icon-192.png',
+    '/2d3t/pro/MirrorX/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -65,7 +65,7 @@ self.addEventListener('fetch', (event) => {
                     })
                     .catch(() => {
                         // Fallback на главную страницу при офлайне
-                        return caches.match('/2d3t/pro/Gmanager/index.html');
+                        return caches.match('/2d3t/pro/MirrorX/index.html');
                     });
             })
     );
