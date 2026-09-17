@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Замена кода</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    font-size: 14px;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  header {
+    padding: 8px;
+    background: #252526;
+    border-bottom: 1px solid #3a3a3a;
+    flex-shrink: 0;
+  }
+  .search-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .search-bar input {
+    flex: 1;
+    min-width: 0;
+  }
+  .search-info {
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+    min-height: 16px;
+    margin-bottom: 6px;
+  }
+  .search-info.active { color: #4ec9b0; }
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  button {
+    background: #0e639c;
+    color: #fff;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    transition: background .15s;
+  }
+  button:active { background: #1177bb; }
+  button.secondary { background: #3a3d41; }
+  button.secondary:active { background: #4a4d51; }
+  button.success { background: #16825d; }
+  button.success:active { background: #1a9e6f; }
+  button:disabled { opacity: .4; }
+  input, textarea {
+    width: 100%;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 10px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    outline: none;
+    resize: none;
+  }
+  input:focus, textarea:focus { border-color: #0e639c; }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .field-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: -2px;
+  }
+  #mainCode {
+    flex: 1;
+    min-height: 100px;
+  }
+  .replace-panel {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: #252526;
+    border-radius: 6px;
+    border: 1px solid #3a3a3a;
+    flex-shrink: 0;
+  }
+  .replace-panel.open { display: flex; }
+  .replace-panel textarea {
+    height: 60px;
+  }
+  .replace-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .footer {
+    padding: 8px;
+    background: #252526;
+    border-top: 1px solid #3a3a3a;
+    flex-shrink: 0;
+  }
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #16825d;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Поиск по коду..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <button id="prevBtn" class="secondary" style="flex:0 0 auto;">↑</button>
+    <button id="nextBtn" class="secondary" style="flex:0 0 auto;">↓</button>
+  </div>
+  <div class="search-info" id="searchInfo"></div>
+  <div class="btn-row">
+    <button id="replaceToggle">Заменить</button>
+    <button id="applyBtn" class="success" disabled>Применить</button>
+  </div>
+</header>
+
+<main>
+  <div class="field-label">Основной код</div>
+  <textarea id="mainCode" placeholder="Вставьте или напишите код здесь..." spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+
+  <div class="replace-panel" id="replacePanel">
+    <div class="field-label">Найти (что заменить)</div>
+    <textarea id="findText" placeholder="Что ищем..." spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+    <div class="field-label">Заменить на</div>
+    <textarea id="replaceText" placeholder="На что меняем..." spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+    <div class="replace-actions">
+      <button id="toggleMode" class="secondary">Замена: все</button>
+      <button id="clearReplace" class="secondary">Очистить</button>
+    </div>
+  </div>
+</main>
+
+<div class="footer">
+  <button id="copyBtn" class="secondary" style="width:100%;">📋 Копировать результат</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  const mainCode = document.getElementById('mainCode');
+  const replacePanel = document.getElementById('replacePanel');
+  const replaceToggle = document.getElementById('replaceToggle');
+  const applyBtn = document.getElementById('applyBtn');
+  const findText = document.getElementById('findText');
+  const replaceText = document.getElementById('replaceText');
+  const toggleModeBtn = document.getElementById('toggleMode');
+  const clearReplace = document.getElementById('clearReplace');
+  const copyBtn = document.getElementById('copyBtn');
+  const searchInput = document.getElementById('searchInput');
+  const searchInfo = document.getElementById('searchInfo');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const toast = document.getElementById('toast');
+
+  let replaceAll = true;
+  let searchMatches = [];
+  let currentMatch = -1;
+
+  // ===== Toast =====
+  let toastTimer;
+  function showToast(msg, color) {
+    toast.textContent = msg;
+    toast.style.background = color || '#16825d';
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 1500);
+  }
+
+  // ===== Панель замены =====
+  replaceToggle.addEventListener('click', () => {
+    const isOpen = replacePanel.classList.contains('open');
+    if (isOpen) {
+      replacePanel.classList.remove('open');
+      replaceToggle.textContent = 'Заменить';
+      updateApplyState();
+    } else {
+      // открываем и очищаем поля — как просили
+      findText.value = '';
+      replaceText.value = '';
+      replacePanel.classList.add('open');
+      replaceToggle.textContent = '✕ Закрыть';
+      findText.focus();
+      updateApplyState();
+    }
+  });
+
+  function updateApplyState() {
+    const hasFind = findText.value.length > 0;
+    applyBtn.disabled = !hasFind;
+  }
+
+  findText.addEventListener('input', updateApplyState);
+
+  // Переключение режима: все / первое
+  toggleModeBtn.addEventListener('click', () => {
+    replaceAll = !replaceAll;
+    toggleModeBtn.textContent = replaceAll ? 'Замена: все' : 'Замена: первое';
+  });
+
+  // Очистить поля замены
+  clearReplace.addEventListener('click', () => {
+    findText.value = '';
+    replaceText.value = '';
+    updateApplyState();
+    findText.focus();
+  });
+
+  // ===== Применить замену =====
+  applyBtn.addEventListener('click', () => {
+    const find = findText.value;
+    const repl = replaceText.value;
+    if (!find) return;
+
+    let count = 0;
+    let result = mainCode.value;
+
+    if (replaceAll) {
+      // Считаем вхождения
+      const parts = result.split(find);
+      count = parts.length - 1;
+      result = parts.join(repl);
+    } else {
+      const idx = result.indexOf(find);
+      if (idx !== -1) {
+        result = result.slice(0, idx) + repl + result.slice(idx + find.length);
+        count = 1;
+      }
+    }
+
+    if (count === 0) {
+      showToast('Не найдено', '#a33');
+      return;
+    }
+
+    mainCode.value = result;
+    showToast('Заменено: ' + count);
+
+    // Очищаем поля для следующей замены
+    findText.value = '';
+    replaceText.value = '';
+    updateApplyState();
+    findText.focus();
+
+    // Сброс поиска
+    clearSearchHighlights();
+  });
+
+  // ===== Копирование =====
+  copyBtn.addEventListener('click', async () => {
+    const text = mainCode.value;
+    if (!text) { showToast('Пусто', '#a33'); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Скопировано ✓');
+    } catch (e) {
+      // fallback
+      mainCode.select();
+      document.execCommand('copy');
+      window.getSelection().removeAllRanges();
+      showToast('Скопировано ✓');
+    }
+  });
+
+  // ===== Поиск =====
+  function findMatches() {
+    const q = searchInput.value;
+    searchMatches = [];
+    currentMatch = -1;
+    if (!q) {
+      searchInfo.textContent = '';
+      searchInfo.classList.remove('active');
+      return;
+    }
+    const text = mainCode.value;
+    let i = 0;
+    while ((i = text.indexOf(q, i)) !== -1) {
+      searchMatches.push({ start: i, end: i + q.length });
+      i += q.length;
+    }
+    if (searchMatches.length === 0) {
+      searchInfo.textContent = 'Совпадений нет';
+      searchInfo.classList.remove('active');
+    } else {
+      searchInfo.textContent = '0 / ' + searchMatches.length;
+      searchInfo.classList.add('active');
+    }
+  }
+
+  function jumpToMatch(index) {
+    if (searchMatches.length === 0) return;
+    if (index < 0) index = searchMatches.length - 1;
+    if (index >= searchMatches.length) index = 0;
+    currentMatch = index;
+    const m = searchMatches[index];
+    mainCode.focus();
+    mainCode.setSelectionRange(m.start, m.end);
+
+    // Прокрутка к найденному
+    const text = mainCode.value;
+    const ratio = m.start / text.length;
+    mainCode.scrollTop = (mainCode.scrollHeight - mainCode.clientHeight) * ratio * 0.9;
+
+    searchInfo.textContent = (index + 1) + ' / ' + searchMatches.length;
+  }
+
+  searchInput.addEventListener('input', findMatches);
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      jumpToMatch(currentMatch + 1);
+    }
+  });
+
+  nextBtn.addEventListener('click', () => jumpToMatch(currentMatch + 1));
+  prevBtn.addEventListener('click', () => jumpToMatch(currentMatch - 1));
+
+  function clearSearchHighlights() {
+    searchMatches = [];
+    currentMatch = -1;
+    if (searchInput.value) findMatches();
+  }
+
+  // Обновление поиска при изменении кода
+  mainCode.addEventListener('input', () => {
+    if (searchInput.value) findMatches();
+  });
+
+  // Стартовое состояние
+  updateApplyState();
+})();
+</script>
+</body>
+</html>
