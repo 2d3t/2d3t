@@ -3,16 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
-
-    <!-- Иконки PWA -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-    <!-- Мета-теги для PWA -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
 <title>GitHub Файловый менеджер</title>
 <style>
   body {
@@ -163,9 +153,9 @@
 
     <div class="status ok" id="whoami"></div>
 
-    <h2>Создать папку:</h2>
-    <form onsubmit="createDir(event)">
-      <input type="text" id="dirName" placeholder="Имя папки" required>
+    <h2>Создать файл:</h2>
+    <form onsubmit="createFile(event)">
+      <input type="text" id="newFileName" placeholder="Имя файла (можно путь: docs/readme.md)" required>
       <button type="submit">Создать</button>
     </form>
 
@@ -387,11 +377,9 @@ function deleteProfile(id) {
   if (store.activeId === id) store.activeId = null;
   saveStore(store);
 
-  // убрать из вкладок
   state.openTabs = state.openTabs.filter(x => x !== id);
   saveOpenTabs(state.openTabs);
 
-  // почистить посещённые пути этого профиля
   const vmap = loadVisited();
   delete vmap[id];
   saveVisited(vmap);
@@ -577,32 +565,50 @@ function parentPath() {
 }
 
 /* =====================================================
-   СОЗДАНИЕ ПАПКИ
+   СОЗДАНИЕ ФАЙЛА
    ===================================================== */
-async function createDir(e) {
+async function createFile(e) {
   e.preventDefault();
   const cfg = getActiveProfile();
   if (!cfg) return;
-  const name = document.getElementById('dirName').value.trim();
-  if (!name) return;
 
-  const dirPath = state.path ? `${state.path}/${name}` : name;
-  const keepPath = `${dirPath}/.gitkeep`;
-  const url = `${apiBase(cfg)}/${encodeURI(keepPath)}`;
+  const rawName = document.getElementById('newFileName').value.trim();
+  if (!rawName) return;
 
-  const body = {
-    message: `Create directory ${dirPath}`,
-    content: b64encode(''),
-    branch: cfg.branch || 'main'
-  };
+  // Убираем ведущие/замыкающие и двойные слэши
+  const cleanName = rawName.replace(/^\/+|\/+$/g, '').replace(/\/{2,}/g, '/');
+  if (!cleanName || cleanName.endsWith('/')) {
+    alert('Введите имя файла (не может заканчиваться на /)');
+    return;
+  }
 
+  // Полный путь: текущая папка + имя (если имя не абсолютное)
+  const fullPath = state.path ? `${state.path}/${cleanName}` : cleanName;
+  const url = `${apiBase(cfg)}/${encodeURI(fullPath)}`;
+  const branch = cfg.branch || 'main';
+
+  // Проверяем, существует ли файл — если да, нужен sha для перезаписи
+  let sha = null;
   try {
-    const rHead = await fetch(`${url}?ref=${encodeURIComponent(cfg.branch || 'main')}`, { headers: headers(cfg) });
+    const rHead = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers: headers(cfg) });
     if (rHead.ok) {
       const d = await rHead.json();
-      body.sha = d.sha;
+      if (d.type === 'dir') {
+        alert('По этому пути уже есть папка — выберите другое имя файла.');
+        return;
+      }
+      sha = d.sha;
+      const overwrite = confirm(`Файл "${fullPath}" уже существует. Перезаписать его пустым содержимым?`);
+      if (!overwrite) return;
     }
   } catch {}
+
+  const body = {
+    message: `Create file ${fullPath}`,
+    content: b64encode(''),   // создаём пустой файл
+    branch
+  };
+  if (sha) body.sha = sha;
 
   const r = await fetch(url, {
     method: 'PUT',
@@ -611,7 +617,7 @@ async function createDir(e) {
   });
 
   if (r.ok) {
-    document.getElementById('dirName').value = '';
+    document.getElementById('newFileName').value = '';
     loadPath(state.path);
   } else {
     const d = await r.json();
