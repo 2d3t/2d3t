@@ -4,23 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
-    
-    <!-- Ваши иконки -->
+
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-    
-    <!-- Мета-теги для PWA -->
+
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    
+
     <title>🪞 PWA - Maker - Butterfly</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #0e0e12;
             color: #ececf0;
@@ -30,11 +24,7 @@
             display: flex;
             flex-direction: column;
         }
-        .container {
-            max-width: 820px;
-            margin: 0 auto;
-            width: 100%;
-        }
+        .container { max-width: 820px; margin: 0 auto; width: 100%; }
         h1 {
             font-size: 2.1rem;
             font-weight: 500;
@@ -68,11 +58,7 @@
             align-items: center;
             margin-bottom: 1.2rem;
         }
-        .card-header h2 {
-            font-weight: 400;
-            font-size: 1.25rem;
-            color: #d6dbe8;
-        }
+        .card-header h2 { font-weight: 400; font-size: 1.25rem; color: #d6dbe8; }
         .badge {
             background: #2f3340;
             padding: 0.2rem 0.8rem;
@@ -90,9 +76,7 @@
             margin-bottom: 0.3rem;
             margin-top: 1rem;
         }
-        label:first-of-type {
-            margin-top: 0;
-        }
+        label:first-of-type { margin-top: 0; }
         input, textarea {
             width: 100%;
             background: #11131b;
@@ -109,11 +93,7 @@
             border-color: #5f7aff;
             box-shadow: 0 0 0 3px rgba(79, 110, 255, 0.15);
         }
-        input[readonly] {
-            opacity: 0.7;
-            cursor: default;
-            border-color: #2a2d36;
-        }
+        input[readonly] { opacity: 0.7; cursor: default; border-color: #2a2d36; }
         textarea {
             min-height: 80px;
             resize: vertical;
@@ -121,11 +101,7 @@
             line-height: 1.5;
             padding: 0.8rem;
         }
-        .row-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
+        .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         .btn-group {
             display: flex;
             flex-wrap: wrap;
@@ -155,29 +131,12 @@
             color: white;
             box-shadow: 0 4px 12px rgba(75, 106, 255, 0.25);
         }
-        .btn-primary:hover {
-            background: #3f5df0;
-            transform: scale(0.97);
-        }
-        .btn-outline {
-            background: transparent;
-            border-color: #3e4357;
-        }
-        .btn-outline:hover {
-            background: #262b38;
-        }
-        .btn-success {
-            background: #2d8f5e;
-            border-color: #2d8f5e;
-            color: white;
-        }
-        .btn-success:hover {
-            background: #237a4e;
-        }
-        .btn-icon {
-            background: #1e212a;
-            border-color: #30354a;
-        }
+        .btn-primary:hover { background: #3f5df0; transform: scale(0.97); }
+        .btn-outline { background: transparent; border-color: #3e4357; }
+        .btn-outline:hover { background: #262b38; }
+        .btn-success { background: #2d8f5e; border-color: #2d8f5e; color: white; }
+        .btn-success:hover { background: #237a4e; }
+        .btn-icon { background: #1e212a; border-color: #30354a; }
         .code-block {
             background: #0d0f16;
             border-radius: 18px;
@@ -220,11 +179,7 @@
             gap: 0.8rem;
             flex-wrap: wrap;
         }
-        .helper {
-            color: #8690ad;
-            font-size: 0.75rem;
-            margin-top: 0.2rem;
-        }
+        .helper { color: #8690ad; font-size: 0.75rem; margin-top: 0.2rem; }
         .helper .auto-path {
             color: #4b6aff;
             font-family: monospace;
@@ -232,11 +187,7 @@
             padding: 0.1rem 0.4rem;
             border-radius: 4px;
         }
-        hr {
-            border: none;
-            border-top: 1px solid #282d3d;
-            margin: 1.4rem 0;
-        }
+        hr { border: none; border-top: 1px solid #282d3d; margin: 1.4rem 0; }
         .icon-link {
             background: #222734;
             border-radius: 40px;
@@ -253,15 +204,8 @@
             border-color: #4b6aff;
             transform: scale(1.02);
         }
-        .icon-link a {
-            color: #b4c2e6;
-            text-decoration: none;
-            font-size: 0.9rem;
-        }
-        .icon-link a:hover {
-            color: white;
-            text-decoration: underline;
-        }
+        .icon-link a { color: #b4c2e6; text-decoration: none; font-size: 0.9rem; }
+        .icon-link a:hover { color: white; text-decoration: underline; }
         .status-badge {
             display: inline-block;
             background: #1f2533;
@@ -271,27 +215,108 @@
             color: #9eb0d9;
             border: 1px solid #2c3347;
         }
-        .color-preset {
-            transition: transform 0.15s;
+        .color-preset { transition: transform 0.15s; }
+        .color-preset:hover { transform: scale(1.2); }
+
+        /* ================= ШАГОВЫЙ ВВОД ================= */
+        .steps-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
-        .color-preset:hover {
-            transform: scale(1.2);
+        .steps-progress .step-counter {
+            font-size: 0.78rem;
+            color: #9eb0d9;
+            background: #1f2533;
+            border: 1px solid #2c3347;
+            padding: 0.15rem 0.8rem;
+            border-radius: 30px;
+        }
+        .steps-bar {
+            flex: 1;
+            height: 4px;
+            background: #232632;
+            border-radius: 30px;
+            overflow: hidden;
+            min-width: 120px;
+        }
+        .steps-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4b6aff, #6f8dff);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 30px;
+        }
+        .step-pane {
+            display: none;
+            animation: stepIn 0.25s ease;
+        }
+        .step-pane.active { display: block; }
+        @keyframes stepIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .step-actions {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 1.2rem;
+            flex-wrap: wrap;
+        }
+        .step-actions .btn { flex: 1 1 auto; }
+        .step-actions .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .step-hint {
+            font-size: 0.78rem;
+            color: #8690ad;
+            margin-top: 0.4rem;
         }
 
-        /* Стили для оверлея перехода */
+        /* Кнопка очистки в лейбле */
+        .label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            margin-bottom: 0.3rem;
+        }
+        .label-row label { margin: 0; }
+        .btn-clear {
+            background: #2a1e22;
+            border: 1px solid #4a2c33;
+            color: #e8a5b0;
+            font-size: 0.72rem;
+            padding: 0.25rem 0.7rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .btn-clear:hover {
+            background: #3a252b;
+            border-color: #e74c3c;
+            color: #ffb3c1;
+        }
+        .btn-clear:active { transform: scale(0.95); }
+
+        /* Оверлей перехода */
         .transition-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: #0a0a12;
             z-index: 999999;
             display: flex;
             flex-direction: column;
             animation: fadeIn 0.3s ease;
         }
-
         .transition-topbar {
             display: flex;
             align-items: center;
@@ -303,7 +328,6 @@
             flex-shrink: 0;
             min-height: 56px;
         }
-
         .transition-back {
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.1);
@@ -317,12 +341,10 @@
             font-weight: 500;
             white-space: nowrap;
         }
-
         .transition-back:hover {
             background: rgba(255,255,255,0.16);
             transform: scale(1.02);
         }
-
         .transition-title {
             color: #94a3b8;
             font-size: 14px;
@@ -331,20 +353,16 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-
         .transition-iframe {
             width: 100%;
             flex: 1;
             border: none;
             background: #ffffff;
         }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.98); }
             to { opacity: 1; transform: scale(1); }
         }
-
-        /* Стили для сообщения о скачивании */
         .download-notification {
             position: fixed;
             bottom: 30px;
@@ -365,39 +383,26 @@
             align-items: center;
             gap: 12px;
         }
-
         .download-notification.success {
             border-color: #00b894;
             background: rgba(0, 184, 148, 0.2);
         }
-
         .download-notification.error {
             border-color: #e74c3c;
             background: rgba(231, 76, 60, 0.2);
         }
-
         @keyframes slideUp {
             from { opacity: 0; transform: translateX(-50%) translateY(30px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
 
         @media (max-width: 540px) {
-            .row-2 {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
-            }
-            .btn-group .btn {
-                flex: 1 1 100%;
-            }
+            .row-2 { grid-template-columns: 1fr; gap: 0.5rem; }
+            .btn-group .btn { flex: 1 1 100%; }
+            .step-actions .btn { flex: 1 1 100%; }
         }
-        ::-webkit-scrollbar {
-            width: 6px;
-            background: #181b24;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #3d435b;
-            border-radius: 12px;
-        }
+        ::-webkit-scrollbar { width: 6px; background: #181b24; }
+        ::-webkit-scrollbar-thumb { background: #3d435b; border-radius: 12px; }
     </style>
 </head>
 <body>
@@ -409,55 +414,73 @@
     <div class="card">
         <div class="card-header">
             <h2>📝 Настройки приложения</h2>
-            <span class="badge">автогенерация</span>
-        </div>
-        <div class="row-2">
-            <div>
-                <label>Название (name)</label>
-                <input type="text" id="appName" value="🦋 Butterfly" placeholder="Название PWA">
-                <label>Короткое имя (short_name)</label>
-                <input type="text" id="shortName" value="Butterfly" placeholder="Сокращённое название">
-            </div>
-            <div>
-                <label>Описание</label>
-                <input type="text" id="appDesc" value="Делай PWA приложения легко!" placeholder="Краткое описание">
-            </div>
-        </div>
-        
-        <!-- БЛОК С ВЫБОРОМ ЦВЕТА -->
-        <div class="row-2">
-            <div>
-                <label>Цвет фона (background_color)</label>
-                <div style="display:flex; gap: 0.6rem; align-items: center;">
-                    <input type="color" id="bgColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
-                    <input type="text" id="bgColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
-                </div>
-                <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                    <button class="color-preset" data-target="bgColor" style="background: #0e0e12; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px #2a2d36;"></button>
-                    <button class="color-preset" data-target="bgColor" style="background: #1a1c23; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
-                    <button class="color-preset" data-target="bgColor" style="background: #f5f0eb; border: 1px solid #ccc; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
-                    <button class="color-preset" data-target="bgColor" style="background: #ffffff; border: 1px solid #aaa; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
-                    <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ быстрые</span>
-                </div>
-            </div>
-            <div>
-                <label>Цвет темы (theme_color)</label>
-                <div style="display:flex; gap: 0.6rem; align-items: center;">
-                    <input type="color" id="themeColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
-                    <input type="text" id="themeColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
-                </div>
-                <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                    <button class="color-preset" data-target="themeColor" style="background: #111111; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
-                    <button class="color-preset" data-target="themeColor" style="background: #4b6aff; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
-                    <button class="color-preset" data-target="themeColor" style="background: #e67e22; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
-                    <button class="color-preset" data-target="themeColor" style="background: #2d8f5e; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
-                    <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ пресеты</span>
-                </div>
-            </div>
+            <span class="badge">пошагово</span>
         </div>
 
-        <!-- БЛОК ПУТЕЙ -->
-        <div>
+        <!-- ПРОГРЕСС -->
+        <div class="steps-progress">
+            <span class="step-counter" id="stepCounter">Шаг 1 из 7</span>
+            <div class="steps-bar"><div class="steps-bar-fill" id="stepsBarFill"></div></div>
+        </div>
+
+        <!-- ШАГ 1: Название -->
+        <div class="step-pane active" data-step="1">
+            <label>Название (name)</label>
+            <input type="text" id="appName" value="🦋 Butterfly" placeholder="Название PWA">
+            <div class="step-hint">💡 Как приложение будет называться на устройстве.</div>
+        </div>
+
+        <!-- ШАГ 2: Короткое имя -->
+        <div class="step-pane" data-step="2">
+            <label>Короткое имя (short_name)</label>
+            <input type="text" id="shortName" value="Butterfly" placeholder="Сокращённое название">
+            <div class="step-hint">💡 Отображается под иконкой на рабочем столе (до 12 символов).</div>
+        </div>
+
+        <!-- ШАГ 3: Описание -->
+        <div class="step-pane" data-step="3">
+            <label>Описание</label>
+            <input type="text" id="appDesc" value="Делай PWA приложения легко!" placeholder="Краткое описание">
+            <div class="step-hint">💡 Краткое описание для manifest.json.</div>
+        </div>
+
+        <!-- ШАГ 4: Цвета -->
+        <div class="step-pane" data-step="4">
+            <div class="row-2">
+                <div>
+                    <label>Цвет фона (background_color)</label>
+                    <div style="display:flex; gap: 0.6rem; align-items: center;">
+                        <input type="color" id="bgColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
+                        <input type="text" id="bgColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
+                    </div>
+                    <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                        <button class="color-preset" data-target="bgColor" style="background: #0e0e12; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; box-shadow: 0 0 0 1px #2a2d36;"></button>
+                        <button class="color-preset" data-target="bgColor" style="background: #1a1c23; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                        <button class="color-preset" data-target="bgColor" style="background: #f5f0eb; border: 1px solid #ccc; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                        <button class="color-preset" data-target="bgColor" style="background: #ffffff; border: 1px solid #aaa; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                        <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ быстрые</span>
+                    </div>
+                </div>
+                <div>
+                    <label>Цвет темы (theme_color)</label>
+                    <div style="display:flex; gap: 0.6rem; align-items: center;">
+                        <input type="color" id="themeColorPicker" value="#111111" style="width: 48px; height: 48px; border: 2px solid #3b3f4e; border-radius: 12px; background: transparent; cursor: pointer; padding: 2px;">
+                        <input type="text" id="themeColor" value="#111111" placeholder="#111111" style="flex:2;" readonly>
+                    </div>
+                    <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                        <button class="color-preset" data-target="themeColor" style="background: #111111; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                        <button class="color-preset" data-target="themeColor" style="background: #4b6aff; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                        <button class="color-preset" data-target="themeColor" style="background: #e67e22; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                        <button class="color-preset" data-target="themeColor" style="background: #2d8f5e; border: 1px solid #444; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;"></button>
+                        <span style="color: #8f97af; font-size: 0.7rem; margin-left: 0.2rem;">⇠ пресеты</span>
+                    </div>
+                </div>
+            </div>
+            <div class="step-hint">💡 Фон — при загрузке, тема — цвет адресной строки/интерфейса.</div>
+        </div>
+
+        <!-- ШАГ 5: Путь -->
+        <div class="step-pane" data-step="5">
             <label>Путь к index.html (start_url + базовый путь)</label>
             <input type="text" id="basePath" value="/2d3t/pro/MirrorX/index.html" placeholder="/ваш/путь/index.html">
             <div class="helper">
@@ -467,32 +490,44 @@
                 <span style="color:#5a627a; margin:0 4px;">·</span>
                 <span class="auto-path" id="icon512Preview">/2d3t/pro/MirrorX/icon-512.png</span>
             </div>
+            <div class="step-hint">💡 Куда будет установлено приложение и откуда запускаться.</div>
+        </div>
+
+        <!-- ШАГ 6: Кэш -->
+        <div class="step-pane" data-step="6">
+            <label>Cache Name (версия кэша)</label>
+            <input type="text" id="cacheName" value="osp-pwa-v2" placeholder="cache-name-v1">
+            <div class="step-hint">💡 Меняйте версию, чтобы сбросить старый кэш после обновления.</div>
+        </div>
+
+        <!-- ШАГ 7: Страницы для предзагрузки -->
+        <div class="step-pane" data-step="7">
+            <div class="label-row">
+                <label>📌 Страницы для предзагрузки (по одной на строку)</label>
+                <button type="button" class="btn-clear" id="clearPrecache" title="Очистить список ссылок">
+                    🗑 Очистить
+                </button>
+            </div>
+            <textarea id="precacheUrls" rows="5" placeholder="https://example.com/page1/index.html&#10;https://example.com/page2/index.html">https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html
+https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
+            <div class="helper">✅ Эти страницы будут доступны офлайн сразу после загрузки</div>
+            <div class="step-hint">💡 Нажмите 🗑 «Очистить», чтобы удалить все ссылки сразу.</div>
         </div>
 
         <!-- СКРЫТЫЕ ПОЛЯ ДЛЯ ИКОНОК -->
         <input type="hidden" id="icon192" value="/2d3t/pro/MirrorX/icon-192.png">
         <input type="hidden" id="icon512" value="/2d3t/pro/MirrorX/icon-512.png">
 
-        <div style="margin-top: 0.6rem;">
-            <label>Cache Name (версия кэша)</label>
-            <input type="text" id="cacheName" value="osp-pwa-v2" placeholder="cache-name-v1">
-        </div>
-
-        <!-- СТРАНИЦЫ ДЛЯ ПРЕДЗАГРУЗКИ -->
-        <div style="margin-top: 1rem;">
-            <label>📌 Страницы для предзагрузки (по одной на строку)</label>
-            <textarea id="precacheUrls" rows="4" placeholder="https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html&#10;https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html">https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html
-https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
-            <div class="helper">✅ Эти страницы будут доступны офлайн сразу после загрузки</div>
-        </div>
-
-        <div class="btn-group">
-            <button class="btn btn-primary" id="generateBtn">🔄 Обновить код</button>
+        <!-- НАВИГАЦИЯ ПО ШАГАМ -->
+        <div class="step-actions">
+            <button class="btn btn-outline" id="prevStep" disabled>← Назад</button>
+            <button class="btn btn-primary" id="nextStep">Далее →</button>
+            <button class="btn btn-success" id="generateBtn" style="display:none;">🔄 Обновить код</button>
             <button class="btn btn-icon" id="resetDefaults">↺ Сбросить</button>
         </div>
     </div>
 
-    <!-- Генератор иконок + внешний переход -->
+    <!-- Генератор иконок -->
     <div style="display:flex; justify-content: flex-end; margin-bottom: 1rem;">
         <div class="icon-link" onclick="openExternalSite('https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html', '🖼️ Генератор иконок')">
             <span>🖼️</span>
@@ -548,7 +583,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     </div>
 
     <!-- скрытые блоки для копирования -->
-    <!-- БЛОК ДЛЯ КОПИРОВАНИЯ #1: PWA-метатеги -->
     <div style="display: none;" id="headPWABlock">
         <code>&lt;link rel="manifest" href="manifest.json"&gt;
 
@@ -562,7 +596,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     &lt;meta name="mobile-web-app-capable" content="yes"&gt;</code>
     </div>
 
-    <!-- БЛОК ДЛЯ КОПИРОВАНИЯ #2: Стили для оверлея -->
     <div style="display: none;" id="headStylesBlock">
         <code>&lt;style&gt;
     /* ============================================================
@@ -676,14 +709,9 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
 (function() {
     "use strict";
 
-    // ============================================================
-    // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
-    // ============================================================
     function openGame(url, title) {
         const oldOverlay = document.querySelector('.transition-overlay');
-        if (oldOverlay) {
-            oldOverlay.remove();
-        }
+        if (oldOverlay) oldOverlay.remove();
 
         const overlay = document.createElement('div');
         overlay.className = 'transition-overlay';
@@ -694,9 +722,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         const backBtn = document.createElement('button');
         backBtn.className = 'transition-back';
         backBtn.textContent = '← Назад';
-        backBtn.onclick = function() {
-            overlay.remove();
-        };
+        backBtn.onclick = function() { overlay.remove(); };
 
         const titleEl = document.createElement('span');
         titleEl.className = 'transition-title';
@@ -733,14 +759,9 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         };
 
         overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) {
-                overlay.remove();
-            }
+            if (e.target === overlay) overlay.remove();
         });
 
-        // ============================================================
-        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
-        // ============================================================
         window.addEventListener('message', function(event) {
             if (event.source !== iframe.contentWindow) return;
             const data = event.data;
@@ -752,9 +773,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         return overlay;
     }
 
-    // ============================================================
-    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
-    // ============================================================
     function handleDownload(content, filename, mimeType) {
         try {
             if (typeof content === 'string' && content.startsWith('http')) {
@@ -785,11 +803,8 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            
-            setTimeout(function() {
-                URL.revokeObjectURL(url);
-            }, 5000);
 
+            setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
             showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
         } catch (error) {
             console.error('Ошибка скачивания:', error);
@@ -797,9 +812,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         }
     }
 
-    // ============================================================
-    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
-    // ============================================================
     function showNotification(message, type) {
         const old = document.querySelector('.download-notification');
         if (old) old.remove();
@@ -812,44 +824,27 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         setTimeout(function() {
             notification.style.opacity = '0';
             notification.style.transition = 'opacity 0.5s';
-            setTimeout(function() {
-                notification.remove();
-            }, 500);
+            setTimeout(function() { notification.remove(); }, 500);
         }, 3000);
     }
 
-    // Делаем функции глобальными
     window.openGame = openGame;
     window.handleDownload = handleDownload;
     window.showNotification = showNotification;
-
-    // ============================================================
-    // ОФЛАЙН-ФУНКЦИОНАЛ
-    // ============================================================
 
     function registerSW() {
         if (!('serviceWorker' in navigator)) {
             console.warn('[SW] ❌ Service Worker не поддерживается');
             return;
         }
-
         navigator.serviceWorker.getRegistration()
             .then(function(registration) {
-                if (registration) {
-                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
-                    return;
-                }
+                if (registration) return;
                 navigator.serviceWorker.register('sw.js')
-                    .then(function(reg) {
-                        console.log('[SW] ✅ Зарегистрирован:', reg);
-                    })
-                    .catch(function(err) {
-                        console.error('[SW] ❌ Ошибка:', err);
-                    });
+                    .then(function(reg) { console.log('[SW] ✅ Зарегистрирован:', reg); })
+                    .catch(function(err) { console.error('[SW] ❌ Ошибка:', err); });
             })
-            .catch(function(err) {
-                console.error('[SW] ❌ Ошибка проверки:', err);
-            });
+            .catch(function(err) { console.error('[SW] ❌ Ошибка проверки:', err); });
     }
 
     function checkNetwork() {
@@ -869,7 +864,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
                     .catch(function() {});
             }
         });
-
         window.addEventListener('offline', function() {
             console.log('📡 Сеть отключена (работаем из кэша)');
         });
@@ -887,7 +881,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     } else {
         init();
     }
-
 })();
 &lt;/script&gt;</code>
     </div>
@@ -903,13 +896,11 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     "use strict";
 
     // ============================================================
-    // ФУНКЦИЯ ОТКРЫТИЯ ВНЕШНИХ САЙТОВ С ОВЕРЛЕЕМ И СКАЧИВАНИЕМ
+    // ОТКРЫТИЕ ВНЕШНИХ САЙТОВ
     // ============================================================
     function openExternalSite(url, title) {
         const oldOverlay = document.querySelector('.transition-overlay');
-        if (oldOverlay) {
-            oldOverlay.remove();
-        }
+        if (oldOverlay) oldOverlay.remove();
 
         const overlay = document.createElement('div');
         overlay.className = 'transition-overlay';
@@ -920,9 +911,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         const backBtn = document.createElement('button');
         backBtn.className = 'transition-back';
         backBtn.textContent = '← Назад';
-        backBtn.onclick = function() {
-            overlay.remove();
-        };
+        backBtn.onclick = function() { overlay.remove(); };
 
         const titleEl = document.createElement('span');
         titleEl.className = 'transition-title';
@@ -959,14 +948,9 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         };
 
         overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) {
-                overlay.remove();
-            }
+            if (e.target === overlay) overlay.remove();
         });
 
-        // ============================================================
-        // ПЕРЕХВАТ СООБЩЕНИЙ ДЛЯ СКАЧИВАНИЯ
-        // ============================================================
         window.addEventListener('message', function(event) {
             if (event.source !== iframe.contentWindow) return;
             const data = event.data;
@@ -978,9 +962,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         return overlay;
     }
 
-    // ============================================================
-    // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
-    // ============================================================
     function handleDownload(content, filename, mimeType) {
         try {
             if (typeof content === 'string' && content.startsWith('http')) {
@@ -1011,11 +992,8 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
-            
-            setTimeout(function() {
-                URL.revokeObjectURL(url);
-            }, 5000);
 
+            setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
             showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
         } catch (error) {
             console.error('Ошибка скачивания:', error);
@@ -1023,9 +1001,6 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         }
     }
 
-    // ============================================================
-    // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
-    // ============================================================
     function showNotification(message, type) {
         const old = document.querySelector('.download-notification');
         if (old) old.remove();
@@ -1038,21 +1013,17 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         setTimeout(function() {
             notification.style.opacity = '0';
             notification.style.transition = 'opacity 0.5s';
-            setTimeout(function() {
-                notification.remove();
-            }, 500);
+            setTimeout(function() { notification.remove(); }, 500);
         }, 3000);
     }
 
-    // Делаем функции глобальными
     window.openExternalSite = openExternalSite;
     window.handleDownload = handleDownload;
     window.showNotification = showNotification;
 
     // ============================================================
-    // ГЕНЕРАТОР КОДА
+    // ЭЛЕМЕНТЫ
     // ============================================================
-
     const appName = document.getElementById('appName');
     const shortName = document.getElementById('shortName');
     const appDesc = document.getElementById('appDesc');
@@ -1063,14 +1034,78 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     const icon512 = document.getElementById('icon512');
     const cacheName = document.getElementById('cacheName');
     const precacheUrls = document.getElementById('precacheUrls');
-
     const icon192Preview = document.getElementById('icon192Preview');
     const icon512Preview = document.getElementById('icon512Preview');
-
     const htmlCode = document.getElementById('htmlCode');
     const manifestCode = document.getElementById('manifestCode');
     const swCode = document.getElementById('swCode');
 
+    // ============================================================
+    // ШАГОВЫЙ ВВОД
+    // ============================================================
+    const stepPanes = Array.from(document.querySelectorAll('.step-pane'));
+    const totalSteps = stepPanes.length;
+    let currentStep = 1;
+
+    const prevBtn = document.getElementById('prevStep');
+    const nextBtn = document.getElementById('nextStep');
+    const generateBtn = document.getElementById('generateBtn');
+    const stepCounter = document.getElementById('stepCounter');
+    const stepsBarFill = document.getElementById('stepsBarFill');
+
+    function showStep(step) {
+        if (step < 1) step = 1;
+        if (step > totalSteps) step = totalSteps;
+        currentStep = step;
+
+        stepPanes.forEach(pane => {
+            const s = parseInt(pane.dataset.step, 10);
+            pane.classList.toggle('active', s === step);
+        });
+
+        stepCounter.textContent = `Шаг ${step} из ${totalSteps}`;
+        stepsBarFill.style.width = ((step - 1) / (totalSteps - 1)) * 100 + '%';
+
+        prevBtn.disabled = (step === 1);
+
+        if (step === totalSteps) {
+            nextBtn.style.display = 'none';
+            generateBtn.style.display = 'inline-flex';
+        } else {
+            nextBtn.style.display = 'inline-flex';
+            generateBtn.style.display = 'none';
+        }
+    }
+
+    prevBtn.addEventListener('click', () => showStep(currentStep - 1));
+    nextBtn.addEventListener('click', () => showStep(currentStep + 1));
+
+    // Автопереход по Enter (кроме textarea)
+    document.querySelector('.card').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.shiftKey) {
+            if (currentStep < totalSteps) {
+                e.preventDefault();
+                showStep(currentStep + 1);
+            }
+        }
+    });
+
+    // ============================================================
+    // КНОПКА ОЧИСТКИ TEXTAREA
+    // ============================================================
+    document.getElementById('clearPrecache').addEventListener('click', function() {
+        if (precacheUrls.value.trim() === '') {
+            showNotification('Поле уже пустое', 'error');
+            return;
+        }
+        precacheUrls.value = '';
+        precacheUrls.dispatchEvent(new Event('input'));
+        showNotification('🗑 Список ссылок очищен', 'success');
+    });
+
+    // ============================================================
+    // ГЕНЕРАЦИЯ
+    // ============================================================
     function getBaseDir(fullPath) {
         if (!fullPath) return '/';
         const lastSlash = fullPath.lastIndexOf('/');
@@ -1081,20 +1116,17 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     function updateIconPaths() {
         const path = basePath.value.trim() || '/index.html';
         const baseDir = getBaseDir(path);
-        
         const icon192Path = baseDir + 'icon-192.png';
         const icon512Path = baseDir + 'icon-512.png';
-        
         icon192.value = icon192Path;
         icon512.value = icon512Path;
-        
         if (icon192Preview) icon192Preview.textContent = icon192Path;
         if (icon512Preview) icon512Preview.textContent = icon512Path;
     }
 
     function generateAll() {
         updateIconPaths();
-        
+
         const name = appName.value.trim() || '🪞 Кривое Зеркало';
         const short = shortName.value.trim() || '';
         const desc = appDesc.value.trim() || '';
@@ -1105,133 +1137,71 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         const icon192src = icon192.value.trim() || (baseDir + 'icon-192.png');
         const icon512src = icon512.value.trim() || (baseDir + 'icon-512.png');
         const cache = cacheName.value.trim() || 'osp-pwa-v2';
-        
+
         const precacheList = precacheUrls.value
             .split('\n')
             .map(url => url.trim())
             .filter(url => url.length > 0);
         const precacheArrayStr = JSON.stringify(precacheList);
 
-        // ---- HTML СКРИПТ С ПОЛНЫМ ФУНКЦИОНАЛОМ ОВЕРЛЕЯ И СКАЧИВАНИЯ ----
         const htmlScript = `<!-- ===== КРИТИЧЕСКИЙ БЛОК <head> ДЛЯ PWA ===== -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
     <link rel="manifest" href="${baseDir}manifest.json">
-    
+
     <link rel="icon" type="image/png" sizes="192x192" href="${icon192src}">
     <link rel="icon" type="image/png" sizes="512x512" href="${icon512src}">
-    
+
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
 
     <title>${name}</title>
     <style>
-        /* ============================================================
-        СТИЛИ ДЛЯ ОВЕРЛЕЯ И УВЕДОМЛЕНИЙ
-        ============================================================ */
         .transition-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0a0a12;
-            z-index: 999999;
-            display: flex;
-            flex-direction: column;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0a12; z-index: 999999; display: flex; flex-direction: column;
             animation: fadeIn 0.3s ease;
         }
-
         .transition-topbar {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(16, 16, 30, 0.98);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            gap: 12px;
-            flex-shrink: 0;
-            min-height: 56px;
+            display: flex; align-items: center; padding: 12px 16px;
+            background: rgba(16, 16, 30, 0.98); backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08); gap: 12px;
+            flex-shrink: 0; min-height: 56px;
         }
-
         .transition-back {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 10px;
-            color: #e2e8f0;
-            padding: 8px 18px;
-            cursor: pointer;
-            font-size: 15px;
-            transition: all 0.2s;
-            font-family: inherit;
-            font-weight: 500;
-            white-space: nowrap;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px; color: #e2e8f0; padding: 8px 18px; cursor: pointer;
+            font-size: 15px; transition: all 0.2s; font-family: inherit;
+            font-weight: 500; white-space: nowrap;
         }
-
-        .transition-back:hover {
-            background: rgba(255,255,255,0.16);
-            transform: scale(1.02);
-        }
-
+        .transition-back:hover { background: rgba(255,255,255,0.16); transform: scale(1.02); }
         .transition-title {
-            color: #94a3b8;
-            font-size: 14px;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            color: #94a3b8; font-size: 14px; flex: 1; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
         }
-
-        .transition-iframe {
-            width: 100%;
-            flex: 1;
-            border: none;
-            background: #ffffff;
-        }
-
+        .transition-iframe { width: 100%; flex: 1; border: none; background: #ffffff; }
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.98); }
             to { opacity: 1; transform: scale(1); }
         }
-
         .download-notification {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(16, 16, 30, 0.95);
-            backdrop-filter: blur(12px);
-            color: white;
-            padding: 16px 32px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            z-index: 9999999;
-            font-size: 16px;
-            font-family: inherit;
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(16, 16, 30, 0.95); backdrop-filter: blur(12px);
+            color: white; padding: 16px 32px; border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1); z-index: 9999999;
+            font-size: 16px; font-family: inherit;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            animation: slideUp 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            animation: slideUp 0.3s ease; display: flex; align-items: center; gap: 12px;
         }
-
-        .download-notification.success {
-            border-color: #00b894;
-            background: rgba(0, 184, 148, 0.2);
-        }
-
-        .download-notification.error {
-            border-color: #e74c3c;
-            background: rgba(231, 76, 60, 0.2);
-        }
-
+        .download-notification.success { border-color: #00b894; background: rgba(0, 184, 148, 0.2); }
+        .download-notification.error { border-color: #e74c3c; background: rgba(231, 76, 60, 0.2); }
         @keyframes slideUp {
             from { opacity: 0; transform: translateX(-50%) translateY(30px); }
             to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
-    <\/style>
+    </style>
 </head>
 <body>
     <!-- Ваш контент -->
@@ -1240,120 +1210,67 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
     (function() {
         "use strict";
 
-        // ============================================================
-        // УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ОТКРЫТИЯ ИГР (БЕЗ АДРЕСНОЙ СТРОКИ)
-        // ============================================================
         function openGame(url, title) {
             const oldOverlay = document.querySelector('.transition-overlay');
-            if (oldOverlay) {
-                oldOverlay.remove();
-            }
-
+            if (oldOverlay) oldOverlay.remove();
             const overlay = document.createElement('div');
             overlay.className = 'transition-overlay';
-
             const topBar = document.createElement('div');
             topBar.className = 'transition-topbar';
-
             const backBtn = document.createElement('button');
             backBtn.className = 'transition-back';
             backBtn.textContent = '← Назад';
-            backBtn.onclick = function() {
-                overlay.remove();
-            };
-
+            backBtn.onclick = function() { overlay.remove(); };
             const titleEl = document.createElement('span');
             titleEl.className = 'transition-title';
             titleEl.textContent = title || '🌐 Загрузка...';
-
             topBar.appendChild(backBtn);
             topBar.appendChild(titleEl);
             overlay.appendChild(topBar);
-
             const iframe = document.createElement('iframe');
             iframe.className = 'transition-iframe';
             iframe.src = url;
             iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
             iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
-
             overlay.appendChild(iframe);
             document.body.appendChild(overlay);
-
             const escapeHandler = function(e) {
-                if (e.key === 'Escape') {
-                    overlay.remove();
-                    document.removeEventListener('keydown', escapeHandler);
-                }
+                if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escapeHandler); }
             };
             document.addEventListener('keydown', escapeHandler);
-
             iframe.onload = function() {
                 try {
                     const frameTitle = iframe.contentDocument?.title;
-                    if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
-                        titleEl.textContent = frameTitle;
-                    }
+                    if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') { titleEl.textContent = frameTitle; }
                 } catch (e) {}
             };
-
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) {
-                    overlay.remove();
-                }
-            });
-
-            // ============================================================
-            // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
-            // ============================================================
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
             window.addEventListener('message', function(event) {
                 if (event.source !== iframe.contentWindow) return;
                 const data = event.data;
-                if (data && data.type === 'download') {
-                    handleDownload(data.content, data.filename, data.mimeType);
-                }
+                if (data && data.type === 'download') { handleDownload(data.content, data.filename, data.mimeType); }
             });
-
             return overlay;
         }
 
-        // ============================================================
-        // ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ФАЙЛОВ
-        // ============================================================
         function handleDownload(content, filename, mimeType) {
             try {
                 if (typeof content === 'string' && content.startsWith('http')) {
                     const a = document.createElement('a');
-                    a.href = content;
-                    a.download = filename || 'download';
-                    a.target = '_blank';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    a.href = content; a.download = filename || 'download'; a.target = '_blank';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
                     showNotification('✅ Скачивание началось!', 'success');
                     return;
                 }
-
                 let blob;
-                if (typeof content === 'string') {
-                    blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
-                } else if (content instanceof Blob) {
-                    blob = content;
-                } else {
-                    throw new Error('Неподдерживаемый формат данных');
-                }
-
+                if (typeof content === 'string') { blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' }); }
+                else if (content instanceof Blob) { blob = content; }
+                else { throw new Error('Неподдерживаемый формат данных'); }
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = filename || 'download';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                setTimeout(function() {
-                    URL.revokeObjectURL(url);
-                }, 5000);
-
+                a.href = url; a.download = filename || 'download';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
                 showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
             } catch (error) {
                 console.error('Ошибка скачивания:', error);
@@ -1361,61 +1278,34 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
             }
         }
 
-        // ============================================================
-        // УВЕДОМЛЕНИЕ О СКАЧИВАНИИ
-        // ============================================================
         function showNotification(message, type) {
             const old = document.querySelector('.download-notification');
             if (old) old.remove();
-
             const notification = document.createElement('div');
             notification.className = 'download-notification ' + (type || '');
             notification.textContent = message;
             document.body.appendChild(notification);
-
             setTimeout(function() {
                 notification.style.opacity = '0';
                 notification.style.transition = 'opacity 0.5s';
-                setTimeout(function() {
-                    notification.remove();
-                }, 500);
+                setTimeout(function() { notification.remove(); }, 500);
             }, 3000);
         }
 
-        // Делаем функции глобальными
         window.openGame = openGame;
         window.handleDownload = handleDownload;
         window.showNotification = showNotification;
 
-        // ============================================================
-        // ОФЛАЙН-ФУНКЦИОНАЛ
-        // ============================================================
-
         function registerSW() {
-            if (!('serviceWorker' in navigator)) {
-                console.warn('[SW] ❌ Service Worker не поддерживается');
-                return;
-            }
-
+            if (!('serviceWorker' in navigator)) { return; }
             navigator.serviceWorker.getRegistration()
                 .then(function(registration) {
-                    if (registration) {
-                        console.log('[SW] ✅ Уже зарегистрирован:', registration);
-                        return;
-                    }
-                    navigator.serviceWorker.register('${baseDir}sw.js', {
-                        scope: '${baseDir}'
-                    })
-                    .then(function(reg) {
-                        console.log('[SW] ✅ Зарегистрирован:', reg);
-                    })
-                    .catch(function(err) {
-                        console.error('[SW] ❌ Ошибка:', err);
-                    });
+                    if (registration) return;
+                    navigator.serviceWorker.register('${baseDir}sw.js', { scope: '${baseDir}' })
+                        .then(function(reg) { console.log('[SW] ✅ Зарегистрирован:', reg); })
+                        .catch(function(err) { console.error('[SW] ❌ Ошибка:', err); });
                 })
-                .catch(function(err) {
-                    console.error('[SW] ❌ Ошибка проверки:', err);
-                });
+                .catch(function(err) { console.error('[SW] ❌ Ошибка проверки:', err); });
         }
 
         function checkNetwork() {
@@ -1435,10 +1325,7 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
                         .catch(function() {});
                 }
             });
-
-            window.addEventListener('offline', function() {
-                console.log('📡 Сеть отключена (работаем из кэша)');
-            });
+            window.addEventListener('offline', function() { console.log('📡 Сеть отключена (работаем из кэша)'); });
         }
 
         function init() {
@@ -1448,70 +1335,37 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
             console.log('[APP] ✅ Офлайн-функционал активирован');
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+        else { init(); }
     })();
     <\/script>
 
-    <!-- ============================================================
-    AUTOCACHE - АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ СТРАНИЦ
-    ============================================================ -->
     <script>
     (function() {
         "use strict";
-
         console.log('[APP] 🔄 Запуск AutoCache...');
 
-        // ============================================================
-        // 1. РЕГИСТРАЦИЯ SERVICE WORKER
-        // ============================================================
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistration()
                 .then(registration => {
-                    if (registration) {
-                        console.log('[APP] ✅ SW уже зарегистрирован');
-                        return registration;
-                    }
-                    return navigator.serviceWorker.register('${baseDir}sw.js', {
-                        scope: '${baseDir}'
-                    });
+                    if (registration) { console.log('[APP] ✅ SW уже зарегистрирован'); return registration; }
+                    return navigator.serviceWorker.register('${baseDir}sw.js', { scope: '${baseDir}' });
                 })
-                .then(reg => {
-                    console.log('[APP] ✅ SW зарегистрирован:', reg);
-                })
-                .catch(err => {
-                    console.warn('[APP] ❌ Ошибка регистрации SW:', err);
-                });
+                .then(reg => { console.log('[APP] ✅ SW зарегистрирован:', reg); })
+                .catch(err => { console.warn('[APP] ❌ Ошибка регистрации SW:', err); });
         }
 
-        // ============================================================
-        // 2. СПИСОК СТРАНИЦ ДЛЯ ПРЕДЗАГРУЗКИ
-        // ============================================================
         const PAGES_TO_PRECACHE = ${precacheArrayStr};
-
         const CACHE_NAME = '${cache}';
         const cachedUrls = new Set();
 
-        // ============================================================
-        // 3. ФУНКЦИЯ КЕШИРОВАНИЯ С ОЖИДАНИЕМ
-        // ============================================================
         async function cacheUrl(url, retries = 3) {
             if (!('caches' in window)) return false;
             if (cachedUrls.has(url)) return true;
-            
             for (let attempt = 1; attempt <= retries; attempt++) {
                 try {
                     console.log(\`[APP] 📥 Попытка \${attempt}/\${retries}: \${url}\`);
-                    
-                    const response = await fetch(url, {
-                        mode: 'cors',
-                        headers: { 'Cache-Control': 'no-cache' }
-                    });
-                    
+                    const response = await fetch(url, { mode: 'cors', headers: { 'Cache-Control': 'no-cache' } });
                     if (response && response.ok) {
                         const cache = await caches.open(CACHE_NAME);
                         await cache.put(url, response);
@@ -1521,90 +1375,49 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
                     }
                 } catch (error) {
                     console.warn(\`[APP] ⚠️ Ошибка (\${attempt}/\${retries}):\`, error.message);
-                    if (attempt < retries) {
-                        await new Promise(r => setTimeout(r, 2000 * attempt));
-                    }
+                    if (attempt < retries) { await new Promise(r => setTimeout(r, 2000 * attempt)); }
                 }
             }
             return false;
         }
 
-        // ============================================================
-        // 4. ПРЕДЗАГРУЗКА ВСЕХ СТРАНИЦ
-        // ============================================================
         async function precacheAllPages() {
             console.log('[APP] 🚀 Начинаем предзагрузку страниц...');
-            
-            if (!navigator.onLine) {
-                console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
-                return;
-            }
-
+            if (!navigator.onLine) { console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна'); return; }
             let successCount = 0;
             for (const pageUrl of PAGES_TO_PRECACHE) {
-                if (await cacheUrl(pageUrl, 3)) {
-                    successCount++;
-                }
+                if (await cacheUrl(pageUrl, 3)) { successCount++; }
                 await new Promise(r => setTimeout(r, 1000));
             }
-            
             console.log(\`[APP] ✅ Предзагружено \${successCount}/\${PAGES_TO_PRECACHE.length} страниц\`);
-            
-            if (successCount === PAGES_TO_PRECACHE.length) {
-                console.log('[APP] 🎉 Все страницы готовы к офлайн-работе!');
-            } else {
-                console.warn('[APP] ⚠️ Некоторые страницы не загрузились');
-            }
+            if (successCount === PAGES_TO_PRECACHE.length) { console.log('[APP] 🎉 Все страницы готовы к офлайн-работе!'); }
+            else { console.warn('[APP] ⚠️ Некоторые страницы не загрузились'); }
         }
 
-        // ============================================================
-        // 5. АВТОМАТИЧЕСКОЕ КЕШИРОВАНИЕ ВСЕХ ССЫЛОК
-        // ============================================================
         async function cacheAllLinks() {
             if (!('caches' in window)) return;
-            
             const links = document.querySelectorAll('a[href]');
             const urls = new Set();
-            
             links.forEach(link => {
                 const href = link.href;
                 if (href && href.startsWith(window.location.origin)) {
-                    if (!href.includes('#') && 
-                        !href.includes('mailto:') && 
-                        !href.includes('tel:') &&
-                        !href.includes('javascript:')) {
-                        urls.add(href);
-                    }
+                    if (!href.includes('#') && !href.includes('mailto:') && !href.includes('tel:') && !href.includes('javascript:')) { urls.add(href); }
                 }
             });
-
             let count = 0;
             for (const url of urls) {
-                if (await cacheUrl(url, 2)) {
-                    count++;
-                    await new Promise(r => setTimeout(r, 200));
-                }
+                if (await cacheUrl(url, 2)) { count++; await new Promise(r => setTimeout(r, 200)); }
             }
-            
-            if (count > 0) {
-                console.log(\`[APP] ✅ Закешировано \${count} страниц со ссылок\`);
-            }
+            if (count > 0) { console.log(\`[APP] ✅ Закешировано \${count} страниц со ссылок\`); }
         }
 
-        // ============================================================
-        // 6. ЗАПУСК
-        // ============================================================
         window.addEventListener('load', () => {
             console.log('[APP] 📄 Страница загружена');
-            
             setTimeout(() => cacheUrl(window.location.href, 2), 500);
             setTimeout(precacheAllPages, 2000);
             setTimeout(cacheAllLinks, 4000);
         });
 
-        // ============================================================
-        // 7. МОНИТОРИНГ НОВЫХ ССЫЛОК
-        // ============================================================
         if (window.MutationObserver) {
             let observerTimeout;
             const observer = new MutationObserver(() => {
@@ -1614,36 +1427,20 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
                     cacheAllLinks();
                 }, 2000);
             });
-            
-            setTimeout(() => {
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-            }, 5000);
+            setTimeout(() => { observer.observe(document.body, { childList: true, subtree: true }); }, 5000);
         }
 
-        // ============================================================
-        // 8. ПРЕДЗАГРУЗКА ПРИ НАВЕДЕНИИ
-        // ============================================================
         let hoverTimeout;
         document.addEventListener('mouseover', (event) => {
             const link = event.target.closest('a[href]');
             if (link && link.href && link.href.startsWith(window.location.origin)) {
-                if (!link.href.includes('#') && 
-                    !link.href.includes('mailto:') && 
-                    !link.href.includes('tel:')) {
+                if (!link.href.includes('#') && !link.href.includes('mailto:') && !link.href.includes('tel:')) {
                     clearTimeout(hoverTimeout);
-                    hoverTimeout = setTimeout(() => {
-                        cacheUrl(link.href, 2);
-                    }, 500);
+                    hoverTimeout = setTimeout(() => { cacheUrl(link.href, 2); }, 500);
                 }
             }
         });
 
-        // ============================================================
-        // 9. ДОСТУП В КОНСОЛИ
-        // ============================================================
         window.precacheAllPages = precacheAllPages;
         window.cacheAll = cacheAllLinks;
         window.cacheUrl = cacheUrl;
@@ -1660,14 +1457,12 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
         console.log('  cacheAll() - кешировать все ссылки');
         console.log('  cacheStatus() - проверить кеш');
         console.log('  cacheUrl("url") - кешировать конкретный URL');
-
     })();
     <\/script>
 </body>`;
 
         htmlCode.textContent = htmlScript;
 
-        // ---- manifest.json ----
         const manifest = {
             name: name,
             short_name: short,
@@ -1678,23 +1473,12 @@ https://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html</textarea>
             theme_color: theme,
             orientation: "portrait",
             icons: [
-                {
-                    src: icon192src,
-                    sizes: "192x192",
-                    type: "image/png",
-                    purpose: "any maskable"
-                },
-                {
-                    src: icon512src,
-                    sizes: "512x512",
-                    type: "image/png",
-                    purpose: "any maskable"
-                }
+                { src: icon192src, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+                { src: icon512src, sizes: "512x512", type: "image/png", purpose: "any maskable" }
             ]
         };
         manifestCode.textContent = JSON.stringify(manifest, null, 2);
 
-        // ---- service-worker.js (ОБРАЗЕЦ ИЗ ЗАПРОСА) ----
         const sw = `// sw.js - Универсальный кеш для всех страниц
 const CACHE_NAME = '${cache}';
 
@@ -1736,52 +1520,45 @@ self.addEventListener('fetch', (event) => {
         caches.match(event.request)
             .then(cachedResponse => {
                 if (cachedResponse) {
-                    // Фоновое обновление кэша
                     fetch(event.request)
                         .then(response => {
                             if (response && response.status === 200) {
                                 const clone = response.clone();
-                                caches.open(CACHE_NAME).then(cache => {
-                                    cache.put(event.request, clone);
-                                });
+                                caches.open(CACHE_NAME).then(cache => { cache.put(event.request, clone); });
                             }
                         })
                         .catch(() => {});
                     return cachedResponse;
                 }
-                
                 return fetch(event.request)
                     .then(response => {
                         if (response && response.status === 200) {
                             const clone = response.clone();
-                            caches.open(CACHE_NAME).then(cache => {
-                                cache.put(event.request, clone);
-                            });
+                            caches.open(CACHE_NAME).then(cache => { cache.put(event.request, clone); });
                         }
                         return response;
                     })
                     .catch(() => {
-                        // Fallback на главную страницу при офлайне
                         return caches.match('${startPath}');
                     });
             })
     );
 });`;
-        
+
         swCode.textContent = sw;
     }
 
-    // Копирование
+    // ============================================================
+    // КОПИРОВАНИЕ
+    // ============================================================
     function copyBlockContent(blockId) {
         const block = document.getElementById(blockId);
         if (!block) return;
         const codeElem = block.querySelector('code');
         let text = codeElem ? codeElem.textContent : block.textContent;
-        
         if (blockId === 'headPWABlock' || blockId === 'headStylesBlock' || blockId === 'scriptBlock') {
             text = text.trim();
         }
-        
         navigator.clipboard.writeText(text).then(() => {
             const badge = block.querySelector('.copy-badge');
             if (badge) {
@@ -1795,30 +1572,28 @@ self.addEventListener('fetch', (event) => {
     }
 
     document.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', function() {
             const target = this.dataset.target;
             if (target) copyBlockContent(target);
         });
     });
 
     document.querySelectorAll('.copy-badge').forEach(badge => {
-        badge.addEventListener('click', function(e) {
+        badge.addEventListener('click', function() {
             const block = this.closest('.code-block');
-            if (block) {
-                const id = block.id;
-                if (id) copyBlockContent(id);
-            }
+            if (block && block.id) copyBlockContent(block.id);
         });
     });
 
-    // Генерация при изменении полей
+    // ============================================================
+    // СОБЫТИЯ ПОЛЕЙ
+    // ============================================================
     const inputs = [appName, shortName, appDesc, bgColor, themeColor, basePath, cacheName, precacheUrls];
     inputs.forEach(inp => {
         inp.addEventListener('input', generateAll);
         inp.addEventListener('change', generateAll);
     });
 
-    // Цветовые пикеры
     const bgPicker = document.getElementById('bgColorPicker');
     const themePicker = document.getElementById('themeColorPicker');
 
@@ -1828,30 +1603,22 @@ self.addEventListener('fetch', (event) => {
                 textField.value = this.value;
                 textField.dispatchEvent(new Event('input'));
             });
-            
             textField.addEventListener('input', function() {
                 const val = this.value.trim();
-                if (/^#[0-9a-f]{6}$/i.test(val)) {
-                    picker.value = val;
-                }
+                if (/^#[0-9a-f]{6}$/i.test(val)) { picker.value = val; }
             });
-            
-            if (textField.value) {
-                picker.value = textField.value;
-            }
+            if (textField.value) { picker.value = textField.value; }
         }
     }
 
     syncColor(bgPicker, bgColor);
     syncColor(themePicker, themeColor);
 
-    // Пресеты цветов
     document.querySelectorAll('.color-preset').forEach(btn => {
         btn.addEventListener('click', function() {
             const targetId = this.dataset.target;
             const targetInput = document.getElementById(targetId);
             const color = window.getComputedStyle(this).backgroundColor;
-            
             function rgbToHex(rgb) {
                 const match = rgb.match(/\d+/g);
                 if (!match) return '#111111';
@@ -1860,12 +1627,10 @@ self.addEventListener('fetch', (event) => {
                 const b = parseInt(match[2]);
                 return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
             }
-            
             const hex = rgbToHex(color);
             if (targetInput) {
                 targetInput.value = hex;
                 targetInput.dispatchEvent(new Event('input'));
-                
                 const pickerId = targetId === 'bgColor' ? 'bgColorPicker' : 'themeColorPicker';
                 const picker = document.getElementById(pickerId);
                 if (picker) picker.value = hex;
@@ -1873,7 +1638,6 @@ self.addEventListener('fetch', (event) => {
         });
     });
 
-    // Сброс
     document.getElementById('resetDefaults').addEventListener('click', function() {
         appName.value = '🪞 Кривое Зеркало';
         shortName.value = 'Зеркало';
@@ -1883,21 +1647,22 @@ self.addEventListener('fetch', (event) => {
         basePath.value = '/2d3t/pro/MirrorX/index.html';
         cacheName.value = 'osp-pwa-v2';
         precacheUrls.value = 'https://2d3t.github.io/2d3t/pro/Games/SuperPaint/index.html\nhttps://2d3t.github.io/2d3t/pro/Games/PaintPro/index.html';
-        
         if (bgPicker) bgPicker.value = '#111111';
         if (themePicker) themePicker.value = '#111111';
-        
         generateAll();
+        showStep(1);
     });
 
-    document.getElementById('generateBtn').addEventListener('click', generateAll);
+    generateBtn.addEventListener('click', generateAll);
 
+    // ============================================================
+    // СТАРТ
+    // ============================================================
     generateAll();
+    showStep(1);
 
     const statusInd = document.getElementById('statusIndicator');
-    if (statusInd) {
-        statusInd.textContent = '✅ готово';
-    }
+    if (statusInd) { statusInd.textContent = '✅ готово'; }
 })();
 </script>
 
@@ -1905,69 +1670,40 @@ self.addEventListener('fetch', (event) => {
 <script>
 (function() {
     "use strict";
-
     function registerSW() {
-        if (!('serviceWorker' in navigator)) {
-            console.warn('[SW] ❌ Service Worker не поддерживается');
-            return;
-        }
-
+        if (!('serviceWorker' in navigator)) return;
         navigator.serviceWorker.getRegistration()
             .then((registration) => {
-                if (registration) {
-                    console.log('[SW] ✅ Уже зарегистрирован:', registration);
-                    return;
-                }
-
+                if (registration) return;
                 navigator.serviceWorker.register('sw.js')
-                    .then((reg) => {
-                        console.log('[SW] ✅ Зарегистрирован:', reg);
-                    })
-                    .catch((err) => {
-                        console.error('[SW] ❌ Ошибка:', err);
-                    });
+                    .then((reg) => { console.log('[SW] ✅ Зарегистрирован:', reg); })
+                    .catch((err) => { console.error('[SW] ❌ Ошибка:', err); });
             })
-            .catch((err) => {
-                console.error('[SW] ❌ Ошибка проверки:', err);
-            });
+            .catch((err) => { console.error('[SW] ❌ Ошибка проверки:', err); });
     }
-
     function checkNetwork() {
         const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
         console.log(`📡 ${status}`);
     }
-
     function setupNetworkListeners() {
         window.addEventListener('online', () => {
             console.log('📡 Сеть восстановлена');
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready
-                    .then((registration) => {
-                        registration.update();
-                        console.log('[SW] 🔄 Проверка обновлений...');
-                    })
+                    .then((registration) => { registration.update(); })
                     .catch(() => {});
             }
         });
-
-        window.addEventListener('offline', () => {
-            console.log('📡 Сеть отключена (работаем из кэша)');
-        });
+        window.addEventListener('offline', () => { console.log('📡 Сеть отключена (работаем из кэша)'); });
     }
-
     function init() {
         registerSW();
         checkNetwork();
         setupNetworkListeners();
         console.log('[APP] ✅ Офлайн-функционал активирован');
     }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+    else { init(); }
 })();
 </script>
 
@@ -1977,188 +1713,66 @@ self.addEventListener('fetch', (event) => {
 // ============================================================
 (function() {
     "use strict";
-
     console.log('[APP] 🔄 Запуск AutoCache...');
-
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistration()
             .then(registration => {
-                if (registration) {
-                    console.log('[APP] ✅ SW уже зарегистрирован');
-                    return registration;
-                }
-                return navigator.serviceWorker.register('/2d3t/pro/PWA-Maker/sw.js', {
-                    scope: '/2d3t/pro/PWA-MAKER/'
-                });
+                if (registration) return registration;
+                return navigator.serviceWorker.register('/2d3t/pro/PWA-Maker/sw.js', { scope: '/2d3t/pro/PWA-MAKER/' });
             })
-            .then(reg => {
-                console.log('[APP] ✅ SW зарегистрирован:', reg);
-            })
-            .catch(err => {
-                console.warn('[APP] ❌ Ошибка регистрации SW:', err);
-            });
+            .then(reg => { console.log('[APP] ✅ SW зарегистрирован:', reg); })
+            .catch(err => { console.warn('[APP] ❌ Ошибка регистрации SW:', err); });
     }
-
-    const GAMES_TO_PRECACHE = [
-        'https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html'
-    ];
-
+    const GAMES_TO_PRECACHE = [ 'https://2d3t.github.io/2d3t/pro/PWA-Maker/Icon-gen/index.html' ];
     const CACHE_NAME = 'iconmaker-pwa-v2';
-
     async function cacheUrl(url, retries = 3) {
         if (!('caches' in window)) return false;
-        
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
-                console.log(`[APP] 📥 Попытка ${attempt}/${retries}: ${url}`);
-                
-                const response = await fetch(url, {
-                    mode: 'cors',
-                    headers: { 'Cache-Control': 'no-cache' }
-                });
-                
+                const response = await fetch(url, { mode: 'cors', headers: { 'Cache-Control': 'no-cache' } });
                 if (response && response.ok) {
                     const cache = await caches.open(CACHE_NAME);
                     await cache.put(url, response);
-                    console.log(`[APP] ✅ Закешировано: ${url}`);
                     return true;
                 }
             } catch (error) {
-                console.warn(`[APP] ⚠️ Ошибка (${attempt}/${retries}):`, error.message);
-                if (attempt < retries) {
-                    await new Promise(r => setTimeout(r, 2000 * attempt));
-                }
+                if (attempt < retries) { await new Promise(r => setTimeout(r, 2000 * attempt)); }
             }
         }
         return false;
     }
-
     async function precacheAllGames() {
-        console.log('[APP] 🚀 Начинаем предзагрузку...');
-        
-        if (!navigator.onLine) {
-            console.warn('[APP] ⚠️ Нет интернета, предзагрузка невозможна');
-            return;
-        }
-
-        let successCount = 0;
-        for (const gameUrl of GAMES_TO_PRECACHE) {
-            if (await cacheUrl(gameUrl, 3)) {
-                successCount++;
-            }
-            await new Promise(r => setTimeout(r, 1000));
-        }
-        
-        console.log(`[APP] ✅ Предзагружено ${successCount}/${GAMES_TO_PRECACHE.length}`);
-        
-        if (successCount === GAMES_TO_PRECACHE.length) {
-            console.log('[APP] 🎉 Всё готово к офлайн-работе!');
-        } else {
-            console.warn('[APP] ⚠️ Некоторые страницы не загрузились');
-        }
+        if (!navigator.onLine) return;
+        for (const gameUrl of GAMES_TO_PRECACHE) { await cacheUrl(gameUrl, 3); await new Promise(r => setTimeout(r, 1000)); }
     }
-
     async function cacheAllLinks() {
         if (!('caches' in window)) return;
-        
         const links = document.querySelectorAll('a[href]');
         const urls = new Set();
-        
         links.forEach(link => {
             const href = link.href;
             if (href && href.startsWith(window.location.origin)) {
-                if (!href.includes('#') && 
-                    !href.includes('mailto:') && 
-                    !href.includes('tel:') &&
-                    !href.includes('javascript:')) {
-                    urls.add(href);
-                }
+                if (!href.includes('#') && !href.includes('mailto:') && !href.includes('tel:') && !href.includes('javascript:')) { urls.add(href); }
             }
         });
-
-        let count = 0;
-        for (const url of urls) {
-            if (await cacheUrl(url, 2)) {
-                count++;
-                await new Promise(r => setTimeout(r, 200));
-            }
-        }
-        
-        if (count > 0) {
-            console.log(`[APP] ✅ Закешировано ${count} страниц со ссылок`);
-        }
+        for (const url of urls) { await cacheUrl(url, 2); await new Promise(r => setTimeout(r, 200)); }
     }
-
     window.addEventListener('load', () => {
-        console.log('[APP] 📄 Страница загружена');
         setTimeout(precacheAllGames, 1000);
         setTimeout(() => cacheUrl(window.location.href, 2), 3000);
         setTimeout(cacheAllLinks, 5000);
     });
-
     if (window.MutationObserver) {
         let observerTimeout;
         const observer = new MutationObserver(() => {
             clearTimeout(observerTimeout);
-            observerTimeout = setTimeout(() => {
-                console.log('[APP] 🔄 Обнаружены изменения, проверяем новые ссылки...');
-                cacheAllLinks();
-            }, 2000);
+            observerTimeout = setTimeout(() => { cacheAllLinks(); }, 2000);
         });
-        
-        setTimeout(() => {
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        }, 5000);
+        setTimeout(() => { observer.observe(document.body, { childList: true, subtree: true }); }, 5000);
     }
-
-    let hoverTimeout;
-    document.addEventListener('mouseover', (event) => {
-        const link = event.target.closest('a[href]');
-        if (link && link.href && link.href.startsWith(window.location.origin)) {
-            if (!link.href.includes('#') && 
-                !link.href.includes('mailto:') && 
-                !link.href.includes('tel:')) {
-                clearTimeout(hoverTimeout);
-                hoverTimeout = setTimeout(() => {
-                    cacheUrl(link.href, 2);
-                }, 500);
-            }
-        }
-    });
-
     window.precacheAllGames = precacheAllGames;
     window.cacheAll = cacheAllLinks;
     window.cacheUrl = cacheUrl;
-    window.cacheStatus = async function() {
-        const cache = await caches.open(CACHE_NAME);
-        const keys = await cache.keys();
-        console.log(`📦 В кеше ${keys.length} файлов:`);
-        keys.forEach(req => console.log(`  - ${req.url}`));
-        
-        const gameUrls = GAMES_TO_PRECACHE;
-        let found = 0;
-        for (const url of gameUrls) {
-            const response = await cache.match(url);
-            if (response) {
-                console.log(`  ✅ Страница в кеше: ${url}`);
-                found++;
-            } else {
-                console.log(`  ❌ Страница НЕ в кеше: ${url}`);
-            }
-        }
-        console.log(`📊 Страниц в кеше: ${found}/${gameUrls.length}`);
-    };
-
-    console.log('[APP] ✅ AutoCache инициализирован');
-    console.log('[APP] 💡 Доступные команды:');
-    console.log('  precacheAllGames() - предзагрузить ВСЕ страницы');
-    console.log('  cacheAll() - кешировать все ссылки');
-    console.log('  cacheStatus() - проверить кеш');
-    console.log('  cacheUrl("url") - кешировать конкретный URL');
-
 })();
 </script>
 
