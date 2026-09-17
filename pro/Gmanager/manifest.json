@@ -1,21 +1,21 @@
 {
-  "name": "GitM",
-  "short_name": "GitM",
-  "description": "Редактируй GIT легко!",
-  "start_url": "/2d3t/pro/Gmanager/index.html",
+  "name": "GitHub",
+  "short_name": "GitHub",
+  "description": "GitHub - легко!",
+  "start_url": "/2d3t/pro/MirrorX/index.html",
   "display": "standalone",
   "background_color": "#111111",
   "theme_color": "#111111",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/2d3t/pro/Gmanager/icon-192.png",
+      "src": "/2d3t/pro/MirrorX/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/2d3t/pro/Gmanager/icon-512.png",
+      "src": "/2d3t/pro/MirrorX/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
