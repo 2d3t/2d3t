@@ -128,6 +128,19 @@
     font-size: 14px;
     font-style: normal;
   }
+
+  /* ---- Индикатор черновика ---- */
+  .draft-badge {
+    display: inline-block;
+    background: #ff9f43;
+    color: #1a1a1a;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -189,10 +202,11 @@
 
   <!-- ЭКРАН РЕДАКТОРА -->
   <div id="editorScreen" style="display:none">
-    <h2>Редактирование: <span id="editPath"></span></h2>
+    <h2>Редактирование: <span id="editPath"></span><span id="draftBadge" class="draft-badge" style="display:none">черновик</span></h2>
     <textarea id="editContent"></textarea>
     <div class="editor-actions">
       <button onclick="saveEdit()">💾 Сохранить</button>
+      <button class="ghost" onclick="copyAllEdit()">📋 Скопировать всё</button>
       <button class="ghost" onclick="clearEdit()">🧹 Очистить</button>
       <button class="ghost" onclick="closeEditor()">⬅ Назад</button>
     </div>
@@ -207,6 +221,7 @@
 const LS_KEY = 'gh_fm_v2';
 const TABS_KEY = 'gh_fm_open_tabs';
 const VISITED_KEY = 'gh_fm_visited';
+const DRAFTS_KEY = 'gh_fm_drafts';
 
 function loadStore() {
   try {
@@ -255,6 +270,42 @@ function isVisited(profileId, path) {
   return arr.includes(path);
 }
 
+/* -------- Черновики редактора --------
+   Структура: { "profileId::path": "содержимое" }
+   Хранит несохранённые правки, чтобы не терять их при выходе из редактора.
+*/
+function loadDrafts() {
+  try { return JSON.parse(localStorage.getItem(DRAFTS_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveDrafts(map) {
+  try {
+    localStorage.setItem(DRAFTS_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.warn('Не удалось сохранить черновик (возможно, превышен лимит localStorage):', e);
+  }
+}
+function draftKey(profileId, path) {
+  return (profileId || '') + '::' + (path || '');
+}
+function getDraft(profileId, path) {
+  return loadDrafts()[draftKey(profileId, path)];
+}
+function setDraft(profileId, path, content) {
+  const map = loadDrafts();
+  map[draftKey(profileId, path)] = content;
+  saveDrafts(map);
+}
+function removeDraft(profileId, path) {
+  const map = loadDrafts();
+  delete map[draftKey(profileId, path)];
+  saveDrafts(map);
+}
+function hasDraft(profileId, path) {
+  const map = loadDrafts();
+  return Object.prototype.hasOwnProperty.call(map, draftKey(profileId, path));
+}
+
 /* =====================================================
    СОСТОЯНИЕ
    ===================================================== */
@@ -262,7 +313,7 @@ let state = {
   activeId: null,
   openTabs: [],
   path: '',
-  editing: { path: '', sha: '' }
+  editing: { path: '', sha: '', originalContent: '' }
 };
 
 function getProfile(id) {
@@ -396,6 +447,15 @@ function deleteProfile(id) {
   const vmap = loadVisited();
   delete vmap[id];
   saveVisited(vmap);
+
+  // Удаляем черновики этого профиля
+  const dmap = loadDrafts();
+  const prefix = id + '::';
+  let changed = false;
+  for (const k of Object.keys(dmap)) {
+    if (k.startsWith(prefix)) { delete dmap[k]; changed = true; }
+  }
+  if (changed) saveDrafts(dmap);
 
   renderProfiles();
 }
@@ -561,7 +621,8 @@ async function loadPath(path) {
       if (item.type === 'dir') {
         li.innerHTML = `<a href="#"${visitedCls} onclick="loadPath('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
       } else {
-        li.innerHTML = `<a href="#"${visitedCls} onclick="openEditor('${safePath}');return false;">${escapeHtml(item.name)}</a>`;
+        const draftMark = hasDraft(state.activeId, item.path) ? ' <span class="draft-badge">черновик</span>' : '';
+        li.innerHTML = `<a href="#"${visitedCls} onclick="openEditor('${safePath}');return false;">${escapeHtml(item.name)}</a>${draftMark}`;
       }
       list.appendChild(li);
     }
@@ -700,14 +761,47 @@ async function openEditor(filePath) {
   const d = await r.json();
   if (!r.ok) { alert('Ошибка: ' + (d.message || r.status)); return; }
 
-  state.editing = { path: filePath, sha: d.sha };
+  const originalContent = b64decode(d.content || '');
+  state.editing = { path: filePath, sha: d.sha, originalContent };
+
   document.getElementById('editPath').textContent = filePath;
-  document.getElementById('editContent').value = b64decode(d.content || '');
-  const st = document.getElementById('editStatus');
-  st.textContent = ''; st.className = 'status';
+  const textarea = document.getElementById('editContent');
+
+  // Проверяем черновик — если он есть, восстанавливаем его
+  const draft = getDraft(state.activeId, filePath);
+  if (typeof draft === 'string' && draft !== originalContent) {
+    textarea.value = draft;
+    updateDraftBadge(true);
+    const st = document.getElementById('editStatus');
+    st.textContent = '📝 Восстановлен несохранённый черновик';
+    st.className = 'status';
+  } else {
+    textarea.value = originalContent;
+    updateDraftBadge(false);
+    const st = document.getElementById('editStatus');
+    st.textContent = ''; st.className = 'status';
+  }
+
+  // Автосохранение черновика при вводе
+  textarea.oninput = function() {
+    const hasChanges = textarea.value !== state.editing.originalContent;
+    if (hasChanges) {
+      setDraft(state.activeId, state.editing.path, textarea.value);
+      updateDraftBadge(true);
+    } else {
+      removeDraft(state.activeId, state.editing.path);
+      updateDraftBadge(false);
+    }
+  };
 
   document.getElementById('managerScreen').style.display = 'none';
   document.getElementById('editorScreen').style.display = 'block';
+}
+
+function updateDraftBadge(show) {
+  const badge = document.getElementById('draftBadge');
+  if (!badge) return;
+  badge.style.display = show ? 'inline-block' : 'none';
 }
 
 async function saveEdit() {
@@ -730,10 +824,59 @@ async function saveEdit() {
   const st = document.getElementById('editStatus');
   if (r.ok) {
     state.editing.sha = d.content.sha;
+    state.editing.originalContent = newContent;
+    // После успешного сохранения черновик больше не нужен
+    removeDraft(state.activeId, state.editing.path);
+    updateDraftBadge(false);
     st.textContent = '✅ Сохранено';
     st.className = 'status ok';
   } else {
     st.textContent = '❌ ' + (d.message || r.status);
+    st.className = 'status err';
+  }
+}
+
+/* -------- Копировать всё содержимое редактора -------- */
+async function copyAllEdit() {
+  const textarea = document.getElementById('editContent');
+  const text = textarea.value;
+  const st = document.getElementById('editStatus');
+
+  if (!text.length) {
+    st.textContent = '⚠ Нечего копировать — поле пустое';
+    st.className = 'status';
+    return;
+  }
+
+  try {
+    // Современный API (требует https или localhost)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // Фолбэк для http и старых браузеров
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('execCommand copy failed');
+    }
+
+    st.textContent = '📋 Скопировано в буфер обмена (' + text.length + ' симв.)';
+    st.className = 'status ok';
+    setTimeout(() => {
+      if (st.textContent.startsWith('📋 Скопировано')) {
+        st.textContent = '';
+        st.className = 'status';
+      }
+    }, 2500);
+  } catch (e) {
+    st.textContent = '❌ Не удалось скопировать: ' + e.message;
     st.className = 'status err';
   }
 }
@@ -743,12 +886,29 @@ function clearEdit() {
   if (!area.value.trim()) return;
   if (!confirm('Очистить содержимое поля? Изменения на GitHub не применятся, пока не нажмёте «Сохранить».')) return;
   area.value = '';
+  // Обновляем черновик (теперь он пустой, но отличается от оригинала)
+  setDraft(state.activeId, state.editing.path, '');
+  updateDraftBadge(true);
   const st = document.getElementById('editStatus');
   st.textContent = '🧹 Поле очищено (не забудьте сохранить)';
   st.className = 'status';
 }
 
 function closeEditor() {
+  // Проверяем несохранённые изменения
+  const area = document.getElementById('editContent');
+  const hasChanges = area.value !== (state.editing.originalContent || '');
+  if (hasChanges) {
+    const saveDraft = confirm('В файле есть несохранённые изменения.\n\nОК — сохранить как черновик и выйти\nОтмена — выйти без сохранения');
+    if (saveDraft) {
+      setDraft(state.activeId, state.editing.path, area.value);
+      updateDraftBadge(true);
+    } else {
+      // Пользователь отказался — удаляем черновик
+      removeDraft(state.activeId, state.editing.path);
+    }
+  }
+
   document.getElementById('editorScreen').style.display = 'none';
   document.getElementById('managerScreen').style.display = 'block';
   loadPath(state.path);
