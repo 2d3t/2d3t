@@ -1,4 +1,4 @@
-const CACHE_NAME = 'klikedit-v6';
+const CACHE_NAME = 'klikedit-v7';
 const FILES_TO_CACHE = [
     '/2d3t/pro/Pro5/index.html',
     '/2d3t/pro/Pro5/manifest.json'
