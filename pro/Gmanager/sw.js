@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'gith-pwa-v1';
+const CACHE_NAME = 'gith-pwa-v2';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/Gmanager/index.html',
