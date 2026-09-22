@@ -221,6 +221,11 @@ body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-co
 <button onclick="openQRScanner()">📷 QR</button>
 <button id="copyButton" onclick="copyText()">Скопировать 📃</button>
 <button onclick="clearAll()">Очистить ❌</button>
+
+<button id="markAButton" onclick="setMarkA()" title="Поставить метку A (начало)">🅰️ A</button>
+<button id="markBButton" onclick="setMarkB()" title="Поставить метку B (конец)">🅱️ B</button>
+<button id="clearBetweenButton" onclick="clearBetweenMarks()" title="Очистить всё между A и B" style="background:#e67e22;">✂️ Очистить A→B</button>
+<button onclick="clearMarks()" title="Сбросить метки">🧹</button>
 <button onclick="window.location.href='https://2d3t.github.io/index.html/'">Выход 🚸</button>
 <button onclick="undo()">Отменить ↩️</button>
 <button onclick="redo()">Повторить ↪️</button>
@@ -1274,6 +1279,147 @@ previewFrame.style.opacity='0';
 initTheme();
 
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').then(()=>console.log('[SW] ✅ Зарегистрирован')).catch(err=>console.log('[SW] ❌ Ошибка:',err));}
+
+
+// ============ МЕТКИ A и B ============
+let markA = null; // позиция начала выделения
+let markB = null; // позиция конца выделения
+
+function setMarkA(){
+    const pos = textarea.selectionStart;
+    markA = pos;
+    // Если B уже есть и B < A — поменяем местами
+    if(markB !== null && markB < markA){ [markA, markB] = [markB, markA]; }
+    applyMarkVisuals();
+    updateMarkButtons();
+    textarea.focus();
+}
+
+function setMarkB(){
+    const pos = textarea.selectionStart;
+    markB = pos;
+    if(markA !== null && markA > markB){ [markA, markB] = [markB, markA]; }
+    applyMarkVisuals();
+    updateMarkButtons();
+    textarea.focus();
+}
+
+function applyMarkVisuals(){
+    // Снимаем старую подсветку
+    textarea.style.backgroundImage = 'none';
+    
+    // Если обе метки есть — подсвечиваем диапазон через градиент (подсветка области)
+    if(markA !== null && markB !== null){
+        const textBefore = textarea.value.substring(0, markA);
+        const textBetween = textarea.value.substring(markA, markB);
+        const linesBefore = textBefore.split('\n').length;
+        const linesBetween = textBetween.split('\n').length;
+        const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+        const paddingTop = parseFloat(getComputedStyle(textarea).paddingTop);
+        
+        const top = paddingTop + (linesBefore - 1) * lineHeight;
+        const height = linesBetween * lineHeight;
+        
+        // Лёгкая подсветка фона через box-shadow inset
+        textarea.style.boxShadow = `inset 0 ${top}px 0 0 transparent, inset 0 ${top + height}px 0 0 transparent`;
+        textarea.style.backgroundImage = `linear-gradient(transparent ${top}px, rgba(230,126,34,0.15) ${top}px, rgba(230,126,34,0.15) ${top + height}px, transparent ${top + height}px)`;
+        textarea.style.backgroundAttachment = 'local';
+    } else {
+        textarea.style.backgroundImage = 'none';
+        textarea.style.boxShadow = '';
+    }
+}
+
+function updateMarkButtons(){
+    const a = document.getElementById('markAButton');
+    const b = document.getElementById('markBButton');
+    const c = document.getElementById('clearBetweenButton');
+    
+    if(markA !== null){
+        a.style.background = '#27ae60';
+        a.textContent = '🅰️ A ✓';
+    } else {
+        a.style.background = '';
+        a.textContent = '🅰️ A';
+    }
+    if(markB !== null){
+        b.style.background = '#2980b9';
+        b.textContent = '🅱️ B ✓';
+    } else {
+        b.style.background = '';
+        b.textContent = '🅱️ B';
+    }
+    c.style.opacity = (markA !== null && markB !== null) ? '1' : '0.5';
+    c.style.cursor = (markA !== null && markB !== null) ? 'pointer' : 'not-allowed';
+}
+
+function clearBetweenMarks(){
+    if(markA === null || markB === null){
+        alert('⚠️ Поставьте сначала метки A и B!');
+        return;
+    }
+    const start = Math.min(markA, markB);
+    const end = Math.max(markA, markB);
+    if(start === end){
+        alert('⚠️ Метки A и B на одной позиции!');
+        return;
+    }
+    
+    saveState();
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    textarea.value = before + after;
+    
+    // Курсор встаёт туда, где был markA (начало удалённой зоны)
+    const newPos = start;
+    textarea.focus();
+    textarea.setSelectionRange(newPos, newPos);
+    
+    // Сбрасываем метки
+    markA = null;
+    markB = null;
+    applyMarkVisuals();
+    updateMarkButtons();
+    
+    // Прокрутка к месту курсора
+    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+    const line = textarea.value.substring(0, newPos).split('\n').length;
+    textarea.scrollTop = Math.max(0, (line - 1) * lineHeight - textarea.clientHeight / 2);
+    
+    updateLineNumbers();
+    highlightActiveLine(line);
+}
+
+function clearMarks(){
+    markA = null;
+    markB = null;
+    applyMarkVisuals();
+    updateMarkButtons();
+}
+
+// Обновляем подсветку при изменении текста
+textarea.addEventListener('input', function(){
+    // Если позиции вышли за пределы текста — сбрасываем
+    if(markA !== null && markA > textarea.value.length){ markA = null; }
+    if(markB !== null && markB > textarea.value.length){ markB = null; }
+    applyMarkVisuals();
+    updateMarkButtons();
+});
+
+// Обновляем подсветку при скролле (чтобы подсветка «ехала» с текстом)
+textarea.addEventListener('scroll', function(){
+    // background-attachment: local уже делает это автоматически
+});
+
+// Горячие клавиши: Ctrl+1 = A, Ctrl+2 = B, Ctrl+0 = очистить
+document.addEventListener('keydown', function(e){
+    if(e.ctrlKey && e.key === '1'){ e.preventDefault(); setMarkA(); }
+    if(e.ctrlKey && e.key === '2'){ e.preventDefault(); setMarkB(); }
+    if(e.ctrlKey && e.key === '0'){ e.preventDefault(); clearBetweenMarks(); }
+});
+
+// Инициализация кнопок
+updateMarkButtons();
 </script>
 </body>
 </html>
