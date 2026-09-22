@@ -328,11 +328,35 @@ const editorContainer=document.getElementById('editorContainer');
 const forceExitFullscreenBtn=document.getElementById('forceExitFullscreenBtn');
 const themeSwitcher=document.getElementById('themeSwitcher');
 const body=document.body;
+
+
+
+
 const searchCounter=document.getElementById('searchCounter');
 
-let history=[],redoStack=[],isFullscreen=false,wasInPreviewBeforeFile=false,fullscreenWasActive=false,lastPreviewUrl=null;
-let searchResults=[],currentResult=-1,lastSearch="";
+// ============ ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ============
+// История отмены/повтора
+let undoStack=[], redoStack=[];
+let isUndoRedoAction=false;      // флаг, чтобы не пушить состояние при самих undo/redo
+let inputDebounceTimer=null;     // таймер дебаунса для автопуша в историю
+
+// Режим просмотра / полного экрана
+let isFullscreen=false;
+let wasInPreviewBeforeFile=false;
+let fullscreenWasActive=false;
+let lastPreviewUrl=null;
+
+// Поиск
+let searchResults=[];
+let currentResult=-1;
+let lastSearch="";
+let lastSearchMode=null;         // 'smart' | 'exact' | null
+
+// Активная строка (подсветка номера строки)
 let activeLineNumber=null;
+
+
+
 
 // ============ ПЕРЕТАСКИВАНИЕ КНОПКИ ВЫХОДА ============
 (function setupDrag() {
@@ -479,7 +503,8 @@ function copyText(){
 }
 
 function clearAll(){
-    saveState();
+    if(!textarea.value) return; // нечего очищать
+    pushUndo(textarea.value);
     textarea.value='';
     activeLineNumber=null;
     updateLineNumbers();
@@ -487,6 +512,7 @@ function clearAll(){
     searchResults=[];
     currentResult=-1;
     updateSearchCounter();
+    if(typeof clearMarks === 'function') clearMarks();
 }
 
 function clearUrlInput(){urlInput.value='';urlInput.focus();}
@@ -498,38 +524,71 @@ function updateSearchCounter(){
     else{const idx=currentResult===-1?0:currentResult;searchCounter.textContent=(idx+1)+'/'+searchResults.length;}
 }
 
+
+
+// ============ UNDO / REDO ============
+const MAX_HISTORY = 200;
+
+// Пуш состояния в undo-стек (вызывается ПЕРЕД изменением текста)
+function pushUndo(prevValue){
+    if(isUndoRedoAction) return; // не записываем наши же undo/redo действия
+    if(prevValue === undefined) prevValue = textarea.value;
+    // Не пушим дубликат верхушки
+    if(undoStack.length && undoStack[undoStack.length-1] === prevValue) return;
+    undoStack.push(prevValue);
+    if(undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack = []; // новое действие обнуляет redo
+}
+
+// Совместимость со старым кодом: saveState() теперь = pushUndo(textarea.value)
 function saveState(){
-    history.push(textarea.value);
-    redoStack=[];
-    if(history.length>100)history.shift();
+    pushUndo(textarea.value);
+}
+
+function applyUndoRedo(value){
+    isUndoRedoAction = true;
+    textarea.value = value;
+    activeLineNumber = null;
+    updateLineNumbers();
+    highlightActiveLine();
+    // сброс поиска
+    searchResults = [];
+    currentResult = -1;
+    updateSearchCounter();
+    // сброс меток A/B, если они вышли за пределы
+    if(typeof markA !== 'undefined'){
+        if(markA !== null && markA > textarea.value.length) markA = null;
+        if(markB !== null && markB > textarea.value.length) markB = null;
+        if(typeof applyMarkVisuals === 'function') applyMarkVisuals();
+        if(typeof updateMarkButtons === 'function') updateMarkButtons();
+    }
+    // снимаем флаг после того, как браузер отрисует (следующий тик)
+    setTimeout(()=>{ isUndoRedoAction = false; }, 0);
 }
 
 function undo(){
-    if(history.length){
-        redoStack.push(textarea.value);
-        textarea.value=history.pop();
-        activeLineNumber=null;
-        updateLineNumbers();
-        highlightActiveLine();
-        searchResults=[];
-        currentResult=-1;
-        updateSearchCounter();
+    if(undoStack.length === 0){
+        showToast('↩️ Нечего отменять');
+        return;
     }
+    const current = textarea.value;
+    const prev = undoStack.pop();
+    redoStack.push(current);
+    if(redoStack.length > MAX_HISTORY) redoStack.shift();
+    applyUndoRedo(prev);
 }
 
 function redo(){
-    if(redoStack.length){
-        history.push(textarea.value);
-        textarea.value=redoStack.pop();
-        activeLineNumber=null;
-        updateLineNumbers();
-        highlightActiveLine();
-        searchResults=[];
-        currentResult=-1;
-        updateSearchCounter();
+    if(redoStack.length === 0){
+        showToast('↪️ Нечего повторять');
+        return;
     }
+    const current = textarea.value;
+    const next = redoStack.pop();
+    undoStack.push(current);
+    if(undoStack.length > MAX_HISTORY) undoStack.shift();
+    applyUndoRedo(next);
 }
-
 
 
 
@@ -541,7 +600,7 @@ function redo(){
 // Режим поиска всегда включён (галочек нет).
 
 // Какой режим сработал в последний раз: 'smart' | 'exact' | null
-let lastSearchMode = null;
+
 
 // Экранирование спецсимволов regex
 function escapeRegex(s) {
@@ -1497,12 +1556,38 @@ function clearMarks(){
 }
 
 // Обновляем подсветку при изменении текста
-textarea.addEventListener('input', function(){
-    // Если позиции вышли за пределы текста — сбрасываем
+
+// Запоминаем значение ДО изменения (первое в серии ввода)
+let valueBeforeInput = textarea.value;
+
+textarea.addEventListener('beforeinput', function(){
+    // сохраняем состояние перед каждой серией правок
+    valueBeforeInput = textarea.value;
+});
+
+textarea.addEventListener('input', function(e){
+    // Автопуш в undo-стек (с дебаунсом, чтобы не плодить историю на каждую букву)
+    if(!isUndoRedoAction){
+        if(inputDebounceTimer) clearTimeout(inputDebounceTimer);
+        // Пушим состояние, которое было ДО начала серии ввода
+        const snapshot = valueBeforeInput;
+        inputDebounceTimer = setTimeout(()=>{
+            pushUndo(snapshot);
+            valueBeforeInput = textarea.value;
+        }, 400);
+    }
+
+    // Метки
     if(markA !== null && markA > textarea.value.length){ markA = null; }
     if(markB !== null && markB > textarea.value.length){ markB = null; }
     applyMarkVisuals();
     updateMarkButtons();
+
+    // Дополнительный редактор
+    if(e.target.id === 'floatingTextArea'){
+        floatingTextContent = e.target.value;
+        updateFloatingCharCount();
+    }
 });
 
 // Обновляем подсветку при скролле (чтобы подсветка «ехала» с текстом)
@@ -1511,11 +1596,28 @@ textarea.addEventListener('scroll', function(){
 });
 
 // Горячие клавиши: Ctrl+1 = A, Ctrl+2 = B, Ctrl+0 = очистить
+
+
 document.addEventListener('keydown', function(e){
+    // Undo / Redo
+    if((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z'){
+        e.preventDefault();
+        undo();
+        return;
+    }
+    if((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))){
+        e.preventDefault();
+        redo();
+        return;
+    }
+
+    // Метки
     if(e.ctrlKey && e.key === '1'){ e.preventDefault(); setMarkA(); }
     if(e.ctrlKey && e.key === '2'){ e.preventDefault(); setMarkB(); }
     if(e.ctrlKey && e.key === '0'){ e.preventDefault(); clearBetweenMarks(); }
 });
+
+
 
 // ============ СОХРАНЕНИЕ В LOCALSTORAGE ============
 const LS_KEY = 'klikedit_saved_code';
