@@ -210,7 +210,6 @@ body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-co
 <input type="number" id="lineNumber" min="1" placeholder="Строка">
 <button onclick="goToLine()">Перейти 🔀</button>
 <button onclick="clearLineNumber()">🗑️</button>
-
 <input type="text" id="searchInput" placeholder="Поиск 🔎" style="width:120px;">
 <button onclick="findNext()">Найти ▶️</button>
 <button onclick="findPrev()">Назад ◀️</button>
@@ -531,43 +530,137 @@ function redo(){
     }
 }
 
-function findAll(term){
-    searchResults=[];
-    currentResult=-1;
-    if(!term)return;
-    let i=textarea.value.indexOf(term);
-    while(i!==-1){searchResults.push(i);i=textarea.value.indexOf(term,i+term.length);}
+
+
+
+// ============ УМНЫЙ ПОИСК С АВТО-FALLBACK НА ТОЧНЫЙ ============
+// Логика:
+//   1. Пробуем "умный" поиск (пробелы/табы/переносы → \s+).
+//   2. Если ничего не найдено — пробуем точный поиск.
+//   3. Если точный что-то нашёл — показываем уведомление и подсвечиваем.
+// Режим поиска всегда включён (галочек нет).
+
+// Какой режим сработал в последний раз: 'smart' | 'exact' | null
+let lastSearchMode = null;
+
+// Экранирование спецсимволов regex
+function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Собираем regex из запроса: пробелы → \s+
+function buildSmartRegex(term) {
+    const parts = term.split(/(\s+)/).filter(p => p.length > 0);
+    const escaped = parts.map(p => /^\s+$/.test(p) ? '\\s+' : escapeRegex(p));
+    let pattern = escaped.join('');
+
+    // Пробел в начале/конце запроса → необязательный
+    if (/^\s/.test(term)) pattern = pattern.replace(/^\\s\+/, '\\s*');
+    if (/\s$/.test(term)) pattern = pattern.replace(/\\s\+$/, '') + '\\s*';
+
+    try {
+        return new RegExp(pattern, 'g');
+    } catch (e) {
+        console.warn('Smart regex error:', e);
+        return null;
+    }
+}
+
+// Умный поиск — возвращает массив {start, end}
+function findSmart(haystack, term) {
+    const re = buildSmartRegex(term);
+    if (!re) return [];
+    const out = [];
+    let m, guard = 0;
+    while ((m = re.exec(haystack)) !== null && guard < 100000) {
+        guard++;
+        if (m[0].length === 0) { re.lastIndex++; continue; }
+        out.push({ start: m.index, end: m.index + m[0].length });
+        if (re.lastIndex === m.index) re.lastIndex++; // защита
+    }
+    return out;
+}
+
+// Точный поиск — возвращает массив {start, end}
+function findExact(haystack, term) {
+    const out = [];
+    let i = haystack.indexOf(term);
+    while (i !== -1) {
+        out.push({ start: i, end: i + term.length });
+        i = haystack.indexOf(term, i + term.length);
+    }
+    return out;
+}
+
+// Главная функция поиска: умный → fallback на точный
+function findAll(term) {
+    searchResults = [];
+    currentResult = -1;
+    lastSearchMode = null;
+    if (!term) { updateSearchCounter(); return; }
+
+    const haystack = textarea.value;
+
+    // 1. Умный поиск
+    let results = findSmart(haystack, term);
+    if (results.length > 0) {
+        searchResults = results;
+        lastSearchMode = 'smart';
+        updateSearchCounter();
+        return;
+    }
+
+    // 2. Fallback — точный поиск
+    results = findExact(haystack, term);
+    if (results.length > 0) {
+        searchResults = results;
+        lastSearchMode = 'exact';
+        updateSearchCounter();
+        // Уведомляем пользователя, что сработал точный режим
+        showToast('🔍 Найдено точным поиском (без учёта гибких пробелов)');
+        return;
+    }
+
+    // 3. Ничего не нашли
     updateSearchCounter();
 }
 
-function highlightMatch(){
-    if(!searchResults.length)return;
-    const pos=searchResults[currentResult],term=searchInput.value;
+function highlightMatch() {
+    if (!searchResults.length) return;
+    const res = searchResults[currentResult];
     textarea.focus();
-    textarea.setSelectionRange(pos,pos+term.length);
-    const h=parseFloat(getComputedStyle(textarea).lineHeight);
-    const line=textarea.value.substring(0,pos).split('\n').length;
-    textarea.scrollTop=Math.max(0,(line-1)*h-textarea.clientHeight/2);
+    textarea.setSelectionRange(res.start, res.end);
+    const h = parseFloat(getComputedStyle(textarea).lineHeight);
+    const line = textarea.value.substring(0, res.start).split('\n').length;
+    textarea.scrollTop = Math.max(0, (line - 1) * h - textarea.clientHeight / 2);
     updateSearchCounter();
 }
 
-function findNext(){
-    const term=searchInput.value;
-    if(!term)return;
-    if(term!==lastSearch){findAll(term);lastSearch=term;}
-    if(!searchResults.length)return;
-    currentResult=(currentResult+1)%searchResults.length;
+function findNext() {
+    const term = searchInput.value;
+    if (!term) return;
+    if (term !== lastSearch) { findAll(term); lastSearch = term; }
+    if (!searchResults.length) {
+        // Ничего не нашли — сообщаем
+        showToast('❌ Ничего не найдено');
+        return;
+    }
+    currentResult = (currentResult + 1) % searchResults.length;
     highlightMatch();
 }
 
-function findPrev(){
-    const term=searchInput.value;
-    if(!term)return;
-    if(term!==lastSearch){findAll(term);lastSearch=term;}
-    if(!searchResults.length)return;
-    currentResult=(currentResult-1+searchResults.length)%searchResults.length;
+function findPrev() {
+    const term = searchInput.value;
+    if (!term) return;
+    if (term !== lastSearch) { findAll(term); lastSearch = term; }
+    if (!searchResults.length) {
+        showToast('❌ Ничего не найдено');
+        return;
+    }
+    currentResult = (currentResult - 1 + searchResults.length) % searchResults.length;
     highlightMatch();
 }
+
 
 // ============ ЗАГРУЗКА ============
 async function fetchWebsiteCode(){
@@ -1613,6 +1706,8 @@ function restoreLastSaved(){
 // Инициализация
 
 updateRestoreButton();
+
+
 
 
 // Инициализация кнопок
