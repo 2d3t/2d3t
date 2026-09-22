@@ -230,6 +230,11 @@ body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-co
 <button onclick="undo()">Отменить ↩️</button>
 <button onclick="redo()">Повторить ↪️</button>
 <button onclick="shareCode()">Скачать ⬇️</button>
+
+
+<button id="saveLocalButton" onclick="saveToLocalStorage()" title="Сохранить в браузер (Ctrl+S)">💾 Сохранить</button>
+<button id="loadLocalButton" onclick="loadFromLocalStorage()" title="Загрузить из браузера (Ctrl+O)">📂 Загрузить</button>
+
 <button onclick="showEditor()">Редактор 🛠️</button>
 <button onclick="runCode()">Просмотр 🖥️</button>
 <button id="fullscreenButton" onclick="toggleFullscreen()">Полный экран ⛶</button>
@@ -1418,8 +1423,168 @@ document.addEventListener('keydown', function(e){
     if(e.ctrlKey && e.key === '0'){ e.preventDefault(); clearBetweenMarks(); }
 });
 
+// ============ СОХРАНЕНИЕ В LOCALSTORAGE ============
+const LS_KEY = 'klikedit_saved_code';
+const LS_TIME_KEY = 'klikedit_saved_time';
+
+function saveToLocalStorage(){
+    const code = textarea.value;
+    if(!code.trim()){
+        showToast('⚠️ Нечего сохранять — пусто');
+        return;
+    }
+    try{
+        const time = Date.now();
+        localStorage.setItem(LS_KEY, code);
+        localStorage.setItem(LS_TIME_KEY, String(time));
+        updateSaveButtonTitle();
+        
+        // Визуальная вспышка кнопки
+        const btn = document.getElementById('saveLocalButton');
+        const orig = btn.textContent;
+        const origBg = btn.style.background;
+        btn.textContent = '✅ Сохранено!';
+        btn.style.background = '#27ae60';
+        btn.style.color = 'white';
+        setTimeout(()=>{
+            btn.textContent = orig;
+            btn.style.background = origBg;
+            btn.style.color = '';
+        }, 1200);
+        
+        showToast('💾 Сохранено в браузер');
+    }catch(e){
+        if(e.name === 'QuotaExceededError'){
+            showToast('❌ Хранилище переполнено');
+        } else {
+            showToast('❌ Ошибка сохранения: ' + e.message);
+        }
+        console.error('Save error:', e);
+    }
+}
+
+function loadFromLocalStorage(){
+    const saved = localStorage.getItem(LS_KEY);
+    if(saved === null || saved === ''){
+        showToast('📭 Нет сохранённой версии');
+        return;
+    }
+    
+    // Если в редакторе уже есть несохранённый текст — предупредим
+    const current = textarea.value;
+    if(current.trim() && current !== saved){
+        const time = localStorage.getItem(LS_TIME_KEY);
+        const timeStr = time ? new Date(parseInt(time)).toLocaleString('ru-RU') : 'неизвестно когда';
+        if(!confirm('⚠️ В редакторе есть текст, который будет заменён!\n\nСохранённая версия от: ' + timeStr + '\n\nПродолжить?')){
+            return;
+        }
+    }
+    
+    saveState(); // в history для undo
+    textarea.value = saved;
+    updateLineNumbers();
+    activeLineNumber = null;
+    highlightActiveLine();
+    searchResults = [];
+    currentResult = -1;
+    updateSearchCounter();
+    
+    // Сброс меток
+    if(typeof clearMarks === 'function') clearMarks();
+    
+    // Курсор в начало
+    textarea.setSelectionRange(0, 0);
+    textarea.scrollTop = 0;
+    
+    showToast('📂 Загружено из браузера');
+}
+
+function updateSaveButtonTitle(){
+    const btn = document.getElementById('saveLocalButton');
+    if(!btn) return;
+    const time = localStorage.getItem(LS_TIME_KEY);
+    if(time){
+        const d = new Date(parseInt(time));
+        const str = d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+        btn.title = 'Сохранить в браузер (Ctrl+S)\nПоследнее сохранение: ' + str;
+    } else {
+        btn.title = 'Сохранить в браузер (Ctrl+S)';
+    }
+}
+
+// ============ TOAST-УВЕДОМЛЕНИЕ ============
+function showToast(message, duration){
+    duration = duration || 2000;
+    let toast = document.getElementById('klikedit-toast');
+    if(!toast){
+        toast = document.createElement('div');
+        toast.id = 'klikedit-toast';
+        toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(30,30,50,0.95);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-family:sans-serif;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:100000;opacity:0;transition:opacity .25s ease, transform .25s ease;pointer-events:none;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    // сброс анимации
+    toast.style.transition = 'none';
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+    // форсируем reflow
+    void toast.offsetHeight;
+    toast.style.transition = 'opacity .25s ease, transform .25s ease';
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(()=>{
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+    }, duration);
+}
+
+// ============ АВТОВОССТАНОВЛЕНИЕ ПРИ СТАРТЕ ============
+function offerRestoreOnStartup(){
+    const saved = localStorage.getItem(LS_KEY);
+    if(!saved || !saved.trim()) return;
+    
+    // Не восстанавливаем, если редактор уже заполнен (например, из другого источника)
+    if(textarea.value.trim()) return;
+    
+    const time = localStorage.getItem(LS_TIME_KEY);
+    const timeStr = time ? new Date(parseInt(time)).toLocaleString('ru-RU') : 'ранее';
+    
+    // Небольшая задержка, чтобы UI успел прогрузиться
+    setTimeout(()=>{
+        if(confirm('💾 Найдена сохранённая версия от ' + timeStr + '.\n\nВосстановить её в редактор?')){
+            textarea.value = saved;
+            updateLineNumbers();
+            activeLineNumber = null;
+            highlightActiveLine();
+            showToast('📂 Восстановлено из браузера');
+        }
+    }, 400);
+}
+
+// ============ ГОРЯЧИЕ КЛАВИШИ Ctrl+S / Ctrl+O ============
+document.addEventListener('keydown', function(e){
+    // Ctrl+S или Cmd+S — сохранить
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+        e.preventDefault();
+        saveToLocalStorage();
+    }
+    // Ctrl+O или Cmd+O — загрузить
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o'){
+        e.preventDefault();
+        loadFromLocalStorage();
+    }
+});
+
+// Инициализация
+updateSaveButtonTitle();
+offerRestoreOnStartup();
+
 // Инициализация кнопок
 updateMarkButtons();
+
+
 </script>
 </body>
 </html>
