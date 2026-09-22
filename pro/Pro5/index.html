@@ -608,14 +608,15 @@ function escapeRegex(s) {
 }
 
 // Собираем regex из запроса: пробелы → \s+
+
+
+// Собираем regex из запроса: пробелы → \s* (0 или больше)
+// Это позволяет находить "text text" даже если в коде "texttext" или "text\n\n\ntext"
 function buildSmartRegex(term) {
     const parts = term.split(/(\s+)/).filter(p => p.length > 0);
-    const escaped = parts.map(p => /^\s+$/.test(p) ? '\\s+' : escapeRegex(p));
+    // Все пробельные группы → \s* (жадный, но с fallback)
+    const escaped = parts.map(p => /^\s+$/.test(p) ? '\\s*' : escapeRegex(p));
     let pattern = escaped.join('');
-
-    // Пробел в начале/конце запроса → необязательный
-    if (/^\s/.test(term)) pattern = pattern.replace(/^\\s\+/, '\\s*');
-    if (/\s$/.test(term)) pattern = pattern.replace(/\\s\+$/, '') + '\\s*';
 
     try {
         return new RegExp(pattern, 'g');
@@ -624,6 +625,7 @@ function buildSmartRegex(term) {
         return null;
     }
 }
+
 
 // Умный поиск — возвращает массив {start, end}
 function findSmart(haystack, term) {
