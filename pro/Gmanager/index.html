@@ -178,11 +178,14 @@
 
     <div class="status ok" id="whoami"></div>
 
+
     <h2>Создать файл:</h2>
-    <form onsubmit="createFile(event)">
-      <input type="text" id="newFileName" placeholder="Имя файла (можно путь: docs/readme.md)" required>
-      <button type="submit">Создать</button>
-    </form>
+<form onsubmit="createFile(event)">
+  <input type="text" id="newFileName" placeholder="Имя файла (можно путь: docs/readme.md)" required>
+  <button type="submit">Создать</button>
+  <button type="button" class="ghost" onclick="createFromLocalFile()">📂 Из файла</button>
+</form>
+<input type="file" id="createLocalFileInput" style="display:none" onchange="createFileFromLocal(event)">
 
     <h2>Загрузить файлы:</h2>
     <form onsubmit="uploadFiles(event)">
@@ -203,12 +206,20 @@
   <div id="editorScreen" style="display:none">
     <h2>Редактирование: <span id="editPath"></span><span id="draftBadge" class="draft-badge" style="display:none">черновик</span></h2>
     <textarea id="editContent"></textarea>
+
+
+
     <div class="editor-actions">
-      <button onclick="saveEdit()">💾 Сохранить</button>
-      <button class="ghost" onclick="copyAllEdit()">📋 Скопировать всё</button>
-      <button class="ghost" onclick="clearEdit()">🧹 Очистить</button>
-      <button class="ghost" onclick="closeEditor()">⬅ Назад</button>
-    </div>
+  <button onclick="saveEdit()">💾 Сохранить</button>
+  <button class="ghost" onclick="copyAllEdit()">📋 Скопировать всё</button>
+  <button class="ghost" onclick="openLocalFile()">📂 Открыть файл</button>
+  <button class="ghost" onclick="clearEdit()">🧹 Очистить</button>
+  <button class="ghost" onclick="closeEditor()">⬅ Назад</button>
+</div>
+<input type="file" id="localFileInput" style="display:none" onchange="loadLocalFileIntoEditor(event)">
+
+
+
     <div class="status" id="editStatus"></div>
   </div>
 </div>
@@ -980,6 +991,129 @@ function closeEditor() {
 /* =====================================================
    МЕЛОЧИ
    ===================================================== */
+
+/* =====================================================
+   ЗАГРУЗКА ЛОКАЛЬНЫХ ФАЙЛОВ
+   ===================================================== */
+
+/* --- В редактор: открыть локальный файл --- */
+function openLocalFile() {
+  const input = document.getElementById('localFileInput');
+  input.value = '';
+  input.click();
+}
+
+function loadLocalFileIntoEditor(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const st = document.getElementById('editStatus');
+  const reader = new FileReader();
+
+  reader.onload = function(ev) {
+    const area = document.getElementById('editContent');
+    area.value = ev.target.result;
+
+    // Помечаем как черновик, если отличается от оригинала
+    const hasChanges = area.value !== (state.editing.originalContent || '');
+    if (hasChanges) {
+      setDraft(state.activeId, state.editing.path, area.value);
+      updateDraftBadge(true);
+    }
+
+    st.textContent = `📂 Загружен файл: ${file.name} (${file.size} байт) — не забудьте сохранить`;
+    st.className = 'status ok';
+
+    // Триггерим oninput для корректной работы черновика
+    if (typeof area.oninput === 'function') area.oninput();
+  };
+
+  reader.onerror = function() {
+    st.textContent = '❌ Не удалось прочитать файл';
+    st.className = 'status err';
+  };
+
+  // Читаем как текст (подходит для HTML, CSS, JS, JSON, MD и т.п.)
+  reader.readAsText(file, 'UTF-8');
+
+  // Сбрасываем input, чтобы можно было выбрать тот же файл повторно
+  e.target.value = '';
+}
+
+/* --- Создание файла из локального --- */
+function createFromLocalFile() {
+  const input = document.getElementById('createLocalFileInput');
+  input.value = '';
+  input.click();
+}
+
+async function createFileFromLocal(e) {
+  const cfg = getActiveProfile();
+  if (!cfg) return;
+
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  const branch = cfg.branch || 'main';
+  const filePath = state.path ? `${state.path}/${file.name}` : file.name;
+  const url = `${apiBase(cfg)}/${encodeURI(filePath)}`;
+
+  // Показываем статус
+  const list = document.getElementById('fileList');
+  list.innerHTML = `<li class="file">⏳ ${escapeHtml(file.name)} (создание...)</li>`;
+
+  try {
+    // Читаем как текст (для кода); если нужно бинарно — замени на arrayBuffer
+    const content = await file.text();
+
+    // Проверяем существование файла
+    let sha = null;
+    try {
+      const rHead = await fetch(
+        `${url}?ref=${encodeURIComponent(branch)}&t=${Date.now()}`,
+        { headers: headers(cfg), cache: 'no-store' }
+      );
+      if (rHead.ok) {
+        const d = await rHead.json();
+        if (d.type === 'dir') {
+          alert(`По пути "${filePath}" уже есть папка`);
+          loadPath(state.path);
+          return;
+        }
+        sha = d.sha;
+        if (!confirm(`Файл "${filePath}" уже существует. Перезаписать?`)) {
+          loadPath(state.path);
+          return;
+        }
+      }
+    } catch {}
+
+    const body = {
+      message: `Create from local file ${filePath}`,
+      content: b64encode(content),
+      branch
+    };
+    if (sha) body.sha = sha;
+
+    const r = await fetch(url, {
+      method: 'PUT',
+      headers: { ...headers(cfg), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      alert('Ошибка: ' + (d.message || r.status));
+    }
+    loadPath(state.path);
+  } catch (err) {
+    alert('Ошибка чтения файла: ' + err.message);
+    loadPath(state.path);
+  }
+}
+
+
 function escapeHtml(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
