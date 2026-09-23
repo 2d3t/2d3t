@@ -233,7 +233,7 @@ body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-co
 
 <button id="saveLocalButton" onclick="saveToLocalStorage()" title="Сохранить в браузер (Ctrl+S)">💾 Сохранить</button>
 <button id="loadLocalButton" onclick="loadFromLocalStorage()" title="Загрузить из браузера (Ctrl+O)">📂 Загрузить</button>
-<button id="restoreLocalButton" onclick="restoreLastSaved()" title="Восстановить последнюю сохранённую версию" style="display:none;">♻️ Восстановить</button>
+
 
 <button onclick="showEditor()">Редактор 🛠️</button>
 <button onclick="runCode()">Просмотр 🖥️</button>
@@ -1625,6 +1625,7 @@ document.addEventListener('keydown', function(e){
 const LS_KEY = 'klikedit_saved_code';
 const LS_TIME_KEY = 'klikedit_saved_time';
 
+
 function saveToLocalStorage(){
     const code = textarea.value;
     if(!code.trim()){
@@ -1634,16 +1635,10 @@ function saveToLocalStorage(){
     try{
         const time = Date.now();
 
-
-
         localStorage.setItem(LS_KEY, code);
-localStorage.setItem(LS_TIME_KEY, String(time));
-updateSaveButtonTitle();
-updateRestoreButton();
+        localStorage.setItem(LS_TIME_KEY, String(time));
+        updateSaveButtonTitle();
 
-
-
-        
         // Визуальная вспышка кнопки
         const btn = document.getElementById('saveLocalButton');
         const orig = btn.textContent;
@@ -1667,6 +1662,7 @@ updateRestoreButton();
         console.error('Save error:', e);
     }
 }
+
 
 function loadFromLocalStorage(){
     const saved = localStorage.getItem(LS_KEY);
@@ -1703,6 +1699,7 @@ function loadFromLocalStorage(){
     
     showToast('📂 Загружено из браузера');
 }
+
 
 function updateSaveButtonTitle(){
     const btn = document.getElementById('saveLocalButton');
@@ -1745,77 +1742,11 @@ function showToast(message, duration){
     }, duration);
 }
 
-// ============ ОБНОВЛЕНИЕ КНОПКИ ВОССТАНОВЛЕНИЯ ============
-function updateRestoreButton(){
-    const btn = document.getElementById('restoreLocalButton');
-    if(!btn) return;
-    const saved = localStorage.getItem(LS_KEY);
-    const time = localStorage.getItem(LS_TIME_KEY);
-    
-    if(saved && saved.trim()){
-        // Есть что восстанавливать — показываем кнопку
-        btn.style.display = 'inline-block';
-        if(time){
-            const d = new Date(parseInt(time));
-            const str = d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
-            btn.title = '♻️ Восстановить последнюю версию\nСохранено: ' + str;
-        } else {
-            btn.title = '♻️ Восстановить последнюю версию';
-        }
-    } else {
-        // Нечего восстанавливать — скрываем кнопку
-        btn.style.display = 'none';
-    }
-}
-
-// ============ ВОССТАНОВЛЕНИЕ ПОСЛЕДНЕЙ СОХРАНЁННОЙ ВЕРСИИ ============
-function restoreLastSaved(){
-    const saved = localStorage.getItem(LS_KEY);
-    if(!saved || !saved.trim()){
-        showToast('📭 Нет сохранённой версии');
-        updateRestoreButton();
-        return;
-    }
-    
-    const time = localStorage.getItem(LS_TIME_KEY);
-    const timeStr = time ? new Date(parseInt(time)).toLocaleString('ru-RU') : 'неизвестно когда';
-    
-    // Если в редакторе уже есть несохранённый текст — предупредим
-    const current = textarea.value;
-    if(current.trim() && current !== saved){
-        if(!confirm('⚠️ В редакторе есть текст, который будет заменён!\n\nСохранённая версия от: ' + timeStr + '\n\nПродолжить?')){
-            return;
-        }
-    }
-    
-    saveState(); // в history для undo
-    textarea.value = saved;
-    updateLineNumbers();
-    activeLineNumber = null;
-    highlightActiveLine();
-    searchResults = [];
-    currentResult = -1;
-    updateSearchCounter();
-    
-    // Сброс меток
-    if(typeof clearMarks === 'function') clearMarks();
-    
-    // Курсор в начало
-    textarea.setSelectionRange(0, 0);
-    textarea.scrollTop = 0;
-    
-    showToast('♻️ Восстановлено из браузера');
-}
-
-// Инициализация
-
-updateRestoreButton();
-
-
-
-
 // Инициализация кнопок
 updateMarkButtons();
+
+
+
 
 </script>
 </body>
