@@ -140,6 +140,98 @@
     margin-left: 8px;
     vertical-align: middle;
   }
+
+/* ---- Анализатор ---- */
+.analyzer-summary {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  justify-content: center; margin: 18px 0;
+}
+.summary-item {
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  padding: 12px 20px;
+  min-width: 130px;
+}
+.summary-item .val {
+  font-size: 22px; font-weight: bold; display: block;
+}
+.summary-item .lbl {
+  font-size: 13px; opacity: 0.85;
+}
+
+.analyzer-filter {
+  background: rgba(0,0,0,0.4);
+  padding: 10px 16px; border-radius: 8px;
+  margin: 12px auto; max-width: 700px;
+  font-size: 14px;
+}
+.analyzer-filter select {
+  padding: 4px 8px; border-radius: 5px;
+  background: #1e1e1e; color: white;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.analyzer-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+@media (max-width: 700px) {
+  .analyzer-grid { grid-template-columns: 1fr; }
+}
+
+.analyzer-card {
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  padding: 14px 18px;
+  text-align: left;
+}
+.analyzer-card h3 {
+  margin: 0 0 10px 0; font-size: 17px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  padding-bottom: 6px;
+}
+
+.bar-row {
+  display: flex; align-items: center; gap: 10px;
+  margin: 6px 0; font-size: 14px;
+}
+.bar-row .bar-label {
+  flex: 0 0 45%; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.bar-row .bar-track {
+  flex: 1; height: 14px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 7px; overflow: hidden;
+}
+.bar-row .bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2a7fff, #6fb1ff);
+  border-radius: 7px;
+  transition: width 0.4s ease;
+}
+.bar-row .bar-val {
+  flex: 0 0 90px; text-align: right;
+  font-family: monospace; font-size: 13px;
+  opacity: 0.9;
+}
+
+.big-file-row {
+  display: flex; justify-content: space-between;
+  gap: 10px; padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 14px;
+}
+.big-file-row:last-child { border-bottom: none; }
+.big-file-row .bf-name {
+  overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; flex: 1; text-align: left;
+}
+.big-file-row .bf-size {
+  font-family: monospace; flex: 0 0 auto; opacity: 0.9;
+}
+
 </style>
 </head>
 <body>
@@ -194,11 +286,13 @@
     </form>
 
     <h2>Содержимое: <span id="currentPath">/</span></h2>
-    <div>
-      <button onclick="loadPath('')">⬅ В корень</button>
-      <button onclick="loadPath(parentPath())">⬅ Назад</button>
-      <button class="ghost" onclick="goToProfiles()">👥 Профили</button>
-    </div>
+
+<div>
+  <button onclick="loadPath('')">⬅ В корень</button>
+  <button onclick="loadPath(parentPath())">⬅ Назад</button>
+  <button class="ghost" onclick="openAnalyzer()">📊 Анализ места</button>
+  <button class="ghost" onclick="goToProfiles()">👥 Профили</button>
+</div>
     <ul id="fileList"></ul>
   </div>
 
@@ -222,7 +316,57 @@
 
     <div class="status" id="editStatus"></div>
   </div>
+
+  <!-- ЭКРАН АНАЛИЗА -->
+  <div id="analyzerScreen" style="display:none">
+    <h2>📊 Анализ места: <span id="analyzerRepo"></span></h2>
+
+    <div>
+      <button onclick="runAnalyzer()">🔄 Обновить</button>
+      <button class="ghost" onclick="copyReport()">📋 Скопировать отчёт</button>
+      <button class="ghost" onclick="closeAnalyzer()">⬅ Назад</button>
+    </div>
+
+    <div class="status" id="analyzerStatus">Нажмите «Обновить», чтобы собрать статистику.</div>
+
+    <div id="analyzerBody" style="display:none">
+      <div class="analyzer-summary" id="analyzerSummary"></div>
+
+      <div class="analyzer-filter">
+        <label>
+          <input type="checkbox" id="onlyBig" onchange="renderAnalyzer()">
+          Показывать только файлы больше 1 МБ
+        </label>
+        <label style="margin-left:16px">
+          Сортировать:
+          <select id="sortMode" onchange="renderAnalyzer()">
+            <option value="size">по размеру</option>
+            <option value="count">по количеству</option>
+            <option value="name">по имени</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="analyzer-grid">
+        <div class="analyzer-card">
+          <h3>📁 По папкам</h3>
+          <div id="byDirList"></div>
+        </div>
+        <div class="analyzer-card">
+          <h3>📄 По расширениям</h3>
+          <div id="byExtList"></div>
+        </div>
+      </div>
+
+      <div class="analyzer-card" style="margin-top:16px">
+        <h3>🐘 Самые большие файлы</h3>
+        <div id="bigFilesList"></div>
+      </div>
+    </div>
+  </div>
 </div>
+
+
 
 <script>
 /* =====================================================
@@ -514,6 +658,9 @@ function renderTabs() {
   tabsEl.appendChild(add);
 }
 
+
+
+
 function openProfile(id) {
   const p = getProfile(id);
   if (!p) return;
@@ -531,6 +678,7 @@ function openProfile(id) {
   document.getElementById('profilesScreen').style.display = 'none';
   document.getElementById('managerScreen').style.display = 'block';
   document.getElementById('editorScreen').style.display = 'none';
+  document.getElementById('analyzerScreen').style.display = 'none';
 
   document.getElementById('whoami').textContent =
     `${p.owner}/${p.repo} @ ${p.branch || 'main'}`;
@@ -543,6 +691,7 @@ function openProfile(id) {
 function switchTab(id) {
   if (id === state.activeId) return;
   document.getElementById('editorScreen').style.display = 'none';
+  document.getElementById('analyzerScreen').style.display = 'none';
   state.activeId = id;
   const p = getProfile(id);
   const store = loadStore();
@@ -559,6 +708,7 @@ function switchTab(id) {
   loadPath('');
 }
 
+
 function closeTab(id) {
   state.openTabs = state.openTabs.filter(x => x !== id);
   saveOpenTabs(state.openTabs);
@@ -570,6 +720,10 @@ function closeTab(id) {
       const store = loadStore();
       store.activeId = state.activeId;
       saveStore(store);
+
+      document.getElementById('editorScreen').style.display = 'none';
+      document.getElementById('analyzerScreen').style.display = 'none';
+      document.getElementById('managerScreen').style.display = 'block';
 
       document.getElementById('whoami').textContent =
         `${p.owner}/${p.repo} @ ${p.branch || 'main'}`;
@@ -588,16 +742,23 @@ function closeTab(id) {
   renderTabs();
 }
 
+
+
 /* =====================================================
    ПЕРЕХОДЫ МЕЖДУ ЭКРАНАМИ
    ===================================================== */
+
+
+
 function goToProfiles() {
   document.getElementById('profilesScreen').style.display = 'block';
   document.getElementById('managerScreen').style.display = 'none';
   document.getElementById('editorScreen').style.display = 'none';
+  document.getElementById('analyzerScreen').style.display = 'none';
   document.getElementById('configBox').style.display = 'none';
   renderProfiles();
 }
+
 
 /* =====================================================
    СПИСОК ФАЙЛОВ
@@ -1110,6 +1271,260 @@ async function createFileFromLocal(e) {
   } catch (err) {
     alert('Ошибка чтения файла: ' + err.message);
     loadPath(state.path);
+  }
+}
+
+
+/* =====================================================
+   АНАЛИЗАТОР МЕСТА
+   ===================================================== */
+let analyzerData = null;   // кэш последнего анализа
+let analyzerCfgId = null;  // для какого профиля собран
+
+function humanSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  const units = ['KB','MB','GB','TB'];
+  let i = -1, v = bytes;
+  do { v /= 1024; i++; } while (v >= 1024 && i < units.length - 1);
+  return v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2) + ' ' + units[i];
+}
+
+function openAnalyzer() {
+  const cfg = getActiveProfile();
+  if (!cfg) return;
+  document.getElementById('managerScreen').style.display = 'none';
+  document.getElementById('editorScreen').style.display = 'none';
+  document.getElementById('analyzerScreen').style.display = 'block';
+  document.getElementById('analyzerRepo').textContent =
+    `${cfg.owner}/${cfg.repo} @ ${cfg.branch || 'main'}`;
+
+  // Если кэш от другого профиля — сбрасываем
+  if (analyzerCfgId !== cfg.id) {
+    analyzerData = null;
+    analyzerCfgId = cfg.id;
+    document.getElementById('analyzerBody').style.display = 'none';
+    document.getElementById('analyzerStatus').textContent =
+      'Нажмите «Обновить», чтобы собрать статистику.';
+    document.getElementById('analyzerStatus').className = 'status';
+  } else if (analyzerData) {
+    renderAnalyzer();
+  }
+
+  // Автозапуск, если данных ещё нет
+  if (!analyzerData) runAnalyzer();
+}
+
+function closeAnalyzer() {
+  document.getElementById('analyzerScreen').style.display = 'none';
+  document.getElementById('managerScreen').style.display = 'block';
+}
+
+async function runAnalyzer() {
+  const cfg = getActiveProfile();
+  if (!cfg) return;
+
+  const st = document.getElementById('analyzerStatus');
+  st.textContent = '⏳ Загружаю дерево репозитория...';
+  st.className = 'status';
+  document.getElementById('analyzerBody').style.display = 'none';
+
+  try {
+    const branch = cfg.branch || 'main';
+    const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`;
+    const r = await fetch(url, { headers: headers(cfg), cache: 'no-store' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.message || ('HTTP ' + r.status));
+
+    const tree = Array.isArray(data.tree) ? data.tree : [];
+    const files = tree.filter(x => x.type === 'blob');
+    const dirs  = tree.filter(x => x.type === 'tree');
+
+    let totalBytes = 0;
+    const byExt = {};
+    const byDir = {};
+    const bigFiles = [];
+
+    for (const f of files) {
+      const size = f.size || 0;
+      totalBytes += size;
+
+      const dotIdx = f.path.lastIndexOf('.');
+      const slashIdx = f.path.lastIndexOf('/');
+      let ext = 'без расширения';
+      if (dotIdx > slashIdx && dotIdx !== -1) {
+        ext = f.path.slice(dotIdx + 1).toLowerCase() || 'без расширения';
+      }
+
+      byExt[ext] = byExt[ext] || { count: 0, size: 0 };
+      byExt[ext].count++;
+      byExt[ext].size += size;
+
+      const topDir = f.path.includes('/') ? f.path.split('/')[0] : '(корень)';
+      byDir[topDir] = byDir[topDir] || { count: 0, size: 0 };
+      byDir[topDir].count++;
+      byDir[topDir].size += size;
+
+      bigFiles.push({ path: f.path, size });
+    }
+
+    bigFiles.sort((a, b) => b.size - a.size);
+
+    analyzerData = {
+      totalBytes,
+      fileCount: files.length,
+      dirCount: dirs.length,
+      byExt,
+      byDir,
+      bigFiles: bigFiles.slice(0, 30),
+      truncated: !!data.truncated
+    };
+    analyzerCfgId = cfg.id;
+
+    if (data.truncated) {
+      st.textContent = '⚠ GitHub вернул усечённое дерево (репозиторий слишком большой). Данные могут быть неполными.';
+      st.className = 'status err';
+    } else {
+      st.textContent = '✅ Готово';
+      st.className = 'status ok';
+    }
+
+    renderAnalyzer();
+  } catch (e) {
+    st.textContent = '❌ ' + e.message;
+    st.className = 'status err';
+  }
+}
+
+function renderAnalyzer() {
+  if (!analyzerData) return;
+  const d = analyzerData;
+
+  document.getElementById('analyzerBody').style.display = 'block';
+
+  // -------- Сводка --------
+  const summary = document.getElementById('analyzerSummary');
+  summary.innerHTML = `
+    <div class="summary-item"><span class="val">${humanSize(d.totalBytes)}</span><span class="lbl">общий размер</span></div>
+    <div class="summary-item"><span class="val">${d.fileCount}</span><span class="lbl">файлов</span></div>
+    <div class="summary-item"><span class="val">${d.dirCount}</span><span class="lbl">папок</span></div>
+    <div class="summary-item"><span class="val">${Object.keys(d.byExt).length}</span><span class="lbl">типов</span></div>
+  `;
+
+  const onlyBig = document.getElementById('onlyBig').checked;
+  const sortMode = document.getElementById('sortMode').value;
+
+  renderBars('byDirList', d.byDir, d.totalBytes, onlyBig, sortMode, 'dir');
+  renderBars('byExtList', d.byExt, d.totalBytes, onlyBig, sortMode, 'ext');
+
+  // -------- Большие файлы --------
+  const bigList = document.getElementById('bigFilesList');
+  const threshold = onlyBig ? 1024 * 1024 : 0;
+  const shown = d.bigFiles.filter(f => f.size >= threshold).slice(0, 20);
+
+  if (shown.length === 0) {
+    bigList.innerHTML = '<div class="small">Нет файлов, попадающих под фильтр.</div>';
+  } else {
+    bigList.innerHTML = shown.map(f => `
+      <div class="big-file-row">
+        <span class="bf-name" title="${escapeHtml(f.path)}">${fileIcon(f.path.split('/').pop())} ${escapeHtml(f.path)}</span>
+        <span class="bf-size">${humanSize(f.size)}</span>
+      </div>
+    `).join('');
+  }
+}
+
+function renderBars(containerId, obj, total, onlyBig, sortMode, kind) {
+  const el = document.getElementById(containerId);
+  let entries = Object.entries(obj).map(([name, v]) => ({ name, ...v }));
+
+  if (onlyBig) {
+    entries = entries.filter(e => e.size >= 1024 * 1024);
+  }
+
+  if (sortMode === 'size')      entries.sort((a, b) => b.size - a.size);
+  else if (sortMode === 'count') entries.sort((a, b) => b.count - a.count);
+  else                            entries.sort((a, b) => a.name.localeCompare(b.name));
+
+  entries = entries.slice(0, 15);
+
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="small">Пусто.</div>';
+    return;
+  }
+
+  const maxSize = Math.max(...entries.map(e => e.size), 1);
+
+  el.innerHTML = entries.map(e => {
+    const pct = (e.size / maxSize) * 100;
+    const icon = kind === 'dir' ? '📁' : '';
+    return `
+      <div class="bar-row">
+        <span class="bar-label" title="${escapeHtml(e.name)}">${icon} ${escapeHtml(e.name)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+        <span class="bar-val">${humanSize(e.size)} · ${e.count}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function copyReport() {
+  if (!analyzerData) {
+    alert('Сначала запустите анализ.');
+    return;
+  }
+  const cfg = getActiveProfile();
+  const d = analyzerData;
+  const lines = [];
+
+  lines.push(`# Анализ репозитория ${cfg.owner}/${cfg.repo} @ ${cfg.branch || 'main'}`);
+  lines.push('');
+  lines.push(`- **Общий размер:** ${humanSize(d.totalBytes)}`);
+  lines.push(`- **Файлов:** ${d.fileCount}`);
+  lines.push(`- **Папок:** ${d.dirCount}`);
+  lines.push(`- **Типов файлов:** ${Object.keys(d.byExt).length}`);
+  if (d.truncated) lines.push(`- ⚠ Дерево усечено GitHub'ом`);
+  lines.push('');
+
+  lines.push('## По папкам (топ-15)');
+  const dirs = Object.entries(d.byDir).sort((a, b) => b[1].size - a[1].size).slice(0, 15);
+  for (const [name, v] of dirs) {
+    lines.push(`- \`${name}\` — ${humanSize(v.size)} (${v.count} файлов)`);
+  }
+  lines.push('');
+
+  lines.push('## По расширениям (топ-15)');
+  const exts = Object.entries(d.byExt).sort((a, b) => b[1].size - a[1].size).slice(0, 15);
+  for (const [name, v] of exts) {
+    lines.push(`- \`.${name}\` — ${humanSize(v.size)} (${v.count} файлов)`);
+  }
+  lines.push('');
+
+  lines.push('## Самые большие файлы (топ-20)');
+  for (const f of d.bigFiles.slice(0, 20)) {
+    lines.push(`- \`${f.path}\` — ${humanSize(f.size)}`);
+  }
+
+  const text = lines.join('\n');
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      const st = document.getElementById('analyzerStatus');
+      st.textContent = '📋 Отчёт скопирован в буфер обмена';
+      st.className = 'status ok';
+    }).catch(err => alert('Не удалось скопировать: ' + err.message));
+  } else {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const st = document.getElementById('analyzerStatus');
+    st.textContent = '📋 Отчёт скопирован';
+    st.className = 'status ok';
   }
 }
 
