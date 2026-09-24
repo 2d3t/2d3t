@@ -199,6 +199,9 @@ body.theme-graphite .floating-editor textarea{background:#1c1c1e;color:#e2e2e6}
 body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-color:#3a3a3c}
 
 /* ============ ОВЕРЛЕЙ ПРАВОК ============ */
+
+
+
 .edits-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .edits-overlay.active{display:flex}
 .edits-modal{background:#1e1e2f;border-radius:16px;padding:20px;max-width:760px;width:94%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);border:1px solid #2a3340;color:#e2e8f0;display:flex;flex-direction:column;gap:14px}
@@ -371,9 +374,12 @@ onchange="handleFileWithFullscreenRestore(event)">
 <div class="edits-overlay" id="editsOverlay">
   <div class="edits-modal">
     <div class="edits-header">
-      <h2>✏️ Правки кода</h2>
-      <button class="close-btn" onclick="closeEditsOverlay()">✕</button>
-    </div>
+  <h2>✏️ Правки кода</h2>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn-ghost" onclick="clearAllEdits()" style="color:#e74c3c;font-size:12px;padding:6px 12px;">🗑️ Удалить все</button>
+    <button class="close-btn" onclick="closeEditsOverlay()">✕</button>
+  </div>
+</div>
     <div id="editsList" style="display:flex;flex-direction:column;gap:12px;"></div>
     <div class="edit-actions">
       <button class="btn-add" onclick="addEditCard()">➕ Добавить правку</button>
@@ -2170,6 +2176,21 @@ document.addEventListener('input', function(e){
 
 // Загружаем черновик при старте
 loadEditsFromStorage();
+
+
+function clearAllEdits(){
+    const list = document.getElementById('editsList');
+    if(!list || list.children.length === 0){
+        showToast('📭 Правок и так нет');
+        return;
+    }
+    if(!confirm('Удалить все правки? Это действие нельзя отменить.')) return;
+
+    list.innerHTML = '';
+    editCardCounter = 0;
+    try{ localStorage.removeItem('klikedit_edits_draft'); }catch(e){}
+    showToast('🗑️ Все правки удалены');
+}
 
 </script>
 </body>
