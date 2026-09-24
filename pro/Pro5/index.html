@@ -1289,13 +1289,12 @@ function openFloatingFrame(){
     frame.style.display='block';
     overlay.classList.add('active');
     floatingFrameOpen=true;
-    if(floatingTextContent){
-        floatingText.value=floatingTextContent;
-    } else {
-        floatingText.value=textarea.value;
-        floatingTextContent=textarea.value;
-    }
+
+    // Дополнительный редактор всегда стартует чистым при первом открытии.
+    // Если пользователь уже что-то вводил ранее — восстанавливаем его содержимое.
+    floatingText.value = floatingTextContent || '';
     updateFloatingCharCount();
+
     if(floatingEditorMode==='preview'){
         const code=extractHtmlContent(floatingText.value)||floatingText.value;
         const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
