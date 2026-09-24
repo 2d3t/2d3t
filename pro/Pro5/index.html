@@ -197,6 +197,64 @@ body.theme-graphite .floating-frame-header{background:#2c2c2e;border-bottom-colo
 body.theme-graphite .floating-frame-header .title{color:#f5f5f7}
 body.theme-graphite .floating-editor textarea{background:#1c1c1e;color:#e2e2e6}
 body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-color:#3a3a3c}
+
+/* ============ ОВЕРЛЕЙ ПРАВОК ============ */
+.edits-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.edits-overlay.active{display:flex}
+.edits-modal{background:#1e1e2f;border-radius:16px;padding:20px;max-width:760px;width:94%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);border:1px solid #2a3340;color:#e2e8f0;display:flex;flex-direction:column;gap:14px}
+body.theme-light .edits-modal{background:#f0f0f4;color:#222;border-color:#ddd}
+body.theme-green .edits-modal{background:#1f3b2c;color:#d4ecd0;border-color:#2c553a}
+body.theme-ocean .edits-modal{background:#0a192f;color:#b8e1fc;border-color:#1e3a5f}
+body.theme-graphite .edits-modal{background:#2c2c2e;color:#f5f5f7;border-color:#3a3a3c}
+.edits-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.edits-header h2{margin:0;font-size:18px}
+.edits-header .close-btn{background:transparent;border:none;color:inherit;font-size:22px;cursor:pointer;opacity:0.7;transition:opacity .2s}
+.edits-header .close-btn:hover{opacity:1}
+
+.edit-card{background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+body.theme-light .edit-card{background:rgba(0,0,0,0.04);border-color:#ddd}
+.edit-card-header{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:0.7}
+.edit-card-header .remove-edit{background:transparent;border:none;color:#e74c3c;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:background .2s}
+.edit-card-header .remove-edit:hover{background:rgba(231,76,60,0.2)}
+
+.edit-field{display:flex;flex-direction:column;gap:4px}
+.edit-field label{font-size:12px;font-weight:600;opacity:0.8}
+.edit-field-row{display:flex;gap:6px;align-items:stretch}
+.edit-input{flex:1;min-height:60px;max-height:200px;overflow:auto;background:#0f0f17;color:#e6e6fa;border:1px solid #2a3340;border-radius:8px;padding:8px 10px;font-family:monospace;font-size:13px;line-height:1.4;outline:none;white-space:pre-wrap;word-break:break-word;box-sizing:border-box}
+.edit-input:focus{border-color:#3b4de0}
+body.theme-light .edit-input{background:#fff;color:#1e1e2a;border-color:#bbb}
+body.theme-green .edit-input{background:#17261e;color:#cfeec7;border-color:#2c553a}
+body.theme-ocean .edit-input{background:#05101f;color:#d9efff;border-color:#1e3a5f}
+body.theme-graphite .edit-input{background:#1c1c1e;color:#e2e2e6;border-color:#3a3a3c}
+.edit-input:empty:before{content:attr(data-placeholder);color:#666;pointer-events:none}
+.edit-input .paste-hint{color:#3b4de0}
+
+.paste-btn{background:#3b4de0;border:none;color:white;border-radius:8px;padding:0 12px;cursor:pointer;font-size:13px;white-space:nowrap;transition:background .2s;min-width:44px}
+.paste-btn:hover{background:#4f5ff0}
+.paste-btn:active{transform:scale(0.96)}
+
+.edit-mode-toggle{display:flex;gap:0;background:rgba(0,0,0,0.25);border-radius:8px;padding:3px;align-self:flex-start}
+.edit-mode-toggle button{background:transparent;border:none;color:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;opacity:0.7;transition:all .2s;font-family:inherit}
+.edit-mode-toggle button.active{background:#3b4de0;color:white;opacity:1;font-weight:600}
+.edit-mode-toggle button:hover:not(.active){opacity:1;background:rgba(255,255,255,0.06)}
+
+.edit-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.edit-actions button{border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-family:inherit;transition:all .2s}
+.btn-apply{background:#27ae60;color:white}
+.btn-apply:hover{background:#2ecc71}
+.btn-apply-single{background:#3b4de0;color:white}
+.btn-apply-single:hover{background:#4f5ff0}
+.btn-add{background:#27ae60;color:white;padding:10px 18px;font-size:14px}
+.btn-add:hover{background:#2ecc71}
+.btn-ghost{background:rgba(255,255,255,0.08);color:inherit}
+.btn-ghost:hover{background:rgba(255,255,255,0.15)}
+body.theme-light .btn-ghost{background:rgba(0,0,0,0.06)}
+body.theme-light .btn-ghost:hover{background:rgba(0,0,0,0.12)}
+
+.edit-status{font-size:12px;padding:6px 10px;border-radius:6px;margin-top:4px;display:none}
+.edit-status.ok{background:rgba(39,174,96,0.2);color:#2ecc71;display:block}
+.edit-status.err{background:rgba(231,76,60,0.2);color:#e74c3c;display:block}
+
 </style>
 </head>
 
@@ -235,6 +293,8 @@ body.theme-graphite .floating-editor-toolbar{background:#2c2c2e;border-bottom-co
 <button id="loadLocalButton" onclick="loadFromLocalStorage()" title="Загрузить из браузера (Ctrl+O)">📂 Загрузить</button>
 
 
+
+<button onclick="openEditsOverlay()" style="background:#8e44ad;color:white;">✏️ Правки</button>
 <button onclick="showEditor()">Редактор 🛠️</button>
 <button onclick="runCode()">Просмотр 🖥️</button>
 <button id="fullscreenButton" onclick="toggleFullscreen()">Полный экран ⛶</button>
@@ -304,6 +364,25 @@ onchange="handleFileWithFullscreenRestore(event)">
         </div>
     </div>
 </div>
+
+
+
+<!-- Оверлей правок -->
+<div class="edits-overlay" id="editsOverlay">
+  <div class="edits-modal">
+    <div class="edits-header">
+      <h2>✏️ Правки кода</h2>
+      <button class="close-btn" onclick="closeEditsOverlay()">✕</button>
+    </div>
+    <div id="editsList" style="display:flex;flex-direction:column;gap:12px;"></div>
+    <div class="edit-actions">
+      <button class="btn-add" onclick="addEditCard()">➕ Добавить правку</button>
+      <button class="btn-apply" onclick="applyAllEdits()">✅ Применить все</button>
+      <button class="btn-ghost" onclick="closeEditsOverlay()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 
 <div class="library-overlay" id="libraryOverlay">
   <div class="library-modal">
@@ -1746,7 +1825,351 @@ function showToast(message, duration){
 updateMarkButtons();
 
 
+// ============ ОВЕРЛЕЙ ПРАВОК ============
+let editCardCounter = 0;
 
+function openEditsOverlay(){
+    document.getElementById('editsOverlay').classList.add('active');
+    if(document.getElementById('editsList').children.length === 0){
+        addEditCard();
+    }
+}
+
+function closeEditsOverlay(){
+    document.getElementById('editsOverlay').classList.remove('active');
+}
+
+// Закрытие по клику на фон и Escape
+document.getElementById('editsOverlay').addEventListener('click', function(e){
+    if(e.target === this) closeEditsOverlay();
+});
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+        const ov = document.getElementById('editsOverlay');
+        if(ov.classList.contains('active')) closeEditsOverlay();
+    }
+});
+
+function addEditCard(){
+    editCardCounter++;
+    const id = 'edit_' + editCardCounter;
+    const list = document.getElementById('editsList');
+    const card = document.createElement('div');
+    card.className = 'edit-card';
+    card.dataset.id = id;
+    card.innerHTML = `
+        <div class="edit-card-header">
+            <span>Правка #${editCardCounter}</span>
+            <button class="remove-edit" onclick="removeEditCard(this)" title="Удалить правку">✕ Удалить</button>
+        </div>
+
+        <div class="edit-field">
+            <label>🔍 Найти (что заменить)</label>
+            <div class="edit-field-row">
+                <div class="edit-input" contenteditable="true" data-placeholder="Вставьте или введите фрагмент для поиска..." data-role="find"></div>
+                <button class="paste-btn" onclick="pasteIntoField(this,'find')" title="Вставить из буфера (с форматированием)">📋</button>
+            </div>
+        </div>
+
+        <div class="edit-field">
+            <label>✨ Заменить на</label>
+            <div class="edit-field-row">
+                <div class="edit-input" contenteditable="true" data-placeholder="Новый фрагмент..." data-role="replace"></div>
+                <button class="paste-btn" onclick="pasteIntoField(this,'replace')" title="Вставить из буфера (с форматированием)">📋</button>
+            </div>
+        </div>
+
+        <div class="edit-mode-toggle" data-role="mode">
+            <button data-mode="instead" class="active">🔁 Вместо</button>
+            <button data-mode="before">⬆️ До</button>
+            <button data-mode="after">⬇️ После</button>
+        </div>
+
+        <div class="edit-actions">
+            <button class="btn-apply-single" onclick="applySingleEdit(this)">▶️ Применить эту правку</button>
+        </div>
+        <div class="edit-status"></div>
+    `;
+    list.appendChild(card);
+
+    // Обработчик переключения режима
+    card.querySelector('[data-role="mode"]').addEventListener('click', function(e){
+        const btn = e.target.closest('button');
+        if(!btn) return;
+        this.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    });
+}
+
+function removeEditCard(btn){
+    const card = btn.closest('.edit-card');
+    if(card) card.remove();
+}
+
+// Вставка из буфера в contenteditable с сохранением форматирования
+async function pasteIntoField(btn, role){
+    const field = btn.parentElement.querySelector(`[data-role="${role}"]`);
+    if(!field) return;
+    try{
+        // Пробуем modern Clipboard API с rich text
+        if(navigator.clipboard && navigator.clipboard.read){
+            try{
+                const items = await navigator.clipboard.read();
+                for(const item of items){
+                    // Приоритет: HTML (с форматированием), потом plain text
+                    if(item.types.includes('text/html')){
+                        const blob = await item.getType('text/html');
+                        const html = await blob.text();
+                        document.execCommand('insertHTML', false, html);
+                        return;
+                    }
+                    if(item.types.includes('text/plain')){
+                        const blob = await item.getType('text/plain');
+                        const text = await blob.text();
+                        // Вставляем как plain text, чтобы сохранить переносы строк
+                        document.execCommand('insertText', false, text);
+                        return;
+                    }
+                }
+            }catch(err){
+                // Если не получилось — fallback на чтение как text
+                console.warn('Rich paste failed, fallback:', err);
+            }
+        }
+        // Fallback: читаем как обычный текст
+        const text = await navigator.clipboard.readText();
+        document.execCommand('insertText', false, text);
+    }catch(err){
+        console.error('Ошибка вставки:', err);
+        showToast('❌ Не удалось вставить из буфера: ' + err.message);
+    }
+}
+
+// Получить текст из contenteditable поля
+function getFieldValue(field){
+    // innerText сохраняет переносы, но может глотать лишние пробелы
+    // Используем innerText — он ближе всего к тому, что видит пользователь
+    let text = field.innerText;
+    // Убираем возможный завершающий перенос, который добавляет браузер
+    return text;
+}
+
+// Получить HTML из contenteditable поля
+function getFieldHtml(field){
+    return field.innerHTML;
+}
+
+// Очистить поле
+function clearField(field){
+    field.innerHTML = '';
+}
+
+// ============ ПРИМЕНЕНИЕ ПРАВОК ============
+
+// Найти позицию с учётом "умного" поиска (как в findSmart)
+function findFirstMatch(haystack, needle){
+    if(!needle) return null;
+
+    // Сначала пробуем точный поиск
+    let idx = haystack.indexOf(needle);
+    if(idx !== -1){
+        return { start: idx, end: idx + needle.length, matched: needle };
+    }
+
+    // Затем "умный" поиск: пробелы → \s*
+    const parts = needle.split(/(\s+)/).filter(p => p.length > 0);
+    if(parts.length === 0) return null;
+    const escaped = parts.map(p => /^\s+$/.test(p) ? '\\s*' : p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    let pattern = escaped.join('');
+    try{
+        const re = new RegExp(pattern);
+        const m = re.exec(haystack);
+        if(m) return { start: m.index, end: m.index + m[0].length, matched: m[0] };
+    }catch(e){ console.warn('Regex error:', e); }
+    return null;
+}
+
+function applySingleEdit(btn){
+    const card = btn.closest('.edit-card');
+    applyEditCard(card);
+}
+
+function applyEditCard(card){
+    const status = card.querySelector('.edit-status');
+    status.className = 'edit-status';
+    status.textContent = '';
+
+    const findField = card.querySelector('[data-role="find"]');
+    const replaceField = card.querySelector('[data-role="replace"]');
+    const modeBtn = card.querySelector('[data-role="mode"] button.active');
+    const mode = modeBtn ? modeBtn.dataset.mode : 'instead';
+
+    const findText = getFieldValue(findField);
+    const replaceHtml = getFieldHtml(replaceField);
+    // Для "заменить на" возьмём innerText, чтобы избежать лишних HTML-тегов
+    // Но если пользователь хочет сохранить форматирование, можно использовать replaceHtml
+    const replaceText = getFieldValue(replaceField);
+
+    if(!findText){
+        status.className = 'edit-status err';
+        status.textContent = '⚠️ Поле "Найти" пустое';
+        return false;
+    }
+
+    const source = textarea.value;
+    const match = findFirstMatch(source, findText);
+
+    if(!match){
+        status.className = 'edit-status err';
+        status.textContent = '❌ Фрагмент не найден в коде';
+        return false;
+    }
+
+    let newValue;
+    let newCursorPos;
+
+    if(mode === 'instead'){
+        newValue = source.substring(0, match.start) + replaceText + source.substring(match.end);
+        newCursorPos = match.start + replaceText.length;
+    } else if(mode === 'before'){
+        newValue = source.substring(0, match.start) + replaceText + source.substring(match.start);
+        newCursorPos = match.start + replaceText.length;
+    } else { // after
+        newValue = source.substring(0, match.end) + replaceText + source.substring(match.end);
+        newCursorPos = match.end + replaceText.length;
+    }
+
+    // Пушим в undo перед изменением
+    pushUndo(source);
+    textarea.value = newValue;
+
+    // Устанавливаем курсор после правки
+    textarea.focus();
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+
+    updateLineNumbers();
+    highlightActiveLine();
+
+    // Подсветка успеха
+    status.className = 'edit-status ok';
+    status.textContent = '✅ Правка применена (' + mode + ')';
+    setTimeout(()=>{
+        status.className = 'edit-status';
+        status.textContent = '';
+    }, 2500);
+
+    return true;
+}
+
+function applyAllEdits(){
+    const cards = document.querySelectorAll('#editsList .edit-card');
+    if(cards.length === 0){
+        showToast('📭 Нет правок для применения');
+        return;
+    }
+
+    let applied = 0;
+    let failed = 0;
+
+    cards.forEach(card => {
+        // Сбрасываем статус
+        const status = card.querySelector('.edit-status');
+        status.className = 'edit-status';
+        status.textContent = '';
+
+        const findField = card.querySelector('[data-role="find"]');
+        const findText = getFieldValue(findField);
+        if(!findText){
+            status.className = 'edit-status err';
+            status.textContent = '⚠️ Поле "Найти" пустое — пропущено';
+            failed++;
+            return;
+        }
+
+        const source = textarea.value;
+        const match = findFirstMatch(source, findText);
+        if(!match){
+            status.className = 'edit-status err';
+            status.textContent = '❌ Не найдено — пропущено';
+            failed++;
+            return;
+        }
+
+        const ok = applyEditCard(card);
+        if(ok) applied++;
+        else failed++;
+    });
+
+    if(applied > 0){
+        showToast('✅ Применено правок: ' + applied + (failed ? ', ошибок: ' + failed : ''));
+    } else {
+        showToast('❌ Ничего не применено. Ошибок: ' + failed);
+    }
+
+    // Обновляем поиск, если он был активен
+    if(searchInput.value){
+        lastSearch = '';
+        searchResults = [];
+        currentResult = -1;
+        updateSearchCounter();
+    }
+}
+
+// Автосохранение содержимого карточек в localStorage (чтобы не потерять при закрытии)
+function saveEditsToStorage(){
+    const cards = document.querySelectorAll('#editsList .edit-card');
+    const data = [];
+    cards.forEach(card => {
+        const findField = card.querySelector('[data-role="find"]');
+        const replaceField = card.querySelector('[data-role="replace"]');
+        const modeBtn = card.querySelector('[data-role="mode"] button.active');
+        data.push({
+            find: getFieldValue(findField),
+            replace: getFieldValue(replaceField),
+            mode: modeBtn ? modeBtn.dataset.mode : 'instead'
+        });
+    });
+    try{
+        localStorage.setItem('klikedit_edits_draft', JSON.stringify(data));
+    }catch(e){ /* ignore */ }
+}
+
+function loadEditsFromStorage(){
+    try{
+        const raw = localStorage.getItem('klikedit_edits_draft');
+        if(!raw) return;
+        const data = JSON.parse(raw);
+        if(!Array.isArray(data) || data.length === 0) return;
+        const list = document.getElementById('editsList');
+        list.innerHTML = '';
+        editCardCounter = 0;
+        data.forEach(item => {
+            addEditCard();
+            const card = list.lastElementChild;
+            const findField = card.querySelector('[data-role="find"]');
+            const replaceField = card.querySelector('[data-role="replace"]');
+            findField.innerText = item.find || '';
+            replaceField.innerText = item.replace || '';
+            // Установить режим
+            const mode = item.mode || 'instead';
+            card.querySelectorAll('[data-role="mode"] button').forEach(b => {
+                b.classList.toggle('active', b.dataset.mode === mode);
+            });
+        });
+    }catch(e){ console.warn('Load edits error:', e); }
+}
+
+// Сохраняем при вводе в полях карточек (дебаунс)
+let editsSaveTimer = null;
+document.addEventListener('input', function(e){
+    if(e.target.closest && e.target.closest('#editsList')){
+        clearTimeout(editsSaveTimer);
+        editsSaveTimer = setTimeout(saveEditsToStorage, 500);
+    }
+});
+
+// Загружаем черновик при старте
+loadEditsFromStorage();
 
 </script>
 </body>
