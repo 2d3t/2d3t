@@ -1047,6 +1047,84 @@ function guessMimeByName(name){
     return map[ext] || 'application/octet-stream';
 }
 
+// ===== Определение MIME по сигнатуре файла (магические байты) =====
+async function detectMimeFromBytes(file){
+    try{
+        const buf = await file.slice(0, 16).arrayBuffer();
+        const b = new Uint8Array(buf);
+
+        // --- АУДИО ---
+        // ID3v2 (mp3 с тегами)
+        if(b[0]===0x49 && b[1]===0x44 && b[2]===0x33) return 'audio/mpeg';
+        // MP3 без ID3: 0xFF 0xFB / 0xFF 0xF3 / 0xFF 0xF2 / 0xFF 0xFA
+        if(b[0]===0xFF && (b[1]===0xFB || b[1]===0xF3 || b[1]===0xF2 || b[1]===0xFA)) return 'audio/mpeg';
+        // fLaC
+        if(b[0]===0x66 && b[1]===0x4C && b[2]===0x61 && b[3]===0x43) return 'audio/flac';
+        // OggS (ogg/opus)
+        if(b[0]===0x4F && b[1]===0x67 && b[2]===0x67 && b[3]===0x53) return 'audio/ogg';
+        // RIFF....WAVE
+        if(b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[3]===0x46 &&
+           b[8]===0x57 && b[9]===0x41 && b[10]===0x56 && b[11]===0x45) return 'audio/wav';
+        // ....ftypM4A / ftypmp42 / ftypisom → mp4-контейнер
+        if(b[4]===0x66 && b[5]===0x74 && b[6]===0x79 && b[7]===0x70){
+            const brand = String.fromCharCode(b[8],b[9],b[10],b[11]);
+            if(brand === 'M4A ' || brand === 'M4B ' || brand === 'mp42' || brand === 'isom') {
+                // не отличить m4a от mp4 по бренду надёжно — уточняем по расширению
+                const ext = (file.name.split('.').pop() || '').toLowerCase();
+                if(ext === 'm4a' || ext === 'aac') return 'audio/mp4';
+                if(ext === 'm4v') return 'video/x-m4v';
+                return 'video/mp4';
+            }
+        }
+
+        // --- ВИДЕО ---
+        // RIFF....AVI
+        if(b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[3]===0x46 &&
+           b[8]===0x41 && b[9]===0x56 && b[10]===0x49 && b[11]===0x20) return 'video/x-msvideo';
+        // Matroska/WebM: 0x1A 0x45 0xDF 0xA3
+        if(b[0]===0x1A && b[1]===0x45 && b[2]===0xDF && b[3]===0xA3) return 'video/webm';
+        // MPEG-TS: 0x47 каждые 188 байт (проверяем 0x47 в начале)
+        if(b[0]===0x47) return 'video/mp2t';
+
+        // --- ИЗОБРАЖЕНИЯ ---
+        if(b[0]===0xFF && b[1]===0xD8 && b[2]===0xFF) return 'image/jpeg';
+        if(b[0]===0x89 && b[1]===0x50 && b[2]===0x4E && b[3]===0x47) return 'image/png';
+        if(b[0]===0x47 && b[1]===0x49 && b[2]===0x46) return 'image/gif';
+        if(b[0]===0x42 && b[1]===0x4D) return 'image/bmp';
+        // RIFF....WEBP
+        if(b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[3]===0x46 &&
+           b[8]===0x57 && b[9]===0x45 && b[10]===0x42 && b[11]===0x50) return 'image/webp';
+
+        // --- PDF ---
+        if(b[0]===0x25 && b[1]===0x50 && b[2]===0x44 && b[3]===0x46) return 'application/pdf';
+
+        // --- ZIP-контейнеры (zip, docx, xlsx, pptx, apk) ---
+        if(b[0]===0x50 && b[1]===0x4B && (b[2]===0x03 || b[2]===0x05 || b[2]===0x07)){
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            const zipMap = {
+                docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                apk:'application/vnd.android.package-archive',
+                zip:'application/zip'
+            };
+            return zipMap[ext] || 'application/zip';
+        }
+        // RAR: 52 61 72 21 1A 07
+        if(b[0]===0x52 && b[1]===0x61 && b[2]===0x72 && b[3]===0x21) return 'application/vnd.rar';
+        // 7z: 37 7A BC AF 27 1C
+        if(b[0]===0x37 && b[1]===0x7A && b[2]===0xBC && b[3]===0xAF) return 'application/x-7z-compressed';
+        // gzip: 1F 8B
+        if(b[0]===0x1F && b[1]===0x8B) return 'application/gzip';
+
+        return null;
+    }catch(e){
+        console.warn('detectMimeFromBytes error:', e);
+        return null;
+    }
+}
+
+
 function getFileIcon(type, name){
     const t = (type || '').toLowerCase();
     const ext = (name.split('.').pop() || '').toLowerCase();
@@ -1074,8 +1152,7 @@ function formatSize(bytes){
 function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
-function handleFileWithFullscreenRestore(event){
+async function handleFileWithFullscreenRestore(event){
     const file = event.target.files[0];
     event.target.value = ''; // чтобы можно было выбрать тот же файл снова
     if(!file) return;
@@ -1116,11 +1193,24 @@ function handleFileWithFullscreenRestore(event){
     }
 
     // ===== БИНАРНЫЙ ФАЙЛ — кладём в память, показываем карточку =====
+    // 1) Определяем MIME: сначала доверяем браузеру, потом — магическим байтам
+    let mime = file.type || '';
+    if(!mime || mime === 'application/octet-stream'){
+        const detected = await detectMimeFromBytes(file);
+        if(detected){
+            mime = detected;
+            console.log('[File] MIME определён по байтам:', mime, 'для', file.name);
+        } else {
+            mime = guessMimeByName(file.name);
+            console.log('[File] MIME не определён, fallback по имени:', mime, 'для', file.name);
+        }
+    }
+
     const item = {
         id: ++fileIdCounter,
         name: file.name,
         size: file.size,
-        type: file.type || guessMimeByName(file.name),
+        type: mime,           // ← теперь гарантированно осмысленный тип
         blob: file,
         addedAt: Date.now()
     };
@@ -1128,7 +1218,6 @@ function handleFileWithFullscreenRestore(event){
     showToast('📎 Файл добавлен: ' + file.name);
     openFilesOverlay();
 }
-
 // ===== Оверлей «Мои файлы» =====
 function openFilesOverlay(){
     document.getElementById('filesOverlay').classList.add('active');
@@ -1176,7 +1265,7 @@ function renderFiles(){
             <div class="file-icon">${getFileIcon(item.type, item.name)}</div>
             <div class="file-info">
                 <div class="file-name">${escapeHtml(item.name)}</div>
-                <div class="file-meta">${formatSize(item.size)} · ${escapeHtml(item.type || '—')}</div>
+                <div class="file-meta">${formatSize(item.size)} · ${escapeHtml(item.type || '—')}${item.size > 9*1024*1024 ? ' · ⚠️ >9 МБ' : ''}</div>
             </div>
             <div class="file-actions">
                 <button class="btn-share" onclick="shareStoredFile(${item.id})" title="Отправить">📤</button>
@@ -1217,27 +1306,55 @@ function downloadStoredFile(id){
     setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+// Безопасный лимит для Web Share API (ниже реального лимита ОС/Telegram)
+const SHARE_LIMIT = 9 * 1024 * 1024; // 9 МБ
+
 async function shareStoredFile(id){
     const item = fileStore.find(f => f.id === id);
     if(!item) return;
 
+    // Пересобираем File с гарантированно правильным MIME
     const file = new File([item.blob], item.name, {type: item.type || 'application/octet-stream'});
 
-    if(navigator.share && navigator.canShare && navigator.canShare({files: [file]})){
-        try{
-            await navigator.share({files: [file], title: item.name});
-        }catch(err){
-            if(err.name !== 'AbortError'){
-                console.warn('Share failed:', err);
-                showToast('❌ Не удалось отправить');
-            }
-        }
+    // 1) Если файл больше безопасного лимита — Web Share API врёт «0 МБ» или падает.
+    //    Поэтому сразу честно скачиваем и подсказываем пользователю.
+    if(file.size > SHARE_LIMIT){
+        const sizeMb = (file.size / 1024 / 1024).toFixed(1);
+        showToast('⚠️ Файл ' + sizeMb + ' МБ — больше лимита шаринга. Сохраняю в «Загрузки»…', 3000);
+        downloadStoredFile(id);
         return;
     }
-    // Fallback — скачиваем
+
+    // 2) Пробуем системное «Поделиться»
+    if(navigator.share && navigator.canShare){
+        let canShareFiles = false;
+        try{
+            canShareFiles = navigator.canShare({files: [file]});
+        }catch(e){
+            canShareFiles = false;
+        }
+
+        if(canShareFiles){
+            try{
+                await navigator.share({files: [file], title: item.name});
+                return; // успех — выходим
+            }catch(err){
+                if(err.name === 'AbortError'){
+                    return; // пользователь сам отменил — это не ошибка
+                }
+                console.warn('Share failed:', err);
+                showToast('❌ Системное «Поделиться» не сработало — скачиваю');
+                downloadStoredFile(id);
+                return;
+            }
+        }
+    }
+
+    // 3) Fallback — скачивание
     showToast('ℹ️ Системное «Поделиться» недоступно — скачиваю');
     downloadStoredFile(id);
 }
+
 // ============ СОХРАНЕНИЕ С ВЫБОРОМ ФОРМАТА ============
 function shareCode(){
     const code = textarea.value;
