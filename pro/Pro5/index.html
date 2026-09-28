@@ -628,6 +628,7 @@ function extractHtmlContent(raw){
     return e<0?raw.substring(s):raw.substring(s,e+7);
 }
 
+let _autoSaveTimer = null;
 function updateLineNumbers(){
     const lines=textarea.value.split('\n').length;
     const total=lines+Math.ceil(lines*.5);
@@ -638,6 +639,9 @@ function updateLineNumbers(){
         lineNumbersDiv.appendChild(d);
     }
     syncScroll();
+    // 🔇 Тихое автосохранение на каждый шаг (с дебаунсом 500мс)
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(()=>saveToLocalStorage(true), 500);
 }
 
 function syncScroll(){lineNumbersDiv.scrollTop=textarea.scrollTop;}
@@ -1977,17 +1981,15 @@ document.addEventListener('keydown', function(e){
     if(e.ctrlKey && e.key === '0'){ e.preventDefault(); clearBetweenMarks(); }
 });
 
-
-
 // ============ СОХРАНЕНИЕ В LOCALSTORAGE ============
 const LS_KEY = 'klikedit_saved_code';
 const LS_TIME_KEY = 'klikedit_saved_time';
 
 
-function saveToLocalStorage(){
+function saveToLocalStorage(silent){
     const code = textarea.value;
     if(!code.trim()){
-        showToast('⚠️ Нечего сохранять — пусто');
+        if(!silent) showToast('⚠️ Нечего сохранять — пусто');
         return;
     }
     try{
@@ -1996,6 +1998,9 @@ function saveToLocalStorage(){
         localStorage.setItem(LS_KEY, code);
         localStorage.setItem(LS_TIME_KEY, String(time));
         updateSaveButtonTitle();
+
+        // 🔇 Тихий режим — не мигаем кнопкой и не показываем тост
+        if(silent) return;
 
         // Визуальная вспышка кнопки
         const btn = document.getElementById('saveLocalButton');
@@ -2013,14 +2018,13 @@ function saveToLocalStorage(){
         showToast('💾 Сохранено в браузер');
     }catch(e){
         if(e.name === 'QuotaExceededError'){
-            showToast('❌ Хранилище переполнено');
+            if(!silent) showToast('❌ Хранилище переполнено');
         } else {
-            showToast('❌ Ошибка сохранения: ' + e.message);
+            if(!silent) showToast('❌ Ошибка сохранения: ' + e.message);
         }
         console.error('Save error:', e);
     }
 }
-
 
 function loadFromLocalStorage(){
     const saved = localStorage.getItem(LS_KEY);
