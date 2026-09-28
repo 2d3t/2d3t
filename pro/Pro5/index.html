@@ -12,20 +12,12 @@ body{margin:0;font-family:sans-serif;background:#f5f5f5;transition:background .2
 .toolbar{display:flex;gap:5px;padding:10px;background:#333;color:white;flex-wrap:wrap;align-items:center;transition:background .2s,color .2s}
 .toolbar input,.toolbar button,.toolbar label{transition:background .2s,border-color .2s,color .2s}
 .url-input{background:#444;border:1px solid #666;color:white;border-radius:5px}
-#lineNumber,#searchInput{background:#444;border:1px solid #666;color:white;border-radius:5px;padding:6px 8px;font-family:inherit;font-size:14px;outline:none;box-sizing:border-box}
-#lineNumber{width:90px}
-#searchInput{width:120px}
-#lineNumber::placeholder,#searchInput::placeholder{color:#aaa}
 .line-numbers{background:#eee;color:#666;transition:background .2s,color .2s}
 textarea{background:#fff;color:#000;border:none;transition:background .2s,color .2s}
 .preview,.fullscreen-overlay{background:white}
 
 body.theme-dark .toolbar{background:#1e1e2f}
-body.theme-dark .url-input,
-body.theme-dark #lineNumber,
-body.theme-dark #searchInput{background:#2a2a3a;border-color:#444;color:#e0e0e0}
-body.theme-dark #lineNumber::placeholder,
-body.theme-dark #searchInput::placeholder{color:#888}
+body.theme-dark .url-input{background:#2a2a3a;border-color:#444;color:#e0e0e0}
 body.theme-dark .toolbar button,body.theme-dark .toolbar label[for="fileUpload"]{background:#2d2d3f;color:#eee}
 body.theme-dark .toolbar button:hover,body.theme-dark .toolbar label:hover{background:#3e3e5e}
 body.theme-dark .line-numbers{background:#1e1e2a;color:#aaa}
@@ -36,11 +28,7 @@ body.theme-dark .fullscreen-exit-btn{background:rgba(20,20,40,.9);color:white}
 body.theme-dark{background:#12121a}
 
 body.theme-light .toolbar{background:#f0f0f4;color:#222;border-bottom:1px solid #ddd}
-body.theme-light .url-input,
-body.theme-light #lineNumber,
-body.theme-light #searchInput{background:#fff;border-color:#bbb;color:#111}
-body.theme-light #lineNumber::placeholder,
-body.theme-light #searchInput::placeholder{color:#888}
+body.theme-light .url-input{background:white;border-color:#bbb;color:#111}
 body.theme-light .toolbar button,body.theme-light .toolbar label[for="fileUpload"]{background:#e2e2e8;color:#111}
 body.theme-light .toolbar button:hover,body.theme-light .toolbar label:hover{background:#d0d0d8}
 body.theme-light .line-numbers{background:#f9f9fc;color:#6c6c7a;border-right:1px solid #e2e2e8}
@@ -50,11 +38,7 @@ body.theme-light .fullscreen-exit-btn{background:rgba(0,0,0,.7);color:white}
 body.theme-light{background:#eef2f5}
 
 body.theme-green .toolbar{background:#1f3b2c;color:#d4ecd0}
-body.theme-green .url-input,
-body.theme-green #lineNumber,
-body.theme-green #searchInput{background:#2a4a36;border-color:#3e6b4e;color:#e2f0dc}
-body.theme-green #lineNumber::placeholder,
-body.theme-green #searchInput::placeholder{color:#9ec89e}
+body.theme-green .url-input{background:#2a4a36;border-color:#3e6b4e;color:#e2f0dc}
 body.theme-green .toolbar button,body.theme-green .toolbar label[for="fileUpload"]{background:#2b5e3b;color:#eaf9e6}
 body.theme-green .toolbar button:hover,body.theme-green .toolbar label:hover{background:#3e7e50}
 body.theme-green .line-numbers{background:#1e3527;color:#a8d5a5}
@@ -64,11 +48,7 @@ body.theme-green .fullscreen-exit-btn{background:#2d5a3b;color:#e0ffd0}
 body.theme-green{background:#1a2a20}
 
 body.theme-ocean .toolbar{background:#0a192f;color:#b8e1fc}
-body.theme-ocean .url-input,
-body.theme-ocean #lineNumber,
-body.theme-ocean #searchInput{background:#112240;border-color:#2a4c7a;color:#cfe9ff}
-body.theme-ocean #lineNumber::placeholder,
-body.theme-ocean #searchInput::placeholder{color:#7fa8d0}
+body.theme-ocean .url-input{background:#112240;border-color:#2a4c7a;color:#cfe9ff}
 body.theme-ocean .toolbar button,body.theme-ocean .toolbar label[for="fileUpload"]{background:#1e3a5f;color:#deedfc}
 body.theme-ocean .toolbar button:hover,body.theme-ocean .toolbar label:hover{background:#2c5282}
 body.theme-ocean .line-numbers{background:#07152a;color:#6b93c0}
@@ -78,11 +58,7 @@ body.theme-ocean .fullscreen-exit-btn{background:#1f4e79;color:white}
 body.theme-ocean{background:#0a192f}
 
 body.theme-graphite .toolbar{background:#2c2c2e;color:#f5f5f7}
-body.theme-graphite .url-input,
-body.theme-graphite #lineNumber,
-body.theme-graphite #searchInput{background:#3a3a3c;border-color:#555;color:#f0f0f0}
-body.theme-graphite #lineNumber::placeholder,
-body.theme-graphite #searchInput::placeholder{color:#999}
+body.theme-graphite .url-input{background:#3a3a3c;border-color:#555;color:#f0f0f0}
 body.theme-graphite .toolbar button,body.theme-graphite .toolbar label{background:#444446;color:#f5f5f7}
 body.theme-graphite .line-numbers{background:#222224;color:#aaa}
 body.theme-graphite textarea{background:#1c1c1e;color:#e2e2e6;border-left:1px solid #3a3a3c}
@@ -280,47 +256,8 @@ body.theme-light .btn-ghost:hover{background:rgba(0,0,0,0.12)}
 
 .edit-status{font-size:12px;padding:6px 10px;border-radius:6px;margin-top:4px;display:none}
 .edit-status.ok{background:rgba(39,174,96,0.2);color:#2ecc71;display:block}
-.edit-status.err{background:rgba(231,76,60,0.2);color:#e74c3c;display:block}/* ============ ОВЕРЛЕЙ «МОИ ФАЙЛЫ» ============ */
-.files-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
-.files-overlay.active{display:flex}
-.files-modal{background:#1e1e2f;border-radius:16px;padding:20px;max-width:640px;width:94%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);border:1px solid #2a3340;color:#e2e8f0;display:flex;flex-direction:column;gap:14px}
-body.theme-light .files-modal{background:#f0f0f4;color:#222;border-color:#ddd}
-body.theme-green .files-modal{background:#1f3b2c;color:#d4ecd0;border-color:#2c553a}
-body.theme-ocean .files-modal{background:#0a192f;color:#b8e1fc;border-color:#1e3a5f}
-body.theme-graphite .files-modal{background:#2c2c2e;color:#f5f5f7;border-color:#3a3a3c}
-.files-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.files-header h2{margin:0;font-size:18px}
-.files-header .close-btn{background:transparent;border:none;color:inherit;font-size:22px;cursor:pointer;opacity:0.7;transition:opacity .2s}
-.files-header .close-btn:hover{opacity:1}
+.edit-status.err{background:rgba(231,76,60,0.2);color:#e74c3c;display:block}
 
-.files-list{display:flex;flex-direction:column;gap:8px}
-.file-card{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.08);transition:background .2s}
-body.theme-light .file-card{background:rgba(0,0,0,0.04);border-color:#ddd}
-.file-card:hover{background:rgba(0,0,0,0.28)}
-.file-card .file-icon{font-size:32px;line-height:1;flex-shrink:0;width:42px;text-align:center}
-.file-card .file-info{flex:1;min-width:0}
-.file-card .file-name{font-weight:600;font-size:14px;word-break:break-all;margin-bottom:2px}
-.file-card .file-meta{font-size:12px;opacity:0.6}
-.file-card .file-actions{display:flex;gap:6px;flex-shrink:0}
-.file-card .file-actions button{border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;font-family:inherit;transition:all .2s;white-space:nowrap}
-.file-card .btn-share{background:#3b4de0;color:white}
-.file-card .btn-share:hover{background:#4f5ff0}
-.file-card .btn-download{background:rgba(255,255,255,0.1);color:inherit}
-.file-card .btn-download:hover{background:rgba(255,255,255,0.2)}
-.file-card .btn-remove{background:transparent;color:#e74c3c;font-size:16px;padding:6px 10px}
-.file-card .btn-remove:hover{background:rgba(231,76,60,0.15)}
-
-.files-empty{text-align:center;padding:30px 10px;opacity:0.7}
-.files-empty p{margin:6px 0}
-.files-hint{font-size:12px;opacity:0.55;text-align:center;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08)}
-body.theme-light .files-hint{border-top-color:#ddd}
-.toolbar-break{
-    flex-basis:100%;
-    height:0;
-    margin:0;
-    padding:0;
-    pointer-events:none;
-}
 </style>
 </head>
 
@@ -330,16 +267,14 @@ body.theme-light .files-hint{border-top-color:#ddd}
 <input type="text" id="urlInput" class="url-input" placeholder="HTML (https://example.com)" value="">
 <button id="fetchButton" onclick="fetchWebsiteCode()">👁️‍🗨️</button>
 <button id="clearUrlButton" class="clear-url-btn" onclick="clearUrlInput()">🗑️</button>
-<Br>
 
 <input type="number" id="lineNumber" min="1" placeholder="Строка">
-<button onclick="goToLine()">Перейти 🔀</button><Br>
+<button onclick="goToLine()">Перейти 🔀</button>
 <button onclick="clearLineNumber()">🗑️</button>
-<Br><span class="toolbar-break"></span>
 <input type="text" id="searchInput" placeholder="Поиск 🔎" style="width:120px;">
 <button onclick="findNext()">Найти ▶️</button>
 <button onclick="findPrev()">Назад ◀️</button>
-<button onclick="clearSearch()">🗑️</button><br>
+<button onclick="clearSearch()">🗑️</button>
 <span id="searchCounter" style="font-size:14px;min-width:40px;display:inline-block;text-align:center;font-weight:bold;color:inherit;"></span>
 
 <button onclick="sendToQR()">📤 QR</button>
@@ -377,10 +312,10 @@ body.theme-light .files-hint{border-top-color:#ddd}
 
 <label for="fileUpload">Файлы 📂</label>
 <input type="file" id="fileUpload" class="file-input"
-accept="*/*"
+accept=".html,.htm,.txt,.py,.js,.css,.json,.xml,.md,.csv,.log,.ini,.cfg,.conf,.sh,.bat,.ps1,.rb,.php,.java,.c,.cpp,.h,.cs,.go,.rs,.swift,.kt,.sql,.yaml,.yml,.toml,.pl,.pm,.r,.lua,.vim,.ts,.jsx,.tsx,.vue,.scss,.less,.sass,.styl"
 onchange="handleFileWithFullscreenRestore(event)">
 <button onclick="shareFile()">📤 Поделиться</button>
-<button onclick="openLibrary()">📚 Библиотека</button><button onclick="openFilesOverlay()">📁 Мои файлы <span id="filesBadge" style="display:none;background:#e74c3c;color:white;border-radius:10px;padding:0 6px;font-size:11px;margin-left:4px;"></span></button>
+<button onclick="openLibrary()">📚 Библиотека</button>
 <button onclick="openFloatingFrame()" class="add-frame-btn">➕</button>
 <button id="restoreFloatingFrameBtn" class="restore-frame-btn" style="display:none;" onclick="restoreFloatingFrameFromButton()">📝 Редактор <span class="badge-mini">вкладка</span></button>
 </div>
@@ -461,26 +396,7 @@ onchange="handleFileWithFullscreenRestore(event)">
     <div id="libraryContent"><div class="library-loading">⏳ Загрузка файлов...</div></div>
   </div>
 </div>
-<!-- Оверлей «Мои файлы» (in-memory, до перезагрузки) -->
-<div class="files-overlay" id="filesOverlay">
-  <div class="files-modal">
-    <div class="files-header">
-      <h2>📁 Мои файлы <span id="filesCount" style="opacity:0.6;font-size:14px;"></span></h2>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn-ghost" onclick="clearAllFiles()" style="color:#e74c3c;">🗑️ Удалить все</button>
-        <button class="close-btn" onclick="closeFilesOverlay()">✕</button>
-      </div>
-    </div>
-    <div id="filesList" class="files-list"></div>
-    <div class="files-empty" id="filesEmpty">
-      <div style="font-size:48px;">📭</div>
-      <p>Пока нет файлов</p>
-      <p style="font-size:12px;opacity:0.6;">Загрузите mp3, mp4, pdf, zip — любой файл, кроме текстовых.<br>
-      Текстовые (js, html, txt…) по-прежнему открываются в редакторе.</p>
-    </div>
-    <div class="files-hint">💡 Файлы хранятся в памяти браузера до перезагрузки страницы.</div>
-  </div>
-</div>
+
 <script>
 // ============ ОСНОВНЫЕ ПЕРЕМЕННЫЕ ============
 const textarea=document.getElementById('codeArea');
@@ -1009,235 +925,45 @@ function handleFullscreenChange(){
 }
 
 // ============ ФАЙЛЫ ============
-// ============ ФАЙЛЫ ============
-// In-memory хранилище бинарных файлов (живёт до перезагрузки вкладки)
-const fileStore = []; // { id, name, size, type, blob, addedAt }
-let fileIdCounter = 0;
-
-const TEXT_EXTENSIONS = ['html','htm','txt','py','js','css','json','xml','md','csv',
-    'log','ini','cfg','conf','sh','bat','ps1','rb','php','java','c','cpp','h','cs',
-    'go','rs','swift','kt','sql','yaml','yml','toml','pl','pm','r','lua','vim','ts',
-    'jsx','tsx','vue','scss','less','sass','styl'];
-
-function isTextFile(file){
-    const ext = (file.name.split('.').pop() || '').toLowerCase();
-    if (TEXT_EXTENSIONS.includes(ext)) return true;
-    if (file.type.startsWith('text/')) return true;
-    if (file.type === 'application/json' || file.type === 'application/xml') return true;
-    return false;
-}
-
-function guessMimeByName(name){
-    const ext = (name.split('.').pop() || '').toLowerCase();
-    const map = {
-        mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', m4a:'audio/mp4', flac:'audio/flac',
-        mp4:'video/mp4', mov:'video/quicktime', webm:'video/webm', mkv:'video/x-matroska',
-        png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
-        webp:'image/webp', svg:'image/svg+xml', bmp:'image/bmp',
-        pdf:'application/pdf', zip:'application/zip', rar:'application/vnd.rar',
-        '7z':'application/x-7z-compressed', tar:'application/x-tar', gz:'application/gzip',
-        doc:'application/msword',
-        docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        xls:'application/vnd.ms-excel',
-        xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ppt:'application/vnd.ms-powerpoint',
-        pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        apk:'application/vnd.android.package-archive',
-    };
-    return map[ext] || 'application/octet-stream';
-}
-
-function getFileIcon(type, name){
-    const t = (type || '').toLowerCase();
-    const ext = (name.split('.').pop() || '').toLowerCase();
-
-    if(t.startsWith('audio/')) return '🎵';
-    if(t.startsWith('video/')) return '🎬';
-    if(t.startsWith('image/')) return '🖼️';
-    if(t === 'application/pdf' || ext === 'pdf') return '📕';
-    if(['zip','rar','7z','tar','gz'].includes(ext)) return '📦';
-    if(['doc','docx'].includes(ext)) return '📘';
-    if(['xls','xlsx'].includes(ext)) return '📗';
-    if(['ppt','pptx'].includes(ext)) return '📙';
-    if(ext === 'apk') return '🤖';
-    if(t.startsWith('text/')) return '📄';
-    return '📎';
-}
-
-function formatSize(bytes){
-    if(bytes < 1024) return bytes + ' Б';
-    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' КБ';
-    if(bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + ' МБ';
-    return (bytes/1024/1024/1024).toFixed(2) + ' ГБ';
-}
-
-function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
 function handleFileWithFullscreenRestore(event){
-    const file = event.target.files[0];
-    event.target.value = ''; // чтобы можно было выбрать тот же файл снова
-    if(!file) return;
-
-    // ===== ТЕКСТОВЫЙ ФАЙЛ — как раньше, грузим в редактор =====
-    if(isTextFile(file)){
-        wasInPreviewBeforeFile = previewFrame.classList.contains('active');
-        fullscreenWasActive = isFullscreen;
-        const reader = new FileReader();
-        reader.onload = e => {
-            const content = e.target.result;
-            saveState();
-            textarea.value = content;
-            activeLineNumber = null;
-            updateLineNumbers();
-            highlightActiveLine();
-            searchResults = [];
-            currentResult = -1;
-            updateSearchCounter();
-            if(wasInPreviewBeforeFile){
-                const code = extractHtmlContent(content) || content;
-                const url = URL.createObjectURL(new Blob([code], {type:'text/html'}));
-                if(lastPreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(lastPreviewUrl);
-                lastPreviewUrl = url;
-                previewFrame.src = url;
-                fullscreenFrame.src = url;
-                previewFrame.style.display = 'block';
-                previewFrame.style.visibility = 'visible';
-                previewFrame.style.opacity = '1';
-                if(fullscreenWasActive && !isFullscreen) setTimeout(() => {
-                    if(previewFrame.classList.contains('active') && !isFullscreen) enterFullscreenInternal();
-                }, 150);
-            }
-        };
-        reader.onerror = () => {};
-        reader.readAsText(file, 'UTF-8');
-        return;
-    }
-
-    // ===== БИНАРНЫЙ ФАЙЛ — кладём в память, показываем карточку =====
-    const item = {
-        id: ++fileIdCounter,
-        name: file.name,
-        size: file.size,
-        type: file.type || guessMimeByName(file.name),
-        blob: file,
-        addedAt: Date.now()
+    const file=event.target.files[0];
+    if(!file)return;
+    const ext=file.name.split('.').pop().toLowerCase();
+    const supported=['html','htm','txt','py','js','css','json','xml','md','csv','log','ini','cfg','conf','sh','bat','ps1','rb','php','java','c','cpp','h','cs','go','rs','swift','kt','sql','yaml','yml','toml','pl','pm','r','lua','vim','ts','jsx','tsx','vue','scss','less','sass','styl'];
+    if(!supported.includes(ext)){event.target.value='';return;}
+    wasInPreviewBeforeFile=previewFrame.classList.contains('active');
+    fullscreenWasActive=isFullscreen;
+    const reader=new FileReader();
+    reader.onload=e=>{
+        const content=e.target.result;
+        saveState();
+        textarea.value=content;
+        activeLineNumber=null;
+        updateLineNumbers();
+        highlightActiveLine();
+        searchResults=[];
+        currentResult=-1;
+        updateSearchCounter();
+        if(wasInPreviewBeforeFile){
+            const code=extractHtmlContent(content)||content;
+            const url=URL.createObjectURL(new Blob([code],{type:'text/html'}));
+            if(lastPreviewUrl?.startsWith('blob:'))URL.revokeObjectURL(lastPreviewUrl);
+            lastPreviewUrl=url;
+            previewFrame.src=url;
+            fullscreenFrame.src=url;
+            previewFrame.style.display='block';
+            previewFrame.style.visibility='visible';
+            previewFrame.style.opacity='1';
+            if(fullscreenWasActive&&!isFullscreen)setTimeout(()=>{
+                if(previewFrame.classList.contains('active')&&!isFullscreen)enterFullscreenInternal();
+            },150);
+        }
+        event.target.value='';
     };
-    fileStore.push(item);
-    showToast('📎 Файл добавлен: ' + file.name);
-    openFilesOverlay();
+    reader.onerror=()=>event.target.value='';
+    reader.readAsText(file,'UTF-8');
 }
 
-// ===== Оверлей «Мои файлы» =====
-function openFilesOverlay(){
-    document.getElementById('filesOverlay').classList.add('active');
-    renderFiles();
-}
-function closeFilesOverlay(){
-    document.getElementById('filesOverlay').classList.remove('active');
-}
-document.getElementById('filesOverlay').addEventListener('click', function(e){
-    if(e.target === this) closeFilesOverlay();
-});
-document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){
-        const ov = document.getElementById('filesOverlay');
-        if(ov.classList.contains('active')) closeFilesOverlay();
-    }
-});
-
-function renderFiles(){
-    const list = document.getElementById('filesList');
-    const empty = document.getElementById('filesEmpty');
-    const count = document.getElementById('filesCount');
-    const badge = document.getElementById('filesBadge');
-
-    if(badge){
-        if(fileStore.length > 0){
-            badge.style.display = 'inline-block';
-            badge.textContent = fileStore.length;
-        } else {
-            badge.style.display = 'none';
-        }
-    }
-
-    if(fileStore.length === 0){
-        list.innerHTML = '';
-        empty.style.display = 'block';
-        count.textContent = '';
-        return;
-    }
-    empty.style.display = 'none';
-    count.textContent = '(' + fileStore.length + ')';
-
-    list.innerHTML = fileStore.map(item => `
-        <div class="file-card" data-id="${item.id}">
-            <div class="file-icon">${getFileIcon(item.type, item.name)}</div>
-            <div class="file-info">
-                <div class="file-name">${escapeHtml(item.name)}</div>
-                <div class="file-meta">${formatSize(item.size)} · ${escapeHtml(item.type || '—')}</div>
-            </div>
-            <div class="file-actions">
-                <button class="btn-share" onclick="shareStoredFile(${item.id})" title="Отправить">📤</button>
-                <button class="btn-download" onclick="downloadStoredFile(${item.id})" title="Скачать">⬇️</button>
-                <button class="btn-remove" onclick="removeStoredFile(${item.id})" title="Удалить">✕</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function removeStoredFile(id){
-    const idx = fileStore.findIndex(f => f.id === id);
-    if(idx === -1) return;
-    fileStore.splice(idx, 1);
-    renderFiles();
-    showToast('🗑️ Файл удалён');
-}
-
-function clearAllFiles(){
-    if(fileStore.length === 0) return;
-    if(!confirm('Удалить все файлы из памяти?')) return;
-    fileStore.length = 0;
-    renderFiles();
-    showToast('🗑️ Все файлы удалены');
-}
-
-function downloadStoredFile(id){
-    const item = fileStore.find(f => f.id === id);
-    if(!item) return;
-    const url = URL.createObjectURL(item.blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = item.name;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-}
-
-async function shareStoredFile(id){
-    const item = fileStore.find(f => f.id === id);
-    if(!item) return;
-
-    const file = new File([item.blob], item.name, {type: item.type || 'application/octet-stream'});
-
-    if(navigator.share && navigator.canShare && navigator.canShare({files: [file]})){
-        try{
-            await navigator.share({files: [file], title: item.name});
-        }catch(err){
-            if(err.name !== 'AbortError'){
-                console.warn('Share failed:', err);
-                showToast('❌ Не удалось отправить');
-            }
-        }
-        return;
-    }
-    // Fallback — скачиваем
-    showToast('ℹ️ Системное «Поделиться» недоступно — скачиваю');
-    downloadStoredFile(id);
-}
 // ============ СОХРАНЕНИЕ С ВЫБОРОМ ФОРМАТА ============
 function shareCode(){
     const code = textarea.value;
