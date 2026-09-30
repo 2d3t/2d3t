@@ -1077,20 +1077,24 @@
         }
 
         function resetTagSection() {
-            tagTitle.value = '';
-            tagArtist.value = '';
-            tagCoverInput.value = '';
-            modalCoverDataUrl = null;
-            tagCoverPreview.src = '';
-            tagCoverPreview.classList.add('hidden');
-            tagCoverClear.classList.remove('show');
-            suggBlock.style.display = 'none';
-            suggGrid.innerHTML = '';
-            suggLoader.classList.remove('show');
-            currentQuery = '';
-            currentPage = 1;
-            setTagStatus('');
-        }
+    tagTitle.value = '';
+    // Подставляем сохранённого исполнителя из прошлой сессии
+    let savedArtist = '';
+    try { savedArtist = localStorage.getItem('mp3Editor_lastArtist') || ''; } catch (_) {}
+    tagArtist.value = savedArtist;
+
+    tagCoverInput.value = '';
+    modalCoverDataUrl = null;
+    tagCoverPreview.src = '';
+    tagCoverPreview.classList.add('hidden');
+    tagCoverClear.classList.remove('show');
+    suggBlock.style.display = 'none';
+    suggGrid.innerHTML = '';
+    suggLoader.classList.remove('show');
+    currentQuery = '';
+    currentPage = 1;
+    setTagStatus('');
+}
 
         async function openTagSection() {
             if (!convertedBlob) return;
@@ -1113,10 +1117,10 @@
 
         // --- Подсказки картинок (Openverse) ---
         function getFallbackUrls(q) {
-            const tag = currentPage;
-            return Array.from({length: 9}, (_, i) =>
-                `https://picsum.photos/seed/${encodeURIComponent(q)}_${tag}_${i}/600/600`);
-        }
+    const tag = currentPage;
+    return Array.from({length: 6}, (_, i) =>
+        `https://picsum.photos/seed/${encodeURIComponent(q)}_${tag}_${i}/600/600`);
+}
         function renderSuggestions(urls) {
             suggGrid.innerHTML = '';
             urls.forEach((url, idx) => {
@@ -1191,29 +1195,29 @@
             }
         }
         async function fetchSuggestions(query, resetPage = false) {
-            if (!query || query.trim().length < 2) {
-                suggBlock.style.display = 'none';
-                return;
-            }
-            if (resetPage) currentPage = 1;
-            currentQuery = query.trim();
-            suggBlock.style.display = 'block';
-            suggLoader.classList.add('show');
-            suggGrid.innerHTML = '';
-            try {
-                const resp = await fetch(
-                    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=9&page=${currentPage}`
-                );
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                const data = await resp.json();
-                const urls = (data.results || []).map(x => x.url).filter(Boolean);
-                renderSuggestions(urls.length ? urls : getFallbackUrls(currentQuery));
-            } catch (e) {
-                renderSuggestions(getFallbackUrls(currentQuery));
-            } finally {
-                suggLoader.classList.remove('show');
-            }
-        }
+    if (!query || query.trim().length < 2) {
+        suggBlock.style.display = 'none';
+        return;
+    }
+    if (resetPage) currentPage = 1;
+    currentQuery = query.trim();
+    suggBlock.style.display = 'block';
+    suggLoader.classList.add('show');
+    suggGrid.innerHTML = '';
+    try {
+        const resp = await fetch(
+            `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=6&page=${currentPage}`
+        );
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        const urls = (data.results || []).map(x => x.url).filter(Boolean);
+        renderSuggestions(urls.length ? urls : getFallbackUrls(currentQuery));
+    } catch (e) {
+        renderSuggestions(getFallbackUrls(currentQuery));
+    } finally {
+        suggLoader.classList.remove('show');
+    }
+}
         tagTitle.addEventListener('input', () => {
             clearTimeout(suggDebounce);
             suggDebounce = setTimeout(() => fetchSuggestions(tagTitle.value, true), 600);
@@ -1274,15 +1278,20 @@
                 let artist = '';
 
                 if (useTags) {
-                    if (!ID3WriterCtor) await loadID3Lib();
-                    const buf = await convertedBlob.arrayBuffer();
-                    const writer = new ID3WriterCtor(new Uint8Array(buf));
+    if (!ID3WriterCtor) await loadID3Lib();
+    const buf = await convertedBlob.arrayBuffer();
+    const writer = new ID3WriterCtor(new Uint8Array(buf));
 
-                    title = tagTitle.value.trim();
-                    artist = tagArtist.value.trim();
+    title = tagTitle.value.trim();
+    artist = tagArtist.value.trim();
 
-                    if (title) writer.setFrame('TIT2', title);
-                    if (artist) writer.setFrame('TPE1', [artist]);
+    // Запоминаем исполнителя в браузере для следующих сессий
+    if (artist) {
+        try { localStorage.setItem('mp3Editor_lastArtist', artist); } catch (_) {}
+    }
+
+    if (title) writer.setFrame('TIT2', title);
+    if (artist) writer.setFrame('TPE1', [artist]);
 
                     if (modalCoverDataUrl) {
                         setTagStatus('Добавляем обложку...');
