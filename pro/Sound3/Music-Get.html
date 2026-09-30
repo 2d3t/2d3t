@@ -409,14 +409,14 @@
         <div id="suggBlock" style="display:none;">
             <div class="sugg-hint">💡 Кликните по картинке, чтобы поставить обложку</div>
             <div class="sugg-grid" id="suggGrid"></div>
-            
+            <button class="sugg-refresh" id="suggRefresh">🔄 Показать другие картинки</button>
             <div class="sugg-loader" id="suggLoader">Загрузка изображений...</div>
         </div>
 
         <label>Исполнитель</label>
         <input type="text" id="tagArtist" placeholder="Например: DJ Sunset" autocomplete="off">
 
-        <label>Загрузить с устройства</label>
+        <label>Загрузить с устройства </label>
         <input type="file" id="tagCoverInput" accept="image/*">
         <img id="tagCoverPreview" class="cover-preview hidden" alt="Обложка">
         <button class="cover-clear" id="tagCoverClear">✖ Убрать обложку</button>
@@ -497,6 +497,7 @@
         let modalCoverDataUrl = null;
         let ID3WriterCtor = null;
         let currentQuery = '';
+        let currentPage = 1;
         let suggDebounce = null;
         let audioPlayer = null;
 
@@ -1055,6 +1056,7 @@
             suggGrid.innerHTML = '';
             suggLoader.classList.remove('show');
             currentQuery = '';
+            currentPage = 1;
             setTagStatus('');
         }
 
@@ -1075,8 +1077,9 @@
 
         // --- Подсказки картинок (Openverse) ---
         function getFallbackUrls(q) {
-            return Array.from({length: 6}, (_, i) =>
-                `https://picsum.photos/seed/${encodeURIComponent(q)}_${i}/600/600`);
+            const tag = currentPage;
+            return Array.from({length: 9}, (_, i) =>
+                `https://picsum.photos/seed/${encodeURIComponent(q)}_${tag}_${i}/600/600`);
         }
         function renderSuggestions(urls) {
             suggGrid.innerHTML = '';
@@ -1151,17 +1154,20 @@
                 setTagStatus('Не удалось загрузить картинку', 'error');
             }
         }
-        async function fetchSuggestions(query) {
+        async function fetchSuggestions(query, resetPage = false) {
             if (!query || query.trim().length < 2) {
                 suggBlock.style.display = 'none';
                 return;
             }
+            if (resetPage) currentPage = 1;
             currentQuery = query.trim();
             suggBlock.style.display = 'block';
             suggLoader.classList.add('show');
             suggGrid.innerHTML = '';
             try {
-                const resp = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=6`);
+                const resp = await fetch(
+                    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=9&page=${currentPage}`
+                );
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const data = await resp.json();
                 const urls = (data.results || []).map(x => x.url).filter(Boolean);
@@ -1174,10 +1180,12 @@
         }
         tagTitle.addEventListener('input', () => {
             clearTimeout(suggDebounce);
-            suggDebounce = setTimeout(() => fetchSuggestions(tagTitle.value), 600);
+            suggDebounce = setTimeout(() => fetchSuggestions(tagTitle.value, true), 600);
         });
         suggRefresh.addEventListener('click', () => {
-            if (currentQuery) fetchSuggestions(currentQuery);
+            if (!currentQuery) return;
+            currentPage++;
+            fetchSuggestions(currentQuery, false);
         });
 
         // --- Обложка из файла ---
