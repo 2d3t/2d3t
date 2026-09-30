@@ -1308,9 +1308,11 @@
                     outBlob = writer.getBlob();
                 }
 
-                const baseName = (title || convertedFileName.replace(/\.mp3$/, '') || 'audio')
-                    .replace(/[\\/:*?"<>|]/g, '_');
-                const fileName = baseName + '.mp3';
+                // Имя файла: "Название - Исполнитель" (если исполнитель есть)
+const rawTitle = title || convertedFileName.replace(/\.mp3$/, '') || 'audio';
+const rawName = (title && artist) ? `${title} - ${artist}` : rawTitle;
+const baseName = rawName.replace(/[\\/:*?"<>|]/g, '_');
+const fileName = baseName + '.mp3';
 
                 const url = URL.createObjectURL(outBlob);
                 const a = document.createElement('a');
