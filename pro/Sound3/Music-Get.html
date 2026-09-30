@@ -1435,12 +1435,18 @@
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
 
                 playSaveSound();
-                setTagStatus('✅ Сохранено: ' + fileName, 'success');
+setTagStatus('✅ Сохранено: ' + fileName, 'success');
 
-                setTimeout(() => {
-                    closeTagSection();
-                    setStatus('✅ Сохранено!', 'done', '✅ Файл: ' + fileName);
-                }, 1200);
+setTimeout(() => {
+    closeTagSection();
+    setStatus('✅ Сохранено!', 'done', '✅ Файл: ' + fileName);
+}, 1200);
+
+// Через 2 секунды после сохранения автоматически возвращаемся
+// в исходное состояние рекордера — как будто нажали «⟳»
+setTimeout(() => {
+    resetAll();
+}, 3200);
             } catch (err) {
                 console.error(err);
                 setTagStatus('Ошибка: ' + err.message, 'error');
