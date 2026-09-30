@@ -11,12 +11,28 @@
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             font-family: -apple-system, system-ui, sans-serif;
-            padding: 20px;
+            padding: 24px 20px;
             color: #e8edff;
         }
-        .app { max-width: 480px; width: 100%; display: flex; flex-direction: column; gap: 16px; }
+        /* Единая колонка: и на телефоне, и на ноуте — одна и та же логика,
+           просто на ноуте чуть шире и с большими отступами. */
+        .app {
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        @media (min-width: 900px) {
+            .app { max-width: 640px; gap: 24px; }
+            body { padding: 40px 24px; }
+        }
+        @media (min-width: 1300px) {
+            .app { max-width: 680px; }
+        }
+
         .card {
             background: #141c2b;
             padding: 28px 24px;
@@ -192,51 +208,56 @@
             transition: width 0.2s ease;
         }
 
-        /* ========= МОДАЛЬНОЕ ОКНО ТЕГОВ ========= */
-        .modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(4, 8, 18, 0.85);
-            backdrop-filter: blur(8px);
-            display: none;
-            align-items: flex-start; justify-content: center;
-            padding: 20px;
-            z-index: 9999;
-            overflow-y: auto;
-        }
-        .modal-overlay.show { display: flex; }
-        .modal {
+        /* ========= БЛОК ТЕГОВ (теперь в потоке, под рекордером) ========= */
+        .tag-section {
             background: #141c2b;
             border: 1px solid #263040;
             border-radius: 40px;
             padding: 28px 24px;
-            max-width: 480px; width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.9);
-            margin: auto 0;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            /* Плавное появление, когда файл готов */
+            opacity: 0;
+            transform: translateY(20px);
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.5s ease, padding 0.3s ease;
+            padding-top: 0;
+            padding-bottom: 0;
+            border-width: 0;
         }
-        .modal h2 {
+        .tag-section.show {
+            opacity: 1;
+            transform: translateY(0);
+            max-height: 2000px;
+            padding-top: 28px;
+            padding-bottom: 28px;
+            border-width: 1px;
+        }
+
+        .tag-section h2 {
             font-size: 1.5rem; font-weight: 700; text-align: center;
             background: linear-gradient(135deg, #7c9aff, #a78bfa);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             margin-bottom: 4px;
         }
-        .modal .modal-sub {
+        .tag-section .modal-sub {
             font-size: 0.8rem; opacity: 0.5; text-align: center;
             margin-bottom: 18px;
         }
-        .modal label {
+        .tag-section label {
             display: block; font-size: 0.8rem; color: #8a9abb;
-            margin: 14px 0 6px;
+            margin: 14px 0 6px; text-align: left;
         }
-        .modal input[type="text"], .modal input[type="file"] {
+        .tag-section input[type="text"], .tag-section input[type="file"] {
             width: 100%; padding: 12px 16px; background: #0f1625;
             border: 1px solid #253040; border-radius: 16px;
             color: #e8edff; font-size: 0.95rem; outline: none;
             transition: 0.15s;
         }
-        .modal input[type="text"]:focus {
+        .tag-section input[type="text"]:focus {
             border-color: #7c9aff; box-shadow: 0 0 0 3px #7c9aff22;
         }
-        .modal input[type="file"] { font-size: 0.8rem; padding: 10px 12px; }
+        .tag-section input[type="file"] { font-size: 0.8rem; padding: 10px 12px; }
         .sugg-grid {
             display: grid; grid-template-columns: repeat(3, 1fr);
             gap: 8px; margin-top: 8px;
@@ -283,12 +304,12 @@
             100% { transform: scale(1); }
         }
         .sugg-hint {
-            font-size: 0.72rem; color: #6a7a9a; margin-top: 8px;
+            font-size: 0.72rem; color: #6a7a9a; margin-top: 8px; text-align: left;
         }
         .sugg-refresh {
             margin-top: 8px; background: none; border: none;
             color: #7c9aff; font-size: 0.72rem; cursor: pointer;
-            text-decoration: underline; padding: 0;
+            text-decoration: underline; padding: 0; display: block;
         }
         .sugg-refresh:hover { color: #a78bfa; }
         .sugg-loader {
@@ -298,7 +319,7 @@
         .sugg-loader.show { display: block; }
         .cover-preview {
             margin: 12px auto 0; border-radius: 16px;
-            width: 140px; height: 140px;
+            width: 160px; height: 160px;
             object-fit: cover;
             display: block;
             box-shadow: 0 8px 30px rgba(0,0,0,0.5);
@@ -312,10 +333,13 @@
         }
         .cover-clear.show { display: block; }
         .cover-clear:hover { background: #2d3650; }
+        .tag-buttons {
+            display: flex; flex-direction: column; gap: 10px;
+            margin-top: 20px;
+        }
         .modal-btn-save {
             width: 100%; padding: 16px; border: none; border-radius: 60px;
             font-size: 1.05rem; font-weight: 700; color: #fff; cursor: pointer;
-            margin-top: 20px;
             background: #2d8f5c; border: 1px solid #4aad7a;
             box-shadow: 0 6px 0 #1a5a3a; transition: 0.06s linear;
         }
@@ -328,7 +352,7 @@
             width: 100%; padding: 14px; border-radius: 60px;
             background: transparent; border: 1px solid #495478;
             color: #a8b4d4; font-weight: 500; cursor: pointer;
-            margin-top: 10px; font-size: 0.88rem;
+            font-size: 0.88rem;
         }
         .modal-btn-skip:hover { background: #2d3650; border-color: #6b7da3; color: #d6def5; }
         .modal-status {
@@ -343,92 +367,18 @@
             border-radius: 30px; border: 1px solid #1f2a4a;
         }
         .modal-file-info .hl { color: #7c9aff; font-weight: 600; }
+
+        /* На широких экранах превью обложки покрупнее */
+        @media (min-width: 900px) {
+            .cover-preview { width: 180px; height: 180px; }
+            .sugg-grid { gap: 10px; }
+        }
     </style>
-<style>
-/* ============================================================
-   ПАТЧ ДЛЯ ПК / НОУТБУКА (ширина ≥ 900px)
-   Вертикальная мобильная раскладка остаётся на телефонах.
-   ============================================================ */
-@media (min-width: 900px) {
-
-    body {
-        align-items: flex-start;
-        padding: 32px 40px;
-    }
-
-    /* Двухколоночный layout: слева рекордер, справа редактор */
-    .app {
-        max-width: 1100px;
-        display: grid;
-        grid-template-columns: 440px 1fr;
-        grid-template-areas: "recorder editor";
-        gap: 24px;
-        align-items: start;
-    }
-
-    .app .card {
-        grid-area: recorder;
-        max-width: none;
-        width: 100%;
-        padding: 32px 28px;
-    }
-
-    /* Модалка превращается в правую колонку, а не оверлей */
-    .modal-overlay {
-        position: static;
-        inset: auto;
-        background: transparent;
-        backdrop-filter: none;
-        padding: 0;
-        display: block;
-        grid-area: editor;
-        overflow: visible;
-        z-index: auto;
-    }
-
-    /* На ПК она всегда видна, даже если "не открыта" */
-    .modal-overlay .modal {
-        max-width: none;
-        width: 100%;
-        margin: 0;
-        display: block;
-        padding: 32px 28px;
-        min-height: 100%;
-    }
-
-    /* Пока файл не готов — показываем заглушку в правой колонке */
-    .modal-overlay:not(.show) .modal > *:not(h2):not(.modal-sub):not(.modal-file-info) {
-        display: none;
-    }
-
-    .modal-overlay:not(.show) .modal::after {
-        content: "🎙 Запишите звук — здесь появятся поля тегов, подсказки картинок и кнопки сохранения.";
-        display: block;
-        text-align: center;
-        color: #6a7a9a;
-        font-size: 0.9rem;
-        margin-top: 24px;
-        line-height: 1.6;
-    }
-
-    /* Кнопки сохранения на ПК делаем в ряд */
-    .modal-btn-save,
-    .modal-btn-skip {
-        width: 100%;
-    }
-}
-
-/* Очень широкие экраны — можно чуть побольше воздуха */
-@media (min-width: 1400px) {
-    .app {
-        max-width: 1240px;
-        grid-template-columns: 480px 1fr;
-    }
-}
-</style>
 </head>
 <body>
 <div class="app">
+
+    <!-- ===== КАРТОЧКА 1: РЕКОРДЕР ===== -->
     <div class="card">
         <h1>🎧 Захват звука</h1>
         <div class="sub">PCM → обрезка → MP3 320 kbps</div>
@@ -475,11 +425,9 @@
 
         <div class="footer">PCM 48 кГц / стерео · обрезка тишины · MP3 320 kbps · всё локально</div>
     </div>
-</div>
 
-<!-- ========= МОДАЛЬНОЕ ОКНО ТЕГОВ ========= -->
-<div class="modal-overlay" id="tagModal">
-    <div class="modal">
+    <!-- ===== КАРТОЧКА 2: ТЕГИ (появляется под рекордером) ===== -->
+    <div class="tag-section" id="tagSection">
         <h2>🏷️ Теги MP3</h2>
         <div class="modal-sub">Название · Исполнитель · Обложка</div>
 
@@ -498,13 +446,15 @@
         <label>Исполнитель</label>
         <input type="text" id="tagArtist" placeholder="Например: DJ Sunset" autocomplete="off">
 
-        <label>Загрузить с устройства </label>
+        <label>Обложка (необязательно)</label>
         <input type="file" id="tagCoverInput" accept="image/*">
         <img id="tagCoverPreview" class="cover-preview hidden" alt="Обложка">
         <button class="cover-clear" id="tagCoverClear">✖ Убрать обложку</button>
 
-        <button class="modal-btn-save" id="tagSaveBtn">💾 Сохранить MP3 с тегами</button>
-        <button class="modal-btn-skip" id="tagSkipBtn">Сохранить без тегов</button>
+        <div class="tag-buttons">
+            <button class="modal-btn-save" id="tagSaveBtn">💾 Сохранить MP3 с тегами</button>
+            <button class="modal-btn-skip" id="tagSkipBtn">Сохранить без тегов</button>
+        </div>
 
         <div class="modal-status" id="tagStatus"></div>
     </div>
@@ -534,7 +484,7 @@
         const progressBar = document.getElementById('progressBar');
         const progressBarFill = document.getElementById('progressBarFill');
 
-        const tagModal = document.getElementById('tagModal');
+        const tagSection = document.getElementById('tagSection');
         const modalFileInfo = document.getElementById('modalFileInfo');
         const tagTitle = document.getElementById('tagTitle');
         const tagArtist = document.getElementById('tagArtist');
@@ -1102,7 +1052,7 @@
 
                 if (!isAutoSaveDone) {
                     isAutoSaveDone = true;
-                    setTimeout(() => { openTagModal(); }, 700);
+                    setTimeout(() => { openTagSection(); }, 500);
                 }
 
                 setTimeout(() => {
@@ -1120,13 +1070,13 @@
             }
         }
 
-        // ====== МОДАЛЬНОЕ ОКНО ТЕГОВ ======
+        // ====== БЛОК ТЕГОВ (в потоке, под рекордером) ======
         function setTagStatus(text, type) {
             tagStatus.textContent = text || '';
             tagStatus.className = 'modal-status' + (type ? ' ' + type : '');
         }
 
-        function resetTagModal() {
+        function resetTagSection() {
             tagTitle.value = '';
             tagArtist.value = '';
             tagCoverInput.value = '';
@@ -1142,19 +1092,23 @@
             setTagStatus('');
         }
 
-        async function openTagModal() {
+        async function openTagSection() {
             if (!convertedBlob) return;
-            resetTagModal();
+            resetTagSection();
             modalFileInfo.innerHTML = '📁 <span class="hl">' + convertedFileName + '</span> · ' +
                 (convertedBlob.size / 1024).toFixed(0) + ' КБ';
-            tagModal.classList.add('show');
+            tagSection.classList.add('show');
             setTagStatus('Введите название — появятся подсказки картинок.');
             try { await loadID3Lib(); } catch (e) { console.warn('ID3 load fail', e); }
-            setTimeout(() => tagTitle.focus(), 100);
+            // Плавный скролл к блоку тегов
+            setTimeout(() => {
+                tagSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                tagTitle.focus({ preventScroll: true });
+            }, 350);
         }
 
-        function closeTagModal() {
-            tagModal.classList.remove('show');
+        function closeTagSection() {
+            tagSection.classList.remove('show');
         }
 
         // --- Подсказки картинок (Openverse) ---
@@ -1362,9 +1316,9 @@
                 setTagStatus('✅ Сохранено: ' + fileName, 'success');
 
                 setTimeout(() => {
-                    closeTagModal();
+                    closeTagSection();
                     setStatus('✅ Сохранено!', 'done', '✅ Файл: ' + fileName);
-                }, 900);
+                }, 1200);
             } catch (err) {
                 console.error(err);
                 setTagStatus('Ошибка: ' + err.message, 'error');
@@ -1379,11 +1333,13 @@
 
         // ====== КНОПКИ РЕКОРДЕРА ======
         function saveFile() {
-            openTagModal();
+            openTagSection();
         }
 
         function resetAll() {
             resetCaptureUI();
+            closeTagSection();
+            resetTagSection();
             saveArea.classList.remove('show');
             trimInfo.classList.remove('show');
             setProgress(0);
