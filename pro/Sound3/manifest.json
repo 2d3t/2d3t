@@ -2,7 +2,7 @@
   "name": "Захват звука → MP3 с тегами",
   "short_name": "Захват MP3",
   "description": "Захват звука с вкладки, обрезка тишины, кодирование в MP3 320 kbps и добавление тегов с обложкой.",
-  "start_url": "./",
+  "start_url": "./Music-Get.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
