@@ -16,8 +16,6 @@
             padding: 24px 20px;
             color: #e8edff;
         }
-        /* Единая колонка: и на телефоне, и на ноуте — одна и та же логика,
-           просто на ноуте чуть шире и с большими отступами. */
         .app {
             width: 100%;
             max-width: 520px;
@@ -208,19 +206,18 @@
             transition: width 0.2s ease;
         }
 
-        /* ========= БЛОК ТЕГОВ (теперь в потоке, под рекордером) ========= */
+        /* ========= БЛОК ТЕГОВ ========= */
         .tag-section {
             background: #141c2b;
             border: 1px solid #263040;
             border-radius: 40px;
             padding: 28px 24px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-            /* Плавное появление, когда файл готов */
             opacity: 0;
             transform: translateY(20px);
             max-height: 0;
             overflow: hidden;
-            transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.5s ease, padding 0.3s ease;
+            transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.6s ease, padding 0.3s ease;
             padding-top: 0;
             padding-bottom: 0;
             border-width: 0;
@@ -228,7 +225,7 @@
         .tag-section.show {
             opacity: 1;
             transform: translateY(0);
-            max-height: 2000px;
+            max-height: 3000px;
             padding-top: 28px;
             padding-bottom: 28px;
             border-width: 1px;
@@ -333,6 +330,21 @@
         }
         .cover-clear.show { display: block; }
         .cover-clear:hover { background: #2d3650; }
+        .overlay-toggle {
+            display: flex; align-items: center; gap: 8px;
+            margin: 10px 0 0 0; padding: 10px 14px;
+            background: #0f1625; border: 1px solid #253040;
+            border-radius: 14px; cursor: pointer;
+            font-size: 0.8rem; color: #b0c4f0;
+            text-align: left; user-select: none;
+            transition: 0.15s;
+        }
+        .overlay-toggle:hover { background: #131a2c; border-color: #35507a; }
+        .overlay-toggle input[type="checkbox"] {
+            accent-color: #7c9aff; width: 16px; height: 16px;
+            cursor: pointer; flex-shrink: 0;
+        }
+        .overlay-toggle span { flex: 1; line-height: 1.3; }
         .tag-buttons {
             display: flex; flex-direction: column; gap: 10px;
             margin-top: 20px;
@@ -368,7 +380,6 @@
         }
         .modal-file-info .hl { color: #7c9aff; font-weight: 600; }
 
-        /* На широких экранах превью обложки покрупнее */
         @media (min-width: 900px) {
             .cover-preview { width: 180px; height: 180px; }
             .sugg-grid { gap: 10px; }
@@ -378,7 +389,6 @@
 <body>
 <div class="app">
 
-    <!-- ===== КАРТОЧКА 1: РЕКОРДЕР ===== -->
     <div class="card">
         <h1>🎧 Захват звука</h1>
         <div class="sub">PCM → обрезка → MP3 320 kbps</div>
@@ -426,7 +436,6 @@
         <div class="footer">PCM 48 кГц / стерео · обрезка тишины · MP3 320 kbps · всё локально</div>
     </div>
 
-    <!-- ===== КАРТОЧКА 2: ТЕГИ (появляется под рекордером) ===== -->
     <div class="tag-section" id="tagSection">
         <h2>🏷️ Теги MP3</h2>
         <div class="modal-sub">Название · Исполнитель · Обложка</div>
@@ -448,6 +457,10 @@
 
         <label>Обложка (с устройства)</label>
         <input type="file" id="tagCoverInput" accept="image/*">
+        <label class="overlay-toggle" for="tagOverlayToggle">
+            <input type="checkbox" id="tagOverlayToggle" checked>
+            <span>✍️ Показать название и исполнителя поверх обложки</span>
+        </label>
         <img id="tagCoverPreview" class="cover-preview hidden" alt="Обложка">
         <button class="cover-clear" id="tagCoverClear">✖ Убрать обложку</button>
 
@@ -489,6 +502,7 @@
         const tagTitle = document.getElementById('tagTitle');
         const tagArtist = document.getElementById('tagArtist');
         const tagCoverInput = document.getElementById('tagCoverInput');
+        const tagOverlayToggle = document.getElementById('tagOverlayToggle');
         const tagCoverPreview = document.getElementById('tagCoverPreview');
         const tagCoverClear = document.getElementById('tagCoverClear');
         const tagSaveBtn = document.getElementById('tagSaveBtn');
@@ -526,7 +540,8 @@
         let convertedBlob = null;
         let convertedFileName = '';
 
-        let modalCoverDataUrl = null;
+        let modalCoverDataUrl = null;      // то, что пойдёт в тег (с текстом или без)
+        let modalCoverCleanDataUrl = null; // всегда чистая квадратная версия
         let ID3WriterCtor = null;
         let currentQuery = '';
         let currentPage = 1;
@@ -672,6 +687,94 @@
                 img.onerror = () => reject(new Error('Не удалось загрузить изображение для обрезки'));
                 img.src = dataUrl;
             });
+        }
+
+        // ====== Наложение названия/исполнителя на обложку ======
+        function drawTextOverlay(cleanSquareDataUrl, title, artist) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const size = img.naturalWidth || 800;
+                        const canvas = document.createElement('canvas');
+                        canvas.width = size;
+                        canvas.height = size;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, size, size);
+
+                        const gradTop = ctx.createLinearGradient(0, 0, 0, size * 0.35);
+                        gradTop.addColorStop(0, 'rgba(0,0,0,0.65)');
+                        gradTop.addColorStop(1, 'rgba(0,0,0,0)');
+                        ctx.fillStyle = gradTop;
+                        ctx.fillRect(0, 0, size, size * 0.35);
+
+                        const gradBot = ctx.createLinearGradient(0, size * 0.65, 0, size);
+                        gradBot.addColorStop(0, 'rgba(0,0,0,0)');
+                        gradBot.addColorStop(1, 'rgba(0,0,0,0.75)');
+                        ctx.fillStyle = gradBot;
+                        ctx.fillRect(0, size * 0.65, size, size * 0.35);
+
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.shadowColor = 'rgba(0,0,0,0.85)';
+                        ctx.shadowBlur = size * 0.02;
+
+                        function fitFont(text, maxWidth, baseSize, weight) {
+                            let fontSize = baseSize;
+                            ctx.font = `${weight} ${fontSize}px -apple-system, system-ui, sans-serif`;
+                            while (ctx.measureText(text).width > maxWidth && fontSize > 14) {
+                                fontSize -= 2;
+                                ctx.font = `${weight} ${fontSize}px -apple-system, system-ui, sans-serif`;
+                            }
+                            return fontSize;
+                        }
+
+                        if (title && title.trim()) {
+                            const t = title.trim();
+                            const maxW = size * 0.88;
+                            fitFont(t, maxW, size * 0.11, '700');
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText(t, size / 2, size * 0.16);
+
+                            if (artist && artist.trim()) {
+                                const a = artist.trim();
+                                fitFont(a, maxW, size * 0.075, '500');
+                                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                                ctx.fillText(a, size / 2, size * 0.85);
+                            }
+                        } else if (artist && artist.trim()) {
+                            const a = artist.trim();
+                            const maxW = size * 0.88;
+                            fitFont(a, maxW, size * 0.09, '500');
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText(a, size / 2, size * 0.85);
+                        }
+
+                        resolve(canvas.toDataURL('image/jpeg', 0.92));
+                    } catch (e) { reject(e); }
+                };
+                img.onerror = () => reject(new Error('Не удалось наложить текст'));
+                img.src = cleanSquareDataUrl;
+            });
+        }
+
+        async function refreshCoverPreview() {
+            if (!modalCoverCleanDataUrl) return;
+            const showOverlay = tagOverlayToggle.checked;
+            const t = tagTitle.value.trim();
+            const a = tagArtist.value.trim();
+
+            if (!showOverlay) {
+                modalCoverDataUrl = modalCoverCleanDataUrl;
+            } else {
+                try {
+                    modalCoverDataUrl = await drawTextOverlay(modalCoverCleanDataUrl, t, a);
+                } catch (e) {
+                    console.warn('Overlay fail, используем чистую картинку', e);
+                    modalCoverDataUrl = modalCoverCleanDataUrl;
+                }
+            }
+            tagCoverPreview.src = modalCoverDataUrl;
         }
 
         // ====== WORKLET ======
@@ -1070,31 +1173,32 @@
             }
         }
 
-        // ====== БЛОК ТЕГОВ (в потоке, под рекордером) ======
+        // ====== БЛОК ТЕГОВ ======
         function setTagStatus(text, type) {
             tagStatus.textContent = text || '';
             tagStatus.className = 'modal-status' + (type ? ' ' + type : '');
         }
 
         function resetTagSection() {
-    tagTitle.value = '';
-    // Подставляем сохранённого исполнителя из прошлой сессии
-    let savedArtist = '';
-    try { savedArtist = localStorage.getItem('mp3Editor_lastArtist') || ''; } catch (_) {}
-    tagArtist.value = savedArtist;
+            tagTitle.value = '';
+            let savedArtist = '';
+            try { savedArtist = localStorage.getItem('mp3Editor_lastArtist') || ''; } catch (_) {}
+            tagArtist.value = savedArtist;
 
-    tagCoverInput.value = '';
-    modalCoverDataUrl = null;
-    tagCoverPreview.src = '';
-    tagCoverPreview.classList.add('hidden');
-    tagCoverClear.classList.remove('show');
-    suggBlock.style.display = 'none';
-    suggGrid.innerHTML = '';
-    suggLoader.classList.remove('show');
-    currentQuery = '';
-    currentPage = 1;
-    setTagStatus('');
-}
+            tagCoverInput.value = '';
+            tagOverlayToggle.checked = true;
+            modalCoverDataUrl = null;
+            modalCoverCleanDataUrl = null;
+            tagCoverPreview.src = '';
+            tagCoverPreview.classList.add('hidden');
+            tagCoverClear.classList.remove('show');
+            suggBlock.style.display = 'none';
+            suggGrid.innerHTML = '';
+            suggLoader.classList.remove('show');
+            currentQuery = '';
+            currentPage = 1;
+            setTagStatus('');
+        }
 
         async function openTagSection() {
             if (!convertedBlob) return;
@@ -1104,7 +1208,6 @@
             tagSection.classList.add('show');
             setTagStatus('Введите название — появятся подсказки картинок.');
             try { await loadID3Lib(); } catch (e) { console.warn('ID3 load fail', e); }
-            // Плавный скролл к блоку тегов
             setTimeout(() => {
                 tagSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 tagTitle.focus({ preventScroll: true });
@@ -1117,10 +1220,10 @@
 
         // --- Подсказки картинок (Openverse) ---
         function getFallbackUrls(q) {
-    const tag = currentPage;
-    return Array.from({length: 6}, (_, i) =>
-        `https://picsum.photos/seed/${encodeURIComponent(q)}_${tag}_${i}/600/600`);
-}
+            const tag = currentPage;
+            return Array.from({length: 6}, (_, i) =>
+                `https://picsum.photos/seed/${encodeURIComponent(q)}_${tag}_${i}/600/600`);
+        }
         function renderSuggestions(urls) {
             suggGrid.innerHTML = '';
             urls.forEach((url, idx) => {
@@ -1184,8 +1287,8 @@
                     });
                 }
                 const squared = await cropImageToSquare(dataUrl, 800, 0.92);
-                modalCoverDataUrl = squared;
-                tagCoverPreview.src = squared;
+                modalCoverCleanDataUrl = squared;
+                await refreshCoverPreview();
                 tagCoverPreview.classList.remove('hidden');
                 tagCoverClear.classList.add('show');
                 setTagStatus('Картинка выбрана ✓', 'success');
@@ -1195,32 +1298,40 @@
             }
         }
         async function fetchSuggestions(query, resetPage = false) {
-    if (!query || query.trim().length < 2) {
-        suggBlock.style.display = 'none';
-        return;
-    }
-    if (resetPage) currentPage = 1;
-    currentQuery = query.trim();
-    suggBlock.style.display = 'block';
-    suggLoader.classList.add('show');
-    suggGrid.innerHTML = '';
-    try {
-        const resp = await fetch(
-            `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=6&page=${currentPage}`
-        );
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const data = await resp.json();
-        const urls = (data.results || []).map(x => x.url).filter(Boolean);
-        renderSuggestions(urls.length ? urls : getFallbackUrls(currentQuery));
-    } catch (e) {
-        renderSuggestions(getFallbackUrls(currentQuery));
-    } finally {
-        suggLoader.classList.remove('show');
-    }
-}
+            if (!query || query.trim().length < 2) {
+                suggBlock.style.display = 'none';
+                return;
+            }
+            if (resetPage) currentPage = 1;
+            currentQuery = query.trim();
+            suggBlock.style.display = 'block';
+            suggLoader.classList.add('show');
+            suggGrid.innerHTML = '';
+            try {
+                const resp = await fetch(
+                    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=6&page=${currentPage}`
+                );
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const data = await resp.json();
+                const urls = (data.results || []).map(x => x.url).filter(Boolean);
+                renderSuggestions(urls.length ? urls : getFallbackUrls(currentQuery));
+            } catch (e) {
+                renderSuggestions(getFallbackUrls(currentQuery));
+            } finally {
+                suggLoader.classList.remove('show');
+            }
+        }
         tagTitle.addEventListener('input', () => {
             clearTimeout(suggDebounce);
             suggDebounce = setTimeout(() => fetchSuggestions(tagTitle.value, true), 600);
+            if (modalCoverCleanDataUrl) refreshCoverPreview();
+        });
+        tagArtist.addEventListener('input', () => {
+            if (modalCoverCleanDataUrl) refreshCoverPreview();
+        });
+        tagOverlayToggle.addEventListener('change', () => {
+            if (modalCoverCleanDataUrl) refreshCoverPreview();
+            playClickSound();
         });
         suggRefresh.addEventListener('click', () => {
             if (!currentQuery) return;
@@ -1241,8 +1352,8 @@
                     r.readAsDataURL(f);
                 });
                 const squared = await cropImageToSquare(dataUrl, 800, 0.92);
-                modalCoverDataUrl = squared;
-                tagCoverPreview.src = squared;
+                modalCoverCleanDataUrl = squared;
+                await refreshCoverPreview();
                 tagCoverPreview.classList.remove('hidden');
                 tagCoverClear.classList.add('show');
                 suggGrid.querySelectorAll('.sugg-wrapper').forEach(el => el.classList.remove('selected'));
@@ -1256,6 +1367,7 @@
         });
         tagCoverClear.addEventListener('click', () => {
             modalCoverDataUrl = null;
+            modalCoverCleanDataUrl = null;
             tagCoverPreview.src = '';
             tagCoverPreview.classList.add('hidden');
             tagCoverClear.classList.remove('show');
@@ -1278,20 +1390,19 @@
                 let artist = '';
 
                 if (useTags) {
-    if (!ID3WriterCtor) await loadID3Lib();
-    const buf = await convertedBlob.arrayBuffer();
-    const writer = new ID3WriterCtor(new Uint8Array(buf));
+                    if (!ID3WriterCtor) await loadID3Lib();
+                    const buf = await convertedBlob.arrayBuffer();
+                    const writer = new ID3WriterCtor(new Uint8Array(buf));
 
-    title = tagTitle.value.trim();
-    artist = tagArtist.value.trim();
+                    title = tagTitle.value.trim();
+                    artist = tagArtist.value.trim();
 
-    // Запоминаем исполнителя в браузере для следующих сессий
-    if (artist) {
-        try { localStorage.setItem('mp3Editor_lastArtist', artist); } catch (_) {}
-    }
+                    if (artist) {
+                        try { localStorage.setItem('mp3Editor_lastArtist', artist); } catch (_) {}
+                    }
 
-    if (title) writer.setFrame('TIT2', title);
-    if (artist) writer.setFrame('TPE1', [artist]);
+                    if (title) writer.setFrame('TIT2', title);
+                    if (artist) writer.setFrame('TPE1', [artist]);
 
                     if (modalCoverDataUrl) {
                         setTagStatus('Добавляем обложку...');
@@ -1309,10 +1420,10 @@
                 }
 
                 // Имя файла: "Название - Исполнитель" (если исполнитель есть)
-const rawTitle = title || convertedFileName.replace(/\.mp3$/, '') || 'audio';
-const rawName = (title && artist) ? `${title} - ${artist}` : rawTitle;
-const baseName = rawName.replace(/[\\/:*?"<>|]/g, '_');
-const fileName = baseName + '.mp3';
+                const rawTitle = title || convertedFileName.replace(/\.mp3$/, '') || 'audio';
+                const rawName = (title && artist) ? `${title} - ${artist}` : rawTitle;
+                const baseName = rawName.replace(/[\\/:*?"<>|]/g, '_');
+                const fileName = baseName + '.mp3';
 
                 const url = URL.createObjectURL(outBlob);
                 const a = document.createElement('a');
