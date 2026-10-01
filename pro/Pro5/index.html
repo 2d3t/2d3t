@@ -257,32 +257,7 @@ body.theme-light .btn-ghost:hover{background:rgba(0,0,0,0.12)}
 .edit-status{font-size:12px;padding:6px 10px;border-radius:6px;margin-top:4px;display:none}
 .edit-status.ok{background:rgba(39,174,96,0.2);color:#2ecc71;display:block}
 .edit-status.err{background:rgba(231,76,60,0.2);color:#e74c3c;display:block}
-.scroll-bottom-btn{
-  position:fixed;
-  right:16px;
-  bottom:16px;
-  width:48px;
-  height:48px;
-  border-radius:50%;
-  border:none;
-  background:#3b4de0;
-  color:#fff;
-  font-size:20px;
-  cursor:pointer;
-  box-shadow:0 6px 20px rgba(0,0,0,.4);
-  z-index:9000;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  transition:transform .15s ease,background .2s,opacity .2s;
-}
-.scroll-bottom-btn:hover{background:#4f5ff0;transform:translateY(-2px)}
-.scroll-bottom-btn:active{transform:scale(.94)}
-.scroll-bottom-btn.visible{display:flex}
-body.theme-light .scroll-bottom-btn{background:#3b4de0;color:#fff}
-body.theme-green .scroll-bottom-btn{background:#2b8a4a}
-body.theme-ocean .scroll-bottom-btn{background:#1f6fb2}
-body.theme-graphite .scroll-bottom-btn{background:#3b4de0}
+
 </style>
 </head>
 
@@ -340,6 +315,10 @@ body.theme-graphite .scroll-bottom-btn{background:#3b4de0}
 accept=".html,.htm,.txt,.py,.js,.css,.json,.xml,.md,.csv,.log,.ini,.cfg,.conf,.sh,.bat,.ps1,.rb,.php,.java,.c,.cpp,.h,.cs,.go,.rs,.swift,.kt,.sql,.yaml,.yml,.toml,.pl,.pm,.r,.lua,.vim,.ts,.jsx,.tsx,.vue,.scss,.less,.sass,.styl"
 onchange="handleFileWithFullscreenRestore(event)">
 <button onclick="shareFile()">📤 Поделиться</button>
+
+
+<button id="scrollTopBtn" onclick="scrollToTop()" title="В начало (Ctrl+Home)" style="background:#3b4de0;color:white;">⬆️ Вверх</button>
+<button id="scrollDownBtn" onclick="scrollToBottom()" title="В конец (Ctrl+End)" style="background:#3b4de0;color:white;">⬇️ Вниз</button>
 <button onclick="openLibrary()">📚 Библиотека</button>
 <button onclick="openFloatingFrame()" class="add-frame-btn">➕</button>
 <button id="restoreFloatingFrameBtn" class="restore-frame-btn" style="display:none;" onclick="restoreFloatingFrameFromButton()">📝 Редактор <span class="badge-mini">вкладка</span></button>
@@ -351,7 +330,7 @@ onchange="handleFileWithFullscreenRestore(event)">
 </div>
 
 <iframe class="preview" id="previewFrame"></iframe>
-<button class="scroll-bottom-btn" id="scrollBottomBtn" title="В самый низ" onclick="scrollToBottom()">⬇️</button>
+
 <div class="fullscreen-overlay" id="fullscreenOverlay">
   <div class="fullscreen-exit-btn" id="forceExitFullscreenBtn">
     <span class="exit-label" id="exitLabel">✕ Выйти из полного экрана</span>
@@ -1854,32 +1833,6 @@ function showToast(message, duration){
 // Инициализация кнопок
 updateMarkButtons();
 
-// ============ КНОПКА "В САМЫЙ НИЗ" ============
-function scrollToBottom(){
-    textarea.scrollTo({ top: textarea.scrollHeight, behavior: 'smooth' });
-    const end = textarea.value.length;
-    textarea.setSelectionRange(end, end);
-    activeLineNumber = null;
-    highlightActiveLine();
-    setTimeout(updateScrollBottomButton, 400);
-}
-
-function updateScrollBottomButton(){
-    const btn = document.getElementById('scrollBottomBtn');
-    if(!btn) return;
-    const editorVisible = editorContainer.style.display !== 'none'
-        && !editorContainer.classList.contains('hidden');
-    const hasScroll = textarea.scrollHeight > textarea.clientHeight + 20;
-    const notAtBottom = textarea.scrollTop + textarea.clientHeight < textarea.scrollHeight - 30;
-    btn.classList.toggle('visible', editorVisible && hasScroll && notAtBottom);
-}
-
-textarea.addEventListener('scroll', updateScrollBottomButton);
-textarea.addEventListener('input', updateScrollBottomButton);
-window.addEventListener('resize', updateScrollBottomButton);
-
-// Первичная проверка
-setTimeout(updateScrollBottomButton, 300);
 
 // ============ ОВЕРЛЕЙ ПРАВОК ============
 let editCardCounter = 0;
@@ -1956,32 +1909,12 @@ function addEditCard(){
         btn.classList.add('active');
     });
 }
+
 function removeEditCard(btn){
     const card = btn.closest('.edit-card');
-    if(!card) return;
-
-    const list = document.getElementById('editsList');
-    // Если это последняя карточка — не удаляем, а очищаем её
-    if(list.children.length <= 1){
-        const findField = card.querySelector('[data-role="find"]');
-        const replaceField = card.querySelector('[data-role="replace"]');
-        if(findField) findField.innerHTML = '';
-        if(replaceField) replaceField.innerHTML = '';
-        // Сброс режима на "Вместо"
-        card.querySelectorAll('[data-role="mode"] button').forEach(b => {
-            b.classList.toggle('active', b.dataset.mode === 'instead');
-        });
-        // Сброс статуса
-        const status = card.querySelector('.edit-status');
-        if(status){ status.className = 'edit-status'; status.textContent = ''; }
-        showToast('Оставлена одна пустая правка');
-        saveEditsToStorage();
-        return;
-    }
-
-    card.remove();
-    saveEditsToStorage();
+    if(card) card.remove();
 }
+
 // Вставка из буфера в contenteditable с сохранением форматирования
 async function pasteIntoField(btn, role){
     const field = btn.parentElement.querySelector(`[data-role="${role}"]`);
@@ -2209,25 +2142,16 @@ function saveEditsToStorage(){
         localStorage.setItem('klikedit_edits_draft', JSON.stringify(data));
     }catch(e){ /* ignore */ }
 }
+
 function loadEditsFromStorage(){
     try{
         const raw = localStorage.getItem('klikedit_edits_draft');
+        if(!raw) return;
+        const data = JSON.parse(raw);
+        if(!Array.isArray(data) || data.length === 0) return;
         const list = document.getElementById('editsList');
         list.innerHTML = '';
         editCardCounter = 0;
-
-        let data = [];
-        if(raw){
-            const parsed = JSON.parse(raw);
-            if(Array.isArray(parsed)) data = parsed;
-        }
-
-        // Если данных нет — создаём одну пустую правку
-        if(data.length === 0){
-            addEditCard();
-            return;
-        }
-
         data.forEach(item => {
             addEditCard();
             const card = list.lastElementChild;
@@ -2235,17 +2159,28 @@ function loadEditsFromStorage(){
             const replaceField = card.querySelector('[data-role="replace"]');
             findField.innerText = item.find || '';
             replaceField.innerText = item.replace || '';
+            // Установить режим
             const mode = item.mode || 'instead';
             card.querySelectorAll('[data-role="mode"] button').forEach(b => {
                 b.classList.toggle('active', b.dataset.mode === mode);
             });
         });
-    }catch(e){
-        console.warn('Load edits error:', e);
-        const list = document.getElementById('editsList');
-        if(list.children.length === 0) addEditCard();
-    }
+    }catch(e){ console.warn('Load edits error:', e); }
 }
+
+// Сохраняем при вводе в полях карточек (дебаунс)
+let editsSaveTimer = null;
+document.addEventListener('input', function(e){
+    if(e.target.closest && e.target.closest('#editsList')){
+        clearTimeout(editsSaveTimer);
+        editsSaveTimer = setTimeout(saveEditsToStorage, 500);
+    }
+});
+
+// Загружаем черновик при старте
+loadEditsFromStorage();
+
+
 function clearAllEdits(){
     const list = document.getElementById('editsList');
     if(!list || list.children.length === 0){
@@ -2257,13 +2192,41 @@ function clearAllEdits(){
     list.innerHTML = '';
     editCardCounter = 0;
     try{ localStorage.removeItem('klikedit_edits_draft'); }catch(e){}
-
-    // Гарантируем хотя бы одну пустую правку
-    addEditCard();
-    saveEditsToStorage();
-
     showToast('🗑️ Все правки удалены');
 }
+// ============ НАВИГАЦИЯ ВВЕРХ/ВНИЗ ПО КОДУ ============
+function scrollToTop(){
+    textarea.focus();
+    textarea.setSelectionRange(0, 0);
+    textarea.scrollTop = 0;
+    syncScroll();
+    highlightActiveLine(1);
+    // Плавный скролл страницы наверх
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function scrollToBottom(){
+    textarea.focus();
+    const pos = textarea.value.length;
+    textarea.setSelectionRange(pos, pos);
+    textarea.scrollTop = textarea.scrollHeight;
+    syncScroll();
+    const totalLines = textarea.value.split('\n').length;
+    highlightActiveLine(totalLines);
+    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+}
+
+// Горячие клавиши Ctrl+Home / Ctrl+End
+document.addEventListener('keydown', function(e){
+    if((e.ctrlKey || e.metaKey) && e.key === 'Home'){
+        e.preventDefault();
+        scrollToTop();
+    }
+    if((e.ctrlKey || e.metaKey) && e.key === 'End'){
+        e.preventDefault();
+        scrollToBottom();
+    }
+});
 </script>
 </body>
 </html>
