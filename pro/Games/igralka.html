@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Точки прыгают по пальцу</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #0a0a12;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; }
+  #hint {
+    position: fixed;
+    top: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #6a6a8a;
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 14px;
+    pointer-events: none;
+    transition: opacity 1s;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">води пальцем по экрану</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const hint = document.getElementById('hint');
+
+let W, H, DPR;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ---------- параметры ----------
+const N = 15;
+
+// «Палец» как упругая сфера
+const FINGER_RADIUS = 40;
+const ATTRACT_FORCE = 1.1;
+const BOUNCE = 0.85;
+const BOUNCE_KICK = 3.2;
+const MAX_SPEED = 22;
+
+// Осциллятор фазы
+const MIN_PERIOD = 25;
+const MAX_PERIOD = 70;
+
+// Общая физика
+const FRICTION = 0.965;
+const MIN_DIST = 30;
+const SEPARATION = 0.6;
+
+// Свободная жизнь
+const WANDER_FORCE = 0.3;
+const WANDER_CHANGE = 0.04;
+
+// Жизненный цикл
+const LIFETIME_MIN = 8;
+const LIFETIME_MAX = 22;
+const FADE_IN_TIME = 1.5;
+const FADE_OUT_TIME = 2.0;
+const RESPAWN_CHANCE = 0.02;
+
+// ---------- фабрика точек ----------
+function createDot(x, y, fresh = true) {
+  const lifetime = LIFETIME_MIN + Math.random() * (LIFETIME_MAX - LIFETIME_MIN);
+  return {
+    x: x !== undefined ? x : W / 2 + (Math.random() - 0.5) * 260,
+    y: y !== undefined ? y : H / 2 + (Math.random() - 0.5) * 260,
+    vx: 0,
+    vy: 0,
+    r: 6 + Math.random() * 6,
+    hue: 180 + Math.random() * 140,
+
+    phase: Math.random() * Math.PI * 2,
+    period: MIN_PERIOD + Math.random() * (MAX_PERIOD - MIN_PERIOD),
+    phaseSpeed: 0,
+
+    wanderAngle: Math.random() * Math.PI * 2,
+
+    age: 0,
+    lifetime: lifetime,
+    fadeIn: FADE_IN_TIME,
+    fadeOut: FADE_OUT_TIME,
+    state: fresh ? 'in' : 'alive',
+    opacity: fresh ? 0 : 1,
+  };
+}
+
+function initDot(d) {
+  d.phaseSpeed = (Math.PI * 2) / d.period;
+}
+
+const dots = [];
+for (let i = 0; i < N; i++) {
+  const d = createDot();
+  initDot(d);
+  d.opacity = 0.4 + Math.random() * 0.6;
+  d.state = 'alive';
+  dots.push(d);
+}
+
+// ---------- ввод ----------
+let pointer = { x: -9999, y: -9999, active: false };
+
+function setPointer(x, y, active) {
+  pointer.x = x;
+  pointer.y = y;
+  pointer.active = active;
+  if (active) hint.style.opacity = 0;
+}
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  setPointer(t.clientX, t.clientY, true);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  setPointer(t.clientX, t.clientY, true);
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  pointer.active = false;
+  pointer.x = -9999;
+  pointer.y = -9999;
+}, { passive: false });
+
+canvas.addEventListener('mousedown', e => setPointer(e.clientX, e.clientY, true));
+canvas.addEventListener('mousemove', e => {
+  if (pointer.active) setPointer(e.clientX, e.clientY, true);
+});
+canvas.addEventListener('mouseup', () => {
+  pointer.active = false;
+  pointer.x = -9999;
+  pointer.y = -9999;
+});
+canvas.addEventListener('mouseleave', () => {
+  pointer.active = false;
+  pointer.x = -9999;
+  pointer.y = -9999;
+});
+
+// ---------- жизненный цикл ----------
+function updateLife(d, dt) {
+  d.age += dt;
+
+  if (d.state === 'in') {
+    d.opacity += dt / d.fadeIn;
+    if (d.opacity >= 1) { d.opacity = 1; d.state = 'alive'; }
+  } else if (d.state === 'alive') {
+    if (d.age > d.lifetime || Math.random() < RESPAWN_CHANCE / 60) {
+      d.state = 'out';
+    }
+  } else if (d.state === 'out') {
+    d.opacity -= dt / d.fadeOut;
+    if (d.opacity <= 0) {
+      d.opacity = 0;
+      const nd = createDot(undefined, undefined, true);
+      Object.assign(d, nd);
+      initDot(d);
+      d.opacity = 0;
+      d.state = 'in';
+    }
+  }
+}
+
+// ---------- физика ----------
+function update(dt) {
+  const dt60 = dt * 60;
+
+  for (const d of dots) {
+    updateLife(d, dt);
+    const alive = d.opacity > 0.05;
+
+    d.phase += d.phaseSpeed * dt60;
+    if (d.phase > Math.PI * 2) d.phase -= Math.PI * 2;
+
+    if (pointer.active && alive) {
+      const dx = pointer.x - d.x;
+      const dy = pointer.y - d.y;
+      let dist = Math.hypot(dx, dy);
+      if (dist < 0.001) dist = 0.001;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      // 1) постоянное притяжение к пальцу
+      d.vx += nx * ATTRACT_FORCE * dt60;
+      d.vy += ny * ATTRACT_FORCE * dt60;
+
+      // 2) фаза модулирует притяжение
+      const osc = Math.sin(d.phase);
+      d.vx += nx * ATTRACT_FORCE * 0.8 * osc * dt60;
+      d.vy += ny * ATTRACT_FORCE * 0.8 * osc * dt60;
+
+      // 3) отскок от поверхности пальца
+      const surface = FINGER_RADIUS + d.r;
+      if (dist < surface) {
+        const overlap = surface - dist;
+        d.x -= nx * overlap;
+        d.y -= ny * overlap;
+
+        const vn = d.vx * nx + d.vy * ny;
+        const tx = -ny, ty = nx;
+        const vt = d.vx * tx + d.vy * ty;
+
+        if (vn > 0) {
+          const newVn = -vn * BOUNCE - BOUNCE_KICK * (0.6 + 0.4 * Math.abs(osc));
+          d.vx = tx * vt + nx * newVn;
+          d.vy = ty * vt + ny * newVn;
+        }
+
+        d.vx *= 0.98;
+        d.vy *= 0.98;
+      }
+    } else if (alive) {
+      d.wanderAngle += (Math.random() - 0.5) * WANDER_CHANGE * 2 * dt60;
+      d.vx += Math.cos(d.wanderAngle) * WANDER_FORCE * dt60;
+      d.vy += Math.sin(d.wanderAngle) * WANDER_FORCE * dt60;
+
+      const cdx = W / 2 - d.x;
+      const cdy = H / 2 - d.y;
+      const cdist = Math.hypot(cdx, cdy) || 0.001;
+      d.vx += (cdx / cdist) * 0.02 * dt60;
+      d.vy += (cdy / cdist) * 0.02 * dt60;
+    }
+  }
+
+  // расталкивание точек
+  for (let i = 0; i < dots.length; i++) {
+    for (let j = i + 1; j < dots.length; j++) {
+      const a = dots[i], b = dots[j];
+      if (a.opacity < 0.1 || b.opacity < 0.1) continue;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dist = Math.hypot(dx, dy) || 0.001;
+      if (dist < MIN_DIST) {
+        const t = (MIN_DIST - dist) / MIN_DIST;
+        const push = SEPARATION * t * dt60;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        a.vx -= nx * push;
+        a.vy -= ny * push;
+        b.vx += nx * push;
+        b.vy += ny * push;
+      }
+    }
+  }
+
+  // интеграция
+  for (const d of dots) {
+    const fr = Math.pow(FRICTION, dt60);
+    d.vx *= fr;
+    d.vy *= fr;
+
+    const sp = Math.hypot(d.vx, d.vy);
+    if (sp > MAX_SPEED) {
+      d.vx = (d.vx / sp) * MAX_SPEED;
+      d.vy = (d.vy / sp) * MAX_SPEED;
+    }
+
+    d.x += d.vx * dt60;
+    d.y += d.vy * dt60;
+
+    if (d.x < d.r) { d.x = d.r; d.vx = Math.abs(d.vx) * 0.7; }
+    if (d.x > W - d.r) { d.x = W - d.r; d.vx = -Math.abs(d.vx) * 0.7; }
+    if (d.y < d.r) { d.y = d.r; d.vy = Math.abs(d.vy) * 0.7; }
+    if (d.y > H - d.r) { d.y = H - d.r; d.vy = -Math.abs(d.vy) * 0.7; }
+  }
+}
+
+// ---------- отрисовка ----------
+function draw() {
+  ctx.fillStyle = 'rgba(10,10,18,0.25)';
+  ctx.fillRect(0, 0, W, H);
+
+  // --- подсветка пальца (мягкое световое пятно) ---
+  if (pointer.active) {
+    const g = ctx.createRadialGradient(
+      pointer.x, pointer.y, 0,
+      pointer.x, pointer.y, FINGER_RADIUS * 3.2
+    );
+    g.addColorStop(0.0, 'rgba(150,200,255,0.28)');
+    g.addColorStop(0.35, 'rgba(130,180,255,0.12)');
+    g.addColorStop(0.7, 'rgba(110,160,255,0.04)');
+    g.addColorStop(1.0, 'rgba(110,160,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(pointer.x, pointer.y, FINGER_RADIUS * 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // линии между близкими точками
+  for (let i = 0; i < dots.length; i++) {
+    for (let j = i + 1; j < dots.length; j++) {
+      const a = dots[i], b = dots[j];
+      const vis = Math.min(a.opacity, b.opacity);
+      if (vis < 0.15) continue;
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const maxD = 150;
+      if (dist < maxD) {
+        const alpha = (1 - dist / maxD) * 0.3 * vis;
+        ctx.strokeStyle = `hsla(${(a.hue + b.hue) / 2}, 80%, 65%, ${alpha})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // точки
+  for (const d of dots) {
+    if (d.opacity < 0.01) continue;
+
+    const pulse = 1 + Math.sin(d.phase) * 0.25 * d.opacity;
+    const r = d.r * pulse * d.opacity;
+    if (r < 0.5) continue;
+
+    const g = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, r * 3);
+    g.addColorStop(0, `hsla(${d.hue}, 90%, 70%, ${0.9 * d.opacity})`);
+    g.addColorStop(1, `hsla(${d.hue}, 90%, 70%, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, r * 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `hsla(${d.hue}, 90%, 75%, ${d.opacity})`;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ---------- цикл ----------
+let last = performance.now();
+let acc = 0;
+const STEP = 1000 / 60;
+
+function loop(now) {
+  let dt = now - last;
+  last = now;
+  if (dt > 100) dt = 100;
+  acc += dt;
+
+  while (acc >= STEP) {
+    update(STEP / 1000);
+    acc -= STEP;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
