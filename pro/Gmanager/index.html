@@ -233,7 +233,7 @@
 }
 
 /* =====================================================
-   ← НОВОЕ: панель поиска в редакторе
+   Панель поиска в редакторе
    ===================================================== */
 .editor-search {
   display: flex;
@@ -337,12 +337,13 @@
   <div id="editorScreen" style="display:none">
     <h2>Редактирование: <span id="editPath"></span><span id="draftBadge" class="draft-badge" style="display:none">черновик</span></h2>
 
-    <!-- ← НОВОЕ: панель поиска -->
+    <!-- Панель поиска -->
     <div class="editor-search" id="editorSearchBar" style="display:none">
       <input type="text" id="searchInput" placeholder="Найти в тексте...">
+      <button onclick="runSearch()" title="Найти (Enter)">🔍 Найти</button>
       <span id="searchCounter" class="search-counter">0 из 0</span>
-      <button class="ghost" onclick="findPrev()" title="Предыдущее совпадение">◀ Назад</button>
-      <button class="ghost" onclick="findNext()" title="Следующее совпадение">Вперёд ▶</button>
+      <button class="ghost" onclick="findPrev()" title="Предыдущее (Shift+Enter)">◀ Назад</button>
+      <button class="ghost" onclick="findNext()" title="Следующее (Enter)">Вперёд ▶</button>
       <button class="ghost" onclick="closeSearch()" title="Закрыть (Esc)">✕</button>
     </div>
 
@@ -1084,7 +1085,7 @@ async function openEditor(filePath) {
     }
   };
 
-  // ← НОВОЕ: сброс поиска при открытии файла
+  // Сброс поиска при открытии файла
   document.getElementById('editorSearchBar').style.display = 'none';
   document.getElementById('searchInput').value = '';
   resetSearch();
@@ -1185,7 +1186,7 @@ function clearEdit() {
 }
 
 /* =====================================================
-   ← НОВОЕ: ПОИСК В РЕДАКТОРЕ
+   ПОИСК В РЕДАКТОРЕ
    ===================================================== */
 let searchState = {
   query: '',        // текущий запрос
@@ -1197,19 +1198,20 @@ function openSearch() {
   const bar = document.getElementById('editorSearchBar');
   bar.style.display = 'flex';
   const input = document.getElementById('searchInput');
-  // Подставляем выделенный текст, если он есть и в одну строку
   const area = document.getElementById('editContent');
+
+  // Подставляем выделенный текст в одну строку, если он есть
   const sel = area.value.substring(area.selectionStart, area.selectionEnd);
   if (sel && !sel.includes('\n')) {
     input.value = sel;
   }
+
+  // Сбрасываем прошлый результат, но НЕ ищем автоматически
+  resetSearch();
+  searchState.query = ''; // чтобы первый runSearch() отработал как новый поиск
+
   input.focus();
   input.select();
-  if (input.value) {
-    updateMatches(input.value, false);
-  } else {
-    resetSearch();
-  }
 }
 
 function closeSearch() {
@@ -1223,6 +1225,22 @@ function resetSearch() {
   searchState.matches = [];
   searchState.current = -1;
   updateCounter();
+}
+
+/* Запустить поиск по текущему значению поля (по кнопке или Enter) */
+function runSearch() {
+  const input = document.getElementById('searchInput');
+  const query = input.value;
+  if (!query) {
+    resetSearch();
+    return;
+  }
+  // Если запрос не изменился — просто переходим к следующему совпадению
+  if (query === searchState.query && searchState.matches.length > 0) {
+    findNext();
+    return;
+  }
+  updateMatches(query, false);
 }
 
 /* Пересобрать список совпадений */
@@ -1338,7 +1356,7 @@ function closeEditor() {
     }
   }
 
-  // ← НОВОЕ: прячем панель поиска
+  // Прячем панель поиска
   document.getElementById('editorSearchBar').style.display = 'none';
   resetSearch();
 
@@ -1724,27 +1742,31 @@ function escapeHtml(s) {
 }
 
 /* =====================================================
-   ← НОВОЕ: обработчики поиска в редакторе
+   Обработчики поиска в редакторе
    ===================================================== */
 (function setupSearchHandlers() {
   const input = document.getElementById('searchInput');
   if (!input) return;
 
-  // Живой поиск при вводе
-  input.addEventListener('input', function () {
-    updateMatches(input.value, false);
-  });
-
-  // Enter — следующее совпадение, Shift+Enter — предыдущее
+  // Enter в поле поиска = Найти / Следующее, Shift+Enter = Предыдущее
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (e.shiftKey) findPrev();
-      else findNext();
+      if (e.shiftKey) {
+        // Shift+Enter — сразу к предыдущему (если уже что-то искали)
+        if (searchState.matches.length > 0 && input.value === searchState.query) {
+          findPrev();
+        } else {
+          runSearch();
+        }
+      } else {
+        runSearch();
+      }
     } else if (e.key === 'Escape') {
       e.preventDefault();
       closeSearch();
     }
+    // Намеренно НЕ реагируем на обычный ввод — поиск только по Enter/кнопке.
   });
 
   // На textarea: Esc закрывает поиск, Ctrl/Cmd+F открывает
