@@ -232,6 +232,43 @@
   font-family: monospace; flex: 0 0 auto; opacity: 0.9;
 }
 
+/* =====================================================
+   ← НОВОЕ: панель поиска в редакторе
+   ===================================================== */
+.editor-search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 10px auto;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  max-width: 100%;
+}
+.editor-search input[type=text] {
+  width: auto;
+  min-width: 220px;
+  flex: 1 1 260px;
+  background: #1e1e1e;
+  color: #eee;
+  margin: 0;
+}
+.editor-search .search-counter {
+  font-family: monospace;
+  font-size: 14px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  min-width: 90px;
+  text-align: center;
+}
+.editor-search .search-counter.empty {
+  background: rgba(200, 60, 60, 0.5);
+}
+.editor-search button { margin: 0; }
 </style>
 </head>
 <body>
@@ -299,6 +336,16 @@
   <!-- ЭКРАН РЕДАКТОРА -->
   <div id="editorScreen" style="display:none">
     <h2>Редактирование: <span id="editPath"></span><span id="draftBadge" class="draft-badge" style="display:none">черновик</span></h2>
+
+    <!-- ← НОВОЕ: панель поиска -->
+    <div class="editor-search" id="editorSearchBar" style="display:none">
+      <input type="text" id="searchInput" placeholder="Найти в тексте...">
+      <span id="searchCounter" class="search-counter">0 из 0</span>
+      <button class="ghost" onclick="findPrev()" title="Предыдущее совпадение">◀ Назад</button>
+      <button class="ghost" onclick="findNext()" title="Следующее совпадение">Вперёд ▶</button>
+      <button class="ghost" onclick="closeSearch()" title="Закрыть (Esc)">✕</button>
+    </div>
+
     <textarea id="editContent"></textarea>
 
 
@@ -306,6 +353,7 @@
     <div class="editor-actions">
   <button onclick="saveEdit()">💾 Сохранить</button>
   <button class="ghost" onclick="copyAllEdit()">📋 Скопировать всё</button>
+  <button class="ghost" onclick="openSearch()">🔍 Поиск</button>
   <button class="ghost" onclick="openLocalFile()">📂 Открыть файл</button>
   <button class="ghost" onclick="clearEdit()">🧹 Очистить</button>
   <button class="ghost" onclick="closeEditor()">⬅ Назад</button>
@@ -1036,6 +1084,11 @@ async function openEditor(filePath) {
     }
   };
 
+  // ← НОВОЕ: сброс поиска при открытии файла
+  document.getElementById('editorSearchBar').style.display = 'none';
+  document.getElementById('searchInput').value = '';
+  resetSearch();
+
   document.getElementById('managerScreen').style.display = 'none';
   document.getElementById('editorScreen').style.display = 'block';
 }
@@ -1131,6 +1184,147 @@ function clearEdit() {
   st.className = 'status';
 }
 
+/* =====================================================
+   ← НОВОЕ: ПОИСК В РЕДАКТОРЕ
+   ===================================================== */
+let searchState = {
+  query: '',        // текущий запрос
+  matches: [],      // массив индексов начала совпадений
+  current: -1       // индекс текущего совпадения в matches
+};
+
+function openSearch() {
+  const bar = document.getElementById('editorSearchBar');
+  bar.style.display = 'flex';
+  const input = document.getElementById('searchInput');
+  // Подставляем выделенный текст, если он есть и в одну строку
+  const area = document.getElementById('editContent');
+  const sel = area.value.substring(area.selectionStart, area.selectionEnd);
+  if (sel && !sel.includes('\n')) {
+    input.value = sel;
+  }
+  input.focus();
+  input.select();
+  if (input.value) {
+    updateMatches(input.value, false);
+  } else {
+    resetSearch();
+  }
+}
+
+function closeSearch() {
+  document.getElementById('editorSearchBar').style.display = 'none';
+  resetSearch();
+  document.getElementById('editContent').focus();
+}
+
+function resetSearch() {
+  searchState.query = '';
+  searchState.matches = [];
+  searchState.current = -1;
+  updateCounter();
+}
+
+/* Пересобрать список совпадений */
+function updateMatches(query, keepPosition) {
+  const area = document.getElementById('editContent');
+  const text = area.value;
+
+  searchState.query = query;
+  searchState.matches = [];
+
+  if (!query) {
+    searchState.current = -1;
+    updateCounter();
+    return;
+  }
+
+  // Регистронезависимый поиск
+  const haystack = text.toLowerCase();
+  const needle = query.toLowerCase();
+
+  let idx = 0;
+  while ((idx = haystack.indexOf(needle, idx)) !== -1) {
+    searchState.matches.push(idx);
+    idx += needle.length; // не перекрываем совпадения
+  }
+
+  // Пытаемся сохранить текущую позицию, если курсор стоял на совпадении
+  if (keepPosition && searchState.matches.length > 0) {
+    const cursor = area.selectionStart;
+    let best = 0;
+    for (let i = 0; i < searchState.matches.length; i++) {
+      if (searchState.matches[i] <= cursor) best = i;
+      else break;
+    }
+    searchState.current = best;
+  } else {
+    searchState.current = searchState.matches.length > 0 ? 0 : -1;
+  }
+
+  updateCounter();
+
+  if (searchState.current >= 0 && !keepPosition) {
+    highlightCurrent();
+  }
+}
+
+/* Перейти к следующему совпадению */
+function findNext() {
+  if (searchState.matches.length === 0) return;
+  searchState.current = (searchState.current + 1) % searchState.matches.length;
+  highlightCurrent();
+}
+
+/* Перейти к предыдущему совпадению */
+function findPrev() {
+  if (searchState.matches.length === 0) return;
+  searchState.current =
+    (searchState.current - 1 + searchState.matches.length) % searchState.matches.length;
+  highlightCurrent();
+}
+
+/* Подсветить текущее совпадение в textarea */
+function highlightCurrent() {
+  const area = document.getElementById('editContent');
+  if (searchState.current < 0) return;
+
+  const start = searchState.matches[searchState.current];
+  const end = start + searchState.query.length;
+
+  area.focus();
+  area.setSelectionRange(start, end);
+
+  // Скроллим так, чтобы совпадение было примерно в середине
+  const lineHeight = parseFloat(getComputedStyle(area).lineHeight) || 20;
+  const before = area.value.substring(0, start);
+  const lineNumber = before.split('\n').length - 1;
+  const targetScroll = Math.max(0, lineNumber * lineHeight - area.clientHeight / 2);
+  area.scrollTop = targetScroll;
+
+  updateCounter();
+}
+
+/* Обновить счётчик «N из M» */
+function updateCounter() {
+  const el = document.getElementById('searchCounter');
+  const total = searchState.matches.length;
+  const cur = searchState.current;
+
+  if (!searchState.query) {
+    el.textContent = '0 из 0';
+    el.classList.remove('empty');
+    return;
+  }
+  if (total === 0) {
+    el.textContent = 'не найдено';
+    el.classList.add('empty');
+    return;
+  }
+  el.classList.remove('empty');
+  el.textContent = `${cur + 1} из ${total}`;
+}
+
 function closeEditor() {
   const area = document.getElementById('editContent');
   const hasChanges = area.value !== (state.editing.originalContent || '');
@@ -1143,6 +1337,10 @@ function closeEditor() {
       removeDraft(state.activeId, state.editing.path);
     }
   }
+
+  // ← НОВОЕ: прячем панель поиска
+  document.getElementById('editorSearchBar').style.display = 'none';
+  resetSearch();
 
   document.getElementById('editorScreen').style.display = 'none';
   document.getElementById('managerScreen').style.display = 'block';
@@ -1194,10 +1392,8 @@ function loadLocalFileIntoEditor(e) {
     st.className = 'status err';
   };
 
-  // Читаем как текст (подходит для HTML, CSS, JS, JSON, MD и т.п.)
   reader.readAsText(file, 'UTF-8');
 
-  // Сбрасываем input, чтобы можно было выбрать тот же файл повторно
   e.target.value = '';
 }
 
@@ -1220,15 +1416,12 @@ async function createFileFromLocal(e) {
   const filePath = state.path ? `${state.path}/${file.name}` : file.name;
   const url = `${apiBase(cfg)}/${encodeURI(filePath)}`;
 
-  // Показываем статус
   const list = document.getElementById('fileList');
   list.innerHTML = `<li class="file">⏳ ${escapeHtml(file.name)} (создание...)</li>`;
 
   try {
-    // Читаем как текст (для кода); если нужно бинарно — замени на arrayBuffer
     const content = await file.text();
 
-    // Проверяем существование файла
     let sha = null;
     try {
       const rHead = await fetch(
@@ -1278,8 +1471,8 @@ async function createFileFromLocal(e) {
 /* =====================================================
    АНАЛИЗАТОР МЕСТА
    ===================================================== */
-let analyzerData = null;   // кэш последнего анализа
-let analyzerCfgId = null;  // для какого профиля собран
+let analyzerData = null;
+let analyzerCfgId = null;
 
 function humanSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -1298,7 +1491,6 @@ function openAnalyzer() {
   document.getElementById('analyzerRepo').textContent =
     `${cfg.owner}/${cfg.repo} @ ${cfg.branch || 'main'}`;
 
-  // Если кэш от другого профиля — сбрасываем
   if (analyzerCfgId !== cfg.id) {
     analyzerData = null;
     analyzerCfgId = cfg.id;
@@ -1310,7 +1502,6 @@ function openAnalyzer() {
     renderAnalyzer();
   }
 
-  // Автозапуск, если данных ещё нет
   if (!analyzerData) runAnalyzer();
 }
 
@@ -1401,7 +1592,6 @@ function renderAnalyzer() {
 
   document.getElementById('analyzerBody').style.display = 'block';
 
-  // -------- Сводка --------
   const summary = document.getElementById('analyzerSummary');
   summary.innerHTML = `
     <div class="summary-item"><span class="val">${humanSize(d.totalBytes)}</span><span class="lbl">общий размер</span></div>
@@ -1416,7 +1606,6 @@ function renderAnalyzer() {
   renderBars('byDirList', d.byDir, d.totalBytes, onlyBig, sortMode, 'dir');
   renderBars('byExtList', d.byExt, d.totalBytes, onlyBig, sortMode, 'ext');
 
-  // -------- Большие файлы --------
   const bigList = document.getElementById('bigFilesList');
   const threshold = onlyBig ? 1024 * 1024 : 0;
   const shown = d.bigFiles.filter(f => f.size >= threshold).slice(0, 20);
@@ -1513,7 +1702,6 @@ function copyReport() {
       st.className = 'status ok';
     }).catch(err => alert('Не удалось скопировать: ' + err.message));
   } else {
-    // Fallback
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
@@ -1534,6 +1722,45 @@ function escapeHtml(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
+
+/* =====================================================
+   ← НОВОЕ: обработчики поиска в редакторе
+   ===================================================== */
+(function setupSearchHandlers() {
+  const input = document.getElementById('searchInput');
+  if (!input) return;
+
+  // Живой поиск при вводе
+  input.addEventListener('input', function () {
+    updateMatches(input.value, false);
+  });
+
+  // Enter — следующее совпадение, Shift+Enter — предыдущее
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.shiftKey) findPrev();
+      else findNext();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeSearch();
+    }
+  });
+
+  // На textarea: Esc закрывает поиск, Ctrl/Cmd+F открывает
+  document.getElementById('editContent').addEventListener('keydown', function (e) {
+    const bar = document.getElementById('editorSearchBar');
+    if (e.key === 'Escape' && bar && bar.style.display !== 'none') {
+      e.preventDefault();
+      closeSearch();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+})();
 
 /* =====================================================
    СТАРТ
@@ -1622,9 +1849,6 @@ init();
             }
         });
 
-        // ============================================================
-        // ПЕРЕХВАТ СООБЩЕНИЙ ОТ IFRAME ДЛЯ СКАЧИВАНИЯ
-        // ============================================================
         window.addEventListener('message', function(event) {
             if (event.source !== iframe.contentWindow) return;
             const data = event.data;
@@ -1702,7 +1926,6 @@ init();
         }, 3000);
     }
 
-    // Делаем функции глобальными
     window.openGame = openGame;
     window.handleDownload = handleDownload;
     window.showNotification = showNotification;
