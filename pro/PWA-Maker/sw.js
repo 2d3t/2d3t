@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pwa-maker-v1';
+const CACHE_NAME = 'pwa-maker-v2';
 const FILES_TO_CACHE = [
     '/2d3t/pro/PWA-Maker/index.html',
     '/2d3t/pro/PWA-Maker/manifest.json'
