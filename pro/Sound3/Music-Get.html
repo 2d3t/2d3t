@@ -397,6 +397,62 @@
             .cover-preview { width: 180px; height: 180px; }
             .sugg-grid { gap: 10px; }
         }
+
+.sugg-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+}
+.sugg-nav-btn {
+    flex: 1;
+    background: #1f2a4a;
+    border: 1px solid #4a5a7a;
+    color: #b0c4f0;
+    padding: 8px 12px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: 0.15s;
+}
+.sugg-nav-btn:hover:not(:disabled) {
+    background: #36466b;
+    border-color: #7c9aff;
+    color: #d6def5;
+}
+.sugg-nav-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.sugg-nav-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+.sugg-page-info {
+    font-size: 0.7rem;
+    color: #6a7a9a;
+    min-width: 50px;
+    text-align: center;
+    font-weight: 600;
+}
+
+/* ===== Имя файла (предпросмотр) ===== */
+.file-name-row {
+    display: flex; align-items: center; gap: 8px;
+    margin: 10px 0 0 0; padding: 10px 14px;
+    background: #0f1625; border: 1px solid #253040;
+    border-radius: 14px; font-size: 0.8rem; color: #b0c4f0;
+    text-align: left;
+}
+.file-name-row .fn-icon { flex-shrink: 0; font-size: 1rem; }
+.file-name-row .fn-preview {
+    flex: 1; color: #d6def5; word-break: break-all;
+    font-family: 'SF Mono', monospace; font-size: 0.78rem;
+    background: #0a0e1a; padding: 4px 10px; border-radius: 10px;
+    border: 1px solid #1f2a4a;
+}
+.file-name-row .fn-preview .hl { color: #7c9aff; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -458,10 +514,20 @@
         <label>Название</label>
         <input type="text" id="tagTitle" placeholder="Например: Summer Vibes" autocomplete="off">
 
+        <!-- НОВОЕ: предпросмотр итогового имени файла -->
+        <div class="file-name-row">
+            <span class="fn-icon">📁</span>
+            <span class="fn-preview" id="fileNamePreview">audio.mp3</span>
+        </div>
+
         <div id="suggBlock" style="display:none;">
             <div class="sugg-hint">💡 Кликните по картинке, чтобы поставить обложку</div>
             <div class="sugg-grid" id="suggGrid"></div>
-            <button class="sugg-refresh" id="suggRefresh">🔄 Показать другие картинки</button>
+            <div class="sugg-nav">
+    <button class="sugg-nav-btn" id="suggPrev" disabled>← Назад</button>
+    <span class="sugg-page-info" id="suggPageInfo">Стр. 1</span>
+    <button class="sugg-nav-btn" id="suggNext">Показать ещё →</button>
+</div>
             <div class="sugg-loader" id="suggLoader">Загрузка изображений...</div>
         </div>
 
@@ -474,6 +540,13 @@
             <input type="checkbox" id="tagOverlayToggle" checked>
             <span>✍️ Показать название и исполнителя поверх обложки</span>
         </label>
+
+        <!-- НОВОЕ: галочка "чистое название файла" -->
+        <label class="overlay-toggle" for="tagCleanNameToggle">
+            <input type="checkbox" id="tagCleanNameToggle">
+            <span>📄 Сохранить в имени файла только название трека (без « - Исполнитель»)</span>
+        </label>
+
         <img id="tagCoverPreview" class="cover-preview hidden" alt="Обложка">
         <button class="cover-clear" id="tagCoverClear">✖ Убрать обложку</button>
 
@@ -489,6 +562,11 @@
 <script>
     (function() {
         'use strict';
+
+        // ====== КЛЮЧИ LOCALSTORAGE ======
+        const LS_ARTIST = 'mp3Editor_lastArtist';
+        const LS_OVERLAY = 'mp3Editor_overlayOnCover';   // «показать текст поверх обложки»
+        const LS_CLEAN_NAME = 'mp3Editor_cleanFileName'; // «только название без исполнителя»
 
         // ====== ЭЛЕМЕНТЫ ======
         const mainBtn = document.getElementById('mainBtn');
@@ -516,15 +594,27 @@
         const tagArtist = document.getElementById('tagArtist');
         const tagCoverInput = document.getElementById('tagCoverInput');
         const tagOverlayToggle = document.getElementById('tagOverlayToggle');
+        const tagCleanNameToggle = document.getElementById('tagCleanNameToggle');
         const tagCoverPreview = document.getElementById('tagCoverPreview');
         const tagCoverClear = document.getElementById('tagCoverClear');
         const tagSaveBtn = document.getElementById('tagSaveBtn');
         const tagSkipBtn = document.getElementById('tagSkipBtn');
         const tagStatus = document.getElementById('tagStatus');
+        const fileNamePreview = document.getElementById('fileNamePreview');
         const suggBlock = document.getElementById('suggBlock');
         const suggGrid = document.getElementById('suggGrid');
         const suggLoader = document.getElementById('suggLoader');
-        const suggRefresh = document.getElementById('suggRefresh');
+        const suggPrev = document.getElementById('suggPrev');
+        const suggNext = document.getElementById('suggNext');
+        const suggPageInfo = document.getElementById('suggPageInfo');
+
+        // ====== УТИЛИТЫ LOCALSTORAGE ======
+        function lsGet(key) {
+            try { return localStorage.getItem(key); } catch (_) { return null; }
+        }
+        function lsSet(key, value) {
+            try { localStorage.setItem(key, value); } catch (_) {}
+        }
 
         // ====== СОСТОЯНИЕ ======
         let audioContext = null;
@@ -553,8 +643,8 @@
         let convertedBlob = null;
         let convertedFileName = '';
 
-        let modalCoverDataUrl = null;      // то, что пойдёт в тег (с текстом или без)
-        let modalCoverCleanDataUrl = null; // всегда чистая квадратная версия
+        let modalCoverDataUrl = null;
+        let modalCoverCleanDataUrl = null;
         let ID3WriterCtor = null;
         let currentQuery = '';
         let currentPage = 1;
@@ -788,6 +878,41 @@
                 }
             }
             tagCoverPreview.src = modalCoverDataUrl;
+        }
+
+        // ====== НОВОЕ: вычисление имени файла ======
+        function computeFileName(title, artist, cleanName) {
+            const fallback = (convertedFileName || 'audio.mp3').replace(/\.mp3$/, '');
+            const rawTitle = title || fallback;
+            let rawName;
+            if (cleanName) {
+                // Только название
+                rawName = title || fallback;
+            } else {
+                // "Название - Исполнитель" или просто "Название"
+                rawName = (title && artist) ? `${title} - ${artist}` : rawTitle;
+            }
+            const baseName = String(rawName).replace(/[\\/:*?"<>|]/g, '_').trim() || 'audio';
+            return baseName + '.mp3';
+        }
+
+        function updateFileNamePreview() {
+            const fileName = computeFileName(
+                tagTitle.value.trim(),
+                tagArtist.value.trim(),
+                tagCleanNameToggle.checked
+            );
+            // Подсветим расширение
+            const base = fileName.replace(/\.mp3$/i, '');
+            fileNamePreview.innerHTML = '<span class="hl">' + escapeHtml(base) + '</span>.mp3';
+        }
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         // ====== WORKLET ======
@@ -1194,12 +1319,30 @@
 
         function resetTagSection() {
             tagTitle.value = '';
+
+            // Загружаем сохранённого исполнителя
             let savedArtist = '';
-            try { savedArtist = localStorage.getItem('mp3Editor_lastArtist') || ''; } catch (_) {}
+            try { savedArtist = lsGet(LS_ARTIST) || ''; } catch (_) {}
             tagArtist.value = savedArtist;
 
+            // Восстанавливаем настройки из localStorage
+            let savedOverlay = true; // по умолчанию ВКЛ (как раньше)
+            try {
+                const v = lsGet(LS_OVERLAY);
+                if (v === '0') savedOverlay = false;
+                else if (v === '1') savedOverlay = true;
+            } catch (_) {}
+            tagOverlayToggle.checked = savedOverlay;
+
+            let savedCleanName = false; // по умолчанию ВЫКЛ (как раньше)
+            try {
+                const v = lsGet(LS_CLEAN_NAME);
+                if (v === '1') savedCleanName = true;
+                else if (v === '0') savedCleanName = false;
+            } catch (_) {}
+            tagCleanNameToggle.checked = savedCleanName;
+
             tagCoverInput.value = '';
-            tagOverlayToggle.checked = true;
             modalCoverDataUrl = null;
             modalCoverCleanDataUrl = null;
             tagCoverPreview.src = '';
@@ -1210,7 +1353,12 @@
             suggLoader.classList.remove('show');
             currentQuery = '';
             currentPage = 1;
+            if (suggPrev) suggPrev.disabled = true;
+            if (suggPageInfo) suggPageInfo.textContent = 'Стр. 1';
             setTagStatus('');
+
+            // Обновляем предпросмотр имени файла
+            updateFileNamePreview();
         }
 
         async function openTagSection() {
@@ -1311,46 +1459,73 @@
             }
         }
         async function fetchSuggestions(query, resetPage = false) {
-            if (!query || query.trim().length < 2) {
-                suggBlock.style.display = 'none';
-                return;
-            }
-            if (resetPage) currentPage = 1;
-            currentQuery = query.trim();
-            suggBlock.style.display = 'block';
-            suggLoader.classList.add('show');
-            suggGrid.innerHTML = '';
-            try {
-                const resp = await fetch(
-                    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=6&page=${currentPage}`
-                );
-                if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                const data = await resp.json();
-                const urls = (data.results || []).map(x => x.url).filter(Boolean);
-                renderSuggestions(urls.length ? urls : getFallbackUrls(currentQuery));
-            } catch (e) {
-                renderSuggestions(getFallbackUrls(currentQuery));
-            } finally {
-                suggLoader.classList.remove('show');
-            }
-        }
+    if (!query || query.trim().length < 2) {
+        suggBlock.style.display = 'none';
+        return;
+    }
+    if (resetPage) currentPage = 1;
+    currentQuery = query.trim();
+    suggBlock.style.display = 'block';
+    suggLoader.classList.add('show');
+    suggGrid.innerHTML = '';
+    updateSuggNav();
+    try {
+        const resp = await fetch(
+            `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=6&page=${currentPage}`
+        );
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        const urls = (data.results || []).map(x => x.url).filter(Boolean);
+        renderSuggestions(urls.length ? urls : getFallbackUrls(currentQuery));
+    } catch (e) {
+        renderSuggestions(getFallbackUrls(currentQuery));
+    } finally {
+        suggLoader.classList.remove('show');
+        updateSuggNav();
+    }
+}
+
+
+// Обновление состояния кнопок навигации
+function updateSuggNav() {
+    if (!suggPageInfo) return;
+    suggPageInfo.textContent = 'Стр. ' + currentPage;
+    suggPrev.disabled = currentPage <= 1;
+}
         tagTitle.addEventListener('input', () => {
             clearTimeout(suggDebounce);
             suggDebounce = setTimeout(() => fetchSuggestions(tagTitle.value, true), 600);
             if (modalCoverCleanDataUrl) refreshCoverPreview();
+            updateFileNamePreview(); // НОВОЕ
         });
         tagArtist.addEventListener('input', () => {
             if (modalCoverCleanDataUrl) refreshCoverPreview();
+            updateFileNamePreview(); // НОВОЕ
         });
         tagOverlayToggle.addEventListener('change', () => {
+            // НОВОЕ: запоминаем выбор
+            lsSet(LS_OVERLAY, tagOverlayToggle.checked ? '1' : '0');
             if (modalCoverCleanDataUrl) refreshCoverPreview();
             playClickSound();
         });
-        suggRefresh.addEventListener('click', () => {
-            if (!currentQuery) return;
-            currentPage++;
-            fetchSuggestions(currentQuery, false);
+        // НОВОЕ: обработчик галочки «только название»
+        tagCleanNameToggle.addEventListener('change', () => {
+            lsSet(LS_CLEAN_NAME, tagCleanNameToggle.checked ? '1' : '0');
+            updateFileNamePreview();
+            playClickSound();
         });
+        suggNext.addEventListener('click', () => {
+    if (!currentQuery) return;
+    currentPage++;
+    fetchSuggestions(currentQuery, false);
+});
+
+
+suggPrev.addEventListener('click', () => {
+    if (!currentQuery || currentPage <= 1) return;
+    currentPage--;
+    fetchSuggestions(currentQuery, false);
+});
 
         // --- Обложка из файла ---
         tagCoverInput.addEventListener('change', async (e) => {
@@ -1411,7 +1586,7 @@
                     artist = tagArtist.value.trim();
 
                     if (artist) {
-                        try { localStorage.setItem('mp3Editor_lastArtist', artist); } catch (_) {}
+                        try { lsSet(LS_ARTIST, artist); } catch (_) {}
                     }
 
                     if (title) writer.setFrame('TIT2', title);
@@ -1432,11 +1607,12 @@
                     outBlob = writer.getBlob();
                 }
 
-                // Имя файла: "Название - Исполнитель" (если исполнитель есть)
-                const rawTitle = title || convertedFileName.replace(/\.mp3$/, '') || 'audio';
-                const rawName = (title && artist) ? `${title} - ${artist}` : rawTitle;
-                const baseName = rawName.replace(/[\\/:*?"<>|]/g, '_');
-                const fileName = baseName + '.mp3';
+                // НОВОЕ: имя файла через общую функцию (учитывает галочку «только название»)
+                const fileName = computeFileName(
+                    title,
+                    artist,
+                    tagCleanNameToggle.checked
+                );
 
                 const url = URL.createObjectURL(outBlob);
                 const a = document.createElement('a');
