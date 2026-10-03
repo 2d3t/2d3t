@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'music-get-pwa-v2';
+const CACHE_NAME = 'music-get-pwa-v3';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/Sound/Music-Get.html',
