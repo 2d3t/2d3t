@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
                         return response;
                     })
                     .catch(() => {
-                        return caches.match('/2d3t/pro/Sound/Music-Get.html');
+                        return caches.match('/2d3t/pro/Sound3/Music-Get.html');
                     });
             })
     );
