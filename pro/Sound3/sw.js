@@ -1,11 +1,11 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'music-get-pwa-v3';
+const CACHE_NAME = 'music-get-pwa-v4';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/Sound/Music-Get.html',
-    '/2d3t/pro/Sound/manifest.json',
-    '/2d3t/pro/Sound/icon-192.png',
-    '/2d3t/pro/Sound/icon-512.png'
+    '/2d3t/pro/Sound3/manifest.json',
+    '/2d3t/pro/Sound3/icon-192.png',
+    '/2d3t/pro/Sound3/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
                         return response;
                     })
                     .catch(() => {
-                        return caches.match('/2d3t/pro/Sound3/Music-Get.html');
+                        return caches.match('/2d3t/pro/Sound3/index.html');
                     });
             })
     );
