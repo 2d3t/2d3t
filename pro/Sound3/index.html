@@ -1706,11 +1706,9 @@ setTimeout(() => {
             audioPlayer.play();
             audioPlayer.onended = () => URL.revokeObjectURL(url);
             document.querySelector('.card').appendChild(audioPlayer);
-        });
-
-        resetAll();
+        });        resetAll();
     })();
-
+</script>
 
 <script>
 (function() {
@@ -1889,7 +1887,6 @@ setTimeout(() => {
         init();
     }
 })();
-</script>
 </script>
 </body>
 </html>
