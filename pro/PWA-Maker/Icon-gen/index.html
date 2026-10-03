@@ -1,154 +1,724 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Создание иконок</title>
-  <style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎨 Генератор иконок</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #2c3e50, #4ca1af);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: "Segoe UI", sans-serif;
-      color: #fff;
+        background: #0a0e1a;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        font-family: -apple-system, system-ui, sans-serif;
+        padding: 24px 20px;
+        color: #e8edff;
+    }
+    .app {
+        width: 100%;
+        max-width: 520px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    @media (min-width: 900px) {
+        .app { max-width: 640px; gap: 24px; }
+        body { padding: 40px 24px; }
     }
 
-    .container {
-      background: rgba(0, 0, 0, 0.6);
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-      text-align: center;
-      max-width: 400px;
-      width: 90%;
+    .card {
+        background: #141c2b;
+        padding: 28px 24px;
+        border-radius: 40px;
+        border: 1px solid #263040;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        text-align: center;
+    }
+    .card h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #7c9aff, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+    }
+    .sub { font-size: 0.85rem; opacity: 0.4; margin-bottom: 16px; }
+
+    .warning {
+        background: #1a1528;
+        padding: 12px 16px;
+        border-radius: 16px;
+        margin: 0 0 14px 0;
+        font-size: 0.85rem;
+        border-left: 4px solid #fbbf24;
+        color: #c8d0f0;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+    }
+    .warning .icon { font-size: 1.6rem; flex-shrink: 0; }
+    .warning strong { color: #fcd34d; }
+
+    .field-label {
+        display: block; font-size: 0.8rem; color: #8a9abb;
+        margin: 14px 0 6px; text-align: left;
+    }
+    input[type="text"], input[type="file"] {
+        width: 100%; padding: 12px 16px; background: #0f1625;
+        border: 1px solid #253040; border-radius: 16px;
+        color: #e8edff; font-size: 0.95rem; outline: none;
+        transition: 0.15s;
+    }
+    input[type="text"]:focus {
+        border-color: #7c9aff; box-shadow: 0 0 0 3px #7c9aff22;
+    }
+    input[type="file"] { font-size: 0.8rem; padding: 10px 12px; }
+
+    /* === Сетка подсказок === */
+    .sugg-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 8px; margin-top: 8px;
+    }
+    .sugg-wrapper {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #0f1625;
+    }
+    .sugg-img {
+        width: 100%; height: 100%; object-fit: cover;
+        cursor: pointer;
+        border: 3px solid transparent;
+        border-radius: 12px;
+        transition: 0.15s;
+        display: block;
+    }
+    .sugg-img:hover { transform: scale(1.04); border-color: #6366f1; }
+    .sugg-img.selected {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.4);
+        animation: pop 0.25s ease;
+    }
+    @keyframes pop {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.12); }
+        100% { transform: scale(1.04); }
+    }
+    .sugg-check {
+        position: absolute; top: 6px; right: 6px;
+        width: 26px; height: 26px; border-radius: 50%;
+        background: #4f46e5;
+        color: #fff; font-size: 15px; font-weight: 700;
+        display: none; align-items: center; justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        pointer-events: none;
+        animation: checkIn 0.2s ease;
+    }
+    .sugg-wrapper.selected .sugg-check { display: flex; }
+    @keyframes checkIn {
+        0% { transform: scale(0); }
+        100% { transform: scale(1); }
+    }
+    .sugg-hint {
+        font-size: 0.72rem; color: #6a7a9a; margin-top: 8px; text-align: left;
+    }
+    .sugg-loader {
+        text-align: center; color: #6a7a9a; font-size: 0.78rem;
+        margin-top: 8px; display: none;
+    }
+    .sugg-loader.show { display: block; }
+
+    .sugg-nav {
+        display: flex; align-items: center;
+        justify-content: space-between;
+        gap: 8px; margin-top: 10px;
+    }
+    .sugg-nav-btn {
+        flex: 1; background: #1f2a4a;
+        border: 1px solid #4a5a7a; color: #b0c4f0;
+        padding: 8px 12px; border-radius: 30px;
+        cursor: pointer; font-size: 0.75rem;
+        font-weight: 600; transition: 0.15s;
+    }
+    .sugg-nav-btn:hover:not(:disabled) {
+        background: #36466b; border-color: #7c9aff; color: #d6def5;
+    }
+    .sugg-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .sugg-page-info {
+        font-size: 0.7rem; color: #6a7a9a;
+        min-width: 50px; text-align: center; font-weight: 600;
     }
 
-    h1 {
-      margin-bottom: 20px;
-      font-size: 24px;
+    /* === Превью иконки === */
+    .icon-preview-wrap {
+        margin: 16px auto 0;
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .icon-preview-item {
+        display: flex; flex-direction: column;
+        align-items: center; gap: 6px;
+    }
+    .icon-preview-item img {
+        width: 96px; height: 96px;
+        border-radius: 20px;
+        object-fit: cover;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        border: 2px solid #263040;
+        background: #0f1625;
+    }
+    .icon-preview-item.small img {
+        width: 64px; height: 64px;
+        border-radius: 14px;
+    }
+    .icon-preview-item span {
+        font-size: 0.68rem; color: #6a7a9a;
     }
 
-    input[type="file"] {
-      margin: 15px 0;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      background: #444;
-      color: #ddd;
-      cursor: pointer;
-      transition: 0.3s;
+    .cover-clear {
+        display: none; margin: 10px auto 0; background: none;
+        border: 1px solid #495478; color: #a8b4d4;
+        border-radius: 30px; padding: 6px 14px; font-size: 0.72rem;
+        cursor: pointer;
+    }
+    .cover-clear.show { display: inline-block; }
+    .cover-clear:hover { background: #2d3650; }
+
+    /* === Кнопки скачивания === */
+    .download-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 14px;
+    }
+    .download-btn {
+        padding: 12px 8px; border-radius: 14px;
+        background: #1f2a4a; border: 1px solid #4a5a7a;
+        color: #d6def5; font-weight: 600; font-size: 0.85rem;
+        cursor: pointer; transition: 0.15s;
+    }
+    .download-btn:hover {
+        background: #2d3c66; border-color: #7c9aff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(124,154,255,0.25);
+    }
+    .download-btn:active { transform: translateY(0); }
+    .download-btn:disabled {
+        opacity: 0.35; cursor: not-allowed;
+        transform: none; box-shadow: none;
     }
 
-    input[type="file"]:hover {
-      background: #555;
+    .download-all {
+        width: 100%; margin-top: 10px;
+        padding: 14px; border-radius: 60px;
+        background: #2d8f5c; border: 1px solid #4aad7a;
+        color: #fff; font-weight: 700; font-size: 0.95rem;
+        cursor: pointer; transition: 0.1s linear;
+        box-shadow: 0 5px 0 #1a5a3a;
+    }
+    .download-all:active {
+        transform: translateY(4px);
+        box-shadow: 0 1px 0 #1a5a3a;
+    }
+    .download-all:disabled {
+        opacity: 0.4; transform: translateY(4px);
+        box-shadow: 0 1px 0 #1a5a3a; pointer-events: none;
     }
 
-    button {
-      padding: 10px 18px;
-      background: #4ca1af;
-      color: white;
-      border: none;
-      margin: 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: 0.3s;
+    .reset-btn {
+        width: 100%; margin-top: 10px;
+        padding: 12px; border-radius: 60px;
+        background: transparent; border: 1px solid #495478;
+        color: #a8b4d4; font-weight: 500; font-size: 0.85rem;
+        cursor: pointer; transition: 0.15s;
+    }
+    .reset-btn:hover {
+        background: #2d3650; border-color: #6b7da3; color: #d6def5;
     }
 
-    button:hover {
-      background: #5cb8c9;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    .status-msg {
+        font-size: 0.82rem; color: #8a9abb;
+        margin-top: 12px; min-height: 20px;
     }
+    .status-msg.success { color: #a1d6a8; }
+    .status-msg.error { color: #f7a9a9; }
 
-    #buttons {
-      margin-top: 20px;
+    .footer {
+        font-size: 0.65rem; color: #4a5a7a; text-align: center;
+        margin-top: 4px; border-top: 1px solid #1f2840; padding-top: 12px;
     }
-
-    .exit-btn {
-      margin-top: 20px;
-      background: #e74c3c;
-    }
-
-    .exit-btn:hover {
-      background: #ff6b5a;
-    }
-  </style>
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>Загрузите изображение для создания иконок</h1>
-    <input type="file" id="upload" accept="image/*">
+<div class="app">
 
-    <div id="buttons" style="display:none;">
-      <h2>Скачивание иконок</h2>
-      <button onclick="downloadIcon(64)">64x64</button>
-      <button onclick="downloadIcon(128)">128x128</button>
-      <button onclick="downloadIcon(192)">192x192</button>
-      <button onclick="downloadIcon(256)">256x256</button>
-      <button onclick="downloadIcon(512)">512x512</button>
-      <button onclick="downloadIcon(1024)">1024x1024</button>
+    <div class="card">
+        <h1>🎨 Генератор иконок</h1>
+        <div class="sub">Поиск картинки · название · скачивание</div>
+
+        <div class="warning">
+            <span class="icon">💡</span>
+            <div>Введите <strong>название</strong> — появятся подсказки картинок. Кликните по любой, чтобы выбрать.</div>
+        </div>
+
+        <!-- Название -->
+        <label class="field-label">Название приложения</label>
+        <input type="text" id="titleInput" placeholder="Например: Weather App" autocomplete="off">
+
+        <!-- Загрузка своей картинки -->
+        <label class="field-label">Или загрузите свою картинку</label>
+        <input type="file" id="fileInput" accept="image/*">
+
+        <!-- Подсказки -->
+        <div id="suggBlock" style="display:none;">
+            <div class="sugg-hint">💡 Кликните по картинке, чтобы выбрать её как основу иконки</div>
+            <div class="sugg-grid" id="suggGrid"></div>
+            <div class="sugg-nav">
+                <button class="sugg-nav-btn" id="suggPrev" disabled>← Назад</button>
+                <span class="sugg-page-info" id="suggPageInfo">Стр. 1</span>
+                <button class="sugg-nav-btn" id="suggNext">Показать ещё →</button>
+            </div>
+            <div class="sugg-loader" id="suggLoader">Загрузка изображений...</div>
+        </div>
+
+        <!-- Настройки наложения -->
+        <label class="field-label" style="margin-top:18px;">Параметры иконки</label>
+        <label class="overlay-toggle" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0f1625;border:1px solid #253040;border-radius:14px;cursor:pointer;font-size:0.8rem;color:#b0c4f0;text-align:left;user-select:none;">
+            <input type="checkbox" id="overlayToggle" checked style="accent-color:#7c9aff;width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+            <span style="flex:1;line-height:1.3;">✍️ Показать название приложения поверх иконки</span>
+        </label>
+
+        <label class="overlay-toggle" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#0f1625;border:1px solid #253040;border-radius:14px;cursor:pointer;font-size:0.8rem;color:#b0c4f0;text-align:left;user-select:none;margin-top:8px;">
+            <input type="checkbox" id="roundedToggle" checked style="accent-color:#7c9aff;width:16px;height:16px;cursor:pointer;flex-shrink:0;">
+            <span style="flex:1;line-height:1.3;">⬜ Скруглённые углы (как у иконок приложений)</span>
+        </label>
+
+        <!-- Превью -->
+        <div class="icon-preview-wrap" id="previewWrap" style="display:none;">
+            <div class="icon-preview-item">
+                <img id="previewBig" alt="512">
+                <span>512×512</span>
+            </div>
+            <div class="icon-preview-item small">
+                <img id="previewSmall" alt="64">
+                <span>64×64</span>
+            </div>
+        </div>
+
+        <button class="cover-clear" id="clearBtn">✖ Убрать картинку</button>
+
+        <!-- Кнопки скачивания -->
+        <div class="download-grid" id="downloadGrid" style="display:none;">
+            <button class="download-btn" data-size="64">64×64</button>
+            <button class="download-btn" data-size="128">128×128</button>
+            <button class="download-btn" data-size="192">192×192</button>
+            <button class="download-btn" data-size="256">256×256</button>
+            <button class="download-btn" data-size="512">512×512</button>
+            <button class="download-btn" data-size="1024">1024×1024</button>
+        </div>
+
+        <button class="download-all" id="downloadAllBtn" style="display:none;">📦 Скачать все размеры</button>
+        <button class="reset-btn" id="resetBtn" style="display:none;">⟳ Начать заново</button>
+
+        <div class="status-msg" id="statusMsg">Введите название или загрузите картинку</div>
+
+        <div class="footer">Всё работает локально · картинки из Openverse / Picsum</div>
     </div>
+</div>
 
-    <button class="exit-btn" onclick="window.location.href='https://2d3t.github.io/index.html/'">Выход</button>
-  </div>
+<canvas id="canvas" style="display:none;"></canvas>
 
-  <canvas id="canvas" style="display:none;"></canvas>
+<script>
+(function() {
+    'use strict';
 
-  <script>
-    let img = new Image();
+    // ===== Элементы =====
+    const titleInput = document.getElementById('titleInput');
+    const fileInput = document.getElementById('fileInput');
+    const suggBlock = document.getElementById('suggBlock');
+    const suggGrid = document.getElementById('suggGrid');
+    const suggLoader = document.getElementById('suggLoader');
+    const suggPrev = document.getElementById('suggPrev');
+    const suggNext = document.getElementById('suggNext');
+    const suggPageInfo = document.getElementById('suggPageInfo');
+    const overlayToggle = document.getElementById('overlayToggle');
+    const roundedToggle = document.getElementById('roundedToggle');
+    const previewWrap = document.getElementById('previewWrap');
+    const previewBig = document.getElementById('previewBig');
+    const previewSmall = document.getElementById('previewSmall');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadGrid = document.getElementById('downloadGrid');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusMsg = document.getElementById('statusMsg');
+    const canvas = document.getElementById('canvas');
 
-    document.getElementById('upload').addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    // ===== Состояние =====
+    let sourceImage = null;       // HTMLImageElement — исходник в натуральном размере
+    let sourceDataUrl = null;     // для перерисовки
+    let currentQuery = '';
+    let currentPage = 1;
+    let suggDebounce = null;
+    let isCustomFile = false;     // true если пользователь загрузил файл
 
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        img.onload = function() {
-          document.getElementById('buttons').style.display = 'block';
+    const SIZES = [64, 128, 192, 256, 512, 1024];
+
+    // ===== Утилиты =====
+    function setStatus(text, type) {
+        statusMsg.textContent = text || '';
+        statusMsg.className = 'status-msg' + (type ? ' ' + type : '');
+    }
+
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ===== Подсказки картинок =====
+    function getFallbackUrls(q) {
+        return Array.from({length: 6}, (_, i) =>
+            `https://picsum.photos/seed/${encodeURIComponent(q)}_${currentPage}_${i}/600/600`);
+    }
+
+    function renderSuggestions(urls) {
+        suggGrid.innerHTML = '';
+        urls.forEach((url, idx) => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'sugg-wrapper';
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = 'sugg ' + idx;
+            img.loading = 'lazy';
+            img.className = 'sugg-img';
+            img.crossOrigin = 'anonymous';
+            img.onerror = () => {
+                img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/></svg>';
+            };
+            img.onclick = () => {
+                suggGrid.querySelectorAll('.sugg-wrapper').forEach(el => el.classList.remove('selected'));
+                suggGrid.querySelectorAll('.sugg-img').forEach(el => el.classList.remove('selected'));
+                wrapper.classList.add('selected');
+                img.classList.add('selected');
+                loadFromUrl(url);
+            };
+
+            const check = document.createElement('div');
+            check.className = 'sugg-check';
+            check.textContent = '✓';
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(check);
+            suggGrid.appendChild(wrapper);
+        });
+    }
+
+    function updateSuggNav() {
+        suggPageInfo.textContent = 'Стр. ' + currentPage;
+        suggPrev.disabled = currentPage <= 1;
+    }
+
+    async function fetchSuggestions(query, resetPage) {
+        if (!query || query.trim().length < 2) {
+            suggBlock.style.display = 'none';
+            return;
         }
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+        if (resetPage) currentPage = 1;
+        currentQuery = query.trim();
+        suggBlock.style.display = 'block';
+        suggLoader.classList.add('show');
+        suggGrid.innerHTML = '';
+        updateSuggNav();
+        try {
+            const resp = await fetch(
+                `https://api.openverse.org/v1/images/?q=${encodeURIComponent(currentQuery)}&page_size=6&page=${currentPage}`
+            );
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            const urls = (data.results || []).map(x => x.url).filter(Boolean);
+            renderSuggestions(urls.length ? urls : getFallbackUrls(currentQuery));
+        } catch (e) {
+            renderSuggestions(getFallbackUrls(currentQuery));
+        } finally {
+            suggLoader.classList.remove('show');
+            updateSuggNav();
+        }
+    }
+
+    // ===== Загрузка картинки =====
+    async function loadFromUrl(url) {
+        setStatus('Загружаем картинку...');
+        try {
+            // Пробуем fetch → blob → dataURL (для canvas)
+            let dataUrl = null;
+            try {
+                const resp = await fetch(url, { mode: 'cors' });
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const blob = await resp.blob();
+                dataUrl = await new Promise((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = () => res(r.result);
+                    r.onerror = () => rej(r.error);
+                    r.readAsDataURL(blob);
+                });
+            } catch (e) {
+                // Fallback через Image + canvas
+                dataUrl = await new Promise((res, rej) => {
+                    const im = new Image();
+                    im.crossOrigin = 'anonymous';
+                    im.onload = () => {
+                        const c = document.createElement('canvas');
+                        c.width = im.naturalWidth;
+                        c.height = im.naturalHeight;
+                        c.getContext('2d').drawImage(im, 0, 0);
+                        res(c.toDataURL('image/png'));
+                    };
+                    im.onerror = () => rej(new Error('Не удалось загрузить картинку'));
+                    im.src = url;
+                });
+            }
+            await setSourceImage(dataUrl);
+            isCustomFile = false;
+            setStatus('Картинка выбрана ✓', 'success');
+        } catch (e) {
+            console.error(e);
+            setStatus('Не удалось загрузить картинку: ' + e.message, 'error');
+        }
+    }
+
+    function setSourceImage(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                sourceImage = img;
+                sourceDataUrl = dataUrl;
+                updateUI(true);
+                renderPreview();
+                resolve();
+            };
+            img.onerror = () => reject(new Error('Ошибка чтения картинки'));
+            img.src = dataUrl;
+        });
+    }
+
+    // ===== Рендер иконки в canvas =====
+    function renderIcon(size) {
+        if (!sourceImage) return null;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, size, size);
+
+        // Фон (чтобы прозрачные PNG не были чёрными)
+        ctx.fillStyle = '#0f1625';
+        ctx.fillRect(0, 0, size, size);
+
+        // Обрезка картинки в квадрат по центру
+        const sw = sourceImage.naturalWidth;
+        const sh = sourceImage.naturalHeight;
+        const side = Math.min(sw, sh);
+        const sx = (sw - side) / 2;
+        const sy = (sh - side) / 2;
+
+        // Скругление углов через clip
+        if (roundedToggle.checked) {
+            const r = size * 0.22;
+            roundRect(ctx, 0, 0, size, size, r);
+            ctx.clip();
+        }
+
+        ctx.drawImage(sourceImage, sx, sy, side, side, 0, 0, size, size);
+
+        // Текст поверх (если включено)
+        if (overlayToggle.checked) {
+            const title = titleInput.value.trim();
+            if (title) {
+                // Градиент затемнения сверху и снизу
+                const gradTop = ctx.createLinearGradient(0, 0, 0, size * 0.45);
+                gradTop.addColorStop(0, 'rgba(0,0,0,0.75)');
+                gradTop.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = gradTop;
+                ctx.fillRect(0, 0, size, size * 0.45);
+
+                const gradBot = ctx.createLinearGradient(0, size * 0.55, 0, size);
+                gradBot.addColorStop(0, 'rgba(0,0,0,0)');
+                gradBot.addColorStop(1, 'rgba(0,0,0,0.75)');
+                ctx.fillStyle = gradBot;
+                ctx.fillRect(0, size * 0.55, size, size * 0.45);
+
+                // Подбор размера шрифта
+                let fontSize = size * 0.16;
+                const maxWidth = size * 0.9;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.85)';
+                ctx.shadowBlur = size * 0.02;
+
+                do {
+                    ctx.font = `700 ${fontSize}px -apple-system, system-ui, sans-serif`;
+                    if (ctx.measureText(title).width <= maxWidth) break;
+                    fontSize -= 1;
+                } while (fontSize > 10);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(title, size / 2, size * 0.78);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        return canvas.toDataURL('image/png');
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    // ===== Превью =====
+    function renderPreview() {
+        if (!sourceImage) return;
+        const bigUrl = renderIcon(512);
+        const smallUrl = renderIcon(64);
+        if (bigUrl) previewBig.src = bigUrl;
+        if (smallUrl) previewSmall.src = smallUrl;
+    }
+
+    function updateUI(hasImage) {
+        previewWrap.style.display = hasImage ? 'flex' : 'none';
+        clearBtn.classList.toggle('show', hasImage);
+        downloadGrid.style.display = hasImage ? 'grid' : 'none';
+        downloadAllBtn.style.display = hasImage ? 'block' : 'none';
+        resetBtn.style.display = hasImage ? 'block' : 'none';
+    }
+
+    // ===== Скачивание =====
+    function downloadSize(size) {
+        const url = renderIcon(size);
+        if (!url) return;
+        const baseName = (titleInput.value.trim() || 'icon')
+            .replace(/[\\/:*?"<>|]/g, '_')
+            .slice(0, 50) || 'icon';
+        const link = document.createElement('a');
+        link.download = `icon-${size}.png`;
+        link.href = url;
+        link.click();
+    }
+
+    // ===== Обработчики =====
+    titleInput.addEventListener('input', () => {
+        clearTimeout(suggDebounce);
+        suggDebounce = setTimeout(() => fetchSuggestions(titleInput.value, true), 600);
+        if (sourceImage && overlayToggle.checked) {
+            renderPreview();
+        }
     });
 
-    async function downloadIcon(size) {
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = size;
-      canvas.height = size;
+    overlayToggle.addEventListener('change', () => {
+        if (sourceImage) renderPreview();
+    });
+    roundedToggle.addEventListener('change', () => {
+        if (sourceImage) renderPreview();
+    });
 
-      ctx.clearRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0, size, size);
+    fileInput.addEventListener('change', (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        setStatus('Обрабатываем вашу картинку...');
+        const reader = new FileReader();
+        reader.onload = async () => {
+            try {
+                await setSourceImage(reader.result);
+                isCustomFile = true;
+                // Снимаем выделение с подсказок
+                suggGrid.querySelectorAll('.sugg-wrapper').forEach(el => el.classList.remove('selected'));
+                suggGrid.querySelectorAll('.sugg-img').forEach(el => el.classList.remove('selected'));
+                setStatus('Ваша картинка загружена ✓', 'success');
+            } catch (err) {
+                setStatus('Ошибка: ' + err.message, 'error');
+            }
+        };
+        reader.onerror = () => setStatus('Ошибка чтения файла', 'error');
+        reader.readAsDataURL(f);
+    });
 
-      // Преобразуем canvas в Blob
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-      
-      // Создаём объект File с нужным именем
-      const fileName = `icon-${size}.png`;
-      const file = new File([blob], fileName, { type: 'image/png' });
+    clearBtn.addEventListener('click', () => {
+        sourceImage = null;
+        sourceDataUrl = null;
+        fileInput.value = '';
+        suggGrid.querySelectorAll('.sugg-wrapper').forEach(el => el.classList.remove('selected'));
+        suggGrid.querySelectorAll('.sugg-img').forEach(el => el.classList.remove('selected'));
+        updateUI(false);
+        setStatus('Картинка убрана');
+    });
 
-      // Используем showDirectoryPicker для возможности замены
-      // Но для простоты используем стандартный download с заменой
-      // Для этого создаём временный URL и используем ссылку с атрибутом download
-      const url = URL.createObjectURL(file);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName; // Это имя будет предложено для сохранения
-      
-      // Симулируем клик для начала скачивания
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Освобождаем URL
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-    }
-  </script>
+    resetBtn.addEventListener('click', () => {
+        titleInput.value = '';
+        fileInput.value = '';
+        sourceImage = null;
+        sourceDataUrl = null;
+        currentQuery = '';
+        currentPage = 1;
+        suggBlock.style.display = 'none';
+        suggGrid.innerHTML = '';
+        updateUI(false);
+        setStatus('Введите название или загрузите картинку');
+    });
+
+    // Делегирование кнопок скачивания
+    downloadGrid.querySelectorAll('.download-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const size = parseInt(btn.dataset.size, 10);
+            downloadSize(size);
+            setStatus(`✅ Скачано icon-${size}.png`, 'success');
+        });
+    });
+
+    downloadAllBtn.addEventListener('click', async () => {
+        downloadAllBtn.disabled = true;
+        setStatus('Скачиваем все размеры...');
+        for (let i = 0; i < SIZES.length; i++) {
+            downloadSize(SIZES[i]);
+            // Небольшая пауза, чтобы браузер не блокировал множественные загрузки
+            await new Promise(r => setTimeout(r, 350));
+        }
+        setStatus('✅ Все размеры скачаны', 'success');
+        downloadAllBtn.disabled = false;
+    });
+
+    // Навигация по страницам
+    suggNext.addEventListener('click', () => {
+        if (!currentQuery) return;
+        currentPage++;
+        fetchSuggestions(currentQuery, false);
+    });
+    suggPrev.addEventListener('click', () => {
+        if (!currentQuery || currentPage <= 1) return;
+        currentPage--;
+        fetchSuggestions(currentQuery, false);
+    });
+
+    // Инициализация
+    updateSuggNav();
+})();
+</script>
 </body>
 </html>
