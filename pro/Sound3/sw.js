@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'osp-pwa-v5';
+const CACHE_NAME = 'osp-pwa-v6';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/Sound3/index.html',
