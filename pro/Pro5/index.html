@@ -2610,15 +2610,54 @@ window.clearBetweenMarks = function(){
     const end   = Math.max(markA, markB);
     if(start === end){ alert('⚠️ Метки A и B на одной позиции!'); return; }
 
+
     const full = getFullCode();
     if(typeof pushUndo==='function') pushUndo(full);
     const newFull = full.substring(0, start) + full.substring(end);
+
+
     markA = null; markB = null;
     if(typeof applyMarkVisuals==='function') applyMarkVisuals();
     if(typeof updateMarkButtons==='function') updateMarkButtons();
 
+
+    const targetPos = Math.min(start, newFull.length);
+
+
+    if(!virtualActive){
+        textarea.value = newFull;
+        textarea.focus();
+        textarea.setSelectionRange(targetPos, targetPos);
+        if(typeof updateLineNumbers==='function') updateLineNumbers();
+        const h = parseFloat(getComputedStyle(textarea).lineHeight);
+        const line = newFull.substring(0, targetPos).split('\n').length;
+        textarea.scrollTop = Math.max(0, (line - 1) * h - textarea.clientHeight / 2);
+        if(typeof highlightActiveLine==='function') highlightActiveLine(line);
+        return;
+    }
+
+
     setFullCode(newFull);
-    centerWindowAt(Math.min(start, newFull.length), 0);
+    centerWindowAt(targetPos, 0);
+
+
+    requestAnimationFrame(() => {
+        textarea.focus();
+        const local = targetPos - windowStart;
+        const clamped = Math.max(0, Math.min(textarea.value.length, local));
+        textarea.setSelectionRange(clamped, clamped);
+
+
+        const h = parseFloat(getComputedStyle(textarea).lineHeight);
+        const line = textarea.value.substring(0, clamped).split('\n').length;
+        textarea.scrollTop = Math.max(0, (line - 1) * h - textarea.clientHeight / 2);
+
+
+        const globalLine = getLinesBefore() + line;
+        activeLineNumber = globalLine;
+        if(typeof highlightActiveLine==='function') highlightActiveLine(globalLine);
+        updatePositionHint();
+    });
 };
 
 const _origApplyMarkVisuals = window.applyMarkVisuals;
