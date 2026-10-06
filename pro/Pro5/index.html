@@ -2193,6 +2193,18 @@ let windowDirty   = false;
 let _linesBeforeCache = { start: -1, value: 0 };
 let _totalLinesCache = { key: -1, value: 0 };
 
+
+// Блокировка авто-сдвига окна после явного перехода (goToLine / scrollToBottom / centerWindowAt)
+let explicitPositionLock = false;
+let explicitLockTimer = null;
+
+
+window.lockExplicitPosition = function(ms){
+    explicitPositionLock = true;
+    clearTimeout(explicitLockTimer);
+    explicitLockTimer = setTimeout(()=>{ explicitPositionLock = false; }, ms || 2000);
+};
+
 // ---------- ДОСТУП К DOM ----------
 const textarea = document.getElementById('codeArea');
 const lineNumbersDiv = document.getElementById('lineNumbers');
@@ -2243,6 +2255,7 @@ window.setFullCode = function(code){
     if(typeof updateLineNumbers === 'function') updateLineNumbers();
     updateWindowIndicator();
     updatePositionHint();
+    if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
 };
 
 // ---------- СИНХРОНИЗАЦИЯ ОКНА И БУФЕРА ----------
@@ -2260,14 +2273,33 @@ function syncWindowToBuffer(){
 // ---------- СДВИГ ОКНА ----------
 window.maybeShiftWindow = function(force){
     if(!virtualActive) return;
+
+
+    // Если только что был явный переход — не трогаем окно,
+    // пока курсор остаётся внутри него.
+    if(!force && explicitPositionLock){
+        const c = textarea.selectionStart;
+        if(c >= 0 && c <= (windowEnd - windowStart)){
+            return; // курсор внутри окна — ничего не делаем
+        }
+        explicitPositionLock = false; // вышел за пределы — снимаем лок
+    }
+
+
     syncWindowToBuffer();
+
 
     const cursor = textarea.selectionStart;
     const winLen = windowEnd - windowStart;
-    const safeTop = VIRTUAL_OVERLAP;
-    const safeBot = winLen - VIRTUAL_OVERLAP;
 
-    if(!force && cursor > safeTop && cursor < safeBot) return;
+
+    // Сдвигаем окно ТОЛЬКО если курсор реально вышел за границы окна,
+    // а не за "safe"-зону у края.
+    if(!force && cursor >= 0 && cursor <= winLen){
+        return;
+    }
+
+
     if(virtualBuffer.length <= VIRTUAL_WINDOW){
         if(windowStart !== 0){
             windowStart = 0;
@@ -2530,17 +2562,18 @@ window.goToLine = function(){
         const localLine = textarea.value.substring(0, localPos).split('\n').length;
         textarea.focus();
         textarea.setSelectionRange(localPos, localPos);
-        textarea.scrollTop = Math.max(0, (localLine - 1) * h - textarea.clientHeight / 2 + h / 2);
-        activeLineNumber = line;
-        if(typeof highlightActiveLine==='function') highlightActiveLine(line);
-        updatePositionHint();
-        return;
-    }
+        textarea.scrollTop = Math.max(0, (localLine - 1) * h - textarea.clientHeight / 2 + h / 2);    activeLineNumber = line;
+    if(typeof highlightActiveLine==='function') highlightActiveLine(line);
+    updatePositionHint();
+    if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
+    return;
+}
 
     // Иначе — сдвигаем окно
     centerWindowAt(pos, 0);
     activeLineNumber = line;
     if(typeof highlightActiveLine==='function') highlightActiveLine(line);
+    if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
 };
 
 // ---------- SCROLL TOP / BOTTOM ----------
@@ -2549,17 +2582,18 @@ window.scrollToTop = function(){
         textarea.focus();
         textarea.setSelectionRange(0, 0);
         textarea.scrollTop = 0;
-        if(typeof syncScroll==='function') syncScroll();
-        if(typeof highlightActiveLine==='function') highlightActiveLine(1);
-        window.scrollTo({top: 0, behavior: 'smooth'});
-        return;
-    }
+        if(typeof syncScroll==='function') syncScroll();    if(typeof highlightActiveLine==='function') highlightActiveLine(1);
+    window.scrollTo({top: 0, behavior: 'smooth'});
+    if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
+    return;
+}
     centerWindowAt(0, 0);
     textarea.scrollTop = 0;
     if(typeof syncScroll==='function') syncScroll();
     activeLineNumber = 1;
     if(typeof highlightActiveLine==='function') highlightActiveLine(1);
     window.scrollTo({top: 0, behavior: 'smooth'});
+    if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
 };
 
 window.scrollToBottom = function(){
@@ -2569,11 +2603,11 @@ window.scrollToBottom = function(){
         textarea.setSelectionRange(pos, pos);
         textarea.scrollTop = textarea.scrollHeight;
         if(typeof syncScroll==='function') syncScroll();
-        const totalLines = textarea.value.split('\n').length;
-        if(typeof highlightActiveLine==='function') highlightActiveLine(totalLines);
-        window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
-        return;
-    }
+        const totalLines = textarea.value.split('\n').length;    if(typeof highlightActiveLine==='function') highlightActiveLine(totalLines);
+    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+    if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
+    return;
+}
     const full = getFullCode();
     const totalLines = full.split('\n').length;
     centerWindowAt(full.length, 0);
@@ -2582,6 +2616,7 @@ window.scrollToBottom = function(){
     activeLineNumber = totalLines;
     if(typeof highlightActiveLine==='function') highlightActiveLine(totalLines);
     window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+    if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
 };
 
 // ---------- МЕТКИ ----------
@@ -2657,6 +2692,7 @@ window.clearBetweenMarks = function(){
         activeLineNumber = globalLine;
         if(typeof highlightActiveLine==='function') highlightActiveLine(globalLine);
         updatePositionHint();
+        if(typeof lockExplicitPosition === 'function') lockExplicitPosition(2000);
     });
 };
 
@@ -3062,7 +3098,7 @@ textarea.addEventListener('keyup', function(){
     if(virtualActive){ maybeShiftWindow(false); updatePositionHint(); }
 });
 textarea.addEventListener('click', function(){
-    if(virtualActive){ maybeShiftWindow(false); updatePositionHint(); }
+    if(virtualActive){ updatePositionHint(); } // клик больше не двигает окно
 });
 textarea.addEventListener('scroll', function(){
     if(virtualActive && typeof syncScroll==='function') syncScroll();
