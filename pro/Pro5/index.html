@@ -3181,6 +3181,109 @@ console.log('[VirtualPatch] ✅ v2.0 установлен. Порог:', Math.ro
 
     console.log('[VirtualPatch] ✅ Фикс рассинхрона номеров применён');
 })();
+
+
+// ---------- ОБЁРТКА shareFile (кнопка «Поделиться 📤») ----------
+function wrapShareFile(){
+    const orig = window.shareFile;
+    if(typeof orig !== 'function') return;
+    window.shareFile = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+
+        const code = getFullCode();
+        if(!code.trim()){ alert('⚠️ Нет текста для отправки!'); return; }
+
+        const modal = document.createElement('div');
+        modal.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .25s ease;padding:20px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);';
+        const card = document.createElement('div');
+        card.style.cssText='background:#141a24;border-radius:24px;padding:24px;max-width:400px;width:100%;border:1px solid #2a3340;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);';
+
+        let defaultExt='txt';
+        const trimmed = code.trim();
+        if(trimmed.toLowerCase().startsWith('<!doctype') ||
+           trimmed.toLowerCase().startsWith('<html') ||
+           trimmed.includes('<body') ||
+           trimmed.includes('<div')) defaultExt='html';
+
+        card.innerHTML = `
+            <h3 style="color:#e2e8f0;margin:0 0 8px 0;">📤 Поделиться файлом</h3>
+            <p style="color:#94a3b8;font-size:14px;margin:0 0 16px 0;">Введите имя файла</p>
+            <div style="margin-bottom:16px;">
+                <input type="text" id="fileNameInput" value="code"
+                    style="width:100%;padding:10px 14px;border-radius:12px;border:1px solid #2a3340;background:#0d1117;color:#e2e8f0;font-size:16px;box-sizing:border-box;outline:none;"
+                    placeholder="Имя файла">
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+                <button onclick="doShare('txt')" style="flex:1;min-width:100px;background:#3b4de0;color:white;border:0;border-radius:40px;padding:12px 20px;font-size:16px;font-weight:600;cursor:pointer;">📄 TXT</button>
+                <button onclick="doShare('html')" style="flex:1;min-width:100px;background:#7c5a00;color:#fcd34d;border:0;border-radius:40px;padding:12px 20px;font-size:16px;font-weight:600;cursor:pointer;">🌐 HTML</button>
+            </div>
+            <button onclick="this.closest('div[style*=\\'position: fixed\\']').remove()" style="margin-top:14px;background:#1e2630;color:#94a3b8;border:1px solid #2a3340;border-radius:40px;padding:8px 24px;font-size:14px;cursor:pointer;">✕ Отмена</button>
+        `;
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+        setTimeout(()=>{const i=document.getElementById('fileNameInput');if(i){i.focus();i.select();}},100);
+        modal.addEventListener('click',(e)=>{if(e.target===modal)modal.remove();});
+        document.addEventListener('keydown',function h(e){
+            if(e.key==='Escape'){modal.remove();document.removeEventListener('keydown',h);}
+        });
+    };
+}
+
+// ---------- ОБЁРТКА doShare (само скачивание) ----------
+function wrapDoShare(){
+    const orig = window.doShare;
+    if(typeof orig !== 'function') return;
+    window.doShare = function(format){
+        if(!virtualActive) return orig.apply(this, arguments);
+
+        const code = getFullCode();
+        if(!code.trim()){ alert('⚠️ Нет данных!'); return; }
+
+        const fileNameInput = document.getElementById('fileNameInput');
+        let fileName = fileNameInput ? fileNameInput.value.trim() : 'code';
+        if(!fileName) fileName = 'code';
+
+        const modal = document.querySelector('div[style*="position: fixed"][style*="z-index: 9999"]');
+        if(modal) modal.remove();
+
+        let blob, fullFilename, mimeType;
+        if(format === 'txt'){
+            blob = new Blob([code], {type:'text/plain;charset=utf-8'});
+            fullFilename = fileName + '.txt';
+            mimeType = 'text/plain';
+        } else {
+            let htmlContent = code.trim();
+            if(!htmlContent.toLowerCase().startsWith('<!doctype') &&
+               !htmlContent.toLowerCase().startsWith('<html')){
+                htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + fileName + '</title>\n<style>\n    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }\n</style>\n</head>\n<body>\n' + code + '\n</body>\n</html>';
+            }
+            blob = new Blob([htmlContent], {type:'text/html;charset=utf-8'});
+            fullFilename = fileName + '.html';
+            mimeType = 'text/html';
+        }
+
+        const file = new File([blob], fullFilename, {type:mimeType, lastModified:Date.now()});
+
+        if(navigator.share){
+            const shareData = {files:[file]};
+            if(navigator.canShare && navigator.canShare(shareData)){
+                navigator.share(shareData).catch((err)=>{
+                    if(err.name !== 'AbortError'){
+                        console.error('Ошибка отправки:', err);
+                        fallbackDownload(blob, fullFilename);
+                    }
+                });
+                return;
+            }
+        }
+        fallbackDownload(blob, fullFilename);
+    };
+}
+
+// Активируем обёртки
+wrapShareFile();
+wrapDoShare();
+
 })();
 </script>
 </body>
