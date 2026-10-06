@@ -2167,5 +2167,1021 @@ document.addEventListener('keydown', function(e){
     }
 });
 </script>
+
+<script>
+/* ============================================================
+   KlikEdit — Virtual Buffer Patch v2.0
+   • Виртуализация больших файлов (>300 КБ)
+   • Глобальная нумерация строк (без "плывущих" номеров)
+   • Корректный переход к строке, Ctrl+Home/End
+   • Поиск, метки, правки, сохранение — по полному буферу
+   ============================================================ */
+(function(){
+'use strict';
+
+// ---------- КОНСТАНТЫ ----------
+const VIRTUAL_THRESHOLD = 300 * 1024;
+const VIRTUAL_WINDOW    = 300 * 1024;
+const VIRTUAL_OVERLAP   = 50  * 1024;
+
+// ---------- СОСТОЯНИЕ ----------
+let virtualBuffer = '';
+let virtualActive = false;
+let windowStart   = 0;
+let windowEnd     = 0;
+let windowDirty   = false;
+let _linesBeforeCache = { start: -1, value: 0 };
+let _totalLinesCache = { key: -1, value: 0 };
+
+// ---------- ДОСТУП К DOM ----------
+const textarea = document.getElementById('codeArea');
+const lineNumbersDiv = document.getElementById('lineNumbers');
+if(!textarea){ console.warn('[VirtualPatch] textarea не найдена'); return; }
+
+// ---------- ЯДРО: доступ к полному коду ----------
+window.getFullCode = function(){
+    if(!virtualActive) return textarea.value;
+    if(windowDirty){
+        virtualBuffer = virtualBuffer.substring(0, windowStart)
+                      + textarea.value
+                      + virtualBuffer.substring(windowEnd);
+        windowEnd = windowStart + textarea.value.length;
+        windowDirty = false;
+        _linesBeforeCache = { start: -1, value: 0 };
+        _totalLinesCache = { key: -1, value: 0 };
+    }
+    return virtualBuffer;
+};
+
+window.setFullCode = function(code){
+    code = code == null ? '' : String(code);
+
+    if(code.length < VIRTUAL_THRESHOLD){
+        if(virtualActive){
+            virtualActive = false;
+            virtualBuffer = '';
+            windowStart = windowEnd = 0;
+            windowDirty = false;
+            _linesBeforeCache = { start: -1, value: 0 };
+            _totalLinesCache = { key: -1, value: 0 };
+        }
+        textarea.value = code;
+        if(typeof updateLineNumbers === 'function') updateLineNumbers();
+        updateWindowIndicator();
+        updatePositionHint();
+        return;
+    }
+
+    virtualActive = true;
+    virtualBuffer = code;
+    windowStart = 0;
+    windowEnd = Math.min(code.length, VIRTUAL_WINDOW);
+    windowDirty = false;
+    _linesBeforeCache = { start: -1, value: 0 };
+    _totalLinesCache = { key: -1, value: 0 };
+    textarea.value = code.substring(0, windowEnd);
+    if(typeof updateLineNumbers === 'function') updateLineNumbers();
+    updateWindowIndicator();
+    updatePositionHint();
+};
+
+// ---------- СИНХРОНИЗАЦИЯ ОКНА И БУФЕРА ----------
+function syncWindowToBuffer(){
+    if(!virtualActive || !windowDirty) return;
+    virtualBuffer = virtualBuffer.substring(0, windowStart)
+                  + textarea.value
+                  + virtualBuffer.substring(windowEnd);
+    windowEnd = windowStart + textarea.value.length;
+    windowDirty = false;
+    _linesBeforeCache = { start: -1, value: 0 };
+    _totalLinesCache = { key: -1, value: 0 };
+}
+
+// ---------- СДВИГ ОКНА ----------
+window.maybeShiftWindow = function(force){
+    if(!virtualActive) return;
+    syncWindowToBuffer();
+
+    const cursor = textarea.selectionStart;
+    const winLen = windowEnd - windowStart;
+    const safeTop = VIRTUAL_OVERLAP;
+    const safeBot = winLen - VIRTUAL_OVERLAP;
+
+    if(!force && cursor > safeTop && cursor < safeBot) return;
+    if(virtualBuffer.length <= VIRTUAL_WINDOW){
+        if(windowStart !== 0){
+            windowStart = 0;
+            windowEnd = virtualBuffer.length;
+            textarea.value = virtualBuffer;
+            _linesBeforeCache = { start: -1, value: 0 };
+            if(typeof updateLineNumbers === 'function') updateLineNumbers();
+        }
+        return;
+    }
+
+    let newStart = Math.max(0, cursor - Math.floor(VIRTUAL_WINDOW / 2));
+    let newEnd   = Math.min(virtualBuffer.length, newStart + VIRTUAL_WINDOW);
+    newStart     = Math.max(0, newEnd - VIRTUAL_WINDOW);
+    if(newStart === windowStart && newEnd === windowEnd && !force) return;
+
+    const cursorOffset = cursor - newStart;
+    windowStart = newStart;
+    windowEnd = newEnd;
+    textarea.value = virtualBuffer.substring(newStart, newEnd);
+    _linesBeforeCache = { start: -1, value: 0 };
+    const newCursor = Math.max(0, Math.min(textarea.value.length, cursorOffset));
+    textarea.setSelectionRange(newCursor, newCursor);
+    if(typeof updateLineNumbers === 'function') updateLineNumbers();
+    if(typeof syncScroll === 'function') syncScroll();
+    updateWindowIndicator();
+    updatePositionHint();
+};
+
+window.centerWindowAt = function(globalPos, selectLen){
+    if(!virtualActive) return;
+    syncWindowToBuffer();
+    const len = virtualBuffer.length;
+
+    if(len <= VIRTUAL_WINDOW){
+        windowStart = 0;
+        windowEnd = len;
+        textarea.value = virtualBuffer;
+    } else {
+        let newStart = Math.max(0, globalPos - Math.floor(VIRTUAL_WINDOW / 2));
+        let newEnd   = Math.min(len, newStart + VIRTUAL_WINDOW);
+        newStart     = Math.max(0, newEnd - VIRTUAL_WINDOW);
+        windowStart = newStart;
+        windowEnd = newEnd;
+        textarea.value = virtualBuffer.substring(newStart, newEnd);
+    }
+    _linesBeforeCache = { start: -1, value: 0 };
+
+    const local = globalPos - windowStart;
+    const endLocal = local + (selectLen || 0);
+    textarea.focus();
+    textarea.setSelectionRange(local, endLocal);
+    if(typeof updateLineNumbers === 'function') updateLineNumbers();
+    if(typeof syncScroll === 'function') syncScroll();
+    updateWindowIndicator();
+    updatePositionHint();
+};
+
+// ---------- КЭШ ЧИСЛА СТРОК ----------
+function getTotalLines(){
+    if(!virtualActive) return textarea.value.split('\n').length;
+    const full = getFullCode();
+    if(_totalLinesCache.key === full.length) return _totalLinesCache.value;
+    _totalLinesCache.value = full.split('\n').length;
+    _totalLinesCache.key = full.length;
+    return _totalLinesCache.value;
+}
+
+function getLinesBefore(){
+    if(_linesBeforeCache.start !== windowStart){
+        _linesBeforeCache.value = virtualBuffer.substring(0, windowStart).split('\n').length - 1;
+        _linesBeforeCache.start = windowStart;
+    }
+    return _linesBeforeCache.value;
+}
+
+// ---------- ИНДИКАТОР ОКНА ----------
+function updateWindowIndicator(){
+    let el = document.getElementById('virtualWindowIndicator');
+    if(!el){
+        el = document.createElement('div');
+        el.id = 'virtualWindowIndicator';
+        el.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(59,77,224,0.9);color:white;padding:6px 12px;border-radius:8px;font-size:12px;z-index:9999;pointer-events:none;opacity:0;transition:opacity .25s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-family:monospace;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+        document.body.appendChild(el);
+    }
+    if(!virtualActive){ el.style.opacity = '0'; return; }
+    const totalKB = Math.round(virtualBuffer.length / 1024);
+    const startKB = Math.round(windowStart / 1024);
+    const endKB   = Math.round(windowEnd / 1024);
+    el.textContent = `⚡ окно ${startKB}–${endKB} КБ / всего ${totalKB} КБ`;
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(()=>{ el.style.opacity = '0'; }, 1800);
+}
+
+// ---------- ИНДИКАТОР ПОЗИЦИИ (строка X / Y) ----------
+function updatePositionHint(){
+    if(!virtualActive){
+        const el = document.getElementById('positionHint');
+        if(el) el.textContent = '';
+        return;
+    }
+    let el = document.getElementById('positionHint');
+    if(!el){
+        el = document.createElement('span');
+        el.id = 'positionHint';
+        el.style.cssText = 'font-size:12px;opacity:0.75;margin-left:8px;font-family:monospace;';
+        const badge = document.getElementById('currentFileName');
+        if(badge && badge.parentNode) badge.parentNode.insertBefore(el, badge.nextSibling);
+    }
+    const linesBefore = getLinesBefore();
+    const cursorLine = linesBefore + textarea.value.substring(0, textarea.selectionStart).split('\n').length;
+    const total = getTotalLines();
+    el.textContent = `· строка ${cursorLine} / ${total}`;
+}
+
+// ---------- ПОДСВЕТКА АКТИВНОЙ СТРОКИ (глобальный номер) ----------
+function highlightActiveLineVirtual(globalLine){
+    if(globalLine === null || globalLine === undefined){
+        Array.from(lineNumbersDiv.children).forEach(el => el.classList.remove('active-line'));
+        return;
+    }
+    const linesBefore = getLinesBefore();
+    const localLine = globalLine - linesBefore;
+    Array.from(lineNumbersDiv.children).forEach((el, i) => {
+        const shouldHighlight = (i === localLine - 1);
+        el.classList.toggle('active-line', shouldHighlight);
+    });
+}
+
+// ---------- ПЕРЕОПРЕДЕЛЕНИЕ updateLineNumbers ----------
+const _origUpdateLineNumbers = window.updateLineNumbers;
+window.updateLineNumbers = function(){
+    if(!virtualActive){
+        if(_origUpdateLineNumbers) return _origUpdateLineNumbers();
+        return;
+    }
+
+    const linesBefore = getLinesBefore();
+    const linesInWindow = textarea.value.split('\n').length;
+
+    lineNumbersDiv.innerHTML = '';
+    for(let i = 1; i <= linesInWindow; i++){
+        const d = document.createElement('div');
+        d.textContent = linesBefore + i;   // ← ГЛОБАЛЬНЫЙ номер
+        lineNumbersDiv.appendChild(d);
+    }
+
+    // Авто-ширина под количество цифр
+    const maxNum = linesBefore + linesInWindow;
+    const digits = String(maxNum).length;
+    const w = Math.max(50, 14 + digits * 9);
+    lineNumbersDiv.style.width = w + 'px';
+    lineNumbersDiv.style.minWidth = w + 'px';
+
+    if(typeof syncScroll === 'function') syncScroll();
+
+    if(typeof activeLineNumber !== 'undefined' && activeLineNumber !== null){
+        highlightActiveLineVirtual(activeLineNumber);
+    }
+};
+
+// ---------- ПЕРЕОПРЕДЕЛЕНИЕ highlightActiveLine ----------
+const _origHighlightActiveLine = window.highlightActiveLine;
+window.highlightActiveLine = function(line){
+    if(!virtualActive){
+        if(_origHighlightActiveLine) return _origHighlightActiveLine(line);
+        return;
+    }
+    if(line === undefined || line === null){
+        activeLineNumber = null;
+        highlightActiveLineVirtual(null);
+        return;
+    }
+    activeLineNumber = line;              // глобальный
+    highlightActiveLineVirtual(line);
+};
+
+// ---------- ПОИСК ----------
+const _origFindAll = window.findAll;
+window.findAll = function(term){
+    if(!virtualActive){
+        if(_origFindAll) return _origFindAll(term);
+        return;
+    }
+    searchResults = [];
+    currentResult = -1;
+    lastSearchMode = null;
+    if(!term){ if(typeof updateSearchCounter==='function') updateSearchCounter(); return; }
+
+    const haystack = getFullCode();
+    let results = (typeof findSmart === 'function') ? findSmart(haystack, term) : [];
+    if(results.length > 0){
+        searchResults = results;
+        lastSearchMode = 'smart';
+        if(typeof updateSearchCounter==='function') updateSearchCounter();
+        return;
+    }
+    results = (typeof findExact === 'function') ? findExact(haystack, term) : [];
+    if(results.length > 0){
+        searchResults = results;
+        lastSearchMode = 'exact';
+        if(typeof updateSearchCounter==='function') updateSearchCounter();
+        if(typeof showToast==='function') showToast('🔍 Найдено точным поиском');
+        return;
+    }
+    if(typeof updateSearchCounter==='function') updateSearchCounter();
+};
+
+window.highlightMatch = function(){
+    if(!searchResults.length) return;
+    const res = searchResults[currentResult];
+    if(virtualActive){
+        centerWindowAt(res.start, res.end - res.start);
+    } else {
+        textarea.focus();
+        textarea.setSelectionRange(res.start, res.end);
+        const h = parseFloat(getComputedStyle(textarea).lineHeight);
+        const line = textarea.value.substring(0, res.start).split('\n').length;
+        textarea.scrollTop = Math.max(0, (line - 1) * h - textarea.clientHeight / 2);
+    }
+    if(typeof updateSearchCounter==='function') updateSearchCounter();
+};
+
+// ---------- ПЕРЕХОД К СТРОКЕ ----------
+window.goToLine = function(){
+    const line = parseInt(document.getElementById('lineNumber').value);
+    if(isNaN(line) || line < 1) return;
+
+    if(!virtualActive){
+        const lines = textarea.value.split('\n');
+        const total = lines.length + Math.ceil(lines.length * .5);
+        if(line > 0 && line <= total){
+            const h = parseFloat(getComputedStyle(textarea).lineHeight);
+            textarea.scrollTop = Math.max(0, (line - 1) * h - textarea.clientHeight / 2 + h / 2);
+            activeLineNumber = line;
+            if(typeof highlightActiveLine==='function') highlightActiveLine(line);
+        }
+        return;
+    }
+
+    const full = getFullCode();
+
+    // Байтовая позиция начала строки
+    let pos = 0;
+    if(line > 1){
+        let idx = -1, cur = 1;
+        while(cur < line){
+            idx = full.indexOf('\n', idx + 1);
+            if(idx === -1) return;
+            cur++;
+        }
+        pos = idx + 1;
+    }
+
+    // Уже в окне? — просто скролл
+    if(pos >= windowStart && pos <= windowEnd){
+        const localPos = pos - windowStart;
+        const h = parseFloat(getComputedStyle(textarea).lineHeight);
+        const localLine = textarea.value.substring(0, localPos).split('\n').length;
+        textarea.focus();
+        textarea.setSelectionRange(localPos, localPos);
+        textarea.scrollTop = Math.max(0, (localLine - 1) * h - textarea.clientHeight / 2 + h / 2);
+        activeLineNumber = line;
+        if(typeof highlightActiveLine==='function') highlightActiveLine(line);
+        updatePositionHint();
+        return;
+    }
+
+    // Иначе — сдвигаем окно
+    centerWindowAt(pos, 0);
+    activeLineNumber = line;
+    if(typeof highlightActiveLine==='function') highlightActiveLine(line);
+};
+
+// ---------- SCROLL TOP / BOTTOM ----------
+window.scrollToTop = function(){
+    if(!virtualActive){
+        textarea.focus();
+        textarea.setSelectionRange(0, 0);
+        textarea.scrollTop = 0;
+        if(typeof syncScroll==='function') syncScroll();
+        if(typeof highlightActiveLine==='function') highlightActiveLine(1);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+        return;
+    }
+    centerWindowAt(0, 0);
+    textarea.scrollTop = 0;
+    if(typeof syncScroll==='function') syncScroll();
+    activeLineNumber = 1;
+    if(typeof highlightActiveLine==='function') highlightActiveLine(1);
+    window.scrollTo({top: 0, behavior: 'smooth'});
+};
+
+window.scrollToBottom = function(){
+    if(!virtualActive){
+        textarea.focus();
+        const pos = textarea.value.length;
+        textarea.setSelectionRange(pos, pos);
+        textarea.scrollTop = textarea.scrollHeight;
+        if(typeof syncScroll==='function') syncScroll();
+        const totalLines = textarea.value.split('\n').length;
+        if(typeof highlightActiveLine==='function') highlightActiveLine(totalLines);
+        window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+        return;
+    }
+    const full = getFullCode();
+    const totalLines = full.split('\n').length;
+    centerWindowAt(full.length, 0);
+    textarea.scrollTop = textarea.scrollHeight;
+    if(typeof syncScroll==='function') syncScroll();
+    activeLineNumber = totalLines;
+    if(typeof highlightActiveLine==='function') highlightActiveLine(totalLines);
+    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+};
+
+// ---------- МЕТКИ ----------
+window.setMarkA = function(){
+    markA = virtualActive ? (windowStart + textarea.selectionStart) : textarea.selectionStart;
+    if(markB !== null && markB < markA){ [markA, markB] = [markB, markA]; }
+    if(typeof applyMarkVisuals==='function') applyMarkVisuals();
+    if(typeof updateMarkButtons==='function') updateMarkButtons();
+    textarea.focus();
+};
+
+window.setMarkB = function(){
+    markB = virtualActive ? (windowStart + textarea.selectionStart) : textarea.selectionStart;
+    if(markA !== null && markA > markB){ [markA, markB] = [markB, markA]; }
+    if(typeof applyMarkVisuals==='function') applyMarkVisuals();
+    if(typeof updateMarkButtons==='function') updateMarkButtons();
+    textarea.focus();
+};
+
+window.clearBetweenMarks = function(){
+    if(markA === null || markB === null){
+        alert('⚠️ Поставьте сначала метки A и B!');
+        return;
+    }
+    const start = Math.min(markA, markB);
+    const end   = Math.max(markA, markB);
+    if(start === end){ alert('⚠️ Метки A и B на одной позиции!'); return; }
+
+    const full = getFullCode();
+    if(typeof pushUndo==='function') pushUndo(full);
+    const newFull = full.substring(0, start) + full.substring(end);
+    markA = null; markB = null;
+    if(typeof applyMarkVisuals==='function') applyMarkVisuals();
+    if(typeof updateMarkButtons==='function') updateMarkButtons();
+
+    setFullCode(newFull);
+    centerWindowAt(Math.min(start, newFull.length), 0);
+};
+
+const _origApplyMarkVisuals = window.applyMarkVisuals;
+window.applyMarkVisuals = function(){
+    if(!virtualActive){
+        if(_origApplyMarkVisuals) return _origApplyMarkVisuals();
+        return;
+    }
+    textarea.style.backgroundImage = 'none';
+    if(markA !== null && markB !== null){
+        const localA = markA - windowStart;
+        const localB = markB - windowStart;
+        const v = textarea.value;
+        if(localB > 0 && localA < v.length){
+            const s = Math.max(0, localA);
+            const e = Math.min(v.length, localB);
+            const before = v.substring(0, s).split('\n').length;
+            const between = v.substring(s, e).split('\n').length;
+            const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight);
+            const paddingTop = parseFloat(getComputedStyle(textarea).paddingTop);
+            const top = paddingTop + (before - 1) * lineHeight;
+            const height = between * lineHeight;
+            textarea.style.backgroundImage = `linear-gradient(transparent ${top}px, rgba(230,126,34,0.15) ${top}px, rgba(230,126,34,0.15) ${top + height}px, transparent ${top + height}px)`;
+            textarea.style.backgroundAttachment = 'local';
+        }
+    }
+};
+
+// ---------- ОБЁРТКИ ВНЕШНИХ ФУНКЦИЙ ----------
+function wrapRunCode(){
+    const orig = window.runCode;
+    if(typeof orig !== 'function') return;
+    window.runCode = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        const code = getFullCode();
+        const extracted = (typeof extractHtmlContent==='function') ? (extractHtmlContent(code) || code) : code;
+        const url = URL.createObjectURL(new Blob([extracted], {type:'text/html'}));
+        if(window.lastPreviewUrl && String(window.lastPreviewUrl).startsWith('blob:')){
+            URL.revokeObjectURL(window.lastPreviewUrl);
+        }
+        window.lastPreviewUrl = url;
+        previewFrame.src = url;
+        fullscreenFrame.src = url;
+        previewFrame.style.display='block';
+        previewFrame.style.visibility='visible';
+        previewFrame.style.opacity='1';
+        previewFrame.classList.add('active');
+        editorContainer.classList.add('hidden');
+        editorContainer.style.display='none';
+        window.scrollTo(0,0);
+    };
+}
+
+function wrapEnterFullscreen(){
+    const orig = window.enterFullscreenInternal;
+    if(typeof orig !== 'function') return;
+    window.enterFullscreenInternal = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        const code = getFullCode();
+        const extracted = (typeof extractHtmlContent==='function') ? (extractHtmlContent(code) || code) : code;
+        const url = URL.createObjectURL(new Blob([extracted], {type:'text/html'}));
+        if(window.lastPreviewUrl && String(window.lastPreviewUrl).startsWith('blob:')){
+            URL.revokeObjectURL(window.lastPreviewUrl);
+        }
+        window.lastPreviewUrl = url;
+        fullscreenFrame.src = url;
+        previewFrame.src = url;
+        fullscreenOverlay.classList.add('active');
+        window.isFullscreen = true;
+        fullscreenButton.textContent='Обычный экран ⛶';
+        fullscreenButton.style.background='#4CAF50';
+        previewFrame.classList.remove('active');
+        previewFrame.style.display='none';
+        previewFrame.style.visibility='hidden';
+        previewFrame.style.opacity='0';
+        document.querySelector('.toolbar').style.display='none';
+        editorContainer.style.display='none';
+        if(fullscreenOverlay.requestFullscreen) fullscreenOverlay.requestFullscreen().catch(()=>{});
+        document.addEventListener('keydown', window.handleEscapeKey);
+        document.addEventListener('fullscreenchange', window.handleFullscreenChange);
+    };
+}
+
+function wrapCopyText(){
+    const orig = window.copyText;
+    if(typeof orig !== 'function') return;
+    window.copyText = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        const code = getFullCode();
+        navigator.clipboard.writeText(code).catch(()=>{
+            const ta = document.createElement('textarea');
+            ta.value = code;
+            document.body.appendChild(ta);
+            ta.select();
+            try{ document.execCommand('copy'); }catch(e){}
+            document.body.removeChild(ta);
+        });
+        const btn = document.getElementById('copyButton');
+        if(btn){
+            btn.classList.add('copied');
+            btn.textContent='Скопировано';
+            setTimeout(()=>{btn.classList.remove('copied');btn.textContent='Скопировать 📃';},1000);
+        }
+    };
+}
+
+function wrapShareCode(){
+    const orig = window.shareCode;
+    if(typeof orig !== 'function') return;
+    window.shareCode = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        const code = getFullCode();
+        if(!code.trim()){ alert('⚠️ Нет текста для сохранения!'); return; }
+        if(typeof showSaveFormatDialog==='function') showSaveFormatDialog(code);
+    };
+}
+
+function wrapSendToQR(){
+    const orig = window.sendToQR;
+    if(typeof orig !== 'function') return;
+    window.sendToQR = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        const code = getFullCode();
+        if(!code.trim()){ alert('Код пуст!'); return; }
+        try{ navigator.clipboard.writeText(code); }catch(e){}
+        localStorage.setItem('sharedCode', JSON.stringify({code:code, timestamp:Date.now(), from:'Pro5'}));
+        const btn = document.querySelector('[onclick="sendToQR()"]');
+        if(btn){
+            btn.textContent='✅ Отправлено!';
+            btn.style.background='#00b894';
+            btn.style.color='white';
+            btn.disabled=true;
+            setTimeout(()=>{btn.textContent='📤 QR';btn.style.background='';btn.style.color='';btn.disabled=false;},2000);
+        }
+        window.open('/2d3t/pro/Pro6/','_blank');
+    };
+}
+
+function wrapSaveLocal(){
+    const orig = window.saveToLocalStorage;
+    if(typeof orig !== 'function') return;
+    window.saveToLocalStorage = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        const code = getFullCode();
+        if(!code.trim()){
+            if(typeof showToast==='function') showToast('⚠️ Нечего сохранять — пусто');
+            return;
+        }
+        try{
+            const time = Date.now();
+            localStorage.setItem('klikedit_saved_code', code);
+            localStorage.setItem('klikedit_saved_time', String(time));
+            if(typeof updateSaveButtonTitle==='function') updateSaveButtonTitle();
+            const btn = document.getElementById('saveLocalButton');
+            if(btn){
+                const o = btn.textContent, ob = btn.style.background;
+                btn.textContent='✅ Сохранено!';
+                btn.style.background='#27ae60';
+                btn.style.color='white';
+                setTimeout(()=>{btn.textContent=o;btn.style.background=ob;btn.style.color='';},1200);
+            }
+            if(typeof showToast==='function') showToast('💾 Сохранено в браузер');
+        }catch(e){
+            if(typeof showToast==='function') showToast('❌ Ошибка: '+e.message);
+        }
+    };
+}
+
+function wrapLoadLocal(){
+    const orig = window.loadFromLocalStorage;
+    if(typeof orig !== 'function') return;
+    window.loadFromLocalStorage = function(){
+        const saved = localStorage.getItem('klikedit_saved_code');
+        if(saved === null || saved === ''){
+            if(typeof showToast==='function') showToast('📭 Нет сохранённой версии');
+            return;
+        }
+        if(!virtualActive && textarea.value.trim() && textarea.value !== saved){
+            const t = localStorage.getItem('klikedit_saved_time');
+            const ts = t ? new Date(parseInt(t)).toLocaleString('ru-RU') : 'неизвестно когда';
+            if(!confirm('⚠️ Заменить текущий текст?\n\nСохранено: '+ts)) return;
+        }
+        if(typeof pushUndo==='function') pushUndo(getFullCode());
+        setFullCode(saved);
+        if(typeof setCurrentFileName==='function') setCurrentFileName('localStorage');
+        if(typeof clearMarks==='function') clearMarks();
+        if(typeof showToast==='function') showToast('📂 Загружено из браузера');
+    };
+}
+
+function wrapFetchWebsiteCode(){
+    const orig = window.fetchWebsiteCode;
+    if(typeof orig !== 'function') return;
+    window.fetchWebsiteCode = async function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        let url = urlInput.value.trim();
+        if(!url) return;
+        if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+        const btn = fetchButton;
+        const old = btn.textContent;
+        btn.textContent='Загрузка... ⏳';
+        btn.classList.add('fetch-loading');
+        btn.disabled = true;
+        try{
+            const r = await fetch(url);
+            if(!r.ok) throw new Error('HTTP '+r.status);
+            const html = await r.text();
+            if(typeof pushUndo==='function') pushUndo(getFullCode());
+            setFullCode(html);
+            if(typeof setCurrentFileName==='function') setCurrentFileName(url.replace(/^https?:\/\//i,'').split('/')[0]);
+            if(typeof clearMarks==='function') clearMarks();
+        }catch(e){ console.error('Ошибка загрузки:', e); }
+        finally{
+            btn.textContent=old;
+            btn.classList.remove('fetch-loading');
+            btn.disabled=false;
+        }
+    };
+}
+
+function wrapHandleFile(){
+    const orig = window.handleFileWithFullscreenRestore;
+    if(typeof orig !== 'function') return;
+    window.handleFileWithFullscreenRestore = function(event){
+        const file = event.target.files[0];
+        if(!file) return;
+        const ext = file.name.split('.').pop().toLowerCase();
+        const supported = ['html','htm','txt','py','js','css','json','xml','md','csv','log','ini','cfg','conf','sh','bat','ps1','rb','php','java','c','cpp','h','cs','go','rs','swift','kt','sql','yaml','yml','toml','pl','pm','r','lua','vim','ts','jsx','tsx','vue','scss','less','sass','styl'];
+        if(!supported.includes(ext)){ event.target.value=''; return; }
+
+        const wasPreview = previewFrame.classList.contains('active');
+        const wasFull = window.isFullscreen;
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            const content = e.target.result;
+            if(typeof pushUndo==='function') pushUndo(getFullCode());
+            setFullCode(content);
+            if(typeof setCurrentFileName==='function') setCurrentFileName(file.name);
+            if(typeof clearMarks==='function') clearMarks();
+
+            if(wasPreview){
+                const extracted = (typeof extractHtmlContent==='function') ? (extractHtmlContent(content) || content) : content;
+                const url = URL.createObjectURL(new Blob([extracted], {type:'text/html'}));
+                if(window.lastPreviewUrl && String(window.lastPreviewUrl).startsWith('blob:')){
+                    URL.revokeObjectURL(window.lastPreviewUrl);
+                }
+                window.lastPreviewUrl = url;
+                previewFrame.src = url;
+                fullscreenFrame.src = url;
+                previewFrame.style.display='block';
+                previewFrame.style.visibility='visible';
+                previewFrame.style.opacity='1';
+                if(wasFull && !window.isFullscreen){
+                    setTimeout(()=>{
+                        if(previewFrame.classList.contains('active') && !window.isFullscreen){
+                            if(typeof enterFullscreenInternal==='function') enterFullscreenInternal();
+                        }
+                    }, 150);
+                }
+            }
+            event.target.value='';
+        };
+        reader.onerror = () => event.target.value='';
+        reader.readAsText(file,'UTF-8');
+    };
+}
+
+function wrapClearAll(){
+    const orig = window.clearAll;
+    if(typeof orig !== 'function') return;
+    window.clearAll = function(){
+        if(!virtualActive) return orig.apply(this, arguments);
+        if(!getFullCode()) return;
+        if(typeof pushUndo==='function') pushUndo(getFullCode());
+        setFullCode('');
+        if(typeof setCurrentFileName==='function') setCurrentFileName('');
+        if(typeof clearMarks==='function') clearMarks();
+        searchResults = [];
+        currentResult = -1;
+        if(typeof updateSearchCounter==='function') updateSearchCounter();
+    };
+}
+
+function wrapApplyEditCard(){
+    const orig = window.applyEditCard;
+    if(typeof orig !== 'function') return;
+    window.applyEditCard = function(card){
+        if(!virtualActive) return orig.apply(this, arguments);
+
+        const status = card.querySelector('.edit-status');
+        status.className = 'edit-status';
+        status.textContent = '';
+
+        const findField = card.querySelector('[data-role="find"]');
+        const replaceField = card.querySelector('[data-role="replace"]');
+        const modeBtn = card.querySelector('[data-role="mode"] button.active');
+        const mode = modeBtn ? modeBtn.dataset.mode : 'instead';
+
+        const findText = (typeof getFieldValue==='function') ? getFieldValue(findField) : findField.innerText;
+        const replaceText = (typeof getFieldValue==='function') ? getFieldValue(replaceField) : replaceField.innerText;
+
+        if(!findText){
+            status.className='edit-status err';
+            status.textContent='⚠️ Поле "Найти" пустое';
+            return false;
+        }
+
+        const source = getFullCode();
+        const match = (typeof findFirstMatch==='function') ? findFirstMatch(source, findText) : null;
+        if(!match){
+            status.className='edit-status err';
+            status.textContent='❌ Фрагмент не найден в коде';
+            return false;
+        }
+
+        let newValue, newCursorPos;
+        if(mode === 'instead'){
+            newValue = source.substring(0, match.start) + replaceText + source.substring(match.end);
+            newCursorPos = match.start + replaceText.length;
+        } else if(mode === 'before'){
+            newValue = source.substring(0, match.start) + replaceText + source.substring(match.start);
+            newCursorPos = match.start + replaceText.length;
+        } else {
+            newValue = source.substring(0, match.end) + replaceText + source.substring(match.end);
+            newCursorPos = match.end + replaceText.length;
+        }
+
+        if(typeof pushUndo==='function') pushUndo(source);
+        setFullCode(newValue);
+        centerWindowAt(newCursorPos, 0);
+
+        status.className='edit-status ok';
+        status.textContent='✅ Правка применена ('+mode+')';
+        setTimeout(()=>{status.className='edit-status';status.textContent='';},2500);
+        return true;
+    };
+}
+
+function wrapUndoRedo(){
+    const origUndo = window.undo;
+    const origRedo = window.redo;
+
+    window.undo = function(){
+        if(!virtualActive) return origUndo.apply(this, arguments);
+        if(undoStack.length === 0){
+            if(typeof showToast==='function') showToast('↩️ Нечего отменять');
+            return;
+        }
+        const current = getFullCode();
+        const prev = undoStack.pop();
+        redoStack.push(current);
+        if(redoStack.length > MAX_HISTORY) redoStack.shift();
+        isUndoRedoAction = true;
+        setFullCode(prev);
+        if(typeof clearMarks==='function') clearMarks();
+        setTimeout(()=>{ isUndoRedoAction=false; }, 0);
+    };
+
+    window.redo = function(){
+        if(!virtualActive) return origRedo.apply(this, arguments);
+        if(redoStack.length === 0){
+            if(typeof showToast==='function') showToast('↪️ Нечего повторять');
+            return;
+        }
+        const current = getFullCode();
+        const next = redoStack.pop();
+        undoStack.push(current);
+        if(undoStack.length > MAX_HISTORY) undoStack.shift();
+        isUndoRedoAction = true;
+        setFullCode(next);
+        if(typeof clearMarks==='function') clearMarks();
+        setTimeout(()=>{ isUndoRedoAction=false; }, 0);
+    };
+}
+
+// ---------- ПЕРЕХВАТ pushUndo (ограничение памяти) ----------
+const _origPushUndo = window.pushUndo;
+window.pushUndo = function(prevValue){
+    if(!virtualActive) return _origPushUndo.apply(this, arguments);
+    if(isUndoRedoAction) return;
+    if(prevValue === undefined) prevValue = getFullCode();
+    if(undoStack.length && undoStack[undoStack.length-1] === prevValue) return;
+    if(prevValue.length > 5 * 1024 * 1024){
+        undoStack.length = 0;   // слишком большой снапшот — не храним
+    }
+    undoStack.push(prevValue);
+    if(undoStack.length > 20) undoStack.shift();
+    redoStack = [];
+};
+
+// ---------- ОБРАБОТЧИКИ СОБЫТИЙ ----------
+textarea.addEventListener('input', function(){
+    if(virtualActive){
+        windowDirty = true;
+        maybeShiftWindow(false);
+        if(typeof applyMarkVisuals==='function') applyMarkVisuals();
+        updatePositionHint();
+    }
+});
+textarea.addEventListener('keyup', function(){
+    if(virtualActive){ maybeShiftWindow(false); updatePositionHint(); }
+});
+textarea.addEventListener('click', function(){
+    if(virtualActive){ maybeShiftWindow(false); updatePositionHint(); }
+});
+textarea.addEventListener('scroll', function(){
+    if(virtualActive && typeof syncScroll==='function') syncScroll();
+});
+
+// ---------- ПЕРЕХВАТ ПРЯМЫХ ПРИСВАИВАНИЙ textarea.value ----------
+(function patchValueSetter(){
+    const proto = HTMLTextAreaElement.prototype;
+    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+    if(!desc || !desc.set) return;
+    const origSet = desc.set;
+    const origGet = desc.get;
+    Object.defineProperty(proto, 'value', {
+        get(){ return origGet.call(this); },
+        set(v){
+            if(this.id === 'codeArea' && virtualActive){
+                const expected = windowEnd - windowStart;
+                if(typeof v === 'string' && v.length === expected){
+                    origSet.call(this, v);
+                    return;
+                }
+                try{ window.setFullCode(v); }
+                catch(e){ origSet.call(this, v); }
+                return;
+            }
+            origSet.call(this, v);
+        },
+        configurable: true
+    });
+})();
+
+// ---------- АКТИВАЦИЯ ОБЁРТОК ----------
+wrapRunCode();
+wrapEnterFullscreen();
+wrapCopyText();
+wrapShareCode();
+wrapSendToQR();
+wrapSaveLocal();
+wrapLoadLocal();
+wrapFetchWebsiteCode();
+wrapHandleFile();
+wrapClearAll();
+wrapApplyEditCard();
+wrapUndoRedo();
+
+// ---------- СТАРТОВАЯ ПРОВЕРКА ----------
+function checkInitialSize(){
+    const v = textarea.value;
+    if(v && v.length >= VIRTUAL_THRESHOLD){
+        setFullCode(v);
+        console.log('[VirtualPatch] ✅ Активирован для файла', Math.round(v.length/1024), 'КБ');
+    }
+}
+checkInitialSize();
+
+// ---------- ДИАГНОСТИКА ----------
+window.__virtualPatch = {
+    isActive: ()=>virtualActive,
+    stats: ()=>({
+        active: virtualActive,
+        bufferSize: virtualBuffer.length,
+        windowStart, windowEnd,
+        windowSize: windowEnd - windowStart,
+        dirty: windowDirty,
+        linesBefore: getLinesBefore(),
+        totalLines: getTotalLines()
+    }),
+    forceWindow: (pos)=>{ if(virtualActive) centerWindowAt(pos, 0); }
+};
+
+console.log('[VirtualPatch] ✅ v2.0 установлен. Порог:', Math.round(VIRTUAL_THRESHOLD/1024), 'КБ');
+// ---------- ФИКС РАССИНХРОНА НОМЕРОВ И СТРОК ----------
+(function fixLineSync(){
+    // 1. Отключаем перенос в textarea — одна логическая строка = одна визуальная
+    textarea.style.whiteSpace = 'pre';
+    textarea.style.overflowWrap = 'normal';
+    textarea.style.overflowX = 'auto';
+    textarea.style.wordBreak = 'normal';
+
+    // 2. Жёстко выравниваем метрики шрифта
+    const METRICS = {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        lineHeight: '1.4',
+        paddingTop: '5px',
+        paddingBottom: '5px',
+        paddingLeft: '5px',
+        paddingRight: '5px',
+        boxSizing: 'border-box',
+        letterSpacing: 'normal',
+        wordSpacing: 'normal',
+        tabSize: '4'
+    };
+
+    Object.entries(METRICS).forEach(([k, v]) => {
+        textarea.style[k] = v;
+        lineNumbersDiv.style[k] = v;
+    });
+
+    // 3. У line-numbers — убираем padding у div'ов, оставляем только горизонтальный
+    const style = document.createElement('style');
+    style.textContent = `
+        #lineNumbers, #lineNumbers div {
+            font-family: monospace !important;
+            font-size: 14px !important;
+            line-height: 1.4 !important;
+            letter-spacing: normal !important;
+            word-spacing: normal !important;
+            tab-size: 4 !important;
+            white-space: pre !important;
+            overflow: hidden !important;
+        }
+        #lineNumbers {
+            padding-top: 5px !important;
+            padding-bottom: 5px !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            box-sizing: border-box !important;
+        }
+        #lineNumbers div {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            height: 19.6px !important;
+            line-height: 19.6px !important;
+            box-sizing: border-box !important;
+        }
+        #codeArea {
+            white-space: pre !important;
+            overflow-wrap: normal !important;
+            word-break: normal !important;
+            overflow-x: auto !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 4. Точный syncScroll — с учётом возможного рассинхрона
+    const _origSyncScroll = window.syncScroll;
+    window.syncScroll = function(){
+        if(_origSyncScroll) _origSyncScroll();
+        // На всякий случай жёстко выравниваем
+        lineNumbersDiv.scrollTop = textarea.scrollTop;
+    };
+
+    // 5. В виртуальном режиме колонка номеров должна не скроллиться,
+    //    а перерисовываться — иначе накопление ошибки.
+    //    Оставляем scrollTop = textarea.scrollTop (без накопления).
+    const _origUpdateLineNumbers = window.updateLineNumbers;
+    window.updateLineNumbers = function(){
+        if(_origUpdateLineNumbers) _origUpdateLineNumbers();
+        // После перестройки колонки — синхронизируем скролл
+        lineNumbersDiv.scrollTop = textarea.scrollTop;
+    };
+
+    console.log('[VirtualPatch] ✅ Фикс рассинхрона номеров применён');
+})();
+})();
+</script>
 </body>
 </html>
