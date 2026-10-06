@@ -2117,34 +2117,99 @@ function toggleQR() {
             }
         }
 
-        async function startScanner() {
-            if (scannerRunning) return;
+       async function startScanner() {
+    if (scannerRunning) return;
 
-            const status = document.getElementById("scanStatus");
-            status.textContent = "Запрашиваю камеру...";
+    const status = document.getElementById("scanStatus");
+    status.textContent = "Запрашиваю камеру...";
 
-            try {
-                scanner = new Html5Qrcode("reader");
-                await scanner.start({ facingMode: "environment" }, {
-                    fps: 15,
-                    qrbox: function(width, height) {
-                        const size = Math.min(width, height) * 0.75;
-                        return { width: size, height: size };
-                    }
-                }, onScanSuccess, function(error) {});
+    // 1. Проверка поддержки
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        status.innerHTML = "<span class='error'>❌ Браузер не поддерживает камеру. Откройте в Chrome или обновите Opera.</span>";
+        playErrorBeep();
+        return;
+    }
 
-                scannerRunning = true;
-                status.innerHTML = "<span class='ok'>📷 Камера работает. Наведите её на QR.</span>";
+    // 2. Проверка secure context
+    if (!window.isSecureContext) {
+        status.innerHTML = "<span class='error'>❌ Камера доступна только по HTTPS. Открой сайт через https://</span>";
+        playErrorBeep();
+        return;
+    }
 
-                playStartBeep();
+    try {
+        scanner = new Html5Qrcode("reader");
 
-            } catch (error) {
-                console.error(error);
-                status.innerHTML = "<span class='error'>Не удалось запустить камеру. Проверьте разрешение.</span>";
-                playErrorBeep();
+        const config = {
+            fps: 15,
+            qrbox: function(width, height) {
+                const size = Math.min(width, height) * 0.75;
+                return { width: size, height: size };
             }
+        };
+
+        const onSuccess = onScanSuccess;
+        const onError = function(error) {};
+
+        // Попытка 1: exact environment
+        try {
+            await scanner.start({ facingMode: { exact: "environment" } }, config, onSuccess, onError);
+            scannerRunning = true;
+            status.innerHTML = "<span class='ok'>📷 Камера работает. Наведите её на QR.</span>";
+            playStartBeep();
+            return;
+        } catch (e1) {
+            console.log('exact environment failed:', e1);
+            try { await scanner.stop(); } catch(_) {}
         }
 
+        // Попытка 2: environment (строка)
+        try {
+            scanner = new Html5Qrcode("reader");
+            await scanner.start({ facingMode: "environment" }, config, onSuccess, onError);
+            scannerRunning = true;
+            status.innerHTML = "<span class='ok'>📷 Камера работает (fallback 2).</span>";
+            playStartBeep();
+            return;
+        } catch (e2) {
+            console.log('environment failed:', e2);
+            try { await scanner.stop(); } catch(_) {}
+        }
+
+        // Попытка 3: перебор камер
+        try {
+            const cameras = await Html5Qrcode.getCameras();
+            if (cameras && cameras.length > 0) {
+                // Ищем заднюю камеру по названию
+                let camId = cameras[cameras.length - 1].id;
+                for (const cam of cameras) {
+                    const label = (cam.label || '').toLowerCase();
+                    if (label.includes('back') || label.includes('rear') || label.includes('задн')) {
+                        camId = cam.id;
+                        break;
+                    }
+                }
+                scanner = new Html5Qrcode("reader");
+                await scanner.start(camId, config, onSuccess, onError);
+                scannerRunning = true;
+                status.innerHTML = "<span class='ok'>📷 Камера работает (fallback 3).</span>";
+                playStartBeep();
+                return;
+            }
+        } catch (e3) {
+            console.log('getCameras failed:', e3);
+            try { await scanner.stop(); } catch(_) {}
+        }
+
+        // Всё упало
+        throw new Error('Все попытки запуска камеры провалились');
+
+    } catch (error) {
+        console.error(error);
+        status.innerHTML = "<span class='error'>❌ Не удалось запустить камеру. Разрешите доступ в настройках браузера.</span>";
+        playErrorBeep();
+    }
+}
         async function stopScanner() {
             if (scanner && scannerRunning) {
                 try { await scanner.stop(); } catch (e) { console.log(e); }
