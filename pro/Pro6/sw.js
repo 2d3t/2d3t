@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pro6-v1';
+const CACHE_NAME = 'pro6-v2';
 const FILES_TO_CACHE = [
     '/2d3t/pro/Pro6/index.html',
     '/2d3t/pro/Pro6/manifest.json',
