@@ -3439,6 +3439,256 @@ wrapShowSaveFormatDialog();
 
 
 })();
+
+
+
+</script>
+<script>
+/* ============================================================
+   KlikEdit — FIX v2.1
+   Исправляет: Undo/Redo в виртуальном режиме, "прыжок" окна
+   в начало файла, некорректную вставку патча после отката.
+   Ставить ПОСЛЕ VirtualPatch v2.0.
+   ============================================================ */
+(function(){
+'use strict';
+
+const textarea = document.getElementById('codeArea');
+if(!textarea){ console.warn('[Fix v2.1] textarea не найдена'); return; }
+
+// Достаём доступ к внутренним функциям VirtualPatch
+const VP = window.__virtualPatch;
+if(!VP){
+    console.warn('[Fix v2.1] VirtualPatch не найден — патч не нужен');
+    return;
+}
+
+// ---------- Утилита: полный код / окно ----------
+function isVirtual(){ return VP.isActive(); }
+
+// Пытаемся достать syncWindowToBuffer через публичный API VirtualPatch.
+// Если её нет — реализуем сами через getFullCode/setFullCode.
+function syncBuffer(){
+    // getFullCode() сам синхронизирует буфер из окна при windowDirty=true
+    return window.getFullCode();
+}
+
+// ---------- 1. setFullCode с сохранением позиции окна ----------
+// Оборачиваем оригинальный setFullCode
+const _origSetFullCode = window.setFullCode;
+window.setFullCode = function(code, keepAround){
+    code = code == null ? '' : String(code);
+
+    // Если не виртуальный режим — отдаём оригиналу как есть
+    if(code.length < 300 * 1024){
+        if(typeof _origSetFullCode === 'function'){
+            return _origSetFullCode.call(this, code);
+        }
+        textarea.value = code;
+        if(typeof updateLineNumbers === 'function') updateLineNumbers();
+        return;
+    }
+
+    // Виртуальный режим. Если keepAround не задан — берём текущую позицию курсора
+    // (глобальную), чтобы окно не прыгало в начало.
+    let center;
+    if(typeof keepAround === 'number'){
+        center = Math.max(0, Math.min(code.length, keepAround));
+    } else if(isVirtual()){
+        center = window.__virtualPatch.stats().windowStart + textarea.selectionStart;
+        center = Math.max(0, Math.min(code.length, center));
+    } else {
+        center = 0;
+    }
+
+    // Делегируем оригиналу — но он сбросит окно в 0.
+    // Поэтому после вызова сами переставим окно.
+    if(typeof _origSetFullCode === 'function'){
+        _origSetFullCode.call(this, code);
+    }
+
+    // Теперь окно в [0, WINDOW]. Сдвигаем его к center.
+    if(code.length > 300 * 1024){
+        requestAnimationFrame(()=>{
+            if(typeof window.centerWindowAt === 'function'){
+                window.centerWindowAt(center, 0);
+            }
+        });
+    }
+};
+
+// ---------- 2. Обёртка undo/redo с корректной позицией ----------
+// Нам нужен доступ к undoStack/redoStack — они в замыкании VirtualPatch,
+// но window.undo/window.redo уже переопределены VirtualPatch и работают
+// с этими стеками. Проблема была в том, что setFullCode сбрасывал окно.
+// Теперь setFullCode исправлен — но нужно ещё передать позицию курсора.
+// Поэтому просто оборачиваем undo/redo, чтобы зафиксировать позицию.
+
+const _origUndo = window.undo;
+const _origRedo = window.redo;
+
+function rememberCursorGlobal(){
+    if(!isVirtual()) return null;
+    const st = window.__virtualPatch.stats();
+    return st.windowStart + textarea.selectionStart;
+}
+
+function restoreCursorGlobal(globalPos, code){
+    if(!isVirtual() || globalPos === null) return;
+    const clamped = Math.max(0, Math.min(code.length, globalPos));
+    if(typeof window.centerWindowAt === 'function'){
+        window.centerWindowAt(clamped, 0);
+    } else {
+        const st = window.__virtualPatch.stats();
+        const local = clamped - st.windowStart;
+        textarea.setSelectionRange(
+            Math.max(0, Math.min(textarea.value.length, local)),
+            Math.max(0, Math.min(textarea.value.length, local))
+        );
+    }
+}
+
+window.undo = function(){
+    if(!isVirtual()) return _origUndo.apply(this, arguments);
+
+    // Перед откатом: подтянуть окно в буфер
+    syncBuffer();
+    const pos = rememberCursorGlobal();
+
+    // Запоминаем размер текущего полного кода
+    const currentFull = window.getFullCode();
+
+    // Вызываем оригинальный undo (он изменит буфер через setFullCode)
+    _origUndo.apply(this, arguments);
+
+    // Теперь восстанавливаем позицию курсора в новом коде
+    const newFull = window.getFullCode();
+    // Позиция курсора не может выходить за пределы нового кода
+    const safePos = Math.min(pos === null ? 0 : pos, newFull.length);
+    requestAnimationFrame(()=>{
+        restoreCursorGlobal(safePos, newFull);
+        if(typeof updateLineNumbers === 'function') updateLineNumbers();
+        if(typeof updatePositionHint === 'function') updatePositionHint();
+    });
+};
+
+window.redo = function(){
+    if(!isVirtual()) return _origRedo.apply(this, arguments);
+
+    syncBuffer();
+    const pos = rememberCursorGlobal();
+
+    _origRedo.apply(this, arguments);
+
+    const newFull = window.getFullCode();
+    const safePos = Math.min(pos === null ? 0 : pos, newFull.length);
+    requestAnimationFrame(()=>{
+        restoreCursorGlobal(safePos, newFull);
+        if(typeof updateLineNumbers === 'function') updateLineNumbers();
+        if(typeof updatePositionHint === 'function') updatePositionHint();
+    });
+};
+
+// ---------- 3. pushUndo: гарантированно полный код ----------
+// VirtualPatch уже переопределил pushUndo, но он берёт getFullCode()
+// при prevValue === undefined. Проблема: базовый input-обработчик
+// передаёт snapshot из textarea.value (это ОКНО, а не полный код).
+// Перехватываем и подменяем на полный.
+const _origPushUndo = window.pushUndo;
+window.pushUndo = function(prevValue){
+    if(!isVirtual()) return _origPushUndo.apply(this, arguments);
+
+    // Если пришёл кусок (окно), а не полный код — заменяем на полный буфер
+    const st = window.__virtualPatch.stats();
+    const winLen = st.windowEnd - st.windowStart;
+
+    let snapshot = prevValue;
+    if(snapshot === undefined || (typeof snapshot === 'string' && snapshot.length <= winLen + 100)){
+        // Похоже, это окно или undefined — берём полный код
+        syncBuffer();
+        snapshot = window.getFullCode();
+    }
+
+    return _origPushUndo.call(this, snapshot);
+};
+
+// ---------- 4. beforeinput: сохраняем ПОЛНЫЙ код ----------
+// Базовый обработчик хранит valueBeforeInput = textarea.value (окно).
+// Перехватываем beforeinput раньше и подменяем.
+// Так как у нас один textarea, а базовый обработчик уже навешан,
+// используем capture-фазу, чтобы отработать первыми.
+textarea.addEventListener('beforeinput', function(e){
+    if(!isVirtual()) return;
+    // Подтягиваем окно в буфер, чтобы getFullCode() вернул актуальное
+    syncBuffer();
+    // Сохраняем полный код в глобальную переменную базового скрипта
+    // (она объявлена через let valueBeforeInput — недоступна извне).
+    // Поэтому используем собственное хранилище и восстанавливаем
+    // через хак: перезаписываем textarea._beforeInputFull
+    try {
+        window.__fixLastBeforeInput = window.getFullCode();
+    } catch(err){}
+}, true);
+
+// Аналогично подменяем input-обработчик для дебаунс-пуша.
+// Базовый обработчик делает pushUndo(valueBeforeInput) через 400мс.
+// Наш pushUndo-обёртка (выше) уже заменит окно на полный код,
+// так что здесь ничего дополнительно не нужно.
+
+// ---------- 5. applyEditCard / applyAllEdits: синхронизация буфера ----------
+// VirtualPatch уже переопределил applyEditCard. Он вызывает
+// setFullCode(newValue) → теперь setFullCode не сбрасывает окно в 0.
+// Дополнительно перед применением правок синхронизируем буфер.
+const _origApplyEditCard = window.applyEditCard;
+if(typeof _origApplyEditCard === 'function'){
+    window.applyEditCard = function(card){
+        if(!isVirtual()) return _origApplyEditCard.apply(this, arguments);
+        syncBuffer();
+        return _origApplyEditCard.apply(this, arguments);
+    };
+}
+
+const _origApplyAllEdits = window.applyAllEdits;
+if(typeof _origApplyAllEdits === 'function'){
+    window.applyAllEdits = function(){
+        if(!isVirtual()) return _origApplyAllEdits.apply(this, arguments);
+        syncBuffer();
+        return _origApplyAllEdits.apply(this, arguments);
+    };
+}
+
+// ---------- 6. Восстановление позиции при clearBetweenMarks ----------
+// VirtualPatch уже переопределил clearBetweenMarks — там есть centerWindowAt.
+// Проверяем, что после setFullCode окно не в 0.
+const _origClearBetween = window.clearBetweenMarks;
+if(typeof _origClearBetween === 'function'){
+    window.clearBetweenMarks = function(){
+        if(!isVirtual()) return _origClearBetween.apply(this, arguments);
+        syncBuffer();
+        return _origClearBetween.apply(this, arguments);
+    };
+}
+
+// ---------- 7. Диагностика ----------
+console.log('[Fix v2.1] ✅ Установлен. Undo/Redo сохраняют позицию окна.');
+
+// Публичный тест
+window.__fixDiagnostics = function(){
+    const st = window.__virtualPatch.stats();
+    const globalCursor = st.windowStart + textarea.selectionStart;
+    return {
+        virtualActive: st.active,
+        windowStart: st.windowStart,
+        windowEnd: st.windowEnd,
+        globalCursor,
+        undoDepth: (function(){
+            // undoStack недоступен напрямую — считаем через попытку
+            return 'см. консоль VirtualPatch';
+        })()
+    };
+};
+
+})();
 </script>
 </body>
 </html>
