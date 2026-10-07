@@ -217,6 +217,9 @@ body.theme-graphite .edits-modal{background:#2c2c2e;color:#f5f5f7;border-color:#
 .edit-card{background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
 body.theme-light .edit-card{background:rgba(0,0,0,0.04);border-color:#ddd}
 .edit-card-header{display:flex;justify-content:space-between;align-items:center;font-size:12px;opacity:0.7}
+.edit-card-header .edit-card-number{font-weight:600}
+.edit-card-header .add-next-edit{background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#2ecc71;cursor:pointer;font-size:14px;font-weight:bold;padding:2px 8px;border-radius:6px;transition:all .2s;line-height:1.4}
+.edit-card-header .add-next-edit:hover{background:#27ae60;color:white;transform:scale(1.1)}
 .edit-card-header .remove-edit{background:transparent;border:none;color:#e74c3c;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:background .2s}
 .edit-card-header .remove-edit:hover{background:rgba(231,76,60,0.2)}
 
@@ -1764,7 +1767,12 @@ let editCardCounter = 0;
 function openEditsOverlay(){
     document.getElementById('editsOverlay').classList.add('active');
     if(document.getElementById('editsList').children.length === 0){
-        addEditCard();
+        addEditCard({ focus: true, scrollIntoView: true });
+    } else {
+        setTimeout(() => {
+            const firstCard = document.querySelector('#editsList .edit-card');
+            if (firstCard) firstCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
     }
 }
 
@@ -1782,20 +1790,22 @@ document.addEventListener('keydown', function(e){
         if(ov.classList.contains('active')) closeEditsOverlay();
     }
 });
-
-function addEditCard(){
+function addEditCard(options = {}){
+    const { insertAfter = null, focus = true, scrollIntoView = true } = options;
     editCardCounter++;
-    const id = 'edit_' + editCardCounter;
+    const id = 'edit_' + editCardCounter + '_' + Date.now();
     const list = document.getElementById('editsList');
     const card = document.createElement('div');
     card.className = 'edit-card';
     card.dataset.id = id;
     card.innerHTML = `
         <div class="edit-card-header">
-            <span>Правка #${editCardCounter}</span>
-            <button class="remove-edit" onclick="removeEditCard(this)" title="Удалить правку">✕ Удалить</button>
+            <span class="edit-card-number">Правка #${editCardCounter}</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+                <button class="add-next-edit" onclick="addEditAfter(this)" title="Добавить правку после этой">➕</button>
+                <button class="remove-edit" onclick="removeEditCard(this)" title="Удалить правку">✕</button>
+            </div>
         </div>
-
         <div class="edit-field">
             <label>🔍 Найти (что заменить)</label>
             <div class="edit-field-row">
@@ -1803,7 +1813,6 @@ function addEditCard(){
                 <button class="paste-btn" onclick="pasteIntoField(this,'find')" title="Вставить из буфера (с форматированием)">📋</button>
             </div>
         </div>
-
         <div class="edit-field">
             <label>✨ Заменить на</label>
             <div class="edit-field-row">
@@ -1811,40 +1820,64 @@ function addEditCard(){
                 <button class="paste-btn" onclick="pasteIntoField(this,'replace')" title="Вставить из буфера (с форматированием)">📋</button>
             </div>
         </div>
-
         <div class="edit-mode-toggle" data-role="mode">
             <button data-mode="instead" class="active">🔁 Вместо</button>
             <button data-mode="before">⬆️ До</button>
             <button data-mode="after">⬇️ После</button>
         </div>
-
         <div class="edit-actions">
             <button class="btn-apply-single" onclick="applySingleEdit(this)">▶️ Применить эту правку</button>
         </div>
         <div class="edit-status"></div>
     `;
-    list.prepend(card);
-
-    // Обработчик переключения режима
+    if (insertAfter && insertAfter.parentNode === list) {
+        insertAfter.insertAdjacentElement('afterend', card);
+    } else {
+        list.prepend(card);
+    }
     card.querySelector('[data-role="mode"]').addEventListener('click', function(e){
         const btn = e.target.closest('button');
         if(!btn) return;
         this.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
     });
+    renumberEditCards();
+    if (focus) {
+        setTimeout(() => {
+            const findField = card.querySelector('[data-role="find"]');
+            if (findField) findField.focus();
+            if (scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 50);
+    } else if (scrollIntoView) {
+        setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+    }
+    if (typeof saveEditsToStorage === 'function') setTimeout(saveEditsToStorage, 100);
+    return card;
 }
 
+function addEditAfter(btn){
+    const currentCard = btn.closest('.edit-card');
+    if (!currentCard) return;
+    addEditCard({ insertAfter: currentCard, focus: true, scrollIntoView: true });
+}
+
+function renumberEditCards(){
+    const cards = document.querySelectorAll('#editsList .edit-card');
+    cards.forEach((card, index) => {
+        const numEl = card.querySelector('.edit-card-number');
+        if (numEl) numEl.textContent = 'Правка #' + (index + 1);
+    });
+    editCardCounter = cards.length;
+}
 function removeEditCard(btn){
     const card = btn.closest('.edit-card');
     if(card) card.remove();
-
-
-    // Если правок не осталось — сразу добавляем пустой бланк
     const list = document.getElementById('editsList');
     if(list && list.children.length === 0){
-        addEditCard();
+        addEditCard({ focus: false, scrollIntoView: false });
+    } else {
+        renumberEditCards();
     }
-    // Обновляем черновик в localStorage
     if(typeof saveEditsToStorage === 'function') saveEditsToStorage();
 }
 
@@ -2086,18 +2119,17 @@ function loadEditsFromStorage(){
         list.innerHTML = '';
         editCardCounter = 0;
         data.forEach(item => {
-            addEditCard();
-            const card = list.lastElementChild;
+            const card = addEditCard({ focus: false, scrollIntoView: false });
             const findField = card.querySelector('[data-role="find"]');
             const replaceField = card.querySelector('[data-role="replace"]');
             findField.innerText = item.find || '';
             replaceField.innerText = item.replace || '';
-            // Установить режим
             const mode = item.mode || 'instead';
             card.querySelectorAll('[data-role="mode"] button').forEach(b => {
                 b.classList.toggle('active', b.dataset.mode === mode);
             });
         });
+        renumberEditCards();
     }catch(e){ console.warn('Load edits error:', e); }
 }
 
@@ -2132,7 +2164,7 @@ function clearAllEdits(){
 
 
     // Сразу создаём один пустой бланк
-    addEditCard();
+addEditCard({ focus: false, scrollIntoView: false });
 
 
     showToast('🗑️ Все правки удалены — создан новый бланк');
