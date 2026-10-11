@@ -98,16 +98,24 @@
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.85)} }
         .status-text { font-size: 0.95rem; color: #bcc6e3; flex: 1; text-align: left; }
         .timer { font-family: 'SF Mono', monospace; font-size: 1.2rem; font-weight: 600; color: #7c9aff; }
-        .meter-wrap {
-            background: #0b111f; height: 6px; border-radius: 20px;
-            margin: 0 0 16px 0; overflow: hidden;
-            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+
+        /* ===== ВИЗУАЛИЗАТОР (Winamp-style) ===== */
+        .visualizer-wrap {
+            background: #0b111f;
+            height: 80px;
+            border-radius: 16px;
+            margin: 0 0 16px 0;
+            overflow: hidden;
+            box-shadow: inset 0 2px 12px rgba(0,0,0,0.7);
+            position: relative;
+            border: 1px solid #1a2338;
         }
-        .meter-bar {
-            height: 100%; width: 0%;
-            background: linear-gradient(90deg, #4f7aff, #a78bfa, #f472b6);
-            border-radius: 20px; transition: width 0.06s ease;
+        #visualizer {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
+
         .btn-main {
             width: 100%; padding: 18px; border: none; border-radius: 60px;
             font-size: 1.2rem; font-weight: 700; color: #fff; cursor: pointer;
@@ -159,6 +167,35 @@
         }
         .settings-row .toggle-btn.inactive {
             background: #2a1a1a; border-color: #6a4a4a; color: #b08080;
+        }
+        .settings-row select {
+            background: #1f2840;
+            color: #b0c4f0;
+            border: 1px solid #4a5a7a;
+            border-radius: 20px;
+            padding: 4px 22px 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            transition: 0.15s;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%237c9aff' d='M0 0l5 6 5-6z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+        }
+        .settings-row select:hover {
+            border-color: #7c9aff;
+            color: #d6def5;
+        }
+        .settings-row select:focus {
+            border-color: #7c9aff;
+            box-shadow: 0 0 0 3px #7c9aff22;
+        }
+        .settings-row select option {
+            background: #141c2b;
+            color: #e8edff;
         }
         .status-msg {
             font-size: 0.85rem; color: #8a9abb;
@@ -460,7 +497,7 @@
 
     <div class="card">
         <h1>🎧 Захват звука</h1>
-        <div class="sub">PCM → обрезка → MP3 320 kbps</div>
+        <div class="sub">PCM → обрезка → MP3 128 / 256 / 320 kbps</div>
 
         <div class="warning">
             <span class="icon">🔊</span>
@@ -473,7 +510,9 @@
             <span class="timer" id="timerDisplay">00:00</span>
         </div>
 
-        <div class="meter-wrap"><div class="meter-bar" id="meterBar"></div></div>
+        <div class="visualizer-wrap">
+            <canvas id="visualizer" width="600" height="80"></canvas>
+        </div>
 
         <button class="btn-main" id="mainBtn">▶ Захват</button>
 
@@ -490,10 +529,19 @@
         <div class="settings-row">
             <label>
                 ⏹ Авто-стоп:
-                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="0.6">
-                <span class="value" id="thresholdValue">0.6</span>с
+                <input type="range" id="silenceThreshold" min="0.5" max="3" step="0.1" value="0.5">
+                <span class="value" id="thresholdValue">0.5</span>с
             </label>
             <button class="toggle-btn active" id="autoStopToggle">Вкл</button>
+            <label>
+                🎚 Битрейт:
+                <select id="bitrateSelect">
+                    <option value="128">128</option>
+                    <option value="256" selected>256</option>
+                    <option value="320">320</option>
+                </select>
+                <span class="value">kbps</span>
+            </label>
         </div>
 
         <div class="save-area" id="saveArea">
@@ -502,7 +550,7 @@
             <button class="btn-reset" id="resetBtn">⟳</button>
         </div>
 
-        <div class="footer">PCM 48 кГц / стерео · обрезка тишины · MP3 320 kbps · всё локально</div>
+        <div class="footer">PCM 48 кГц / стерео · обрезка тишины · MP3 до 320 kbps · всё локально</div>
     </div>
 
     <div class="tag-section" id="tagSection">
@@ -514,7 +562,6 @@
         <label>Название</label>
         <input type="text" id="tagTitle" placeholder="Например: Summer Vibes" autocomplete="off">
 
-        <!-- НОВОЕ: предпросмотр итогового имени файла -->
         <div class="file-name-row">
             <span class="fn-icon">📁</span>
             <span class="fn-preview" id="fileNamePreview">audio.mp3</span>
@@ -541,7 +588,6 @@
             <span>✍️ Показать название и исполнителя поверх обложки</span>
         </label>
 
-        <!-- НОВОЕ: галочка "чистое название файла" -->
         <label class="overlay-toggle" for="tagCleanNameToggle">
             <input type="checkbox" id="tagCleanNameToggle">
             <span>📄 Сохранить в имени файла только название трека (без « - Исполнитель»)</span>
@@ -565,19 +611,22 @@
 
         // ====== КЛЮЧИ LOCALSTORAGE ======
         const LS_ARTIST = 'mp3Editor_lastArtist';
-        const LS_OVERLAY = 'mp3Editor_overlayOnCover';   // «показать текст поверх обложки»
-        const LS_CLEAN_NAME = 'mp3Editor_cleanFileName'; // «только название без исполнителя»
+        const LS_OVERLAY = 'mp3Editor_overlayOnCover';
+        const LS_CLEAN_NAME = 'mp3Editor_cleanFileName';
+        const LS_BITRATE = 'mp3Editor_bitrate';
 
         // ====== ЭЛЕМЕНТЫ ======
         const mainBtn = document.getElementById('mainBtn');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const statusMsg = document.getElementById('statusMsg');
-        const meterBar = document.getElementById('meterBar');
+        const visualizerCanvas = document.getElementById('visualizer');
+        const visualizerCtx = visualizerCanvas.getContext('2d');
         const timerDisplay = document.getElementById('timerDisplay');
         const silenceThreshold = document.getElementById('silenceThreshold');
         const thresholdValue = document.getElementById('thresholdValue');
         const autoStopToggle = document.getElementById('autoStopToggle');
+        const bitrateSelect = document.getElementById('bitrateSelect');
         const saveArea = document.getElementById('saveArea');
         const finalFileName = document.getElementById('finalFileName');
         const saveBtn = document.getElementById('saveBtn');
@@ -652,6 +701,24 @@
         let audioPlayer = null;
 
         let workletUrl = null;
+
+        // ====== ВИЗУАЛИЗАТОР (Winamp-style) ======
+        const BAR_COUNT = 48;
+        let barHeights = null;
+        let peakHeights = null;
+
+        function initVisualizerBuffers() {
+            if (!barHeights) barHeights = new Float32Array(BAR_COUNT);
+            if (!peakHeights) peakHeights = new Float32Array(BAR_COUNT);
+        }
+
+        function clearVisualizer() {
+            if (visualizerCtx) {
+                visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+            }
+            if (barHeights) barHeights.fill(0);
+            if (peakHeights) peakHeights.fill(0);
+        }
 
         // ====== ЗВУКОВЫЕ СИГНАЛЫ ======
         function playBeep(frequency = 880, duration = 200, type = 'sine') {
@@ -880,16 +947,14 @@
             tagCoverPreview.src = modalCoverDataUrl;
         }
 
-        // ====== НОВОЕ: вычисление имени файла ======
+        // ====== Имя файла ======
         function computeFileName(title, artist, cleanName) {
             const fallback = (convertedFileName || 'audio.mp3').replace(/\.mp3$/, '');
             const rawTitle = title || fallback;
             let rawName;
             if (cleanName) {
-                // Только название
                 rawName = title || fallback;
             } else {
-                // "Название - Исполнитель" или просто "Название"
                 rawName = (title && artist) ? `${title} - ${artist}` : rawTitle;
             }
             const baseName = String(rawName).replace(/[\\/:*?"<>|]/g, '_').trim() || 'audio';
@@ -902,7 +967,6 @@
                 tagArtist.value.trim(),
                 tagCleanNameToggle.checked
             );
-            // Подсветим расширение
             const base = fileName.replace(/\.mp3$/i, '');
             fileNamePreview.innerHTML = '<span class="hl">' + escapeHtml(base) + '</span>.mp3';
         }
@@ -1030,7 +1094,7 @@
         function resetCaptureUI() {
             if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-            meterBar.style.width = '0%';
+            clearVisualizer();
             timerDisplay.textContent = '00:00';
             silenceStartTime = null;
             isAutoStopping = false;
@@ -1066,19 +1130,76 @@
                 if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
                 return;
             }
-            analyser.getByteTimeDomainData(dataArray);
-            let max = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                const val = (dataArray[i] - 128) / 128;
-                const abs = Math.abs(val);
-                if (abs > max) max = abs;
+
+            analyser.getByteFrequencyData(dataArray);
+
+            const W = visualizerCanvas.width;
+            const H = visualizerCanvas.height;
+            visualizerCtx.clearRect(0, 0, W, H);
+
+            initVisualizerBuffers();
+
+            const usableBins = Math.floor(dataArray.length * 0.6);
+            const binsPerBar = usableBins / BAR_COUNT;
+
+            let overallMax = 0;
+
+            for (let i = 0; i < BAR_COUNT; i++) {
+                const start = Math.floor(i * binsPerBar);
+                const end = Math.floor((i + 1) * binsPerBar);
+                let sum = 0, count = 0;
+                for (let j = start; j < end && j < usableBins; j++) {
+                    sum += dataArray[j];
+                    count++;
+                }
+                const avg = count > 0 ? sum / count : 0;
+                const norm = avg / 255;
+
+                if (norm > overallMax) overallMax = norm;
+
+                const target = norm;
+                if (target > barHeights[i]) {
+                    barHeights[i] = target;
+                } else {
+                    barHeights[i] = barHeights[i] * 0.82 + target * 0.18;
+                }
+
+                if (barHeights[i] > peakHeights[i]) {
+                    peakHeights[i] = barHeights[i];
+                } else {
+                    peakHeights[i] -= 0.008;
+                    if (peakHeights[i] < 0) peakHeights[i] = 0;
+                }
             }
-            const percent = Math.min(max * 100, 100);
-            meterBar.style.width = percent + '%';
+
+            const barW = W / BAR_COUNT;
+            const gap = 1;
+            const drawW = Math.max(1, barW - gap);
+
+            for (let i = 0; i < BAR_COUNT; i++) {
+                const h = barHeights[i] * H;
+                const x = i * barW;
+
+                const grad = visualizerCtx.createLinearGradient(0, H, 0, H - h);
+                grad.addColorStop(0, '#4f7aff');
+                grad.addColorStop(0.5, '#a78bfa');
+                grad.addColorStop(1, '#f472b6');
+
+                visualizerCtx.fillStyle = grad;
+                visualizerCtx.fillRect(x, H - h, drawW, h);
+
+                const ph = peakHeights[i] * H;
+                if (ph > 2) {
+                    visualizerCtx.fillStyle = 'rgba(255,255,255,0.85)';
+                    visualizerCtx.fillRect(x, H - ph - 2, drawW, 2);
+                }
+            }
+
+            const percent = overallMax * 100;
 
             if (isRecording && !isAutoStopping && autoStopEnabled && !isManualStop) {
                 const threshold = parseFloat(silenceThreshold.value);
-                const isSilent = percent < 1.5;
+                const isSilent = percent < 8;
                 if (isSilent) {
                     if (silenceStartTime === null) silenceStartTime = Date.now();
                     const silenceDuration = (Date.now() - silenceStartTime) / 1000;
@@ -1144,9 +1265,14 @@
                 source.connect(workletNode);
 
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
+                analyser.fftSize = 512;
+                analyser.smoothingTimeConstant = 0.75;
                 dataArray = new Uint8Array(analyser.frequencyBinCount);
                 source.connect(analyser);
+
+                initVisualizerBuffers();
+                barHeights.fill(0);
+                peakHeights.fill(0);
 
                 isRecording = true;
                 isManualStop = false;
@@ -1204,7 +1330,7 @@
             audioContext = null;
             analyser = null;
             dataArray = null;
-            meterBar.style.width = '0%';
+            clearVisualizer();
 
             updateMainBtn('⏳ Обработка...', 'processing');
             setStatus('Обработка...', 'processing', '🔍 Обрезка тишины и кодирование MP3...');
@@ -1260,11 +1386,12 @@
                     trimEndInfo.textContent = endSaved.toFixed(2);
                 }
 
-                setStatus('Обработка...', 'processing', '🎵 Кодирование MP3 (320 kbps)...');
+                const bitrate = parseInt(bitrateSelect.value, 10) || 256;
+
+                setStatus('Обработка...', 'processing', '🎵 Кодирование MP3 (' + bitrate + ' kbps)...');
                 setProgress(20);
                 await new Promise(r => setTimeout(r, 30));
 
-                const bitrate = 320;
                 const blob = await encodeToMp3(
                     trimmedLeft, trimmedRight,
                     pcmSampleRate, pcmChannels, bitrate,
@@ -1286,7 +1413,7 @@
                 const realDuration = trimmedFrames / pcmSampleRate;
                 setStatus('Готово!', 'done',
                     '✅ MP3 ' + realDuration.toFixed(1) + 'с · ' + formatBytes(blob.size) +
-                    ' · обрезано ' + (startSaved + endSaved).toFixed(2) + 'с');
+                    ' · ' + bitrate + ' kbps · обрезано ' + (startSaved + endSaved).toFixed(2) + 'с');
 
                 setTimeout(() => setProgress(0), 1500);
                 playEndSound();
@@ -1320,13 +1447,11 @@
         function resetTagSection() {
             tagTitle.value = '';
 
-            // Загружаем сохранённого исполнителя
             let savedArtist = '';
             try { savedArtist = lsGet(LS_ARTIST) || ''; } catch (_) {}
             tagArtist.value = savedArtist;
 
-            // Восстанавливаем настройки из localStorage
-            let savedOverlay = true; // по умолчанию ВКЛ (как раньше)
+            let savedOverlay = true;
             try {
                 const v = lsGet(LS_OVERLAY);
                 if (v === '0') savedOverlay = false;
@@ -1334,7 +1459,7 @@
             } catch (_) {}
             tagOverlayToggle.checked = savedOverlay;
 
-            let savedCleanName = false; // по умолчанию ВЫКЛ (как раньше)
+            let savedCleanName = false;
             try {
                 const v = lsGet(LS_CLEAN_NAME);
                 if (v === '1') savedCleanName = true;
@@ -1357,7 +1482,6 @@
             if (suggPageInfo) suggPageInfo.textContent = 'Стр. 1';
             setTagStatus('');
 
-            // Обновляем предпросмотр имени файла
             updateFileNamePreview();
         }
 
@@ -1496,19 +1620,17 @@ function updateSuggNav() {
             clearTimeout(suggDebounce);
             suggDebounce = setTimeout(() => fetchSuggestions(tagTitle.value, true), 600);
             if (modalCoverCleanDataUrl) refreshCoverPreview();
-            updateFileNamePreview(); // НОВОЕ
+            updateFileNamePreview();
         });
         tagArtist.addEventListener('input', () => {
             if (modalCoverCleanDataUrl) refreshCoverPreview();
-            updateFileNamePreview(); // НОВОЕ
+            updateFileNamePreview();
         });
         tagOverlayToggle.addEventListener('change', () => {
-            // НОВОЕ: запоминаем выбор
             lsSet(LS_OVERLAY, tagOverlayToggle.checked ? '1' : '0');
             if (modalCoverCleanDataUrl) refreshCoverPreview();
             playClickSound();
         });
-        // НОВОЕ: обработчик галочки «только название»
         tagCleanNameToggle.addEventListener('change', () => {
             lsSet(LS_CLEAN_NAME, tagCleanNameToggle.checked ? '1' : '0');
             updateFileNamePreview();
@@ -1607,7 +1729,6 @@ suggPrev.addEventListener('click', () => {
                     outBlob = writer.getBlob();
                 }
 
-                // НОВОЕ: имя файла через общую функцию (учитывает галочку «только название»)
                 const fileName = computeFileName(
                     title,
                     artist,
@@ -1631,8 +1752,6 @@ setTimeout(() => {
     setStatus('✅ Сохранено!', 'done', '✅ Файл: ' + fileName);
 }, 1200);
 
-// Через 2 секунды после сохранения автоматически возвращаемся
-// в исходное состояние рекордера — как будто нажали «⟳»
 setTimeout(() => {
     resetAll();
 }, 3200);
@@ -1682,6 +1801,9 @@ setTimeout(() => {
             autoStopToggle.textContent = autoStopEnabled ? 'Вкл' : 'Выкл';
             autoStopToggle.className = 'toggle-btn' + (autoStopEnabled ? ' active' : ' inactive');
         });
+        bitrateSelect.addEventListener('change', () => {
+            lsSet(LS_BITRATE, bitrateSelect.value);
+        });
 
         // ====== СОБЫТИЯ ======
         mainBtn.addEventListener('click', () => {
@@ -1706,7 +1828,19 @@ setTimeout(() => {
             audioPlayer.play();
             audioPlayer.onended = () => URL.revokeObjectURL(url);
             document.querySelector('.card').appendChild(audioPlayer);
-        });        resetAll();
+        });
+
+        // Восстановление сохранённого битрейта
+        (function restoreBitrate() {
+            try {
+                const saved = lsGet(LS_BITRATE);
+                if (saved && ['128', '256', '320'].includes(saved)) {
+                    bitrateSelect.value = saved;
+                }
+            } catch (_) {}
+        })();
+
+        resetAll();
     })();
 </script>
 
