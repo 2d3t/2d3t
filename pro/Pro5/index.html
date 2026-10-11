@@ -271,6 +271,9 @@ body.theme-light .btn-ghost:hover{background:rgba(0,0,0,0.12)}
 <button id="fetchButton" onclick="fetchWebsiteCode()">👁️‍🗨️</button>
 <button id="clearUrlButton" class="clear-url-btn" onclick="clearUrlInput()">🗑️</button>
 
+<button id="restoreOriginalButton" onclick="restoreOriginalFile()" 
+        class="restore-original-btn"
+        title="Вернуть к исходному файлу">↺</button>
 <input type="number" id="lineNumber" min="1" placeholder="Строка">
 <button onclick="goToLine()">Перейти 🔀</button>
 <button onclick="clearLineNumber()">🗑️</button>
@@ -3720,6 +3723,210 @@ window.__fixDiagnostics = function(){
     };
 };
 
+})();
+</script>
+<script>
+/* ============================================================
+   KlikEdit — Restore Original File v1.0
+   Запоминает первое состояние загруженного файла
+   и позволяет вернуться к нему одной кнопкой.
+   ============================================================ */
+(function(){
+'use strict';
+
+const textarea = document.getElementById('codeArea');
+const restoreBtn = document.getElementById('restoreOriginalButton');
+if(!textarea || !restoreBtn) return;
+
+// ---------- Хранилище исходного состояния ----------
+let originalFileState = null;   // строка с полным исходным кодом
+let originalFileName = '';      // имя файла на момент запоминания
+
+// ---------- Утилиты ----------
+function getCode(){
+    if(typeof window.getFullCode === 'function') return window.getFullCode();
+    return textarea.value;
+}
+
+function setCode(code){
+    if(typeof window.setFullCode === 'function') window.setFullCode(code);
+    else textarea.value = code;
+    if(typeof updateLineNumbers === 'function') updateLineNumbers();
+}
+
+// ---------- Запомнить исходное состояние ----------
+function rememberOriginal(code, name){
+    if(code === null || code === undefined) return;
+    originalFileState = String(code);
+    originalFileName = name || '';
+    updateRestoreButton();
+}
+
+// ---------- Показать/скрыть кнопку ----------
+function updateRestoreButton(){
+    if(originalFileState === null){
+        restoreBtn.style.display = 'none';
+        return;
+    }
+    const current = getCode();
+    const differs = current !== originalFileState;
+    restoreBtn.style.display = differs ? 'inline-block' : 'none';
+}
+
+// ---------- Восстановить ----------
+window.restoreOriginalFile = function(){
+    if(originalFileState === null){
+        if(typeof showToast === 'function') showToast('📭 Нет исходного состояния');
+        return;
+    }
+    const current = getCode();
+    if(current === originalFileState){
+        if(typeof showToast === 'function') showToast('✅ Уже исходное состояние');
+        return;
+    }
+
+    // Пушим в undo, чтобы можно было отменить восстановление
+    if(typeof window.pushUndo === 'function'){
+        window.pushUndo(current);
+    }
+
+    // Восстановление
+    if(typeof window.setFullCode === 'function'){
+        window.setFullCode(originalFileState, 0); // 0 — показать начало
+    } else {
+        textarea.value = originalFileState;
+        if(typeof updateLineNumbers === 'function') updateLineNumbers();
+    }
+
+    // Сброс меток / поиска / позиции
+    if(typeof clearMarks === 'function') clearMarks();
+    if(typeof searchResults !== 'undefined'){
+        window.searchResults = [];
+        window.currentResult = -1;
+        if(typeof updateSearchCounter === 'function') updateSearchCounter();
+    }
+
+    // Курсор в начало
+    if(typeof window.centerWindowAt === 'function'){
+        window.centerWindowAt(0, 0);
+    } else {
+        textarea.focus();
+        textarea.setSelectionRange(0, 0);
+        textarea.scrollTop = 0;
+    }
+    textarea.scrollTop = 0;
+    if(typeof syncScroll === 'function') syncScroll();
+
+    if(typeof highlightActiveLine === 'function') highlightActiveLine(1);
+    if(typeof showToast === 'function') showToast('↺ Восстановлен исходный файл');
+
+    updateRestoreButton();
+};
+
+// ---------- Хук на загрузку файла ----------
+// Оригинальный обработчик уже может быть обёрнут VirtualPatch,
+// поэтому просто подписываемся на change у input'а — но так мы потеряем
+// оригинальный обработчик. Лучше — обернуть handleFileWithFullscreenRestore.
+
+const _origHandleFile = window.handleFileWithFullscreenRestore;
+window.handleFileWithFullscreenRestore = function(event){
+    const file = event.target.files && event.target.files[0];
+    if(!file) return;
+    // Запоминаем контент ДО того, как оригинал его установит.
+    // Оригинал читает файл асинхронно через FileReader, поэтому просто
+    // перехватим reader.onload нельзя — перехватываем через setTimeout(0)
+    // после того как прочитается. Проще — читаем сами параллельно.
+    const reader = new FileReader();
+    reader.onload = function(e){
+        rememberOriginal(e.target.result, file.name);
+        // Не вызываем оригинал здесь — он уже вызван ниже.
+    };
+    reader.readAsText(file, 'UTF-8');
+
+    // Делегируем оригиналу (VirtualPatch-версии), если он есть
+    if(typeof _origHandleFile === 'function'){
+        return _origHandleFile.apply(this, arguments);
+    }
+};
+
+// ---------- Хук на загрузку URL ----------
+const _origFetch = window.fetchWebsiteCode;
+window.fetchWebsiteCode = async function(){
+    if(typeof _origFetch !== 'function') return;
+
+    // Обёртка fetch, чтобы поймать загруженный текст.
+    // Проще: после успешной загрузки оригинал сам выставит setFullCode,
+    // а мы просто дождёмся и запомним текущее содержимое.
+    const before = getCode();
+    const result = await _origFetch.apply(this, arguments);
+    const after = getCode();
+    if(after && after !== before){
+        // Получим URL как имя
+        let name = '';
+        try{
+            const url = document.getElementById('urlInput').value.trim();
+            if(url) name = url.replace(/^https?:\/\//i,'').split('/')[0];
+        }catch(e){}
+        rememberOriginal(after, name);
+    }
+    return result;
+};
+
+// ---------- Хук на загрузку из localStorage ----------
+const _origLoadLocal = window.loadFromLocalStorage;
+window.loadFromLocalStorage = function(){
+    if(typeof _origLoadLocal !== 'function') return;
+    const before = getCode();
+    const result = _origLoadLocal.apply(this, arguments);
+    const after = getCode();
+    if(after && after !== before){
+        rememberOriginal(after, 'localStorage');
+    }
+    return result;
+};
+
+// ---------- Хук на очистку (сбрасывает исходник) ----------
+const _origClearAll = window.clearAll;
+window.clearAll = function(){
+    if(typeof _origClearAll !== 'function') return;
+    originalFileState = null;
+    originalFileName = '';
+    const r = _origClearAll.apply(this, arguments);
+    updateRestoreButton();
+    return r;
+};
+
+// ---------- Отслеживание изменений ----------
+textarea.addEventListener('input', function(){
+    // Дебаунс, чтобы не дёргать DOM на каждую букву
+    clearTimeout(updateRestoreButton._t);
+    updateRestoreButton._t = setTimeout(updateRestoreButton, 250);
+});
+
+// После undo/redo и правок тоже обновляем видимость
+['undo','redo'].forEach(fn=>{
+    const orig = window[fn];
+    if(typeof orig === 'function'){
+        window[fn] = function(){
+            const r = orig.apply(this, arguments);
+            setTimeout(updateRestoreButton, 50);
+            return r;
+        };
+    }
+});
+
+// ---------- Публичный API ----------
+window.__restoreOriginal = {
+    get: ()=>originalFileState,
+    name: ()=>originalFileName,
+    remember: rememberOriginal,
+    update: updateRestoreButton
+};
+
+// Стартовая проверка (если файл уже загружен — но у нас пусто)
+updateRestoreButton();
+
+console.log('[RestoreOriginal] ✅ Установлен');
 })();
 </script>
 </body>
