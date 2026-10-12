@@ -3929,5 +3929,139 @@ updateRestoreButton();
 console.log('[RestoreOriginal] ✅ Установлен');
 })();
 </script>
+
+<script>
+/* ============================================================
+   KlikEdit — AutoScrollToBottomOnLoad v1.0
+   После загрузки файла (из input, URL, localStorage) —
+   автоматически прокручивает редактор в самый низ.
+   Работает и в обычном, и в виртуальном режиме.
+   ============================================================ */
+(function(){
+'use strict';
+
+const textarea = document.getElementById('codeArea');
+if(!textarea){ console.warn('[AutoBottom] textarea не найдена'); return; }
+
+// ---------- Утилита: полный код ----------
+function getCode(){
+    if(typeof window.getFullCode === 'function') return window.getFullCode();
+    return textarea.value;
+}
+
+// ---------- Главная функция: прокрутить в самый низ ----------
+function scrollEditorToBottom(){
+    if(typeof window.setFullCode !== 'function'){
+        // Фолбэк без VirtualPatch
+        textarea.focus();
+        const pos = textarea.value.length;
+        textarea.setSelectionRange(pos, pos);
+        textarea.scrollTop = textarea.scrollHeight;
+        if(typeof syncScroll === 'function') syncScroll();
+        return;
+    }
+
+    const full = getCode();
+    const isVirtual = (typeof window.__virtualPatch === 'object')
+                   && window.__virtualPatch.isActive
+                   && window.__virtualPatch.isActive();
+
+    if(!isVirtual){
+        // Обычный режим — просто скроллим textarea
+        textarea.focus();
+        const pos = textarea.value.length;
+        textarea.setSelectionRange(pos, pos);
+        textarea.scrollTop = textarea.scrollHeight;
+        if(typeof syncScroll === 'function') syncScroll();
+
+        const totalLines = textarea.value.split('\n').length;
+        if(typeof highlightActiveLine === 'function') highlightActiveLine(totalLines);
+        return;
+    }
+
+    // Виртуальный режим: сдвигаем окно к концу файла,
+    // затем скроллим textarea в самый низ внутри окна.
+    if(typeof window.centerWindowAt === 'function'){
+        window.centerWindowAt(full.length, 0);
+    }
+
+    // После сдвига окна — прокрутка вниз.
+    // requestAnimationFrame гарантирует, что textarea.value уже обновлён.
+    requestAnimationFrame(()=>{
+        textarea.focus();
+        const pos = textarea.value.length;
+        textarea.setSelectionRange(pos, pos);
+        textarea.scrollTop = textarea.scrollHeight;
+        if(typeof syncScroll === 'function') syncScroll();
+
+        // Подсветка последней глобальной строки
+        if(typeof window.__virtualPatch === 'object' && window.__virtualPatch.stats){
+            try{
+                const st = window.__virtualPatch.stats();
+                const total = st.totalLines;
+                if(typeof highlightActiveLine === 'function') highlightActiveLine(total);
+            }catch(e){}
+        }
+        if(typeof updatePositionHint === 'function'){
+            try{ updatePositionHint(); }catch(e){}
+        }
+    });
+}
+
+// ---------- Публичный API ----------
+window.scrollEditorToBottom = scrollEditorToBottom;
+
+// ---------- Хук на загрузку файла (input) ----------
+const _origHandleFile = window.handleFileWithFullscreenRestore;
+window.handleFileWithFullscreenRestore = function(event){
+    if(typeof _origHandleFile !== 'function'){
+        return;
+    }
+    const r = _origHandleFile.apply(this, arguments);
+    // Оригинал читает файл асинхронно — ждём немного.
+    // 250 мс хватает для FileReader + setFullCode + updateLineNumbers.
+    setTimeout(scrollEditorToBottom, 250);
+    return r;
+};
+
+// ---------- Хук на загрузку по URL ----------
+const _origFetch = window.fetchWebsiteCode;
+window.fetchWebsiteCode = async function(){
+    if(typeof _origFetch !== 'function') return;
+    const r = await _origFetch.apply(this, arguments);
+    // fetch уже await'ится, но setFullCode и перерисовка — в микротасках,
+    // поэтому даём кадр-другой.
+    setTimeout(scrollEditorToBottom, 150);
+    return r;
+};
+
+// ---------- Хук на загрузку из localStorage ----------
+const _origLoad = window.loadFromLocalStorage;
+window.loadFromLocalStorage = function(){
+    if(typeof _origLoad !== 'function') return;
+    const r = _origLoad.apply(this, arguments);
+    setTimeout(scrollEditorToBottom, 150);
+    return r;
+};
+
+// ---------- Хук на undo/redo (по желанию) ----------
+// Раскомментируй, если хочешь, чтобы после отмены/повтора
+// тоже прыгало вниз:
+//
+// ['undo','redo'].forEach(fn=>{
+//     const orig = window[fn];
+//     if(typeof orig === 'function'){
+//         window[fn] = function(){
+//             const r = orig.apply(this, arguments);
+//             setTimeout(scrollEditorToBottom, 100);
+//             return r;
+//         };
+//     }
+// });
+
+console.log('[AutoBottom] ✅ Установлен — после загрузки файла скроллит вниз');
+})();
+</script>
+
 </body>
 </html>
