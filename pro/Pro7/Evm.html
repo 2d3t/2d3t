@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Цветовой криптофон · 2 режима</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #0b0f1c;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+        }
+        .app {
+            max-width: 500px;
+            width: 100%;
+            background: #141b2b;
+            border-radius: 42px;
+            padding: 24px 20px 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), inset 0 1px 2px rgba(255,255,255,0.08);
+            border: 1px solid #2c3a50;
+        }
+        h1 {
+            margin: 0 0 6px 0;
+            font-size: 1.9rem;
+            font-weight: 600;
+            text-align: center;
+            background: linear-gradient(135deg, #b3e0ff, #a0d0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+        .subhead {
+            text-align: center;
+            color: #8b9bb8;
+            margin-bottom: 22px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #253040;
+            padding-bottom: 14px;
+        }
+        .mode-switch {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            background: #0e131f;
+            padding: 6px;
+            border-radius: 60px;
+            border: 1px solid #2c3a50;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 14px 0;
+            border: none;
+            border-radius: 40px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            background: transparent;
+            color: #8b9bb8;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .mode-btn.active {
+            background: #2f4460;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,180,255,0.3);
+        }
+        .panel {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .panel.active {
+            display: flex;
+        }
+        .color-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 8px;
+        }
+        .color-btn {
+            aspect-ratio: 1.2 / 1;
+            border: none;
+            border-radius: 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.3), 0 10px 20px rgba(0,0,0,0.5);
+            transition: all 0.08s ease;
+            cursor: pointer;
+            padding: 0 8px;
+            line-height: 1.2;
+            text-align: center;
+        }
+        .color-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.3), 0 5px 12px rgba(0,0,0,0.5);
+        }
+        .freq-label {
+            font-size: 0.75rem;
+            font-weight: 400;
+            opacity: 0.9;
+            display: block;
+            margin-top: 4px;
+        }
+        .status {
+            background: #0e131f;
+            padding: 14px 16px;
+            border-radius: 24px;
+            border: 1px solid #2c3a50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #b0c4e0;
+            font-size: 0.95rem;
+        }
+        .badge {
+            background: #1e2a3a;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-weight: 500;
+            color: #aad0ff;
+            border: 1px solid #3c5068;
+            font-size: 0.9rem;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .receive-area {
+            background: #0e131f;
+            border-radius: 28px;
+            padding: 24px 16px;
+            border: 1px solid #2c3a50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .color-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 40px;
+            background: #1a2333;
+            border: 3px solid #2f4460;
+            transition: background 0.15s, box-shadow 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: rgba(255,255,255,0.3);
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+        }
+        .color-preview.active-color {
+            box-shadow: 0 0 30px currentColor, inset 0 0 20px rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+        }
+        .detected-label {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #d0e2ff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-height: 2.2rem;
+        }
+        .btn-mic {
+            background: #2f4460;
+            border: none;
+            border-radius: 50px;
+            padding: 16px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            box-shadow: 0 6px 0 #0e131f, 0 8px 18px black;
+            transition: 0.08s;
+            cursor: pointer;
+            border: 1px solid #4b6e94;
+        }
+        .btn-mic:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #0e131f, 0 6px 12px black;
+        }
+        .btn-mic.listening {
+            background: #b32b2b;
+            border-color: #ff7b7b;
+            box-shadow: 0 4px 0 #4a0f0f;
+        }
+        .hint {
+            color: #6e85a8;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 8px;
+        }
+        .level-meter {
+            width: 100%;
+            height: 8px;
+            background: #1e2a3a;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 8px 0 0;
+        }
+        .level-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #34d399, #fbbf24, #ef4444);
+            border-radius: 10px;
+            transition: width 0.05s;
+        }
+        .no-mic {
+            color: #ffb3b3;
+            font-size: 0.85rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <h1>🎨 ЦВЕТОФОН</h1>
+    <div class="subhead">тональный крипто-канал · два телефона</div>
+
+    <div class="mode-switch">
+        <button class="mode-btn active" id="modeTransmitBtn">📤 Отдача</button>
+        <button class="mode-btn" id="modeReceiveBtn">🎤 Приём</button>
+    </div>
+
+    <!-- ПАНЕЛЬ ПЕРЕДАЧИ -->
+    <div class="panel active" id="transmitPanel">
+        <div class="color-grid" id="colorGrid">
+            <!-- Кнопки будут созданы через JS для единообразия -->
+        </div>
+        <div class="status">
+            <span>🔊 Тональный сигнал</span>
+            <span class="badge" id="transmitStatus">ожидание</span>
+        </div>
+        <div class="hint">Нажми цвет — второй телефон услышит тон</div>
+    </div>
+
+    <!-- ПАНЕЛЬ ПРИЁМА -->
+    <div class="panel" id="receivePanel">
+        <div class="receive-area">
+            <div class="color-preview" id="colorPreview">?</div>
+            <div class="detected-label" id="detectedLabel">—</div>
+            <div class="level-meter">
+                <div class="level-fill" id="levelFill"></div>
+            </div>
+            <button class="btn-mic" id="micButton">🎤 Включить микрофон</button>
+            <div class="hint" id="receiveHint">Нажми и разреши доступ к микрофону</div>
+        </div>
+        <div class="status">
+            <span>📡 Принимаемый тон</span>
+            <span class="badge" id="receiveStatus">микрофон выкл</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ---------- ЦВЕТА И ЧАСТОТЫ ----------
+        // 6 цветов с разными тонами (чтобы не перекрывались и были хорошо различимы)
+        const COLORS = [
+            { name: 'КРАСНЫЙ', hex: '#e63946', freq: 440.0 },   // A4
+            { name: 'ОРАНЖ',   hex: '#f4a261', freq: 523.25 },  // C5
+            { name: 'ЖЁЛТЫЙ',  hex: '#f9c74f', freq: 659.25 },  // E5
+            { name: 'ЗЕЛЁНЫЙ', hex: '#2a9d8f', freq: 783.99 },  // G5
+            { name: 'СИНИЙ',   hex: '#3a86ff', freq: 880.00 },  // A5
+            { name: 'ФИОЛЕТ',  hex: '#9d4edd', freq: 1046.50 }  // C6
+        ];
+
+        // ---------- АУДИОКОНТЕКСТ ----------
+        let audioCtx = null;
+        let currentOscillator = null;
+        let currentGain = null;
+        let isTransmitting = false;
+
+        // ---------- DOM ЭЛЕМЕНТЫ ----------
+        const modeTransmitBtn = document.getElementById('modeTransmitBtn');
+        const modeReceiveBtn = document.getElementById('modeReceiveBtn');
+        const transmitPanel = document.getElementById('transmitPanel');
+        const receivePanel = document.getElementById('receivePanel');
+        const colorGrid = document.getElementById('colorGrid');
+        const transmitStatus = document.getElementById('transmitStatus');
+        const receiveStatus = document.getElementById('receiveStatus');
+        const colorPreview = document.getElementById('colorPreview');
+        const detectedLabel = document.getElementById('detectedLabel');
+        const micButton = document.getElementById('micButton');
+        const levelFill = document.getElementById('levelFill');
+        const receiveHint = document.getElementById('receiveHint');
+
+        // ---------- ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ ----------
+        function setMode(mode) {
+            if (mode === 'transmit') {
+                modeTransmitBtn.classList.add('active');
+                modeReceiveBtn.classList.remove('active');
+                transmitPanel.classList.add('active');
+                receivePanel.classList.remove('active');
+                stopListening(); // выключаем микрофон при переходе в передачу
+                if (currentOscillator) stopTone(); // останавливаем звук, если играл
+            } else {
+                modeReceiveBtn.classList.add('active');
+                modeTransmitBtn.classList.remove('active');
+                receivePanel.classList.add('active');
+                transmitPanel.classList.remove('active');
+                stopTone();
+                // Микрофон не включаем автоматически — нужно нажать кнопку
+            }
+        }
+
+        modeTransmitBtn.addEventListener('click', () => setMode('transmit'));
+        modeReceiveBtn.addEventListener('click', () => setMode('receive'));
+
+        // ---------- ГЕНЕРАЦИЯ КНОПОК ЦВЕТОВ ----------
+        function buildColorButtons() {
+            colorGrid.innerHTML = '';
+            COLORS.forEach((col, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'color-btn';
+                btn.style.background = col.hex;
+                btn.style.color = '#fff';
+                // Для некоторых светлых цветов затемним текст
+                if (col.name === 'ЖЁЛТЫЙ' || col.name === 'ОРАНЖ') {
+                    btn.style.color = '#1a1a1a';
+                    btn.style.textShadow = '0 1px 4px rgba(255,255,255,0.5)';
+                }
+                btn.innerHTML = `${col.name}<span class="freq-label">${col.freq} Hz</span>`;
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    playTone(col.freq, col.name);
+                });
+                // Для мобильных устройств предотвращаем двойное нажатие/зум
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    playTone(col.freq, col.name);
+                }, { passive: false });
+                colorGrid.appendChild(btn);
+            });
+        }
+
+        // ---------- ВОСПРОИЗВЕДЕНИЕ ТОНА (РЕЖИМ ПЕРЕДАЧИ) ----------
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function stopTone() {
+            if (currentOscillator) {
+                try {
+                    currentOscillator.stop();
+                    currentOscillator.disconnect();
+                } catch (e) {}
+                currentOscillator = null;
+            }
+            if (currentGain) {
+                try {
+                    currentGain.disconnect();
+                } catch (e) {}
+                currentGain = null;
+            }
+            isTransmitting = false;
+            transmitStatus.textContent = 'ожидание';
+        }
+
+        function playTone(frequency, colorName) {
+            // Останавливаем предыдущий звук
+            if (currentOscillator) {
+                stopTone();
+            }
+            try {
+                const ctx = initAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = frequency;
+                gain.gain.value = 0.4; // умеренная громкость
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+
+                currentOscillator = osc;
+                currentGain = gain;
+                isTransmitting = true;
+
+                transmitStatus.textContent = `🔊 ${colorName} (${frequency} Hz)`;
+
+                // Автоматически выключаем через 1.2 секунды (чтобы не пищал бесконечно)
+                // Но можно и вручную – просто нажать другой цвет или переключить режим.
+                // Сделаем таймер, но если пользователь нажмёт другую кнопку – таймер сбросится.
+                if (window.toneTimeout) clearTimeout(window.toneTimeout);
+                window.toneTimeout = setTimeout(() => {
+                    if (currentOscillator) {
+                        stopTone();
+                        transmitStatus.textContent = 'ожидание';
+                    }
+                }, 1200);
+
+            } catch (err) {
+                console.warn('Ошибка воспроизведения:', err);
+                transmitStatus.textContent = 'ошибка Audio';
+            }
+        }
+
+        // ---------- ПРИЁМ (МИКРОФОН + АНАЛИЗ) ----------
+        let micStream = null;
+        let analyser = null;
+        let sourceNode = null;
+        let isListening = false;
+        let animationFrame = null;
+        let lastDetectedColor = null;
+
+        // Порог для определения тона (амплитуда)
+        const AMPLITUDE_THRESHOLD = 0.02; // будем смотреть по громкости
+        // Допустимое отклонение частоты (в Гц)
+        const FREQ_TOLERANCE = 35;
+
+        function stopListening() {
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+                micStream = null;
+            }
+            if (sourceNode) {
+                try { sourceNode.disconnect(); } catch (e) {}
+                sourceNode = null;
+            }
+            analyser = null;
+            isListening = false;
+            micButton.classList.remove('listening');
+            micButton.innerHTML = '🎤 Включить микрофон';
+            receiveStatus.textContent = 'микрофон выкл';
+            receiveHint.textContent = 'Нажми и разреши доступ к микрофону';
+            // Сброс индикации цвета, но не обязательно
+            levelFill.style.width = '0%';
+        }
+
+        async function startListening() {
+            if (isListening) {
+                stopListening();
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                micStream = stream;
+
+                const ctx = initAudioContext(); // используем тот же AudioContext
+                // Пересоздаём анализатор
+                analyser = ctx.createAnalyser();
+                analyser.fftSize = 4096; // большее разрешение по частоте
+                analyser.smoothingTimeConstant = 0.3;
+
+                sourceNode = ctx.createMediaStreamSource(stream);
+                sourceNode.connect(analyser);
+                // Не подключаем к destination, чтобы избежать свиста
+
+                isListening = true;
+                micButton.classList.add('listening');
+                micButton.innerHTML = '⏹️ Остановить приём';
+                receiveStatus.textContent = '🔴 слушаю...';
+                receiveHint.textContent = 'Поднесите телефон к источнику звука';
+
+                // Запускаем анализ
+                analyzeAudio();
+
+            } catch (err) {
+                console.error('Микрофон недоступен:', err);
+                receiveHint.textContent = '❌ Нет доступа к микрофону. Разрешите в настройках.';
+                receiveStatus.textContent = 'ошибка доступа';
+                isListening = false;
+            }
+        }
+
+        function analyzeAudio() {
+            if (!isListening || !analyser) return;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            // Также будем использовать временную область для громкости
+            const timeDomainArray = new Uint8Array(analyser.fftSize);
+
+            const sampleRate = audioCtx.sampleRate;
+
+            function update() {
+                if (!isListening || !analyser) return;
+                analyser.getByteFrequencyData(dataArray);
+                analyser.getByteTimeDomainData(timeDomainArray);
+
+                // --- Вычисляем уровень громкости (RMS) ---
+                let sum = 0;
+                for (let i = 0; i < timeDomainArray.length; i++) {
+                    const v = (timeDomainArray[i] - 128) / 128;
+                    sum += v * v;
+                }
+                const rms = Math.sqrt(sum / timeDomainArray.length);
+                const levelPercent = Math.min(100, rms * 400); // для индикатора
+                levelFill.style.width = levelPercent + '%';
+
+                // --- Ищем пиковую частоту ---
+                let maxVal = -1;
+                let maxIndex = -1;
+                // Игнорируем самые низкие частоты (первые 2 бина, обычно шум)
+                const startBin = 4;
+                for (let i = startBin; i < bufferLength; i++) {
+                    const val = dataArray[i];
+                    if (val > maxVal) {
+                        maxVal = val;
+                        maxIndex = i;
+                    }
+                }
+
+                let detectedColorName = null;
+                let detectedFreq = null;
+
+                if (maxVal > 30) { // порог чувствительности (чем больше, тем меньше шума)
+                    // Частота бина: index * sampleRate / fftSize
+                    const peakFreq = maxIndex * sampleRate / analyser.fftSize;
+                    // Ищем ближайший цвет
+                    let minDiff = Infinity;
+                    let bestColor = null;
+                    COLORS.forEach(col => {
+                        const diff = Math.abs(col.freq - peakFreq);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestColor = col;
+                        }
+                    });
+                    // Если отклонение в пределах допуска — регистрируем
+                    if (bestColor && minDiff <= FREQ_TOLERANCE) {
+                        detectedColorName = bestColor.name;
+                        detectedFreq = bestColor.freq;
+                    }
+                }
+
+                // Обновляем визуальную часть приёма
+                if (detectedColorName) {
+                    const colorObj = COLORS.find(c => c.name === detectedColorName);
+                    if (colorObj) {
+                        colorPreview.style.background = colorObj.hex;
+                        colorPreview.style.color = '#fff';
+                        colorPreview.textContent = '✓';
+                        colorPreview.classList.add('active-color');
+                        colorPreview.style.color = colorObj.hex; // для свечения
+                        detectedLabel.textContent = detectedColorName;
+                        detectedLabel.style.color = colorObj.hex;
+                        receiveStatus.textContent = `🎵 ${detectedColorName} (${colorObj.freq} Hz)`;
+                    }
+                } else {
+                    // Нет уверенного тона
+                    if (rms < 0.01) {
+                        colorPreview.style.background = '#1a2333';
+                        colorPreview.textContent = '?';
+                        colorPreview.classList.remove('active-color');
+                        detectedLabel.textContent = '—';
+                        detectedLabel.style.color = '#d0e2ff';
+                        receiveStatus.textContent = 'тишина';
+                    } else {
+                        // Есть шум, но не распознали
+                        receiveStatus.textContent = 'шум / нет тона';
+                    }
+                }
+
+                // Продолжаем цикл
+                animationFrame = requestAnimationFrame(update);
+            }
+
+            animationFrame = requestAnimationFrame(update);
+        }
+
+        // Обработчик кнопки микрофона
+        micButton.addEventListener('click', () => {
+            if (isListening) {
+                stopListening();
+            } else {
+                // Если режим передачи — переключим на приём для удобства
+                if (transmitPanel.classList.contains('active')) {
+                    setMode('receive');
+                }
+                startListening();
+            }
+        });
+
+        // ---------- ИНИЦИАЛИЗАЦИЯ ----------
+        buildColorButtons();
+
+        // Предзагрузка AudioContext при первом касании (для мобильных)
+        document.body.addEventListener('touchstart', function initOnTouch() {
+            if (!audioCtx) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {}
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            document.body.removeEventListener('touchstart', initOnTouch);
+        }, { once: true });
+
+        // Также по клику
+        document.body.addEventListener('click', function initOnClick() {
+            if (!audioCtx) {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {}
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            document.body.removeEventListener('click', initOnClick);
+        }, { once: true });
+
+        // При закрытии/обновлении страницы останавливаем все процессы
+        window.addEventListener('beforeunload', () => {
+            stopTone();
+            stopListening();
+            if (audioCtx) {
+                audioCtx.close();
+            }
+        });
+
+        // Останавливаем тон при уходе со страницы
+        window.addEventListener('pagehide', () => {
+            stopTone();
+            stopListening();
+        });
+
+    })();
+</script>
+</body>
+</html>
