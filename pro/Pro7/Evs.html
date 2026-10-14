@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Голосовой холст · плавный цвет по тону</title>
+<style>
+  * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0a0e17; }
+
+  #canvas {
+    position: fixed; inset: 0;
+    width: 100vw; height: 100vh;
+    touch-action: none;
+    background: radial-gradient(circle at 30% 20%, #131b2c, #06080f 80%);
+    display: block;
+  }
+
+  /* ---------- ВЕРХНЯЯ ПАНЕЛЬ ---------- */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    padding: 12px 14px env(safe-area-inset-top, 12px) 14px;
+    display: flex; gap: 8px; align-items: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .topbar > * { pointer-events: auto; }
+
+  .pill {
+    background: rgba(20, 27, 43, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(120, 160, 220, 0.25);
+    border-radius: 40px;
+    padding: 10px 16px;
+    color: #cfe0ff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+
+  .pill.mic-on { background: rgba(200, 40, 60, 0.9); color: #fff; border-color: #ff7b8a; }
+  .pill.mic-off { background: rgba(20, 27, 43, 0.85); }
+
+  .swatch {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.7);
+    background: #444;
+    box-shadow: 0 0 12px currentColor;
+    transition: background 0.08s;
+  }
+
+  .spacer { flex: 1; }
+
+  .btn {
+    border: none; cursor: pointer;
+    border-radius: 40px;
+    padding: 12px 18px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #2f4460, #1b2739);
+    border: 1px solid rgba(120,160,220,0.35);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+    transition: transform 0.08s, filter 0.15s;
+  }
+  .btn:active { transform: scale(0.95); }
+  .btn.danger { background: linear-gradient(135deg, #7a2230, #4a1018); border-color: rgba(255,120,140,0.4); }
+  .btn.accent { background: linear-gradient(135deg, #1f6feb, #0b3fa8); }
+
+  /* ---------- НИЖНЯЯ ПАНЕЛЬ ---------- */
+  .bottombar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 8px));
+    display: flex; flex-direction: column; gap: 10px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .bottombar > * { pointer-events: auto; }
+
+  .info-row {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(20, 27, 43, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(120, 160, 220, 0.2);
+    border-radius: 22px;
+    padding: 10px 14px;
+    color: #cfe0ff;
+    font-size: 0.8rem;
+  }
+  .info-row b { color: #fff; font-weight: 700; }
+
+  /* Слайдер тона — резервный ручной режим */
+  .tone-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 34px; border-radius: 20px;
+    background: linear-gradient(90deg,
+      hsl(0,90%,55%) 0%,
+      hsl(60,90%,55%) 16%,
+      hsl(120,90%,55%) 33%,
+      hsl(180,90%,55%) 50%,
+      hsl(240,90%,55%) 66%,
+      hsl(300,90%,55%) 83%,
+      hsl(360,90%,55%) 100%);
+    outline: none;
+    border: 1px solid rgba(255,255,255,0.25);
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+  }
+  .tone-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #fff; border: 3px solid #0a0e17;
+    box-shadow: 0 0 14px rgba(255,255,255,0.9);
+    cursor: pointer;
+  }
+  .tone-slider::-moz-range-thumb {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #fff; border: 3px solid #0a0e17;
+    box-shadow: 0 0 14px rgba(255,255,255,0.9);
+  }
+
+  .hint {
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(200, 220, 255, 0.35);
+    font-size: 1.1rem; font-weight: 600;
+    text-align: center; line-height: 1.6;
+    pointer-events: none;
+    z-index: 5;
+    max-width: 80vw;
+    transition: opacity 0.6s;
+  }
+  .hint.hidden { opacity: 0; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="hint" id="hint">
+  Веди пальцем по экрану — рисуй<br>
+  Держи голосом тон — цвет меняется<br>
+  Отпусти — мазок останется
+</div>
+
+<!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+<div class="topbar">
+  <div class="pill mic-off" id="micPill">
+    <span id="micIcon">🎤</span>
+    <span id="micLabel">Микрофон выкл</span>
+  </div>
+  <div class="pill">
+    <span class="swatch" id="swatch"></span>
+    <span id="freqLabel">— Hz</span>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn danger" id="clearBtn">Стереть</button>
+</div>
+
+<!-- НИЖНЯЯ ПАНЕЛЬ -->
+<div class="bottombar">
+  <div class="info-row">
+    <span>🎚️ Ручной тон (если голосом неудобно):</span>
+    <b id="sliderFreq">440 Hz</b>
+  </div>
+  <input type="range" min="80" max="1200" value="440" step="1" class="tone-slider" id="toneSlider">
+  <div class="info-row">
+    <span>🎨 Цвет: <b id="colorName">—</b></span>
+    <span style="margin-left:auto">🖌️ Мазков: <b id="strokeCount">0</b></span>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ====================== НАСТРОЙКИ ======================
+  const MIN_FREQ = 80;      // нижняя граница анализа (Гц)
+  const MAX_FREQ = 1200;    // верхняя граница анализа (Гц)
+  const COLOR_STEPS = 360;  // HSV hue
+
+  // Палитра для отображения имени цвета по hue
+  const colorNames = [
+    {max: 15,  name: 'КРАСНЫЙ'},
+    {max: 45,  name: 'ОРАНЖ'},
+    {max: 70,  name: 'ЖЁЛТЫЙ'},
+    {max: 160, name: 'ЗЕЛЁНЫЙ'},
+    {max: 200, name: 'ГОЛУБОЙ'},
+    {max: 250, name: 'СИНИЙ'},
+    {max: 290, name: 'ФИОЛЕТ'},
+    {max: 330, name: 'МАДЖЕНТА'},
+    {max: 360, name: 'КРАСНЫЙ'},
+  ];
+
+  // ====================== CANVAS ======================
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  let DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2.5));
+
+  function resizeCanvas() {
+    DPR = Math.max(1, Math.min(window.devicePixelRatio || 1, 2.5));
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    canvas.width = Math.floor(w * DPR);
+    canvas.height = Math.floor(h * DPR);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // Фон заново (иначе сбрасывается при resize)
+    ctx.fillStyle = '#06080f';
+    ctx.fillRect(0, 0, w, h);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // ====================== СОСТОЯНИЕ ======================
+  let currentHue = 0;            // текущий оттенок (0-360)
+  let currentFreq = 440;         // текущая частота (Гц)
+  let lastX = null, lastY = null;
+  let isDrawing = false;
+  let strokeCount = 0;
+  let lastHueAtPoint = 0;
+
+  let micActive = false;
+  let audioCtx = null;
+  let analyser = null;
+  let micStream = null;
+  let sourceNode = null;
+  let rafId = null;
+
+  // ====================== UI ======================
+  const hint = document.getElementById('hint');
+  const micPill = document.getElementById('micPill');
+  const micIcon = document.getElementById('micIcon');
+  const micLabel = document.getElementById('micLabel');
+  const swatch = document.getElementById('swatch');
+  const freqLabel = document.getElementById('freqLabel');
+  const colorNameEl = document.getElementById('colorName');
+  const strokeCountEl = document.getElementById('strokeCount');
+  const slider = document.getElementById('toneSlider');
+  const sliderFreq = document.getElementById('sliderFreq');
+
+  // Скрываем подсказку при первом взаимодействии
+  let hintDismissed = false;
+  function dismissHint() {
+    if (!hintDismissed) {
+      hintDismissed = true;
+      hint.classList.add('hidden');
+    }
+  }
+
+  // ====================== ЦВЕТ ПО ЧАСТОТЕ ======================
+  // Маппинг: 80 Гц -> hue 0 (красный), 1200 Гц -> hue 360 (красный через весь спектр)
+  function freqToHue(freq) {
+    const clamped = Math.max(MIN_FREQ, Math.min(MAX_FREQ, freq));
+    const t = (clamped - MIN_FREQ) / (MAX_FREQ - MIN_FREQ);
+    return t * 360;
+  }
+
+  function hueToName(hue) {
+    const h = ((hue % 360) + 360) % 360;
+    for (const c of colorNames) {
+      if (h <= c.max) return c.name;
+    }
+    return 'КРАСНЫЙ';
+  }
+
+  function hsl(hue, s, l, a = 1) {
+    return `hsla(${hue}, ${s}%, ${l}%, ${a})`;
+  }
+
+  function updateColorIndicators(hue, freq) {
+    currentHue = hue;
+    currentFreq = freq;
+
+    const color = hsl(hue, 95, 55);
+    swatch.style.background = color;
+    swatch.style.color = color;
+    freqLabel.textContent = Math.round(freq) + ' Hz';
+    colorNameEl.textContent = hueToName(hue);
+    colorNameEl.style.color = color;
+
+    sliderFreq.textContent = Math.round(freq) + ' Hz';
+  }
+
+  // ====================== РИСОВАНИЕ ======================
+  function startStroke(x, y) {
+    isDrawing = true;
+    lastX = x;
+    lastY = y;
+    lastHueAtPoint = currentHue;
+  }
+
+  function drawSegment(x, y) {
+    if (!isDrawing || lastX === null) return;
+
+    const hue = currentHue;
+
+    // Плавный переход: если hue сильно изменился — рисуем сегментами
+    // Интерполируем цвет между lastHueAtPoint и текущим hue
+    const steps = 6;
+    const startHue = lastHueAtPoint;
+    const endHue = hue;
+
+    // Вычисляем длину сегмента, чтобы шаг был визуально комфортным
+    const dx = x - lastX;
+    const dy = y - lastY;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.5) return;
+
+    // Рисуем несколько коротких подсегментов с интерполяцией цвета
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const px = lastX + dx * t;
+      const py = lastY + dy * t;
+      const prevT = (i - 1) / steps;
+      const ppx = lastX + dx * prevT;
+      const ppy = lastY + dy * prevT;
+
+      // Интерполяция hue (учитываем переход через 360)
+      let h1 = startHue;
+      let h2 = endHue;
+      // Берём кратчайший путь по кругу
+      let diff = h2 - h1;
+      if (diff > 180) diff -= 360;
+      if (diff < -180) diff += 360;
+      const segmentHue = h1 + diff * t;
+
+      // Рисуем линию с лёгким свечением
+      ctx.save();
+      ctx.strokeStyle = hsl(segmentHue, 95, 60);
+      ctx.lineWidth = 6 + Math.sin(t * Math.PI) * 2; // чуть толще в середине
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = hsl(segmentHue, 95, 55);
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.moveTo(ppx, ppy);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    lastHueAtPoint = hue;
+    lastX = x;
+    lastY = y;
+  }
+
+  function endStroke() {
+    if (isDrawing) {
+      strokeCount++;
+      strokeCountEl.textContent = strokeCount;
+    }
+    isDrawing = false;
+    lastX = null;
+    lastY = null;
+  }
+
+  // ====================== УКАЗАТЕЛЬ ======================
+  // Поддержка мыши и тача
+  function getPos(e) {
+    if (e.touches && e.touches.length) {
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    dismissHint();
+    const p = getPos(e);
+    startStroke(p.x, p.y);
+  }
+
+  function onPointerMove(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    const p = getPos(e);
+    drawSegment(p.x, p.y);
+  }
+
+  function onPointerUp(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    endStroke();
+  }
+
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+  canvas.addEventListener('touchend', onPointerUp, { passive: false });
+  canvas.addEventListener('touchcancel', onPointerUp, { passive: false });
+
+  canvas.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  // ====================== МИКРОФОН ======================
+  function stopMic() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    if (micStream) {
+      micStream.getTracks().forEach(t => t.stop());
+      micStream = null;
+    }
+    if (sourceNode) {
+      try { sourceNode.disconnect(); } catch (e) {}
+      sourceNode = null;
+    }
+    analyser = null;
+    micActive = false;
+    micPill.classList.remove('mic-on');
+    micPill.classList.add('mic-off');
+    micIcon.textContent = '🎤';
+    micLabel.textContent = 'Микрофон выкл';
+  }
+
+  async function startMic() {
+    try {
+      // AudioContext создаём при первом включении
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      sourceNode = audioCtx.createMediaStreamSource(micStream);
+
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 4096;
+      analyser.smoothingTimeConstant = 0.55;
+
+      sourceNode.connect(analyser);
+
+      micActive = true;
+      micPill.classList.remove('mic-off');
+      micPill.classList.add('mic-on');
+      micIcon.textContent = '🔴';
+      micLabel.textContent = 'Слушаю тон...';
+
+      analyzeLoop();
+    } catch (err) {
+      console.error(err);
+      micLabel.textContent = 'Нет доступа к микрофону';
+      micActive = false;
+    }
+  }
+
+  function analyzeLoop() {
+    if (!micActive || !analyser) return;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const data = new Uint8Array(bufferLength);
+    const timeData = new Uint8Array(analyser.fftSize);
+
+    const sampleRate = audioCtx.sampleRate;
+    const binHz = sampleRate / analyser.fftSize;
+
+    function step() {
+      if (!micActive) return;
+      analyser.getByteFrequencyData(data);
+      analyser.getByteTimeDomainData(timeData);
+
+      // Проверка на наличие сигнала (RMS)
+      let sum = 0;
+      for (let i = 0; i < timeData.length; i++) {
+        const v = (timeData[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / timeData.length);
+
+      if (rms > 0.008) {
+        // Ищем пик только в диапазоне MIN_FREQ..MAX_FREQ
+        const minBin = Math.max(2, Math.floor(MIN_FREQ / binHz));
+        const maxBin = Math.min(bufferLength - 1, Math.ceil(MAX_FREQ / binHz));
+
+        let maxVal = -1;
+        let maxIdx = -1;
+        for (let i = minBin; i <= maxBin; i++) {
+          // Лёгкое взвешивание к центру диапазона, чтобы гармоники не побеждали
+          const w = 1;
+          const v = data[i] * w;
+          if (v > maxVal) {
+            maxVal = v;
+            maxIdx = i;
+          }
+        }
+
+        if (maxVal > 40 && maxIdx >= 0) {
+          const peakFreq = maxIdx * binHz;
+          // Плавно подтягиваем текущую частоту к пику
+          currentFreq = currentFreq * 0.7 + peakFreq * 0.3;
+          const hue = freqToHue(currentFreq);
+          updateColorIndicators(hue, currentFreq);
+        }
+      }
+
+      rafId = requestAnimationFrame(step);
+    }
+    rafId = requestAnimationFrame(step);
+  }
+
+  micPill.addEventListener('click', () => {
+    dismissHint();
+    if (micActive) stopMic();
+    else startMic();
+  });
+
+  // ====================== СЛАЙДЕР (ручной тон) ======================
+  slider.addEventListener('input', (e) => {
+    dismissHint();
+    const f = parseFloat(e.target.value);
+    const hue = freqToHue(f);
+    updateColorIndicators(hue, f);
+  });
+
+  // ====================== ОЧИСТКА ======================
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    dismissHint();
+    const w = window.innerWidth, h = window.innerHeight;
+    ctx.fillStyle = '#06080f';
+    ctx.fillRect(0, 0, w, h);
+    strokeCount = 0;
+    strokeCountEl.textContent = '0';
+  });
+
+  // ====================== ИНИЦИАЛИЗАЦИЯ ======================
+  // Начальное состояние: hue 180 (голубой) для наглядности
+  updateColorIndicators(freqToHue(440), 440);
+
+  // Предзагрузка AudioContext по первому тапу (мобильные)
+  const initAudioOnce = () => {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {}
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    document.removeEventListener('touchstart', initAudioOnce);
+    document.removeEventListener('click', initAudioOnce);
+  };
+  document.addEventListener('touchstart', initAudioOnce, { once: true });
+  document.addEventListener('click', initAudioOnce, { once: true });
+
+  // Блокируем контекстное меню на холсте (длинный тап)
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Останавливаем всё при уходе
+  window.addEventListener('pagehide', () => { stopMic(); });
+})();
+</script>
+</body>
+</html>
