@@ -1062,15 +1062,15 @@
                     </div>
 
                     <div class="cp-controls">
-                        <button class="cp-btn" id="cpRewindBtn" title="Назад 10с">
-                            <i class="fas fa-backward"></i>
-                        </button>
-                        <button class="cp-btn primary" id="cpPlayBtn" title="Играть/Пауза">
-                            <i class="fas fa-play" id="cpPlayIcon"></i>
-                        </button>
-                        <button class="cp-btn" id="cpForwardBtn" title="Вперёд 10с">
-                            <i class="fas fa-forward"></i>
-                        </button>
+                        <button class="cp-btn" id="cpRewindBtn" title="Предыдущая станция">
+    <i class="fas fa-backward"></i>
+</button>
+<button class="cp-btn primary" id="cpPlayBtn" title="Играть/Пауза">
+    <i class="fas fa-play" id="cpPlayIcon"></i>
+</button>
+<button class="cp-btn" id="cpForwardBtn" title="Следующая станция">
+    <i class="fas fa-forward"></i>
+</button>
                         <div class="cp-volume">
                             <i class="fas fa-volume-up" id="cpVolumeIcon"></i>
                             <input type="range" class="cp-volume-slider" id="cpVolumeSlider" min="0" max="1" step="0.01" value="0.8">
@@ -1080,13 +1080,10 @@
                     <div class="cp-status" id="radioStatus"></div>
 
                     <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; position:relative; z-index:1;">
-                        <button class="radio-fav-btn" id="radioFavBtn" style="flex:1; justify-content:center;">
-                            <i class="far fa-heart"></i> <span>В избранное</span>
-                        </button>
-                        <button class="modal-btn radio-next-btn" id="radioNextBtn" style="flex:1; margin-top:0; padding:10px;">
-                            <i class="fas fa-forward"></i> Следующая
-                        </button>
-                    </div>
+    <button class="radio-fav-btn" id="radioFavBtn" style="flex:1; justify-content:center;">
+        <i class="far fa-heart"></i> <span>В избранное</span>
+    </button>
+</div>
                 </div>
 
                 <div class="favorites-section">
@@ -1132,15 +1129,15 @@
             <div class="fp-progress" id="fpProgress"></div>
         </div>
         <div class="fp-controls">
-            <button class="fp-btn" id="fpRewindBtn" title="Назад 10с">
-                <i class="fas fa-backward"></i>
-            </button>
-            <button class="fp-btn primary" id="fpPlayBtn" title="Играть/Пауза">
-                <i class="fas fa-play" id="fpPlayIcon"></i>
-            </button>
-            <button class="fp-btn" id="fpForwardBtn" title="Вперёд 10с">
-                <i class="fas fa-forward"></i>
-            </button>
+            <button class="fp-btn" id="fpRewindBtn" title="Предыдущая станция">
+    <i class="fas fa-backward"></i>
+</button>
+<button class="fp-btn primary" id="fpPlayBtn" title="Играть/Пауза">
+    <i class="fas fa-play" id="fpPlayIcon"></i>
+</button>
+<button class="fp-btn" id="fpForwardBtn" title="Следующая станция">
+    <i class="fas fa-forward"></i>
+</button>
             <div class="fp-volume">
                 <i class="fas fa-volume-up" id="fpVolumeIcon"></i>
                 <input type="range" class="fp-volume-slider" id="fpVolumeSlider" min="0" max="1" step="0.01" value="0.8">
@@ -1587,16 +1584,14 @@
         });
 
         cpRewindBtn.addEventListener("click", function() {
-            if (cpAudio.duration && isFinite(cpAudio.duration)) {
-                cpAudio.currentTime = Math.max(0, cpAudio.currentTime - 10);
-            }
-        });
+    if (!radioStations.length) return;
+    playRadioStation(radioCurrentIndex - 1);
+});
 
-        cpForwardBtn.addEventListener("click", function() {
-            if (cpAudio.duration && isFinite(cpAudio.duration)) {
-                cpAudio.currentTime = Math.min(cpAudio.duration, cpAudio.currentTime + 10);
-            }
-        });
+cpForwardBtn.addEventListener("click", function() {
+    if (!radioStations.length) return;
+    playRadioStation(radioCurrentIndex + 1);
+});
 
         cpProgressWrap.addEventListener("click", function(e) {
             if (!cpAudio.duration || !isFinite(cpAudio.duration)) return;
@@ -1665,16 +1660,14 @@
         });
 
         fpRewindBtn.addEventListener("click", function() {
-            if (cpAudio.duration && isFinite(cpAudio.duration)) {
-                cpAudio.currentTime = Math.max(0, cpAudio.currentTime - 10);
-            }
-        });
+    if (!radioStations.length) return;
+    playRadioStation(radioCurrentIndex - 1);
+});
 
-        fpForwardBtn.addEventListener("click", function() {
-            if (cpAudio.duration && isFinite(cpAudio.duration)) {
-                cpAudio.currentTime = Math.min(cpAudio.duration, cpAudio.currentTime + 10);
-            }
-        });
+fpForwardBtn.addEventListener("click", function() {
+    if (!radioStations.length) return;
+    playRadioStation(radioCurrentIndex + 1);
+});
 
         fpProgressWrap.addEventListener("click", function(e) {
             if (!cpAudio.duration || !isFinite(cpAudio.duration)) return;
@@ -2297,9 +2290,7 @@
                 }
             });
 
-            document.getElementById("radioNextBtn").addEventListener("click", function () {
-                if (radioStations.length > 0) playRadioStation(radioCurrentIndex + 1);
-            });
+            
 
             document.getElementById("radioFavBtn").addEventListener("click", function () {
                 if (!radioStations.length) return;
