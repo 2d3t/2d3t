@@ -12,12 +12,8 @@
     <meta name="theme-color" content="#0a0f2a">
 
     <link rel="manifest" href="manifest.json">
-
-    <!-- Иконки PWA -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-
-    <!-- Мета-теги для PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -226,7 +222,7 @@
             width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(6px);
-            z-index: 1000;
+            z-index: 2500;
             justify-content: center;
             align-items: center;
             animation: fadeIn 0.3s ease;
@@ -427,48 +423,198 @@
         .date-info { font-size: 12px; color: #8888aa; margin-top: 2px; }
         .timezone-offset { font-size: 12px; color: #4a9eff; margin-top: 2px; }
 
-        /* Радио */
-        .radio-player {
-            background: rgba(10, 20, 40, 0.6);
-            border-radius: 20px;
-            padding: 18px 16px;
+        /* ============ КАСТОМНЫЙ ПЛЕЕР ============ */
+        .custom-player {
+            background: linear-gradient(145deg, #1a2744, #0d1830);
+            border-radius: 24px;
+            padding: 18px;
             margin-bottom: 16px;
             border: 1px solid rgba(245, 158, 11, 0.4);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
         }
-        .radio-station-name {
+        .custom-player::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
+            animation: rotateGlow 8s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes rotateGlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .cp-station-name {
             font-size: 1.05rem;
             font-weight: 700;
             color: #fbbf24;
             margin-bottom: 4px;
             word-break: break-word;
+            position: relative;
+            z-index: 1;
         }
-        .radio-station-meta {
-            font-size: 0.8rem;
+        .cp-station-meta {
+            font-size: 0.75rem;
             opacity: 0.7;
             color: #cbd5e1;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
         }
-        #radioAudio {
-            width: 100%;
-            margin-top: 10px;
-            border-radius: 12px;
-            outline: none;
+        .cp-visualizer {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            height: 40px;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 1;
         }
-        .radio-status {
-            font-size: 0.8rem;
-            margin-top: 8px;
-            color: #10b981;
-            min-height: 18px;
+        .cp-bar {
+            width: 4px;
+            background: linear-gradient(to top, #f59e0b, #fbbf24, #fde68a);
+            border-radius: 2px;
+            height: 6px;
+            box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+            animation-name: none;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+            animation-direction: alternate;
         }
-        .radio-status.error { color: #ef4444; }
-        .radio-next-btn {
-            margin-top: 12px;
+        .custom-player.playing .cp-bar {
+            animation-name: barPulse;
+            animation-duration: var(--d, 0.5s);
+            animation-delay: var(--delay, 0s);
+        }
+        .cp-bar:nth-child(1)  { --d: 0.42s; --delay: 0.00s; --max: 28px; }
+        .cp-bar:nth-child(2)  { --d: 0.61s; --delay: 0.13s; --max: 36px; }
+        .cp-bar:nth-child(3)  { --d: 0.35s; --delay: 0.27s; --max: 22px; }
+        .cp-bar:nth-child(4)  { --d: 0.78s; --delay: 0.05s; --max: 34px; }
+        .cp-bar:nth-child(5)  { --d: 0.52s; --delay: 0.21s; --max: 30px; }
+        .cp-bar:nth-child(6)  { --d: 0.67s; --delay: 0.09s; --max: 38px; }
+        .cp-bar:nth-child(7)  { --d: 0.44s; --delay: 0.31s; --max: 26px; }
+        .cp-bar:nth-child(8)  { --d: 0.71s; --delay: 0.17s; --max: 32px; }
+        .cp-bar:nth-child(9)  { --d: 0.38s; --delay: 0.23s; --max: 24px; }
+        .cp-bar:nth-child(10) { --d: 0.59s; --delay: 0.02s; --max: 34px; }
+        .cp-bar:nth-child(11) { --d: 0.48s; --delay: 0.29s; --max: 28px; }
+        .cp-bar:nth-child(12) { --d: 0.65s; --delay: 0.11s; --max: 30px; }
+
+        @keyframes barPulse {
+            0%   { height: 6px; opacity: 0.55; }
+            100% { height: var(--max, 30px); opacity: 1; }
+        }
+        .cp-progress-wrap {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            height: 6px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+        .cp-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            border-radius: 8px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+        }
+        .cp-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        .cp-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #eef2ff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .cp-btn:hover {
+            background: rgba(245, 158, 11, 0.3);
+            border-color: #f59e0b;
+            transform: scale(1.08);
+        }
+        .cp-btn.primary {
+            width: 48px;
+            height: 48px;
             background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-color: #fbbf24;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+        }
+        .cp-btn.primary:hover {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            transform: scale(1.1);
+        }
+        .cp-volume {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .cp-volume i {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            flex-shrink: 0;
+        }
+        .cp-volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
             width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
         }
-        .radio-next-btn:hover {
-            background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+        .cp-volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
         }
+        .cp-volume-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+        }
+        .cp-status {
+            font-size: 0.75rem;
+            margin-top: 10px;
+            color: #10b981;
+            min-height: 16px;
+            position: relative;
+            z-index: 1;
+        }
+        .cp-status.error { color: #ef4444; }
 
         /* ====== ИЗБРАННЫЕ РАДИОСТАНЦИИ ====== */
         .favorites-section {
@@ -618,6 +764,176 @@
             100% { transform: scale(1); }
         }
 
+        /* ============ ПЛАВАЮЩИЙ МИНИ-ПЛЕЕР ============ */
+        .floating-player {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            background: linear-gradient(145deg, #1a2744, #0d1830);
+            border-radius: 20px;
+            padding: 14px 16px;
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 24px rgba(245, 158, 11, 0.15);
+            z-index: 2000;
+            display: none;
+            animation: slideInRight 0.4s ease;
+            backdrop-filter: blur(10px);
+            transition: left 0.4s ease, right 0.4s ease;
+        }
+        .floating-player.visible { display: block; }
+        @keyframes slideInRight {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        body.modal-open .floating-player {
+            right: auto;
+            left: 20px;
+            bottom: 20px;
+        }
+        body.modal-open .floating-player.visible {
+            animation: slideInLeft 0.4s ease;
+        }
+        @keyframes slideInLeft {
+            from { transform: translateX(-120%); opacity: 0; }
+            to   { transform: translateX(0); opacity: 1; }
+        }
+        .fp-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .fp-flag {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+        .fp-title {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+        .fp-name {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fbbf24;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fp-country {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fp-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #94a3b8;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            padding: 0;
+        }
+        .fp-close:hover {
+            background: #ef4444;
+            color: white;
+        }
+        .fp-progress-wrap {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            height: 4px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .fp-progress {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+            border-radius: 6px;
+            transition: width 0.1s linear;
+        }
+        .fp-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .fp-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #eef2ff;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            padding: 0;
+            flex-shrink: 0;
+        }
+        .fp-btn:hover {
+            background: rgba(245, 158, 11, 0.3);
+            border-color: #f59e0b;
+        }
+        .fp-btn.primary {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border-color: #fbbf24;
+            font-size: 0.9rem;
+        }
+        .fp-btn.primary:hover {
+            transform: scale(1.08);
+        }
+        .fp-volume {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .fp-volume i { font-size: 0.7rem; color: #94a3b8; }
+        .fp-volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+        .fp-volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+        }
+        .fp-volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            border: none;
+        }
+
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp {
             from { transform: translateY(30px); opacity: 0; }
@@ -634,6 +950,16 @@
             .clock-number { font-size: 12px; top: 16px; }
             .clock-mark { height: 8px; }
             .clock-mark.large { height: 12px; }
+            .floating-player {
+                width: calc(100vw - 24px);
+                right: 12px;
+                bottom: 12px;
+            }
+            body.modal-open .floating-player {
+                left: 12px;
+                right: auto;
+                width: calc(100vw - 24px);
+            }
         }
         @media (prefers-color-scheme: dark) {
             .hour-hand {
@@ -718,17 +1044,46 @@
                 <div class="am-pm-badge" id="ampmBadge">--</div>
             </div>
 
+            <!-- КАСТОМНЫЙ ПЛЕЕР В МОДАЛКЕ -->
             <div id="radioInfo" style="display:none;">
-                <div class="radio-player">
-                    <div class="radio-station-name" id="radioStationName">Загрузка станций...</div>
-                    <div class="radio-station-meta" id="radioStationMeta">—</div>
-                    <audio id="radioAudio" controls preload="none"></audio>
-                    <div class="radio-status" id="radioStatus"></div>
-                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
-                        <button class="radio-fav-btn" id="radioFavBtn" style="flex:1;">
+                <div class="custom-player" id="customPlayer">
+                    <div class="cp-station-name" id="radioStationName">Загрузка станций...</div>
+                    <div class="cp-station-meta" id="radioStationMeta">—</div>
+
+                    <div class="cp-visualizer" id="cpVisualizer">
+                        <div class="cp-bar"></div><div class="cp-bar"></div><div class="cp-bar"></div>
+                        <div class="cp-bar"></div><div class="cp-bar"></div><div class="cp-bar"></div>
+                        <div class="cp-bar"></div><div class="cp-bar"></div><div class="cp-bar"></div>
+                        <div class="cp-bar"></div><div class="cp-bar"></div><div class="cp-bar"></div>
+                    </div>
+
+                    <div class="cp-progress-wrap" id="cpProgressWrap">
+                        <div class="cp-progress" id="cpProgress"></div>
+                    </div>
+
+                    <div class="cp-controls">
+                        <button class="cp-btn" id="cpRewindBtn" title="Назад 10с">
+                            <i class="fas fa-backward"></i>
+                        </button>
+                        <button class="cp-btn primary" id="cpPlayBtn" title="Играть/Пауза">
+                            <i class="fas fa-play" id="cpPlayIcon"></i>
+                        </button>
+                        <button class="cp-btn" id="cpForwardBtn" title="Вперёд 10с">
+                            <i class="fas fa-forward"></i>
+                        </button>
+                        <div class="cp-volume">
+                            <i class="fas fa-volume-up" id="cpVolumeIcon"></i>
+                            <input type="range" class="cp-volume-slider" id="cpVolumeSlider" min="0" max="1" step="0.01" value="0.8">
+                        </div>
+                    </div>
+
+                    <div class="cp-status" id="radioStatus"></div>
+
+                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; position:relative; z-index:1;">
+                        <button class="radio-fav-btn" id="radioFavBtn" style="flex:1; justify-content:center;">
                             <i class="far fa-heart"></i> <span>В избранное</span>
                         </button>
-                        <button class="modal-btn radio-next-btn" id="radioNextBtn" style="flex:1; margin-top:0;">
+                        <button class="modal-btn radio-next-btn" id="radioNextBtn" style="flex:1; margin-top:0; padding:10px;">
                             <i class="fas fa-forward"></i> Следующая
                         </button>
                     </div>
@@ -761,7 +1116,74 @@
         </div>
     </div>
 
+    <!-- ПЛАВАЮЩИЙ МИНИ-ПЛЕЕР -->
+    <div class="floating-player" id="floatingPlayer">
+        <div class="fp-header">
+            <span class="fp-flag" id="fpFlag">🌍</span>
+            <div class="fp-title">
+                <div class="fp-name" id="fpName">—</div>
+                <div class="fp-country" id="fpCountry">—</div>
+            </div>
+            <button class="fp-close" id="fpClose" title="Остановить">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="fp-progress-wrap" id="fpProgressWrap">
+            <div class="fp-progress" id="fpProgress"></div>
+        </div>
+        <div class="fp-controls">
+            <button class="fp-btn" id="fpRewindBtn" title="Назад 10с">
+                <i class="fas fa-backward"></i>
+            </button>
+            <button class="fp-btn primary" id="fpPlayBtn" title="Играть/Пауза">
+                <i class="fas fa-play" id="fpPlayIcon"></i>
+            </button>
+            <button class="fp-btn" id="fpForwardBtn" title="Вперёд 10с">
+                <i class="fas fa-forward"></i>
+            </button>
+            <div class="fp-volume">
+                <i class="fas fa-volume-up" id="fpVolumeIcon"></i>
+                <input type="range" class="fp-volume-slider" id="fpVolumeSlider" min="0" max="1" step="0.01" value="0.8">
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ====== ЦВЕТ ДЛЯ КАЖДОЙ СТРАНЫ ======
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        const COUNTRY_PALETTE = [
+            "#4A90D9", "#5BAF7C", "#C97B4A", "#8B6BB5", "#D4A843",
+            "#4FA3A8", "#C75B7A", "#6B8FBF", "#A67C52", "#5D9B8E",
+            "#B56576", "#7A9E7E", "#CC8B58", "#6D7FC4", "#B89B5E",
+            "#5C8A9E", "#A56E7C", "#7F9E5C", "#C9876B", "#6E7BA3",
+            "#4E9B7E", "#B0806B", "#8E8AC4", "#C4A35A", "#5E8B9E",
+            "#A66B5E", "#7B9B6E", "#9B7EB5", "#D49A6B", "#6B9E8E"
+        ];
+
+        function colorForCountry(name) {
+            if (!name) return "#3a5a8c";
+            const idx = hashCode(name) % COUNTRY_PALETTE.length;
+            return COUNTRY_PALETTE[idx];
+        }
+
+        function hoverColorForCountry(baseColor) {
+            const c = baseColor.replace("#", "");
+            const r = parseInt(c.substr(0, 2), 16);
+            const g = parseInt(c.substr(2, 2), 16);
+            const b = parseInt(c.substr(4, 2), 16);
+            const lighten = (v) => Math.min(255, Math.round(v + (255 - v) * 0.3));
+            return "#" + [lighten(r), lighten(g), lighten(b)]
+                .map(v => v.toString(16).padStart(2, "0")).join("");
+        }
+
         // ====== БАЗА ДАННЫХ ЧАСОВЫХ ПОЯСОВ ======
         const timezoneMap = {
             "Russia": "Europe/Moscow", "Germany": "Europe/Berlin", "France": "Europe/Paris",
@@ -1114,6 +1536,166 @@
             }
         }
 
+        // ====== УПРАВЛЕНИЕ КАСТОМНЫМ ПЛЕЕРОМ ======
+        const cpPlayer = document.getElementById("customPlayer");
+        const cpAudio = new Audio();
+        cpAudio.id = "radioAudio";
+        cpAudio.preload = "none";
+        cpAudio.crossOrigin = "anonymous";
+        cpAudio.style.display = "none";
+        document.body.appendChild(cpAudio);
+
+        const cpProgress = document.getElementById("cpProgress");
+        const cpProgressWrap = document.getElementById("cpProgressWrap");
+        const cpPlayBtn = document.getElementById("cpPlayBtn");
+        const cpPlayIcon = document.getElementById("cpPlayIcon");
+        const cpRewindBtn = document.getElementById("cpRewindBtn");
+        const cpForwardBtn = document.getElementById("cpForwardBtn");
+        const cpVolumeSlider = document.getElementById("cpVolumeSlider");
+        const cpVolumeIcon = document.getElementById("cpVolumeIcon");
+
+        const savedVolume = parseFloat(localStorage.getItem("globalExplorer_volume"));
+        const initialVolume = isNaN(savedVolume) ? 0.8 : savedVolume;
+        cpAudio.volume = initialVolume;
+        cpVolumeSlider.value = initialVolume;
+        updateVolumeIcon(initialVolume);
+
+        function updateVolumeIcon(v) {
+            if (v === 0) cpVolumeIcon.className = "fas fa-volume-mute";
+            else if (v < 0.5) cpVolumeIcon.className = "fas fa-volume-down";
+            else cpVolumeIcon.className = "fas fa-volume-up";
+        }
+
+        cpVolumeSlider.addEventListener("input", function() {
+            const v = parseFloat(this.value);
+            cpAudio.volume = v;
+            localStorage.setItem("globalExplorer_volume", v);
+            updateVolumeIcon(v);
+            fpVolumeSlider.value = v;
+            updateFpVolumeIcon(v);
+        });
+
+        cpPlayBtn.addEventListener("click", function() {
+            if (cpAudio.paused) {
+                cpAudio.play().catch(() => {
+                    document.getElementById("radioStatus").textContent = "⚠ Не удалось воспроизвести";
+                    document.getElementById("radioStatus").className = "cp-status error";
+                });
+            } else {
+                cpAudio.pause();
+            }
+        });
+
+        cpRewindBtn.addEventListener("click", function() {
+            if (cpAudio.duration && isFinite(cpAudio.duration)) {
+                cpAudio.currentTime = Math.max(0, cpAudio.currentTime - 10);
+            }
+        });
+
+        cpForwardBtn.addEventListener("click", function() {
+            if (cpAudio.duration && isFinite(cpAudio.duration)) {
+                cpAudio.currentTime = Math.min(cpAudio.duration, cpAudio.currentTime + 10);
+            }
+        });
+
+        cpProgressWrap.addEventListener("click", function(e) {
+            if (!cpAudio.duration || !isFinite(cpAudio.duration)) return;
+            const rect = this.getBoundingClientRect();
+            const ratio = (e.clientX - rect.left) / rect.width;
+            cpAudio.currentTime = ratio * cpAudio.duration;
+        });
+
+        cpAudio.addEventListener("play", function() {
+            cpPlayIcon.className = "fas fa-pause";
+            cpPlayer.classList.add("playing");
+            fpPlayIcon.className = "fas fa-pause";
+        });
+        cpAudio.addEventListener("pause", function() {
+            cpPlayIcon.className = "fas fa-play";
+            cpPlayer.classList.remove("playing");
+            fpPlayIcon.className = "fas fa-play";
+        });
+        cpAudio.addEventListener("timeupdate", function() {
+            if (cpAudio.duration && isFinite(cpAudio.duration)) {
+                const pct = (cpAudio.currentTime / cpAudio.duration) * 100;
+                cpProgress.style.width = pct + "%";
+                fpProgress.style.width = pct + "%";
+            }
+        });
+
+        // ====== ПЛАВАЮЩИЙ МИНИ-ПЛЕЕР ======
+        const floatingPlayer = document.getElementById("floatingPlayer");
+        const fpFlag = document.getElementById("fpFlag");
+        const fpName = document.getElementById("fpName");
+        const fpCountry = document.getElementById("fpCountry");
+        const fpProgress = document.getElementById("fpProgress");
+        const fpProgressWrap = document.getElementById("fpProgressWrap");
+        const fpPlayBtn = document.getElementById("fpPlayBtn");
+        const fpPlayIcon = document.getElementById("fpPlayIcon");
+        const fpRewindBtn = document.getElementById("fpRewindBtn");
+        const fpForwardBtn = document.getElementById("fpForwardBtn");
+        const fpVolumeSlider = document.getElementById("fpVolumeSlider");
+        const fpVolumeIcon = document.getElementById("fpVolumeIcon");
+        const fpClose = document.getElementById("fpClose");
+
+        fpVolumeSlider.value = initialVolume;
+
+        function updateFpVolumeIcon(v) {
+            if (v === 0) fpVolumeIcon.className = "fas fa-volume-mute";
+            else if (v < 0.5) fpVolumeIcon.className = "fas fa-volume-down";
+            else fpVolumeIcon.className = "fas fa-volume-up";
+        }
+        updateFpVolumeIcon(initialVolume);
+
+        fpVolumeSlider.addEventListener("input", function() {
+            const v = parseFloat(this.value);
+            cpAudio.volume = v;
+            cpVolumeSlider.value = v;
+            localStorage.setItem("globalExplorer_volume", v);
+            updateVolumeIcon(v);
+            updateFpVolumeIcon(v);
+        });
+
+        fpPlayBtn.addEventListener("click", function() {
+            if (cpAudio.paused) {
+                cpAudio.play().catch(() => {});
+            } else {
+                cpAudio.pause();
+            }
+        });
+
+        fpRewindBtn.addEventListener("click", function() {
+            if (cpAudio.duration && isFinite(cpAudio.duration)) {
+                cpAudio.currentTime = Math.max(0, cpAudio.currentTime - 10);
+            }
+        });
+
+        fpForwardBtn.addEventListener("click", function() {
+            if (cpAudio.duration && isFinite(cpAudio.duration)) {
+                cpAudio.currentTime = Math.min(cpAudio.duration, cpAudio.currentTime + 10);
+            }
+        });
+
+        fpProgressWrap.addEventListener("click", function(e) {
+            if (!cpAudio.duration || !isFinite(cpAudio.duration)) return;
+            const rect = this.getBoundingClientRect();
+            const ratio = (e.clientX - rect.left) / rect.width;
+            cpAudio.currentTime = ratio * cpAudio.duration;
+        });
+
+        fpClose.addEventListener("click", function() {
+            stopRadio();
+            floatingPlayer.classList.remove("visible");
+        });
+
+        function showFloatingPlayer(station, countryName) {
+            fpFlag.textContent = flagMap[countryName] || "🌍";
+            fpName.textContent = station.name;
+            fpCountry.textContent = countryName || "—";
+            floatingPlayer.classList.add("visible");
+        }
+
+        // ====== ЗАПУСК СТАНЦИИ ======
         function playRadioStation(index) {
             if (!radioStations.length) return;
             if (index < 0) index = radioStations.length - 1;
@@ -1131,26 +1713,26 @@
                 (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
                 (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
 
-            const audio = document.getElementById("radioAudio");
-            audio.pause();
-            audio.src = st.url;
-            audio.load();
+            cpAudio.pause();
+            cpAudio.src = st.url;
+            cpAudio.load();
 
-            const playPromise = audio.play();
+            const playPromise = cpAudio.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     statusEl.textContent = "▶ Играет: " + st.name;
-                    statusEl.className = "radio-status";
+                    statusEl.className = "cp-status";
+                    showFloatingPlayer(st, radioCurrentCountry);
                 }).catch(() => {
                     statusEl.textContent = "⚠ Не удалось воспроизвести. Пробую следующую...";
-                    statusEl.className = "radio-status error";
+                    statusEl.className = "cp-status error";
                     setTimeout(() => playRadioStation(radioCurrentIndex + 1), 1500);
                 });
             }
 
-            audio.onerror = () => {
+            cpAudio.onerror = () => {
                 statusEl.textContent = "⚠ Поток недоступен. Следующая станция...";
-                statusEl.className = "radio-status error";
+                statusEl.className = "cp-status error";
                 setTimeout(() => playRadioStation(radioCurrentIndex + 1), 1200);
             };
 
@@ -1166,7 +1748,7 @@
             nameEl.textContent = "⏳ Загрузка радиостанций " + countryName + "...";
             metaEl.textContent = "—";
             statusEl.textContent = "";
-            statusEl.className = "radio-status";
+            statusEl.className = "cp-status";
 
             radioStations = await fetchRadioStations(countryName);
 
@@ -1174,18 +1756,17 @@
                 nameEl.textContent = "📻 Радио недоступно";
                 metaEl.textContent = "Не удалось найти станции для " + countryName;
                 statusEl.textContent = "Попробуйте другую страну";
-                statusEl.className = "radio-status error";
+                statusEl.className = "cp-status error";
                 return;
             }
             playRadioStation(0);
         }
 
         function stopRadio() {
-            const audio = document.getElementById("radioAudio");
-            if (audio) {
-                try { audio.pause(); } catch (e) {}
-                audio.removeAttribute('src');
-                audio.load();
+            if (cpAudio) {
+                try { cpAudio.pause(); } catch (e) {}
+                cpAudio.removeAttribute('src');
+                cpAudio.load();
             }
             if (radioFetchAbort) { radioFetchAbort.abort(); radioFetchAbort = null; }
             radioStations = [];
@@ -1193,9 +1774,10 @@
             radioCurrentCountry = null;
             const favBtn = document.getElementById('radioFavBtn');
             if (favBtn) favBtn.style.display = 'none';
+            floatingPlayer.classList.remove("visible");
         }
 
-        // ====== ИЗБРАННЫЕ РАДИОСТАНЦИИ (localStorage) ======
+        // ====== ИЗБРАННЫЕ РАДИОСТАНЦИИ ======
         const FAVORITES_KEY = 'globalExplorer_favoriteStations_v1';
 
         function loadFavorites() {
@@ -1344,6 +1926,7 @@
                 tags: fav.tags
             }];
             radioCurrentIndex = 0;
+            radioCurrentCountry = fav.country;
             playRadioStation(0);
             updateFavButtonState();
             showFavToast('▶ Играет: ' + fav.name);
@@ -1398,26 +1981,60 @@
             let polygonSeries = chart.series.push(
                 am5map.MapPolygonSeries.new(root, { geoJSON: am5geodata_worldLow })
             );
-            polygonSeries.set("fill", am5.color(0x2c3e66));
-            polygonSeries.set("stroke", am5.color(0x4a6b9e));
-            polygonSeries.set("strokeWidth", 0.6);
 
             let polygonTemplate = polygonSeries.mapPolygons.template;
+
             polygonTemplate.setAll({
                 interactive: true,
                 tooltipText: "{name}",
                 tooltipY: 0,
-                fill: am5.color(0x3a5a8c),
-                stroke: am5.color(0x7e9bc0),
-                strokeWidth: 0.8,
+                stroke: am5.color(0x1a2744),
+                strokeWidth: 0.6,
                 cursorOverStyle: "pointer"
             });
 
+            // Гарантированная раскраска через адаптер — работает поверх любой темы
+            polygonTemplate.adapters.add("fill", function(fill, target) {
+                const ctx = target.dataItem && target.dataItem.dataContext;
+                const name = ctx && ctx.name;
+                if (!name) return am5.color(0x2c3e66);
+                return am5.color(colorForCountry(name));
+            });
+
+            // Храним базовый и hover-цвет для каждого полигона
+            polygonSeries.events.on("datavalidated", function() {
+                polygonSeries.mapPolygons.each(function(polygon) {
+                    const di = polygon.dataItem;
+                    if (!di) return;
+                    const name = di.dataContext && di.dataContext.name;
+                    if (!name) return;
+                    const base = colorForCountry(name);
+                    di.set("_baseColor", base);
+                    di.set("_hoverColor", hoverColorForCountry(base));
+                });
+            });
+
             polygonTemplate.states.create("hover", {
-                fill: am5.color(0x5d8bc9),
                 stroke: am5.color(0xffd966),
                 strokeWidth: 1.5,
                 scale: 1.01
+            });
+
+            polygonTemplate.events.on("pointerover", function(ev) {
+                const di = ev.target.dataItem;
+                if (!di) return;
+                const hoverColor = di.get("_hoverColor");
+                if (hoverColor) {
+                    ev.target.animate({ key: "fill", to: am5.color(hoverColor), duration: 150 });
+                }
+            });
+            polygonTemplate.events.on("pointerout", function(ev) {
+                const di = ev.target.dataItem;
+                if (!di) return;
+                const baseColor = di.get("_baseColor");
+                if (baseColor) {
+                    ev.target.animate({ key: "fill", to: am5.color(baseColor), duration: 250 });
+                }
             });
 
             let rotationAnimation = chart.animate({
@@ -1461,14 +2078,16 @@
                 stopClock();
                 stopRadio();
                 modalOverlay.classList.add("active");
+                document.body.classList.add("modal-open");
             }
 
             function hideModal() {
                 modalOverlay.classList.remove("active");
+                document.body.classList.remove("modal-open");
                 currentCountryForModal = null;
                 isTimeMode = false;
                 stopClock();
-                stopRadio();
+                // НЕ останавливаем радио — оно продолжает играть в мини-плеере!
             }
 
             function clearPendingState(resetStatusToDefault) {
@@ -1557,12 +2176,14 @@
                 if (pendingCountry === null) {
                     pendingCountry = countryName;
                     showCountryNameAndWait(countryName);
-                    ev.target.animate({ key: "fill", to: am5.color(0xffaa66), duration: 200 });
+                    ev.target.animate({ key: "stroke", to: am5.color(0xffaa66), duration: 200 });
+                    ev.target.animate({ key: "strokeWidth", to: 2.5, duration: 200 });
                     setTimeout(function () {
-                        if (ev.target && ev.target.get("fill") !== undefined) {
-                            ev.target.animate({ key: "fill", to: am5.color(0x3a5a8c), duration: 400 });
+                        if (ev.target && ev.target.get("stroke") !== undefined) {
+                            ev.target.animate({ key: "stroke", to: am5.color(0x1a2744), duration: 400 });
+                            ev.target.animate({ key: "strokeWidth", to: 0.6, duration: 400 });
                         }
-                    }, 500);
+                    }, 600);
                     return;
                 }
 
@@ -1595,10 +2216,14 @@
                                 clearPendingState(true);
                             }
                         }, 7000);
-                        ev.target.animate({ key: "fill", to: am5.color(0xffaa66), duration: 200 });
+                        ev.target.animate({ key: "stroke", to: am5.color(0xffaa66), duration: 200 });
+                        ev.target.animate({ key: "strokeWidth", to: 2.5, duration: 200 });
                         setTimeout(function () {
-                            if (ev.target) ev.target.animate({ key: "fill", to: am5.color(0x3a5a8c), duration: 400 });
-                        }, 500);
+                            if (ev.target) {
+                                ev.target.animate({ key: "stroke", to: am5.color(0x1a2744), duration: 400 });
+                                ev.target.animate({ key: "strokeWidth", to: 0.6, duration: 400 });
+                            }
+                        }, 600);
                     }
                     return;
                 }
@@ -1627,7 +2252,7 @@
                 if (currentCountryForModal) {
                     const langDisplay = openNewsForCountry(currentCountryForModal);
                     statusSpan.innerHTML = '<i class="fas fa-newspaper"></i> 📰 Opening news for <strong>' +
-                        currentCountryForModal + '</strong> in <strong>' + langDisplay + '</strong>...';
+                        currentCountryForModal + '</strong> in <strong>' + langDisplay + '</strong>... (радио продолжает играть 🎵)';
                     statusCard.style.borderColor = "#4caf50";
                     hideModal();
                     setTimeout(function () {
@@ -1635,7 +2260,7 @@
                             statusSpan.innerHTML = DEFAULT_STATUS;
                             statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
                         }
-                    }, 4000);
+                    }, 5000);
                 }
             });
 
@@ -1643,7 +2268,7 @@
                 if (currentCountryForModal) {
                     const langCode = openWikipediaForCountry(currentCountryForModal);
                     statusSpan.innerHTML = '<i class="fab fa-wikipedia-w"></i> 📖 Opening Wikipedia for <strong>' +
-                        currentCountryForModal + '</strong> (' + langCode + ')...';
+                        currentCountryForModal + '</strong> (' + langCode + ')... (радио продолжает играть 🎵)';
                     statusCard.style.borderColor = "#8b5cf6";
                     hideModal();
                     setTimeout(function () {
@@ -1651,7 +2276,7 @@
                             statusSpan.innerHTML = DEFAULT_STATUS;
                             statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
                         }
-                    }, 4000);
+                    }, 5000);
                 }
             });
 
@@ -1676,7 +2301,6 @@
                 if (radioStations.length > 0) playRadioStation(radioCurrentIndex + 1);
             });
 
-            // Кнопка "В избранное"
             document.getElementById("radioFavBtn").addEventListener("click", function () {
                 if (!radioStations.length) return;
                 const current = radioStations[radioCurrentIndex];
@@ -1691,13 +2315,11 @@
                 updateFavButtonState();
             });
 
-            // Сворачивание/разворачивание списка избранного
             document.getElementById("favoritesToggle").addEventListener("click", function () {
                 this.classList.toggle('collapsed');
                 document.getElementById('favoritesList').classList.toggle('collapsed');
             });
 
-            // Первичный рендер избранного
             renderFavorites();
 
             document.getElementById("modalCancelBtn").addEventListener("click", function () {
@@ -1719,16 +2341,16 @@
                 clockActions.style.display = 'none';
                 modalActions.style.display = 'flex';
                 stopClock();
-                stopRadio();
+                // НЕ трогаем радио — пусть играет в мини-плеере
                 modalSubInfo.textContent = "Choose what you want to see";
             });
 
             document.getElementById("modalCloseBtn").addEventListener("click", function () {
                 stopClock();
-                stopRadio();
                 hideModal();
                 statusSpan.innerHTML = DEFAULT_STATUS;
                 statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                // Радио остаётся в мини-плеере
             });
 
             modalOverlay.addEventListener("click", function (e) {
