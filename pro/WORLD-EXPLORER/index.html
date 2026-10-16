@@ -11,10 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <meta name="theme-color" content="#0a0f2a">
 
-
-
-
-<link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
 
     <!-- Иконки PWA -->
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -24,7 +21,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -234,6 +230,8 @@
             justify-content: center;
             align-items: center;
             animation: fadeIn 0.3s ease;
+            overflow-y: auto;
+            padding: 20px 0;
         }
         .modal-overlay.active { display: flex; }
         .modal-box {
@@ -246,6 +244,7 @@
             border: 1px solid rgba(100, 181, 246, 0.3);
             box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
             animation: slideUp 0.3s ease;
+            margin: auto;
         }
         .modal-box h2 { font-size: 1.3rem; margin-bottom: 6px; color: #b3d9ff; }
         .modal-box .country-name {
@@ -471,6 +470,154 @@
             background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
         }
 
+        /* ====== ИЗБРАННЫЕ РАДИОСТАНЦИИ ====== */
+        .favorites-section {
+            margin-top: 16px;
+            border-top: 1px solid rgba(245, 158, 11, 0.3);
+            padding-top: 12px;
+        }
+        .favorites-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .favorites-title i.fa-chevron-down {
+            margin-left: auto;
+            transition: transform 0.3s;
+            font-size: 0.75rem;
+        }
+        .favorites-title.collapsed i.fa-chevron-down {
+            transform: rotate(-90deg);
+        }
+        .favorites-list {
+            max-height: 320px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-right: 4px;
+        }
+        .favorites-list.collapsed {
+            display: none;
+        }
+        .favorites-list::-webkit-scrollbar { width: 6px; }
+        .favorites-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+        .favorites-list::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 3px; }
+
+        .fav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 14px;
+            padding: 8px 10px;
+            transition: all 0.2s ease;
+        }
+        .fav-item:hover {
+            background: rgba(45, 60, 85, 0.85);
+            border-color: rgba(245, 158, 11, 0.6);
+            transform: translateX(2px);
+        }
+        .fav-flag {
+            font-size: 1.4rem;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .fav-info {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+        .fav-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #f0f3fa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fav-country {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fav-play-btn, .fav-remove-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #eef2ff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+        .fav-play-btn:hover {
+            background: #10b981;
+            border-color: #10b981;
+            transform: scale(1.1);
+        }
+        .fav-remove-btn:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            transform: scale(1.1);
+        }
+        .fav-empty {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+            padding: 12px 0;
+            font-style: italic;
+        }
+
+        .radio-fav-btn {
+            margin-top: 8px;
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            color: #fbbf24;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+        .radio-fav-btn:hover {
+            background: rgba(245, 158, 11, 0.3);
+            transform: scale(1.02);
+        }
+        .radio-fav-btn.active {
+            background: #f59e0b;
+            color: #1a1a1a;
+            border-color: #fbbf24;
+        }
+        .radio-fav-btn.active i {
+            animation: heartBeat 0.3s ease;
+        }
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp {
             from { transform: translateY(30px); opacity: 0; }
@@ -577,9 +724,26 @@
                     <div class="radio-station-meta" id="radioStationMeta">—</div>
                     <audio id="radioAudio" controls preload="none"></audio>
                     <div class="radio-status" id="radioStatus"></div>
-                    <button class="modal-btn radio-next-btn" id="radioNextBtn">
-                        <i class="fas fa-forward"></i> Следующая станция
-                    </button>
+                    <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                        <button class="radio-fav-btn" id="radioFavBtn" style="flex:1;">
+                            <i class="far fa-heart"></i> <span>В избранное</span>
+                        </button>
+                        <button class="modal-btn radio-next-btn" id="radioNextBtn" style="flex:1; margin-top:0;">
+                            <i class="fas fa-forward"></i> Следующая
+                        </button>
+                    </div>
+                </div>
+
+                <div class="favorites-section">
+                    <div class="favorites-title" id="favoritesToggle">
+                        <i class="fas fa-heart" style="color:#ef4444;"></i>
+                        <span>Избранные станции</span>
+                        <span id="favoritesCount" style="color:#94a3b8; font-weight:400;">(0)</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="favorites-list" id="favoritesList">
+                        <div class="fav-empty">Пока нет избранных станций 💔</div>
+                    </div>
                 </div>
             </div>
 
@@ -989,6 +1153,8 @@
                 statusEl.className = "radio-status error";
                 setTimeout(() => playRadioStation(radioCurrentIndex + 1), 1200);
             };
+
+            updateFavButtonState();
         }
 
         async function startRadioForCountry(countryName) {
@@ -1025,6 +1191,189 @@
             radioStations = [];
             radioCurrentIndex = 0;
             radioCurrentCountry = null;
+            const favBtn = document.getElementById('radioFavBtn');
+            if (favBtn) favBtn.style.display = 'none';
+        }
+
+        // ====== ИЗБРАННЫЕ РАДИОСТАНЦИИ (localStorage) ======
+        const FAVORITES_KEY = 'globalExplorer_favoriteStations_v1';
+
+        function loadFavorites() {
+            try {
+                const raw = localStorage.getItem(FAVORITES_KEY);
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.warn('Ошибка загрузки избранного:', e);
+                return [];
+            }
+        }
+
+        function saveFavorites(favorites) {
+            try {
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+            } catch (e) {
+                console.warn('Ошибка сохранения избранного:', e);
+            }
+        }
+
+        function isStationFavorite(station) {
+            if (!station || !station.url) return false;
+            const favorites = loadFavorites();
+            return favorites.some(f => f.url === station.url);
+        }
+
+        function addFavorite(station, countryName) {
+            if (!station || !station.url) return;
+            const favorites = loadFavorites();
+            if (favorites.some(f => f.url === station.url)) return;
+            favorites.unshift({
+                name: station.name,
+                url: station.url,
+                codec: station.codec || '',
+                bitrate: station.bitrate || 0,
+                tags: station.tags || '',
+                country: countryName,
+                flag: flagMap[countryName] || '🌍',
+                addedAt: Date.now()
+            });
+            saveFavorites(favorites);
+            renderFavorites();
+            updateFavButtonState();
+        }
+
+        function removeFavorite(url) {
+            let favorites = loadFavorites();
+            favorites = favorites.filter(f => f.url !== url);
+            saveFavorites(favorites);
+            renderFavorites();
+            updateFavButtonState();
+        }
+
+        function updateFavButtonState() {
+            const btn = document.getElementById('radioFavBtn');
+            if (!btn) return;
+            if (!radioStations.length) {
+                btn.style.display = 'none';
+                return;
+            }
+            btn.style.display = 'inline-flex';
+            const current = radioStations[radioCurrentIndex];
+            if (!current) return;
+            const isFav = isStationFavorite(current);
+            btn.classList.toggle('active', isFav);
+            btn.innerHTML = isFav
+                ? '<i class="fas fa-heart"></i> <span>В избранном</span>'
+                : '<i class="far fa-heart"></i> <span>В избранное</span>';
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function renderFavorites() {
+            const list = document.getElementById('favoritesList');
+            const countEl = document.getElementById('favoritesCount');
+            if (!list) return;
+            const favorites = loadFavorites();
+            if (countEl) countEl.textContent = '(' + favorites.length + ')';
+
+            if (!favorites.length) {
+                list.innerHTML = '<div class="fav-empty">Пока нет избранных станций 💔</div>';
+                return;
+            }
+
+            list.innerHTML = favorites.map((fav, idx) => {
+                const safeName = escapeHtml(fav.name || 'Без названия');
+                const safeCountry = escapeHtml(fav.country || 'Неизвестно');
+                const safeUrl = escapeHtml(fav.url);
+                return `
+                    <div class="fav-item" data-url="${safeUrl}">
+                        <span class="fav-flag" title="${safeCountry}">${fav.flag || '🌍'}</span>
+                        <div class="fav-info">
+                            <div class="fav-name" title="${safeName}">${safeName}</div>
+                            <div class="fav-country">${safeCountry}</div>
+                        </div>
+                        <button class="fav-play-btn" data-action="play" data-index="${idx}" title="Воспроизвести">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="fav-remove-btn" data-action="remove" data-index="${idx}" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            list.querySelectorAll('.fav-play-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const idx = parseInt(this.dataset.index, 10);
+                    playFavoriteByIndex(idx);
+                });
+            });
+            list.querySelectorAll('.fav-remove-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const idx = parseInt(this.dataset.index, 10);
+                    const favs = loadFavorites();
+                    if (favs[idx]) {
+                        removeFavorite(favs[idx].url);
+                        showFavToast('🗑 Удалено из избранного');
+                    }
+                });
+            });
+        }
+
+        function playFavoriteByIndex(idx) {
+            const favorites = loadFavorites();
+            const fav = favorites[idx];
+            if (!fav) return;
+
+            radioStations = [{
+                name: fav.name,
+                url: fav.url,
+                codec: fav.codec,
+                bitrate: fav.bitrate,
+                tags: fav.tags
+            }];
+            radioCurrentIndex = 0;
+            playRadioStation(0);
+            updateFavButtonState();
+            showFavToast('▶ Играет: ' + fav.name);
+        }
+
+        function showFavToast(msg) {
+            let toast = document.getElementById('favToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'favToast';
+                toast.style.cssText = `
+                    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
+                    background: rgba(15, 23, 42, 0.95); color: #fff; padding: 10px 20px;
+                    border-radius: 40px; font-size: 0.85rem; z-index: 3000;
+                    border: 1px solid #f59e0b; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                    opacity: 0; transition: opacity 0.3s, transform 0.3s;
+                    pointer-events: none; max-width: 90vw; text-align: center;
+                `;
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(-50%) translateY(0)';
+            });
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(10px)';
+            }, 2200);
         }
 
         // ====== AMCHARTS GLOBE ======
@@ -1318,6 +1667,7 @@
                     modalSubInfo.textContent = "📻 Радио " + country;
                     statusSpan.innerHTML = '<i class="fas fa-radio"></i> 📻 Загрузка радио для <strong>' + country + '</strong>...';
                     statusCard.style.borderColor = "#f59e0b";
+                    renderFavorites();
                     startRadioForCountry(country);
                 }
             });
@@ -1325,6 +1675,30 @@
             document.getElementById("radioNextBtn").addEventListener("click", function () {
                 if (radioStations.length > 0) playRadioStation(radioCurrentIndex + 1);
             });
+
+            // Кнопка "В избранное"
+            document.getElementById("radioFavBtn").addEventListener("click", function () {
+                if (!radioStations.length) return;
+                const current = radioStations[radioCurrentIndex];
+                if (!current) return;
+                if (isStationFavorite(current)) {
+                    removeFavorite(current.url);
+                    showFavToast('💔 Удалено из избранного');
+                } else {
+                    addFavorite(current, radioCurrentCountry || 'Неизвестно');
+                    showFavToast('❤️ Добавлено в избранное: ' + current.name);
+                }
+                updateFavButtonState();
+            });
+
+            // Сворачивание/разворачивание списка избранного
+            document.getElementById("favoritesToggle").addEventListener("click", function () {
+                this.classList.toggle('collapsed');
+                document.getElementById('favoritesList').classList.toggle('collapsed');
+            });
+
+            // Первичный рендер избранного
+            renderFavorites();
 
             document.getElementById("modalCancelBtn").addEventListener("click", function () {
                 hideModal();
