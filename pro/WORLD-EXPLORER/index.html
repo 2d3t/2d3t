@@ -1178,9 +1178,10 @@
     <div id="chartdiv"></div>
 
     <div class="controls-panel">
-        <button id="toggleRotation" class="btn"><i class="fas fa-pause-circle"></i> <span>Stop Rotation</span></button>
-        <button id="resetView" class="btn"><i class="fas fa-sync-alt"></i> Reset View</button>
-    </div>
+    <button id="toggleRotation" class="btn"><i class="fas fa-pause-circle"></i> <span>Stop Rotation</span></button>
+    <button id="resetView" class="btn"><i class="fas fa-sync-alt"></i> Reset View</button>
+    <button id="randomCountry" class="btn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border-color: #a78bfa;"><i class="fas fa-dice"></i> <span>Random Country</span></button>
+</div>
 
     <div class="share-section">
         <p><i class="fas fa-share-alt"></i> Share this interactive globe — news, Wikipedia, local time & radio!</p>
@@ -2632,7 +2633,56 @@ vizContainerEl.addEventListener('dblclick', function(e) {
                 stopClock();
             }
 
-            function clearPendingState(resetStatusToDefault) {
+            // ====== СЛУЧАЙНАЯ СТРАНА ======
+function getRandomCountry() {
+    const candidates = Object.keys(timezoneMap).filter(function(name) {
+        return countryCodeMap[name] && name !== "Greenland" && name !== "Antarctica";
+    });
+    if (!candidates.length) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function openRandomCountry() {
+    const country = getRandomCountry();
+    if (!country) {
+        statusSpan.innerHTML = "⚠ Не удалось выбрать случайную страну.";
+        return;
+    }
+
+    if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
+    pendingCountry = null;
+
+    const langInfo = getLanguageForCountry(country);
+    const tz = getTimezoneForCountry(country);
+    statusSpan.innerHTML = '<i class="fas fa-dice"></i> 🎲 Random: <span class="country-badge">' +
+        (flagMap[country] || "🌍") + ' ' + country + '</span> <span class="language-tag">' +
+        langInfo.display + '</span> <span class="language-tag" style="background:#10b981;">' +
+        tz + '</span>';
+    statusCard.style.borderColor = "#a78bfa";
+
+    showModal(country);
+
+    try {
+        polygonSeries.mapPolygons.each(function(polygon) {
+            const di = polygon.dataItem;
+            if (!di) return;
+            const ctx = di.dataContext;
+            if (ctx && ctx.name === country) {
+                polygon.animate({ key: "stroke", to: am5.color(0xffaa66), duration: 300 });
+                polygon.animate({ key: "strokeWidth", to: 2.5, duration: 300 });
+                setTimeout(function() {
+                    if (polygon) {
+                        polygon.animate({ key: "stroke", to: am5.color(0x1a2744), duration: 600 });
+                        polygon.animate({ key: "strokeWidth", to: 0.6, duration: 600 });
+                    }
+                }, 1500);
+            }
+        });
+    } catch (e) { /* игнорируем */ }
+}
+
+
+function clearPendingState(resetStatusToDefault) {
                 if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
                 pendingCountry = null;
                 if (resetStatusToDefault) {
@@ -2901,7 +2951,10 @@ vizContainerEl.addEventListener('dblclick', function(e) {
                 }
             });
 
-            const toggleBtn = document.getElementById("toggleRotation");
+            document.getElementById("randomCountry").addEventListener("click", openRandomCountry);
+
+
+const toggleBtn = document.getElementById("toggleRotation");
             toggleBtn.addEventListener("click", function () {
                 if (rotationAnimation && !rotationAnimation.isStopped()) {
                     rotationAnimation.stop();
