@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'worldexplorer-pwa-v3';
+const CACHE_NAME = 'worldexplorer-pwa-v-map3';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/WORLD-EXPLORER/index.html',
