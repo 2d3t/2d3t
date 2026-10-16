@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Global Explorer — Время, Новости, Википедия и Радио</title>
+    <title>World Explorer — Время, Новости, Википедия и Радио</title>
     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
@@ -1161,7 +1161,7 @@
 <body>
 
     <div class="globe-header">
-        <h1><i class="fas fa-globe-europe" style="margin-right: 10px;"></i> Global Explorer</h1>
+        <h1><i class="fas fa-globe-europe" style="margin-right: 10px;"></i> World Explorer</h1>
         <div class="sub">
             <i class="fas fa-mouse-pointer"></i> <span>Click once → country name | Click twice → choose: <strong style="color:#ffb74d;">News</strong>, <strong style="color:#a78bfa;">Wikipedia</strong>, <strong style="color:#10b981;">Time</strong> or <strong style="color:#fbbf24;">Radio</strong></span>
             <i class="fas fa-language"></i>
@@ -1630,6 +1630,78 @@
         }
 
         // ================================================================
+// ==================== WAKE LOCK (экран не гаснет) ================
+// ================================================================
+const WakeLock = (function () {
+    let sentinel = null;
+    let wantLock = false;
+    let reacquireTimer = null;
+
+    const supported = 'wakeLock' in navigator;
+
+    async function acquire() {
+        if (!supported) return;
+        if (sentinel && !sentinel.released) return;
+
+        try {
+            sentinel = await navigator.wakeLock.request('screen');
+            console.log('[WakeLock] ✅ Экран удерживается');
+
+            sentinel.addEventListener('release', () => {
+                console.log('[WakeLock] ⚠️ Screen lock released');
+                sentinel = null;
+                if (wantLock) scheduleReacquire();
+            });
+        } catch (err) {
+            console.warn('[WakeLock] ❌ Ошибка:', err.message);
+            sentinel = null;
+            if (wantLock) scheduleReacquire();
+        }
+    }
+
+    function scheduleReacquire() {
+        if (reacquireTimer) return;
+        reacquireTimer = setTimeout(() => {
+            reacquireTimer = null;
+            if (wantLock && document.visibilityState === 'visible') {
+                acquire();
+            }
+        }, 2000);
+    }
+
+    async function release() {
+        wantLock = false;
+        if (reacquireTimer) { clearTimeout(reacquireTimer); reacquireTimer = null; }
+        if (sentinel && !sentinel.released) {
+            try { await sentinel.release(); } catch (e) {}
+            console.log('[WakeLock] 🔓 Экран отпущен');
+        }
+        sentinel = null;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && wantLock) {
+            acquire();
+        }
+    });
+
+    return {
+        enable() {
+            wantLock = true;
+            if (document.visibilityState === 'visible') {
+                acquire();
+            }
+        },
+        disable() {
+            release();
+        },
+        isSupported() { return supported; },
+        isActive() { return !!sentinel && !sentinel.released; }
+    };
+})();
+
+
+// ================================================================
         // ==================== ВИЗУАЛИЗАЦИЯ РАДИО ========================
         // ================================================================
         const VizEngine = (function () {
@@ -1837,10 +1909,12 @@
                         container.appendChild(spinnerEl);
                     }
                     spinnerEl.classList.add('active');
-                    container.style.display = 'block';
+container.style.display = 'block';
 
-                    (async () => {
-                        await fillQueue();
+WakeLock.enable();
+
+(async () => {
+    await fillQueue();
                         spinnerEl.classList.remove('active');
                         const first = queue.shift();
                         if (first) showImage(first);
@@ -1855,11 +1929,12 @@
                     const container = document.getElementById('vizContainer');
                     if (container) container.style.display = 'none';
                     if (layerA) layerA.classList.remove('active');
-                    if (layerB) layerB.classList.remove('active');
-                    if (captionEl) { captionEl.classList.remove('ready'); captionEl.textContent = ''; }
-                },
+                    if (layerB) layerB.classList.remove('active');    if (captionEl) { captionEl.classList.remove('ready'); captionEl.textContent = ''; }
 
-                isActive() { return active; }
+    WakeLock.disable();
+},
+
+isActive() { return active; }
             };
         })();
 
@@ -2032,15 +2107,17 @@
         });
 
         cpAudio.addEventListener("play", function() {
-            cpPlayIcon.className = "fas fa-pause";
-            cpPlayer.classList.add("playing");
-            fpPlayIcon.className = "fas fa-pause";
-        });
-        cpAudio.addEventListener("pause", function() {
-            cpPlayIcon.className = "fas fa-play";
-            cpPlayer.classList.remove("playing");
-            fpPlayIcon.className = "fas fa-play";
-        });
+    cpPlayIcon.className = "fas fa-pause";
+    cpPlayer.classList.add("playing");
+    fpPlayIcon.className = "fas fa-pause";
+    if (!VizEngine.isActive()) WakeLock.enable();
+});
+cpAudio.addEventListener("pause", function() {
+    cpPlayIcon.className = "fas fa-play";
+    cpPlayer.classList.remove("playing");
+    fpPlayIcon.className = "fas fa-play";
+    if (!VizEngine.isActive()) WakeLock.disable();
+});
         cpAudio.addEventListener("timeupdate", function() {
             if (cpAudio.duration && isFinite(cpAudio.duration)) {
                 const pct = (cpAudio.currentTime / cpAudio.duration) * 100;
@@ -2992,7 +3069,7 @@ const toggleBtn = document.getElementById("toggleRotation");
             });
 
             function getShareUrl() { return window.location.href; }
-            const shareText = "Global Explorer: click any country twice — choose News, Wikipedia, Local Time or Radio! Interactive 3D globe. 🌐📰📖🕐📻";
+            const shareText = "World Explorer: click any country twice — choose News, Wikipedia, Local Time or Radio! Interactive 3D globe. 🌐📰📖🕐📻";
             const currentUrl = encodeURIComponent(getShareUrl());
             const encodedText = encodeURIComponent(shareText);
             document.getElementById("fbShare").href = "https://www.facebook.com/sharer/sharer.php?u=" + currentUrl;
