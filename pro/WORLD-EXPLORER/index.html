@@ -1089,6 +1089,73 @@
             .clock-mark { background: #aaa; }
             .clock-mark.large { background: #ccc; }
         }
+
+/* ====== FULLSCREEN VISUALIZER ====== */
+.viz-container:fullscreen,
+.viz-container:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    aspect-ratio: auto;
+    border-radius: 0;
+    margin: 0;
+    box-shadow: none;
+}
+.viz-container:fullscreen .viz-caption,
+.viz-container:-webkit-full-screen .viz-caption {
+    font-size: 1.1rem;
+    left: 24px;
+    right: 80px;
+    bottom: 24px;
+    padding: 10px 18px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 40px;
+    backdrop-filter: blur(10px);
+}
+.viz-container:fullscreen .viz-close,
+.viz-container:-webkit-full-screen .viz-close {
+    top: 18px;
+    right: 18px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+}
+.viz-fs-btn {
+    position: absolute;
+    top: 8px;
+    right: 42px;
+    z-index: 4;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    backdrop-filter: blur(6px);
+    transition: all 0.2s;
+    padding: 0;
+}
+.viz-fs-btn:hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    transform: scale(1.1);
+}
+.viz-container:fullscreen .viz-fs-btn,
+.viz-container:-webkit-full-screen .viz-fs-btn {
+    top: 18px;
+    right: 74px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+}
+/* Скрываем фон под визуализацией в полноэкранном режиме */
+.viz-container:fullscreen {
+    background: #000;
+}
     </style>
 </head>
 <body>
@@ -1166,17 +1233,20 @@
 
                     <!-- ===== ВИЗУАЛИЗАЦИЯ ===== -->
                     <div class="viz-container" id="vizContainer" style="display:none;">
-                        <div class="viz-layer" id="vizLayerA"></div>
-                        <div class="viz-layer" id="vizLayerB"></div>
-                        <div class="viz-overlay"></div>
-                        <div class="viz-caption">
-                            <i class="fas fa-camera-retro"></i>
-                            <span id="vizCaption">—</span>
-                        </div>
-                        <button class="viz-close" id="vizClose" title="Скрыть визуализацию">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+    <div class="viz-layer" id="vizLayerA"></div>
+    <div class="viz-layer" id="vizLayerB"></div>
+    <div class="viz-overlay"></div>
+    <div class="viz-caption">
+        <i class="fas fa-camera-retro"></i>
+        <span id="vizCaption">—</span>
+    </div>
+    <button class="viz-fs-btn" id="vizFsBtn" title="На весь экран">
+        <i class="fas fa-expand"></i>
+    </button>
+    <button class="viz-close" id="vizClose" title="Скрыть визуализацию">
+        <i class="fas fa-times"></i>
+    </button>
+</div>
 
                     <div class="cp-progress-wrap" id="cpProgressWrap">
                         <div class="cp-progress" id="cpProgress"></div>
@@ -1269,6 +1339,10 @@
     </div>
 
     <script>
+
+
+
+
         // ====== ЦВЕТ ДЛЯ КАЖДОЙ СТРАНЫ ======
         function hashCode(str) {
             let hash = 0;
@@ -2043,55 +2117,91 @@
             fpCountry.textContent = countryName || "—";
             floatingPlayer.classList.add("visible");
         }
+function playRadioStation(index) {
+    if (!radioStations.length) return;
+    if (index < 0) index = radioStations.length - 1;
+    if (index >= radioStations.length) index = 0;
+    radioCurrentIndex = index;
+    const st = radioStations[index];
 
-        function playRadioStation(index) {
-            if (!radioStations.length) return;
-            if (index < 0) index = radioStations.length - 1;
-            if (index >= radioStations.length) index = 0;
-            radioCurrentIndex = index;
-            const st = radioStations[index];
+    const nameEl = document.getElementById("radioStationName");
+    const metaEl = document.getElementById("radioStationMeta");
+    const statusEl = document.getElementById("radioStatus");
 
-            const nameEl = document.getElementById("radioStationName");
-            const metaEl = document.getElementById("radioStationMeta");
-            const statusEl = document.getElementById("radioStatus");
+    nameEl.textContent = "📻 " + st.name;
+    metaEl.textContent =
+        (st.codec || "?") +
+        (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
+        (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
 
-            nameEl.textContent = "📻 " + st.name;
-            metaEl.textContent =
-                (st.codec || "?") +
-                (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
-                (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
+    statusEl.textContent = "⏳ Подключение к " + st.name + "...";
+    statusEl.className = "cp-status";
 
-            cpAudio.pause();
-            cpAudio.src = st.url;
-            cpAudio.load();
+    cpAudio.pause();
+    cpAudio.src = st.url;
+    cpAudio.load();
 
-            const playPromise = cpAudio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    statusEl.textContent = "▶ Играет: " + st.name;
-                    statusEl.className = "cp-status";
-                    showFloatingPlayer(st, radioCurrentCountry);
-                }).catch(() => {
-                    statusEl.textContent = "⚠ Не удалось воспроизвести. Пробую следующую...";
+    // Флаг: станция реально заиграла
+    let hasPlayed = false;
+    let failTimer = null;
+
+    // Очищаем предыдущий таймер и обработчики
+    if (cpAudio._failTimer) { clearTimeout(cpAudio._failTimer); cpAudio._failTimer = null; }
+    cpAudio.onerror = null;
+    cpAudio.onplaying = null;
+
+    // Реальное начало воспроизведения
+    cpAudio.onplaying = () => {
+        if (hasPlayed) return;
+        hasPlayed = true;
+        if (failTimer) { clearTimeout(failTimer); failTimer = null; }
+        statusEl.textContent = "▶ Играет: " + st.name;
+        statusEl.className = "cp-status";
+        showFloatingPlayer(st, radioCurrentCountry);
+        cpAudio.onerror = null;
+    };
+
+    // Ошибка потока — ждём 3 секунды перед переключением
+    cpAudio.onerror = () => {
+        if (hasPlayed) return;
+        if (failTimer) return; // уже ждём
+        statusEl.textContent = "⚠ Поток " + st.name + " не отвечает. Пробую следующую через 3 сек...";
+        statusEl.className = "cp-status error";
+        failTimer = setTimeout(() => {
+            failTimer = null;
+            playRadioStation(radioCurrentIndex + 1);
+        }, 3000);
+    };
+
+    const playPromise = cpAudio.play();
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            // Если play() разрешился, но onplaying ещё не сработал —
+            // даём потоку до 4 секунд, чтобы реально начать звук
+            failTimer = setTimeout(() => {
+                if (!hasPlayed) {
+                    statusEl.textContent = "⚠ Нет звука от " + st.name + ". Следующая станция...";
                     statusEl.className = "cp-status error";
-                    setTimeout(() => playRadioStation(radioCurrentIndex + 1), 1500);
-                });
-            }
+                    playRadioStation(radioCurrentIndex + 1);
+                }
+            }, 4000);
+        }).catch(() => {
+            if (hasPlayed) return;
+            statusEl.textContent = "⚠ Не удалось воспроизвести. Следующая через 3 сек...";
+            statusEl.className = "cp-status error";
+            failTimer = setTimeout(() => {
+                failTimer = null;
+                playRadioStation(radioCurrentIndex + 1);
+            }, 3000);
+        });
+    }
 
-            cpAudio.onerror = () => {
-                statusEl.textContent = "⚠ Поток недоступен. Следующая станция...";
-                statusEl.className = "cp-status error";
-                setTimeout(() => playRadioStation(radioCurrentIndex + 1), 1200);
-            };
+    updateFavButtonState();
 
-            updateFavButtonState();
-
-            // Обновить визуализацию под новую страну/станцию
-            if (VizEngine.isActive() && radioCurrentCountry) {
-                VizEngine.start(radioCurrentCountry);
-            }
-        }
-
+    if (VizEngine.isActive() && radioCurrentCountry) {
+        VizEngine.start(radioCurrentCountry);
+    }
+}
         async function startRadioForCountry(countryName) {
             const nameEl = document.getElementById("radioStationName");
             const metaEl = document.getElementById("radioStationMeta");
@@ -2341,6 +2451,58 @@
                 vizToggleBtn.classList.remove('active-viz');
             });
         }
+
+// ====== ПОЛНОЭКРАННАЯ ВИЗУАЛИЗАЦИЯ ======
+const vizContainerEl = document.getElementById('vizContainer');
+const vizFsBtn = document.getElementById('vizFsBtn');
+
+function updateFsIcon() {
+    if (!vizFsBtn) return;
+    const isFs = document.fullscreenElement === vizContainerEl ||
+                 document.webkitFullscreenElement === vizContainerEl;
+    const icon = vizFsBtn.querySelector('i');
+    if (icon) {
+        icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
+    }
+    vizFsBtn.title = isFs ? 'Выйти из полноэкранного режима' : 'На весь экран';
+}
+
+function toggleVizFullscreen() {
+    if (!vizContainerEl) return;
+    const isFs = document.fullscreenElement === vizContainerEl ||
+                 document.webkitFullscreenElement === vizContainerEl;
+    if (isFs) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+        if (vizContainerEl.requestFullscreen) {
+            vizContainerEl.requestFullscreen().catch(err => {
+                showFavToast('⚠ Не удалось открыть на весь экран');
+                console.warn('Fullscreen error:', err);
+            });
+        } else if (vizContainerEl.webkitRequestFullscreen) {
+            vizContainerEl.webkitRequestFullscreen();
+        } else {
+            showFavToast('⚠ Полноэкранный режим не поддерживается');
+        }
+    }
+}
+
+if (vizFsBtn) {
+    vizFsBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleVizFullscreen();
+    });
+}
+
+document.addEventListener('fullscreenchange', updateFsIcon);
+document.addEventListener('webkitfullscreenchange', updateFsIcon);
+
+// Клик по визуализации (кроме кнопок) — тоже переключает полный экран
+vizContainerEl.addEventListener('dblclick', function(e) {
+    if (e.target.closest('.viz-close') || e.target.closest('.viz-fs-btn')) return;
+    toggleVizFullscreen();
+});
 
         // ====== AMCHARTS GLOBE ======
         am5.ready(function () {
