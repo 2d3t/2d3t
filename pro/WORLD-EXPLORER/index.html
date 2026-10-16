@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Global Explorer — Время, Новости, Википедия и Радио</title>
+    <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
+    <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <meta name="theme-color" content="#0a0f2a">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0a0f2a 0%, #0a1a3a 100%);
+            color: #f0f3fa;
+            font-family: 'Segoe UI', 'Poppins', 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .globe-header {
+            text-align: center;
+            padding: 1.5rem 1rem 0.8rem;
+            backdrop-filter: blur(10px);
+            background: rgba(10, 15, 42, 0.6);
+            border-bottom: 1px solid rgba(72, 187, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFFFFF, #64B5F6, #42A5F5);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.25rem;
+            text-shadow: 0 2px 10px rgba(0, 160, 255, 0.2);
+        }
+        .sub {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .sub i { font-size: 0.8rem; color: #64B5F6; }
+        .info-card {
+            background: rgba(20, 28, 58, 0.75);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            margin: 18px auto 12px;
+            max-width: 760px;
+            width: 90%;
+            padding: 14px 24px;
+            text-align: center;
+            border: 1px solid rgba(100, 181, 246, 0.4);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .info-card p {
+            font-size: 1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .info-card i { font-size: 1.3rem; color: #64B5F6; }
+        .country-badge {
+            background: #1e3a8a;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-weight: bold;
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .language-tag {
+            background: #ff9800;
+            color: #1e1e2a;
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        #chartdiv {
+            width: 100%;
+            height: 500px;
+            margin: 0 auto;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5);
+            background: #03081a;
+        }
+        .controls-panel {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin: 20px 0 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: rgba(25, 35, 70, 0.8);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 181, 246, 0.5);
+            padding: 12px 28px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 60px;
+            color: #eef2ff;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-family: inherit;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .btn i { font-size: 1.1rem; }
+        .btn:hover {
+            background: #2563eb;
+            border-color: #90caf9;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px -8px rgba(37, 99, 235, 0.4);
+        }
+        .btn:active { transform: translateY(2px); }
+        .share-section {
+            background: rgba(10, 20, 40, 0.5);
+            border-radius: 28px;
+            margin: 20px auto 25px;
+            padding: 12px 20px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(100, 181, 246, 0.2);
+        }
+        .share-section p {
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #b3e0ff;
+        }
+        .share-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #1f2a48;
+            padding: 8px 20px;
+            border-radius: 50px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .share-btn i { font-size: 1.2rem; }
+        .share-btn.facebook:hover { background: #1877f2; transform: scale(1.02); }
+        .share-btn.twitter:hover { background: #1da1f2; transform: scale(1.02); }
+        .share-btn.vk:hover { background: #4c75a3; transform: scale(1.02); }
+        .share-btn.telegram:hover { background: #0088cc; transform: scale(1.02); }
+        .counter-footer {
+            text-align: center;
+            padding: 15px 10px;
+            font-size: 0.75rem;
+            opacity: 0.7;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 15px;
+        }
+        @media (max-width: 640px) {
+            h1 { font-size: 1.7rem; }
+            #chartdiv { height: 380px; }
+            .btn { padding: 8px 18px; font-size: 0.85rem; }
+            .info-card p { font-size: 0.85rem; }
+        }
+        .am5-tooltip {
+            background: #0f172ad9 !important;
+            backdrop-filter: blur(8px);
+            border-radius: 24px !important;
+            border: 1px solid #3b82f6;
+            color: white !important;
+            font-weight: 500;
+            padding: 8px 16px;
+            font-family: inherit;
+        }
+        .am5-tooltip-text { color: white !important; }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            100% { transform: scale(1.02); opacity: 1; }
+        }
+        .click-hint { animation: pulse 0.6s ease; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: linear-gradient(145deg, #1a2744, #0d1830);
+            border-radius: 32px;
+            padding: 32px 28px 28px;
+            max-width: 480px;
+            width: 92%;
+            text-align: center;
+            border: 1px solid rgba(100, 181, 246, 0.3);
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
+            animation: slideUp 0.3s ease;
+        }
+        .modal-box h2 { font-size: 1.3rem; margin-bottom: 6px; color: #b3d9ff; }
+        .modal-box .country-name {
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+        }
+        .modal-box .country-flag {
+            font-size: 2.5rem;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .modal-box .sub-info {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            margin-bottom: 20px;
+        }
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .modal-btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            font-family: inherit;
+            color: white;
+        }
+        .modal-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        .modal-btn.news-btn { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+        .modal-btn.news-btn:hover { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .modal-btn.wiki-btn { background: linear-gradient(135deg, #7c3aed, #6d28d9); }
+        .modal-btn.wiki-btn:hover { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .modal-btn.time-btn { background: linear-gradient(135deg, #059669, #047857); }
+        .modal-btn.time-btn:hover { background: linear-gradient(135deg, #10b981, #059669); }
+        .modal-btn.radio-btn { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .modal-btn.radio-btn:hover { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+        .modal-btn.back-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #aaa;
+            font-size: 0.85rem;
+            padding: 10px;
+        }
+        .modal-btn.back-btn:hover { background: rgba(255, 255, 255, 0.15); color: white; }
+        .modal-btn.cancel-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #aaa;
+            font-size: 0.85rem;
+            padding: 10px;
+        }
+        .modal-btn.cancel-btn:hover { background: rgba(255, 255, 255, 0.15); color: white; }
+        .modal-btn i { font-size: 1.3rem; }
+
+        /* Циферблат */
+        .mechanical-clock {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 16px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .clock-face {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #f5f5f5, #d0d0d0);
+            border: 6px solid #8a8a8a;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.4);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .clock-center {
+            position: absolute;
+            width: 12px; height: 12px;
+            background: #222;
+            border-radius: 50%;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            border: 2px solid #eee;
+        }
+        .hour-hand {
+            position: absolute;
+            width: 6px; height: 55px;
+            background: #1a1a1a;
+            border-radius: 3px;
+            top: 50%; left: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            z-index: 5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+            border: 1px solid #888;
+        }
+        .minute-hand {
+            position: absolute;
+            width: 4px; height: 75px;
+            background: #2a2a2a;
+            border-radius: 2px;
+            top: 50%; left: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            z-index: 4;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            border: 1px solid #999;
+        }
+        .second-hand {
+            position: absolute;
+            width: 2px; height: 82px;
+            background: #e74c3c;
+            border-radius: 1px;
+            top: 50%; left: 50%;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%) rotate(0deg);
+            z-index: 6;
+            box-shadow: 0 0 4px rgba(231, 76, 60, 0.6);
+        }
+        .clock-mark {
+            position: absolute;
+            top: 6px; left: 50%;
+            width: 2px; height: 10px;
+            background: #444;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+        }
+        .clock-mark.large {
+            height: 16px; width: 3px;
+            background: #222; top: 4px;
+        }
+        .clock-number {
+            position: absolute;
+            top: 20px; left: 50%;
+            width: 24px;
+            margin-left: -12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1a1a1a;
+            font-family: 'Georgia', serif;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+        }
+        .am-pm-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .am-pm-badge.am { background: #f39c12; color: #fff; }
+        .am-pm-badge.pm { background: #2c3e50; color: #fff; }
+        .digital-time {
+            font-size: 15px;
+            color: #a0a0c0;
+            font-family: 'Courier New', monospace;
+            margin-top: 4px;
+        }
+        .date-info { font-size: 12px; color: #8888aa; margin-top: 2px; }
+        .timezone-offset { font-size: 12px; color: #4a9eff; margin-top: 2px; }
+
+        /* Радио */
+        .radio-player {
+            background: rgba(10, 20, 40, 0.6);
+            border-radius: 20px;
+            padding: 18px 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .radio-station-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #fbbf24;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        .radio-station-meta {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+        #radioAudio {
+            width: 100%;
+            margin-top: 10px;
+            border-radius: 12px;
+            outline: none;
+        }
+        .radio-status {
+            font-size: 0.8rem;
+            margin-top: 8px;
+            color: #10b981;
+            min-height: 18px;
+        }
+        .radio-status.error { color: #ef4444; }
+        .radio-next-btn {
+            margin-top: 12px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            width: 100%;
+        }
+        .radio-next-btn:hover {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @media (max-width: 480px) {
+            .modal-box { padding: 24px 16px; }
+            .modal-box .country-name { font-size: 1.4rem; }
+            .modal-btn { padding: 12px 16px; font-size: 0.9rem; }
+            .mechanical-clock { width: 160px; height: 160px; }
+            .hour-hand { height: 42px; }
+            .minute-hand { height: 58px; }
+            .second-hand { height: 64px; }
+            .clock-number { font-size: 12px; top: 16px; }
+            .clock-mark { height: 8px; }
+            .clock-mark.large { height: 12px; }
+        }
+        @media (prefers-color-scheme: dark) {
+            .hour-hand {
+                background: #f0f0f0;
+                border-color: #ccc;
+                box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+            }
+            .minute-hand {
+                background: #e0e0e0;
+                border-color: #bbb;
+                box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
+            }
+            .second-hand {
+                background: #ff6b6b;
+                box-shadow: 0 0 10px rgba(255, 80, 80, 0.6);
+            }
+            .clock-center { background: #ddd; border-color: #888; }
+            .clock-number { color: #eee; text-shadow: 0 0 6px rgba(0, 0, 0, 0.8); }
+            .clock-mark { background: #aaa; }
+            .clock-mark.large { background: #ccc; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="globe-header">
+        <h1><i class="fas fa-globe-europe" style="margin-right: 10px;"></i> Global Explorer</h1>
+        <div class="sub">
+            <i class="fas fa-mouse-pointer"></i> <span>Click once → country name | Click twice → choose: <strong style="color:#ffb74d;">News</strong>, <strong style="color:#a78bfa;">Wikipedia</strong>, <strong style="color:#10b981;">Time</strong> or <strong style="color:#fbbf24;">Radio</strong></span>
+            <i class="fas fa-language"></i>
+        </div>
+    </div>
+
+    <div class="info-card" id="statusCard">
+        <p>
+            <i class="fas fa-info-circle"></i>
+            <span id="statusText">🌍 Tap any country → first click shows the name, second click opens a choice: News, Wikipedia, Local Time or Radio</span>
+        </p>
+    </div>
+
+    <div id="chartdiv"></div>
+
+    <div class="controls-panel">
+        <button id="toggleRotation" class="btn"><i class="fas fa-pause-circle"></i> <span>Stop Rotation</span></button>
+        <button id="resetView" class="btn"><i class="fas fa-sync-alt"></i> Reset View</button>
+    </div>
+
+    <div class="share-section">
+        <p><i class="fas fa-share-alt"></i> Share this interactive globe — news, Wikipedia, local time & radio!</p>
+        <div class="share-buttons">
+            <a href="#" id="fbShare" class="share-btn facebook" target="_blank"><i class="fab fa-facebook-f"></i> Facebook</a>
+            <a href="#" id="twShare" class="share-btn twitter" target="_blank"><i class="fab fa-twitter"></i> Twitter</a>
+            <a href="#" id="vkShare" class="share-btn vk" target="_blank"><i class="fab fa-vk"></i> VK</a>
+            <a href="#" id="tgShare" class="share-btn telegram" target="_blank"><i class="fab fa-telegram-plane"></i> Telegram</a>
+        </div>
+    </div>
+
+    <center class="counter-footer">
+        <a href='https://www.free-counters.org/' style="color:#aaa;">🌐 globe visits</a>
+        <script type='text/javascript' src='https://www.freevisitorcounters.com/auth.php?id=2f743762864763112c7120f08e9697713b83db63'></script>
+        <script type="text/javascript" src="https://www.freevisitorcounters.com/en/home/counter/1267337/t/0"></script>
+    </center>
+
+    <div class="modal-overlay" id="actionModal">
+        <div class="modal-box">
+            <span class="country-flag" id="modalFlag">🌍</span>
+            <div class="country-name" id="modalCountryName">Country</div>
+            <div class="sub-info" id="modalSubInfo">Choose what you want to see</div>
+
+            <div class="mechanical-clock" id="modalClock" style="display:none;">
+                <div class="clock-face" id="clockFace">
+                    <div class="clock-center"></div>
+                    <div class="hour-hand" id="hourHand"></div>
+                    <div class="minute-hand" id="minuteHand"></div>
+                    <div class="second-hand" id="secondHand"></div>
+                </div>
+            </div>
+            <div id="clockInfo" style="display:none;">
+                <div class="digital-time" id="digitalTime">--:--:--</div>
+                <div class="date-info" id="dateInfo">---</div>
+                <div class="timezone-offset" id="tzOffset">UTC --</div>
+                <div class="am-pm-badge" id="ampmBadge">--</div>
+            </div>
+
+            <div id="radioInfo" style="display:none;">
+                <div class="radio-player">
+                    <div class="radio-station-name" id="radioStationName">Загрузка станций...</div>
+                    <div class="radio-station-meta" id="radioStationMeta">—</div>
+                    <audio id="radioAudio" controls preload="none"></audio>
+                    <div class="radio-status" id="radioStatus"></div>
+                    <button class="modal-btn radio-next-btn" id="radioNextBtn">
+                        <i class="fas fa-forward"></i> Следующая станция
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-actions" id="modalActions">
+                <button class="modal-btn time-btn" id="modalTimeBtn"><i class="fas fa-clock"></i> 🕐 Local Time</button>
+                <button class="modal-btn news-btn" id="modalNewsBtn"><i class="fas fa-newspaper"></i> 📰 Latest News</button>
+                <button class="modal-btn wiki-btn" id="modalWikiBtn"><i class="fab fa-wikipedia-w"></i> 📖 Wikipedia</button>
+                <button class="modal-btn radio-btn" id="modalRadioBtn"><i class="fas fa-radio"></i> 📻 Radio</button>
+                <button class="modal-btn cancel-btn" id="modalCancelBtn"><i class="fas fa-times"></i> Cancel</button>
+            </div>
+            <div class="modal-actions" id="clockActions" style="display:none;">
+                <button class="modal-btn back-btn" id="modalBackBtn"><i class="fas fa-arrow-left"></i> Back to Menu</button>
+                <button class="modal-btn cancel-btn" id="modalCloseBtn"><i class="fas fa-times"></i> Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ====== БАЗА ДАННЫХ ЧАСОВЫХ ПОЯСОВ ======
+        const timezoneMap = {
+            "Russia": "Europe/Moscow", "Germany": "Europe/Berlin", "France": "Europe/Paris",
+            "Italy": "Europe/Rome", "Spain": "Europe/Madrid", "United Kingdom": "Europe/London",
+            "Ukraine": "Europe/Kyiv", "Poland": "Europe/Warsaw", "Netherlands": "Europe/Amsterdam",
+            "Sweden": "Europe/Stockholm", "Norway": "Europe/Oslo", "Denmark": "Europe/Copenhagen",
+            "Finland": "Europe/Helsinki", "Belgium": "Europe/Brussels", "Switzerland": "Europe/Zurich",
+            "Austria": "Europe/Vienna", "Greece": "Europe/Athens", "Portugal": "Europe/Lisbon",
+            "Czech Republic": "Europe/Prague", "Hungary": "Europe/Budapest", "Romania": "Europe/Bucharest",
+            "Bulgaria": "Europe/Sofia", "Serbia": "Europe/Belgrade", "Croatia": "Europe/Zagreb",
+            "Slovakia": "Europe/Bratislava", "Slovenia": "Europe/Ljubljana", "Lithuania": "Europe/Vilnius",
+            "Latvia": "Europe/Riga", "Estonia": "Europe/Tallinn", "Iceland": "Atlantic/Reykjavik",
+            "Ireland": "Europe/Dublin", "Belarus": "Europe/Minsk", "Moldova": "Europe/Chisinau",
+            "Georgia": "Asia/Tbilisi", "Armenia": "Asia/Yerevan", "Azerbaijan": "Asia/Baku",
+            "Turkmenistan": "Asia/Ashgabat", "Tajikistan": "Asia/Dushanbe", "Kyrgyzstan": "Asia/Bishkek",
+            "China": "Asia/Shanghai", "Japan": "Asia/Tokyo", "South Korea": "Asia/Seoul",
+            "India": "Asia/Kolkata", "Indonesia": "Asia/Jakarta", "Thailand": "Asia/Bangkok",
+            "Vietnam": "Asia/Ho_Chi_Minh", "Malaysia": "Asia/Kuala_Lumpur", "Philippines": "Asia/Manila",
+            "Pakistan": "Asia/Karachi", "Bangladesh": "Asia/Dhaka", "Turkey": "Europe/Istanbul",
+            "Iran": "Asia/Tehran", "Saudi Arabia": "Asia/Riyadh", "Israel": "Asia/Jerusalem",
+            "United Arab Emirates": "Asia/Dubai", "Iraq": "Asia/Baghdad", "Kazakhstan": "Asia/Almaty",
+            "Uzbekistan": "Asia/Tashkent", "Afghanistan": "Asia/Kabul", "Nepal": "Asia/Kathmandu",
+            "Sri Lanka": "Asia/Colombo", "Myanmar": "Asia/Yangon", "Cambodia": "Asia/Phnom_Penh",
+            "Mongolia": "Asia/Ulaanbaatar", "Singapore": "Asia/Singapore", "Taiwan": "Asia/Taipei",
+            "Hong Kong": "Asia/Hong_Kong", "Macau": "Asia/Macau", "North Korea": "Asia/Pyongyang",
+            "Laos": "Asia/Vientiane", "Brunei": "Asia/Brunei", "Timor-Leste": "Asia/Dili",
+            "Maldives": "Indian/Maldives", "Mauritius": "Indian/Mauritius", "Seychelles": "Indian/Mahe",
+            "Qatar": "Asia/Qatar", "Kuwait": "Asia/Kuwait", "Bahrain": "Asia/Bahrain",
+            "Oman": "Asia/Muscat", "Yemen": "Asia/Aden", "Jordan": "Asia/Amman",
+            "Lebanon": "Asia/Beirut", "Syria": "Asia/Damascus", "Cyprus": "Asia/Nicosia",
+            "Malta": "Europe/Malta", "Luxembourg": "Europe/Luxembourg", "Monaco": "Europe/Monaco",
+            "Andorra": "Europe/Andorra", "San Marino": "Europe/San_Marino", "Liechtenstein": "Europe/Vaduz",
+            "Albania": "Europe/Tirane", "North Macedonia": "Europe/Skopje", "Montenegro": "Europe/Podgorica",
+            "Bosnia and Herzegovina": "Europe/Sarajevo", "Kosovo": "Europe/Belgrade",
+            "Czechia": "Europe/Prague", "Vatican": "Europe/Vatican",
+            "Egypt": "Africa/Cairo", "South Africa": "Africa/Johannesburg", "Nigeria": "Africa/Lagos",
+            "Kenya": "Africa/Nairobi", "Morocco": "Africa/Casablanca", "Algeria": "Africa/Algiers",
+            "Tunisia": "Africa/Tunis", "Ethiopia": "Africa/Addis_Ababa", "Ghana": "Africa/Accra",
+            "Angola": "Africa/Luanda", "Mozambique": "Africa/Maputo", "Senegal": "Africa/Dakar",
+            "Madagascar": "Indian/Antananarivo", "Tanzania": "Africa/Dar_es_Salaam", "Uganda": "Africa/Kampala",
+            "Rwanda": "Africa/Kigali", "Burundi": "Africa/Bujumbura", "Zambia": "Africa/Lusaka",
+            "Zimbabwe": "Africa/Harare", "Botswana": "Africa/Gaborone", "Namibia": "Africa/Windhoek",
+            "Malawi": "Africa/Blantyre", "Lesotho": "Africa/Maseru", "Eswatini": "Africa/Mbabane",
+            "Democratic Republic of the Congo": "Africa/Kinshasa", "Republic of the Congo": "Africa/Brazzaville",
+            "Gabon": "Africa/Libreville", "Equatorial Guinea": "Africa/Malabo", "Cameroon": "Africa/Douala",
+            "Central African Republic": "Africa/Bangui", "Chad": "Africa/Ndjamena", "Sudan": "Africa/Khartoum",
+            "South Sudan": "Africa/Juba", "Eritrea": "Africa/Asmara", "Djibouti": "Africa/Djibouti",
+            "Somalia": "Africa/Mogadishu", "Libya": "Africa/Tripoli", "Mauritania": "Africa/Nouakchott",
+            "Mali": "Africa/Bamako", "Burkina Faso": "Africa/Ouagadougou", "Niger": "Africa/Niamey",
+            "Benin": "Africa/Porto-Novo", "Togo": "Africa/Lome", "Liberia": "Africa/Monrovia",
+            "Sierra Leone": "Africa/Freetown", "Guinea": "Africa/Conakry", "Guinea-Bissau": "Africa/Bissau",
+            "Gambia": "Africa/Banjul", "Cape Verde": "Atlantic/Cape_Verde", "Sao Tome and Principe": "Africa/Sao_Tome",
+            "Ivory Coast": "Africa/Abidjan",
+            "United States": "America/New_York", "Canada": "America/Toronto", "Mexico": "America/Mexico_City",
+            "Brazil": "America/Sao_Paulo", "Argentina": "America/Argentina/Buenos_Aires", "Chile": "America/Santiago",
+            "Colombia": "America/Bogota", "Peru": "America/Lima", "Venezuela": "America/Caracas",
+            "Ecuador": "America/Guayaquil", "Cuba": "America/Havana", "Bolivia": "America/La_Paz",
+            "Paraguay": "America/Asuncion", "Uruguay": "America/Montevideo", "Guyana": "America/Guyana",
+            "Suriname": "America/Paramaribo", "Greenland": "America/Nuuk", "Costa Rica": "America/Costa_Rica",
+            "Panama": "America/Panama", "Guatemala": "America/Guatemala", "Honduras": "America/Tegucigalpa",
+            "El Salvador": "America/El_Salvador", "Nicaragua": "America/Managua", "Belize": "America/Belize",
+            "Jamaica": "America/Jamaica", "Haiti": "America/Port-au-Prince", "Dominican Republic": "America/Santo_Domingo",
+            "Puerto Rico": "America/Puerto_Rico", "Trinidad and Tobago": "America/Port_of_Spain",
+            "Barbados": "America/Barbados", "Bahamas": "America/Nassau", "Cayman Islands": "America/Cayman",
+            "Bermuda": "Atlantic/Bermuda", "French Guiana": "America/Cayenne", "Falkland Islands": "Atlantic/Stanley",
+            "South Georgia": "Atlantic/South_Georgia",
+            "Australia": "Australia/Sydney", "New Zealand": "Pacific/Auckland", "Fiji": "Pacific/Fiji",
+            "Papua New Guinea": "Pacific/Port_Moresby", "Solomon Islands": "Pacific/Guadalcanal",
+            "Vanuatu": "Pacific/Efate", "New Caledonia": "Pacific/Noumea", "Samoa": "Pacific/Apia",
+            "Tonga": "Pacific/Tongatapu", "Kiribati": "Pacific/Tarawa", "Tuvalu": "Pacific/Funafuti",
+            "Nauru": "Pacific/Nauru", "Palau": "Pacific/Palau", "Marshall Islands": "Pacific/Majuro",
+            "Micronesia": "Pacific/Pohnpei", "Guam": "Pacific/Guam", "Northern Mariana Islands": "Pacific/Saipan",
+            "American Samoa": "Pacific/Pago_Pago", "Cook Islands": "Pacific/Rarotonga",
+            "French Polynesia": "Pacific/Tahiti", "Wallis and Futuna": "Pacific/Wallis",
+            "Norfolk Island": "Pacific/Norfolk", "Christmas Island": "Indian/Christmas",
+            "Cocos Islands": "Indian/Cocos", "Chagos": "Indian/Chagos", "Reunion": "Indian/Reunion",
+            "Mayotte": "Indian/Mayotte", "Comoros": "Indian/Comoro", "Canary Islands": "Atlantic/Canary",
+            "Azores": "Atlantic/Azores", "Madeira": "Atlantic/Madeira", "Faroe Islands": "Atlantic/Faroe",
+            "Svalbard": "Arctic/Longyearbyen", "Jan Mayen": "Arctic/Longyearbyen",
+            "Antarctica": "Antarctica/McMurdo", "French Southern Territories": "Indian/Kerguelen",
+            "Heard Island": "Indian/Kerguelen"
+        };
+
+        const languageMap = {
+            "Russia": { lr: "lang_ru", display: "Русский" },
+            "Germany": { lr: "lang_de", display: "Deutsch" },
+            "France": { lr: "lang_fr", display: "Français" },
+            "Italy": { lr: "lang_it", display: "Italiano" },
+            "Spain": { lr: "lang_es", display: "Español" },
+            "United Kingdom": { lr: "lang_en", display: "English" },
+            "Ukraine": { lr: "lang_uk", display: "Українська" },
+            "Poland": { lr: "lang_pl", display: "Polski" },
+            "Netherlands": { lr: "lang_nl", display: "Nederlands" },
+            "Sweden": { lr: "lang_sv", display: "Svenska" },
+            "Norway": { lr: "lang_no", display: "Norsk" },
+            "Denmark": { lr: "lang_da", display: "Dansk" },
+            "Finland": { lr: "lang_fi", display: "Suomi" },
+            "Belgium": { lr: "lang_fr", display: "Français / Nederlands" },
+            "Switzerland": { lr: "lang_de", display: "Deutsch" },
+            "Austria": { lr: "lang_de", display: "Deutsch" },
+            "Greece": { lr: "lang_el", display: "Ελληνικά" },
+            "Portugal": { lr: "lang_pt", display: "Português" },
+            "Czech Republic": { lr: "lang_cs", display: "Čeština" },
+            "Hungary": { lr: "lang_hu", display: "Magyar" },
+            "Romania": { lr: "lang_ro", display: "Română" },
+            "Bulgaria": { lr: "lang_bg", display: "Български" },
+            "Serbia": { lr: "lang_sr", display: "Српски" },
+            "Croatia": { lr: "lang_hr", display: "Hrvatski" },
+            "Slovakia": { lr: "lang_sk", display: "Slovenčina" },
+            "Slovenia": { lr: "lang_sl", display: "Slovenščina" },
+            "Lithuania": { lr: "lang_lt", display: "Lietuvių" },
+            "Latvia": { lr: "lang_lv", display: "Latviešu" },
+            "Estonia": { lr: "lang_et", display: "Eesti" },
+            "Iceland": { lr: "lang_is", display: "Íslenska" },
+            "Ireland": { lr: "lang_en", display: "English" },
+            "China": { lr: "lang_zh", display: "中文" },
+            "Japan": { lr: "lang_ja", display: "日本語" },
+            "South Korea": { lr: "lang_ko", display: "한국어" },
+            "India": { lr: "lang_hi", display: "हिन्दी / English" },
+            "Indonesia": { lr: "lang_id", display: "Bahasa Indonesia" },
+            "Thailand": { lr: "lang_th", display: "ไทย" },
+            "Vietnam": { lr: "lang_vi", display: "Tiếng Việt" },
+            "Malaysia": { lr: "lang_ms", display: "Bahasa Melayu" },
+            "Philippines": { lr: "lang_tl", display: "Filipino" },
+            "Pakistan": { lr: "lang_ur", display: "اردو" },
+            "Bangladesh": { lr: "lang_bn", display: "বাংলা" },
+            "Turkey": { lr: "lang_tr", display: "Türkçe" },
+            "Iran": { lr: "lang_fa", display: "فارسی" },
+            "Saudi Arabia": { lr: "lang_ar", display: "العربية" },
+            "Israel": { lr: "lang_iw", display: "עברית" },
+            "United Arab Emirates": { lr: "lang_ar", display: "العربية" },
+            "Iraq": { lr: "lang_ar", display: "العربية" },
+            "Kazakhstan": { lr: "lang_kk", display: "Қазақша" },
+            "Uzbekistan": { lr: "lang_uz", display: "O'zbek" },
+            "Afghanistan": { lr: "lang_ps", display: "پښتو" },
+            "Nepal": { lr: "lang_ne", display: "नेपाली" },
+            "Sri Lanka": { lr: "lang_si", display: "සිංහල" },
+            "Myanmar": { lr: "lang_my", display: "မြန်မာ" },
+            "Cambodia": { lr: "lang_km", display: "ខ្មែរ" },
+            "Mongolia": { lr: "lang_mn", display: "Монгол" },
+            "Egypt": { lr: "lang_ar", display: "العربية" },
+            "South Africa": { lr: "lang_af", display: "Afrikaans / English" },
+            "Nigeria": { lr: "lang_en", display: "English" },
+            "Kenya": { lr: "lang_sw", display: "Kiswahili" },
+            "Morocco": { lr: "lang_ar", display: "العربية" },
+            "Algeria": { lr: "lang_ar", display: "العربية" },
+            "Tunisia": { lr: "lang_ar", display: "العربية" },
+            "Ethiopia": { lr: "lang_am", display: "አማርኛ" },
+            "Ghana": { lr: "lang_en", display: "English" },
+            "Angola": { lr: "lang_pt", display: "Português" },
+            "Mozambique": { lr: "lang_pt", display: "Português" },
+            "Senegal": { lr: "lang_fr", display: "Français" },
+            "Madagascar": { lr: "lang_mg", display: "Malagasy" },
+            "United States": { lr: "lang_en", display: "English" },
+            "Canada": { lr: "lang_en", display: "English / Français" },
+            "Mexico": { lr: "lang_es", display: "Español" },
+            "Brazil": { lr: "lang_pt", display: "Português" },
+            "Argentina": { lr: "lang_es", display: "Español" },
+            "Chile": { lr: "lang_es", display: "Español" },
+            "Colombia": { lr: "lang_es", display: "Español" },
+            "Peru": { lr: "lang_es", display: "Español" },
+            "Venezuela": { lr: "lang_es", display: "Español" },
+            "Ecuador": { lr: "lang_es", display: "Español" },
+            "Cuba": { lr: "lang_es", display: "Español" },
+            "Bolivia": { lr: "lang_es", display: "Español" },
+            "Paraguay": { lr: "lang_es", display: "Español" },
+            "Uruguay": { lr: "lang_es", display: "Español" },
+            "Guyana": { lr: "lang_en", display: "English" },
+            "Suriname": { lr: "lang_nl", display: "Nederlands" },
+            "Australia": { lr: "lang_en", display: "English" },
+            "New Zealand": { lr: "lang_en", display: "English" },
+            "Fiji": { lr: "lang_en", display: "English" },
+            "Papua New Guinea": { lr: "lang_en", display: "English" }
+        };
+
+        const flagMap = {
+            "Russia": "🇷🇺", "Germany": "🇩🇪", "France": "🇫🇷", "Italy": "🇮🇹", "Spain": "🇪🇸",
+            "United Kingdom": "🇬🇧", "Ukraine": "🇺🇦", "Poland": "🇵🇱", "Netherlands": "🇳🇱",
+            "Sweden": "🇸🇪", "Norway": "🇳🇴", "Denmark": "🇩🇰", "Finland": "🇫🇮", "Belgium": "🇧🇪",
+            "Switzerland": "🇨🇭", "Austria": "🇦🇹", "Greece": "🇬🇷", "Portugal": "🇵🇹",
+            "Czech Republic": "🇨🇿", "Hungary": "🇭🇺", "Romania": "🇷🇴", "Bulgaria": "🇧🇬",
+            "Serbia": "🇷🇸", "Croatia": "🇭🇷", "Slovakia": "🇸🇰", "Slovenia": "🇸🇮",
+            "Lithuania": "🇱🇹", "Latvia": "🇱🇻", "Estonia": "🇪🇪", "Iceland": "🇮🇸", "Ireland": "🇮🇪",
+            "China": "🇨🇳", "Japan": "🇯🇵", "South Korea": "🇰🇷", "India": "🇮🇳", "Indonesia": "🇮🇩",
+            "Thailand": "🇹🇭", "Vietnam": "🇻🇳", "Malaysia": "🇲🇾", "Philippines": "🇵🇭",
+            "Pakistan": "🇵🇰", "Bangladesh": "🇧🇩", "Turkey": "🇹🇷", "Iran": "🇮🇷",
+            "Saudi Arabia": "🇸🇦", "Israel": "🇮🇱", "United Arab Emirates": "🇦🇪", "Iraq": "🇮🇶",
+            "Kazakhstan": "🇰🇿", "Uzbekistan": "🇺🇿", "Afghanistan": "🇦🇫", "Nepal": "🇳🇵",
+            "Sri Lanka": "🇱🇰", "Myanmar": "🇲🇲", "Cambodia": "🇰🇭", "Mongolia": "🇲🇳",
+            "Egypt": "🇪🇬", "South Africa": "🇿🇦", "Nigeria": "🇳🇬", "Kenya": "🇰🇪",
+            "Morocco": "🇲🇦", "Algeria": "🇩🇿", "Tunisia": "🇹🇳", "Ethiopia": "🇪🇹", "Ghana": "🇬🇭",
+            "Angola": "🇦🇴", "Mozambique": "🇲🇿", "Senegal": "🇸🇳", "Madagascar": "🇲🇬",
+            "United States": "🇺🇸", "Canada": "🇨🇦", "Mexico": "🇲🇽", "Brazil": "🇧🇷",
+            "Argentina": "🇦🇷", "Chile": "🇨🇱", "Colombia": "🇨🇴", "Peru": "🇵🇪",
+            "Venezuela": "🇻🇪", "Ecuador": "🇪🇨", "Cuba": "🇨🇺", "Bolivia": "🇧🇴",
+            "Paraguay": "🇵🇾", "Uruguay": "🇺🇾", "Guyana": "🇬🇾", "Suriname": "🇸🇷",
+            "Australia": "🇦🇺", "New Zealand": "🇳🇿", "Fiji": "🇫🇯", "Papua New Guinea": "🇵🇬"
+        };
+
+        const countryCodeMap = {
+            "Russia": "RU", "Germany": "DE", "France": "FR", "Italy": "IT", "Spain": "ES",
+            "United Kingdom": "GB", "Ukraine": "UA", "Poland": "PL", "Netherlands": "NL",
+            "Sweden": "SE", "Norway": "NO", "Denmark": "DK", "Finland": "FI", "Belgium": "BE",
+            "Switzerland": "CH", "Austria": "AT", "Greece": "GR", "Portugal": "PT",
+            "Czech Republic": "CZ", "Czechia": "CZ", "Hungary": "HU", "Romania": "RO",
+            "Bulgaria": "BG", "Serbia": "RS", "Croatia": "HR", "Slovakia": "SK",
+            "Slovenia": "SI", "Lithuania": "LT", "Latvia": "LV", "Estonia": "EE",
+            "Iceland": "IS", "Ireland": "IE", "Belarus": "BY", "Moldova": "MD",
+            "Georgia": "GE", "Armenia": "AM", "Azerbaijan": "AZ", "Turkmenistan": "TM",
+            "Tajikistan": "TJ", "Kyrgyzstan": "KG", "China": "CN", "Japan": "JP",
+            "South Korea": "KR", "India": "IN", "Indonesia": "ID", "Thailand": "TH",
+            "Vietnam": "VN", "Malaysia": "MY", "Philippines": "PH", "Pakistan": "PK",
+            "Bangladesh": "BD", "Turkey": "TR", "Iran": "IR", "Saudi Arabia": "SA",
+            "Israel": "IL", "United Arab Emirates": "AE", "Iraq": "IQ", "Kazakhstan": "KZ",
+            "Uzbekistan": "UZ", "Afghanistan": "AF", "Nepal": "NP", "Sri Lanka": "LK",
+            "Myanmar": "MM", "Cambodia": "KH", "Mongolia": "MN", "Singapore": "SG",
+            "Taiwan": "TW", "Hong Kong": "HK", "North Korea": "KP", "Laos": "LA",
+            "Qatar": "QA", "Kuwait": "KW", "Bahrain": "BH", "Oman": "OM", "Yemen": "YE",
+            "Jordan": "JO", "Lebanon": "LB", "Syria": "SY", "Cyprus": "CY", "Malta": "MT",
+            "Luxembourg": "LU", "Monaco": "MC", "Andorra": "AD", "San Marino": "SM",
+            "Liechtenstein": "LI", "Albania": "AL", "North Macedonia": "MK",
+            "Montenegro": "ME", "Bosnia and Herzegovina": "BA", "Kosovo": "XK",
+            "Egypt": "EG", "South Africa": "ZA", "Nigeria": "NG", "Kenya": "KE",
+            "Morocco": "MA", "Algeria": "DZ", "Tunisia": "TN", "Ethiopia": "ET",
+            "Ghana": "GH", "Angola": "AO", "Mozambique": "MZ", "Senegal": "SN",
+            "Madagascar": "MG", "Tanzania": "TZ", "Uganda": "UG", "Rwanda": "RW",
+            "Zambia": "ZM", "Zimbabwe": "ZW", "Botswana": "BW", "Namibia": "NA",
+            "Malawi": "MW", "Cameroon": "CM", "Ivory Coast": "CI", "Sudan": "SD",
+            "Somalia": "SO", "Libya": "LY", "Mali": "ML", "Niger": "NE",
+            "United States": "US", "Canada": "CA", "Mexico": "MX", "Brazil": "BR",
+            "Argentina": "AR", "Chile": "CL", "Colombia": "CO", "Peru": "PE",
+            "Venezuela": "VE", "Ecuador": "EC", "Cuba": "CU", "Bolivia": "BO",
+            "Paraguay": "PY", "Uruguay": "UY", "Guyana": "GY", "Suriname": "SR",
+            "Costa Rica": "CR", "Panama": "PA", "Guatemala": "GT", "Honduras": "HN",
+            "El Salvador": "SV", "Nicaragua": "NI", "Belize": "BZ", "Jamaica": "JM",
+            "Haiti": "HT", "Dominican Republic": "DO", "Puerto Rico": "PR",
+            "Trinidad and Tobago": "TT", "Barbados": "BB", "Bahamas": "BS",
+            "Australia": "AU", "New Zealand": "NZ", "Fiji": "FJ",
+            "Papua New Guinea": "PG", "Samoa": "WS", "Tonga": "TO"
+        };
+
+        function getLanguageForCountry(countryName) {
+            if (languageMap[countryName]) return languageMap[countryName];
+            return { lr: "lang_en", display: "English (global)" };
+        }
+        function getTimezoneForCountry(countryName) {
+            if (timezoneMap[countryName]) return timezoneMap[countryName];
+            return "UTC";
+        }
+
+        // ====== МЕХАНИЧЕСКИЕ ЧАСЫ ======
+        let clockInterval = null;
+        let currentClockTimezone = null;
+
+        function createClockFace() {
+            const face = document.getElementById('clockFace');
+            face.querySelectorAll('.clock-mark, .clock-number').forEach(el => el.remove());
+            const size = face.offsetWidth || 200;
+            const radius = size / 2 - 10;
+            const center = size / 2;
+            for (let i = 0; i < 60; i++) {
+                const mark = document.createElement('div');
+                mark.className = 'clock-mark';
+                if (i % 5 === 0) mark.classList.add('large');
+                const angle = i * 6 - 90;
+                mark.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+                mark.style.top = i % 5 === 0 ? '4px' : '6px';
+                mark.style.left = '50%';
+                face.appendChild(mark);
+            }
+            for (let i = 1; i <= 12; i++) {
+                const num = document.createElement('div');
+                num.className = 'clock-number';
+                num.textContent = i;
+                const angle = (i * 30 - 90) * Math.PI / 180;
+                const r = radius - 20;
+                const x = Math.cos(angle) * r + center;
+                const y = Math.sin(angle) * r + center;
+                num.style.left = (x - 12) + 'px';
+                num.style.top = (y - 10) + 'px';
+                num.style.transform = 'none';
+                face.appendChild(num);
+            }
+            const centerEl = document.createElement('div');
+            centerEl.className = 'clock-center';
+            face.appendChild(centerEl);
+        }
+
+        function updateClock(timezone) {
+            const now = new Date();
+            const options = { timeZone: timezone, hour12: false, hour: 'numeric', minute: 'numeric', second: 'numeric' };
+            const timeStr = now.toLocaleTimeString('en-US', options);
+            const [h, m, s] = timeStr.split(':').map(Number);
+            document.getElementById('hourHand').style.transform = `translate(-50%, -100%) rotate(${(h % 12) * 30 + m * 0.5}deg)`;
+            document.getElementById('minuteHand').style.transform = `translate(-50%, -100%) rotate(${m * 6 + s * 0.1}deg)`;
+            document.getElementById('secondHand').style.transform = `translate(-50%, -100%) rotate(${s * 6}deg)`;
+            const pad = (n) => String(n).padStart(2, '0');
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            document.getElementById('digitalTime').textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+            const badge = document.getElementById('ampmBadge');
+            badge.textContent = ampm;
+            badge.className = 'am-pm-badge ' + (h >= 12 ? 'pm' : 'am');
+            const dateOptions = { timeZone: timezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('dateInfo').textContent = now.toLocaleDateString('ru-RU', dateOptions);
+            const offset = now.toLocaleTimeString('en-US', { timeZone: timezone, timeZoneName: 'shortOffset' }).split(' ').pop();
+            document.getElementById('tzOffset').textContent = 'UTC' + offset;
+        }
+
+        function startClock(timezone) {
+            currentClockTimezone = timezone;
+            createClockFace();
+            updateClock(timezone);
+            if (clockInterval) clearInterval(clockInterval);
+            clockInterval = setInterval(() => updateClock(timezone), 1000);
+        }
+        function stopClock() {
+            if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+            currentClockTimezone = null;
+        }
+
+        // ====== РАДИО ======
+        let radioStations = [];
+        let radioCurrentIndex = 0;
+        let radioCurrentCountry = null;
+        let radioFetchAbort = null;
+
+        async function fetchRadioStations(countryName) {
+            const code = countryCodeMap[countryName];
+            if (!code) return [];
+            try {
+                if (radioFetchAbort) radioFetchAbort.abort();
+                radioFetchAbort = new AbortController();
+                const url = `https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/${code}?limit=40&hidebroken=true&order=clickcount&reverse=true`;
+                const resp = await fetch(url, { signal: radioFetchAbort.signal });
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                const data = await resp.json();
+                return data
+                    .filter(s => s.url_resolved && s.name)
+                    .map(s => ({
+                        name: s.name.trim(),
+                        url: s.url_resolved,
+                        codec: s.codec || "?",
+                        bitrate: s.bitrate || 0,
+                        tags: s.tags || ""
+                    }));
+            } catch (e) {
+                if (e.name === 'AbortError') return [];
+                console.warn("Radio fetch error:", e);
+                return [];
+            }
+        }
+
+        function playRadioStation(index) {
+            if (!radioStations.length) return;
+            if (index < 0) index = radioStations.length - 1;
+            if (index >= radioStations.length) index = 0;
+            radioCurrentIndex = index;
+            const st = radioStations[index];
+
+            const nameEl = document.getElementById("radioStationName");
+            const metaEl = document.getElementById("radioStationMeta");
+            const statusEl = document.getElementById("radioStatus");
+
+            nameEl.textContent = "📻 " + st.name;
+            metaEl.textContent =
+                (st.codec || "?") +
+                (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
+                (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
+
+            const audio = document.getElementById("radioAudio");
+            audio.pause();
+            audio.src = st.url;
+            audio.load();
+
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    statusEl.textContent = "▶ Играет: " + st.name;
+                    statusEl.className = "radio-status";
+                }).catch(() => {
+                    statusEl.textContent = "⚠ Не удалось воспроизвести. Пробую следующую...";
+                    statusEl.className = "radio-status error";
+                    setTimeout(() => playRadioStation(radioCurrentIndex + 1), 1500);
+                });
+            }
+
+            audio.onerror = () => {
+                statusEl.textContent = "⚠ Поток недоступен. Следующая станция...";
+                statusEl.className = "radio-status error";
+                setTimeout(() => playRadioStation(radioCurrentIndex + 1), 1200);
+            };
+        }
+
+        async function startRadioForCountry(countryName) {
+            const nameEl = document.getElementById("radioStationName");
+            const metaEl = document.getElementById("radioStationMeta");
+            const statusEl = document.getElementById("radioStatus");
+
+            radioCurrentCountry = countryName;
+            nameEl.textContent = "⏳ Загрузка радиостанций " + countryName + "...";
+            metaEl.textContent = "—";
+            statusEl.textContent = "";
+            statusEl.className = "radio-status";
+
+            radioStations = await fetchRadioStations(countryName);
+
+            if (!radioStations.length) {
+                nameEl.textContent = "📻 Радио недоступно";
+                metaEl.textContent = "Не удалось найти станции для " + countryName;
+                statusEl.textContent = "Попробуйте другую страну";
+                statusEl.className = "radio-status error";
+                return;
+            }
+            playRadioStation(0);
+        }
+
+        function stopRadio() {
+            const audio = document.getElementById("radioAudio");
+            if (audio) {
+                try { audio.pause(); } catch (e) {}
+                audio.removeAttribute('src');
+                audio.load();
+            }
+            if (radioFetchAbort) { radioFetchAbort.abort(); radioFetchAbort = null; }
+            radioStations = [];
+            radioCurrentIndex = 0;
+            radioCurrentCountry = null;
+        }
+
+        // ====== AMCHARTS GLOBE ======
+        am5.ready(function () {
+            let root = am5.Root.new("chartdiv");
+            root.setThemes([am5themes_Animated.new(root)]);
+
+            let chart = root.container.children.push(
+                am5map.MapChart.new(root, {
+                    panX: "rotateX",
+                    panY: "rotateY",
+                    projection: am5map.geoOrthographic(),
+                    homeGeoPoint: { latitude: 0, longitude: 0 }
+                })
+            );
+
+            chart.seriesContainer.set("background", am5.Rectangle.new(root, {
+                fill: am5.color(0x06102b),
+                fillOpacity: 1
+            }));
+
+            let polygonSeries = chart.series.push(
+                am5map.MapPolygonSeries.new(root, { geoJSON: am5geodata_worldLow })
+            );
+            polygonSeries.set("fill", am5.color(0x2c3e66));
+            polygonSeries.set("stroke", am5.color(0x4a6b9e));
+            polygonSeries.set("strokeWidth", 0.6);
+
+            let polygonTemplate = polygonSeries.mapPolygons.template;
+            polygonTemplate.setAll({
+                interactive: true,
+                tooltipText: "{name}",
+                tooltipY: 0,
+                fill: am5.color(0x3a5a8c),
+                stroke: am5.color(0x7e9bc0),
+                strokeWidth: 0.8,
+                cursorOverStyle: "pointer"
+            });
+
+            polygonTemplate.states.create("hover", {
+                fill: am5.color(0x5d8bc9),
+                stroke: am5.color(0xffd966),
+                strokeWidth: 1.5,
+                scale: 1.01
+            });
+
+            let rotationAnimation = chart.animate({
+                key: "rotationX", from: 0, to: 360,
+                loops: Infinity, duration: 32000,
+                easing: am5.ease.linear
+            });
+
+            let pendingCountry = null;
+            let pendingTimeout = null;
+            let currentCountryForModal = null;
+            let isTimeMode = false;
+
+            const statusSpan = document.getElementById("statusText");
+            const statusCard = document.getElementById("statusCard");
+            const modalOverlay = document.getElementById("actionModal");
+            const modalCountryName = document.getElementById("modalCountryName");
+            const modalFlag = document.getElementById("modalFlag");
+            const modalSubInfo = document.getElementById("modalSubInfo");
+            const modalActions = document.getElementById("modalActions");
+            const clockActions = document.getElementById("clockActions");
+            const modalClock = document.getElementById("modalClock");
+            const clockInfo = document.getElementById("clockInfo");
+            const radioInfo = document.getElementById("radioInfo");
+
+            const DEFAULT_STATUS = "🌍 Tap any country → first click shows the name, second click opens a choice: News, Wikipedia, Local Time or Radio";
+
+            function showModal(countryName) {
+                currentCountryForModal = countryName;
+                modalCountryName.textContent = countryName;
+                modalFlag.textContent = flagMap[countryName] || "🌍";
+                const langInfo = getLanguageForCountry(countryName);
+                const tz = getTimezoneForCountry(countryName);
+                modalSubInfo.textContent = "🌐 " + langInfo.display + " · " + tz;
+                isTimeMode = false;
+                modalClock.style.display = 'none';
+                clockInfo.style.display = 'none';
+                radioInfo.style.display = 'none';
+                modalActions.style.display = 'flex';
+                clockActions.style.display = 'none';
+                stopClock();
+                stopRadio();
+                modalOverlay.classList.add("active");
+            }
+
+            function hideModal() {
+                modalOverlay.classList.remove("active");
+                currentCountryForModal = null;
+                isTimeMode = false;
+                stopClock();
+                stopRadio();
+            }
+
+            function clearPendingState(resetStatusToDefault) {
+                if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
+                pendingCountry = null;
+                if (resetStatusToDefault) {
+                    statusSpan.innerHTML = DEFAULT_STATUS;
+                    statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                }
+            }
+
+            function openNewsForCountry(countryName) {
+                if (!countryName) return;
+                const langInfo = getLanguageForCountry(countryName);
+                const searchQuery = "latest news from " + countryName;
+                const encodedQuery = encodeURIComponent(searchQuery);
+                let newsUrl = "https://www.google.com/search?q=" + encodedQuery + "&tbm=nws";
+                if (langInfo.lr) newsUrl += "&lr=" + langInfo.lr;
+                window.open(newsUrl, "_blank");
+                return langInfo.display;
+            }
+
+            function openWikipediaForCountry(countryName) {
+                if (!countryName) return;
+                const langInfo = getLanguageForCountry(countryName);
+                let langCode = "en";
+                if (langInfo.lr && langInfo.lr.startsWith("lang_")) langCode = langInfo.lr.replace("lang_", "");
+                const langMap = {
+                    "iw": "he", "zh": "zh", "vi": "vi", "th": "th", "ko": "ko", "ja": "ja",
+                    "ru": "ru", "uk": "uk", "pl": "pl", "de": "de", "fr": "fr", "es": "es",
+                    "it": "it", "pt": "pt", "nl": "nl", "sv": "sv", "no": "no", "da": "da",
+                    "fi": "fi", "el": "el", "cs": "cs", "hu": "hu", "ro": "ro", "bg": "bg",
+                    "sr": "sr", "hr": "hr", "sk": "sk", "sl": "sl", "lt": "lt", "lv": "lv",
+                    "et": "et", "is": "is", "hi": "hi", "id": "id", "ms": "ms", "tl": "tl",
+                    "ur": "ur", "bn": "bn", "tr": "tr", "fa": "fa", "ar": "ar", "kk": "kk",
+                    "uz": "uz", "ps": "ps", "ne": "ne", "si": "si", "my": "my", "km": "km",
+                    "mn": "mn", "am": "am", "sw": "sw", "mg": "mg", "af": "af"
+                };
+                if (langMap[langCode]) langCode = langMap[langCode];
+                const encodedName = encodeURIComponent(countryName);
+                const wikiUrl = "https://" + langCode + ".wikipedia.org/wiki/" + encodedName;
+                window.open(wikiUrl, "_blank");
+                return langCode;
+            }
+
+            function showCountryNameAndWait(countryName) {
+                const langInfo = getLanguageForCountry(countryName);
+                const tz = getTimezoneForCountry(countryName);
+                statusSpan.innerHTML = '<i class="fas fa-globe"></i> <span class="country-badge"><i class="fas fa-flag"></i> ' +
+                    countryName + '</span> <span class="language-tag"><i class="fas fa-language"></i> ' + langInfo.display +
+                    '</span> <span class="language-tag" style="background:#10b981;"><i class="fas fa-clock"></i> ' + tz +
+                    '</span> → ✅ Click again to choose News, Wikipedia, Local Time or Radio!';
+                statusCard.style.borderColor = "#ffb74d";
+                if (pendingTimeout) clearTimeout(pendingTimeout);
+                pendingTimeout = setTimeout(function () {
+                    if (pendingCountry === countryName) {
+                        statusSpan.innerHTML = "⏳ Timeout. Click again on any country to start over.";
+                        setTimeout(function () {
+                            if (!pendingCountry) {
+                                statusSpan.innerHTML = DEFAULT_STATUS;
+                                statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                            }
+                        }, 2000);
+                        clearPendingState(false);
+                        setTimeout(function () {
+                            if (!pendingCountry) {
+                                statusSpan.innerHTML = DEFAULT_STATUS;
+                                statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                            }
+                        }, 2500);
+                    } else {
+                        clearPendingState(true);
+                    }
+                }, 7000);
+            }
+
+            polygonSeries.mapPolygons.template.events.on("click", function (ev) {
+                let dataItem = ev.target.dataItem;
+                if (!dataItem) return;
+                let countryName = dataItem.dataContext.name;
+                if (!countryName) return;
+                if (countryName === "Greenland" || countryName === "Antarctica") return;
+
+                if (modalOverlay.classList.contains("active")) hideModal();
+
+                if (pendingCountry === null) {
+                    pendingCountry = countryName;
+                    showCountryNameAndWait(countryName);
+                    ev.target.animate({ key: "fill", to: am5.color(0xffaa66), duration: 200 });
+                    setTimeout(function () {
+                        if (ev.target && ev.target.get("fill") !== undefined) {
+                            ev.target.animate({ key: "fill", to: am5.color(0x3a5a8c), duration: 400 });
+                        }
+                    }, 500);
+                    return;
+                }
+
+                if (pendingCountry !== null) {
+                    if (pendingCountry === countryName) {
+                        if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
+                        pendingCountry = null;
+                        showModal(countryName);
+                        statusSpan.innerHTML = '<i class="fas fa-hand-pointer"></i> Choose action for <strong>' +
+                            countryName + '</strong> in the popup';
+                        statusCard.style.borderColor = "#a78bfa";
+                        return;
+                    } else {
+                        if (pendingTimeout) clearTimeout(pendingTimeout);
+                        pendingCountry = countryName;
+                        const newLang = getLanguageForCountry(countryName).display;
+                        const tz = getTimezoneForCountry(countryName);
+                        statusSpan.innerHTML = '<i class="fas fa-exchange-alt"></i> Changed: now <strong>' +
+                            countryName + '</strong> (' + newLang + ', ' + tz + '). Click again for action.';
+                        statusCard.style.borderColor = "#ffb74d";
+                        pendingTimeout = setTimeout(function () {
+                            if (pendingCountry === countryName) {
+                                statusSpan.innerHTML = "⏳ Timeout. Tap again to activate.";
+                                setTimeout(function () { if (pendingCountry === countryName) clearPendingState(true); }, 2000);
+                                clearPendingState(false);
+                                setTimeout(function () {
+                                    if (!pendingCountry) statusSpan.innerHTML = DEFAULT_STATUS;
+                                }, 2200);
+                            } else {
+                                clearPendingState(true);
+                            }
+                        }, 7000);
+                        ev.target.animate({ key: "fill", to: am5.color(0xffaa66), duration: 200 });
+                        setTimeout(function () {
+                            if (ev.target) ev.target.animate({ key: "fill", to: am5.color(0x3a5a8c), duration: 400 });
+                        }, 500);
+                    }
+                    return;
+                }
+            });
+
+            // ====== КНОПКИ МОДАЛКИ ======
+            document.getElementById("modalTimeBtn").addEventListener("click", function () {
+                if (currentCountryForModal) {
+                    const tz = getTimezoneForCountry(currentCountryForModal);
+                    isTimeMode = true;
+                    modalActions.style.display = 'none';
+                    clockActions.style.display = 'flex';
+                    modalClock.style.display = 'block';
+                    clockInfo.style.display = 'block';
+                    radioInfo.style.display = 'none';
+                    stopRadio();
+                    startClock(tz);
+                    modalSubInfo.textContent = "🕐 Local time in " + currentCountryForModal + " (" + tz + ")";
+                    statusSpan.innerHTML = '<i class="fas fa-clock"></i> 🕐 Showing local time for <strong>' +
+                        currentCountryForModal + '</strong>';
+                    statusCard.style.borderColor = "#10b981";
+                }
+            });
+
+            document.getElementById("modalNewsBtn").addEventListener("click", function () {
+                if (currentCountryForModal) {
+                    const langDisplay = openNewsForCountry(currentCountryForModal);
+                    statusSpan.innerHTML = '<i class="fas fa-newspaper"></i> 📰 Opening news for <strong>' +
+                        currentCountryForModal + '</strong> in <strong>' + langDisplay + '</strong>...';
+                    statusCard.style.borderColor = "#4caf50";
+                    hideModal();
+                    setTimeout(function () {
+                        if (pendingCountry === null) {
+                            statusSpan.innerHTML = DEFAULT_STATUS;
+                            statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                        }
+                    }, 4000);
+                }
+            });
+
+            document.getElementById("modalWikiBtn").addEventListener("click", function () {
+                if (currentCountryForModal) {
+                    const langCode = openWikipediaForCountry(currentCountryForModal);
+                    statusSpan.innerHTML = '<i class="fab fa-wikipedia-w"></i> 📖 Opening Wikipedia for <strong>' +
+                        currentCountryForModal + '</strong> (' + langCode + ')...';
+                    statusCard.style.borderColor = "#8b5cf6";
+                    hideModal();
+                    setTimeout(function () {
+                        if (pendingCountry === null) {
+                            statusSpan.innerHTML = DEFAULT_STATUS;
+                            statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                        }
+                    }, 4000);
+                }
+            });
+
+            document.getElementById("modalRadioBtn").addEventListener("click", function () {
+                if (currentCountryForModal) {
+                    const country = currentCountryForModal;
+                    modalActions.style.display = 'none';
+                    clockActions.style.display = 'flex';
+                    modalClock.style.display = 'none';
+                    clockInfo.style.display = 'none';
+                    radioInfo.style.display = 'block';
+                    stopClock();
+                    modalSubInfo.textContent = "📻 Радио " + country;
+                    statusSpan.innerHTML = '<i class="fas fa-radio"></i> 📻 Загрузка радио для <strong>' + country + '</strong>...';
+                    statusCard.style.borderColor = "#f59e0b";
+                    startRadioForCountry(country);
+                }
+            });
+
+            document.getElementById("radioNextBtn").addEventListener("click", function () {
+                if (radioStations.length > 0) playRadioStation(radioCurrentIndex + 1);
+            });
+
+            document.getElementById("modalCancelBtn").addEventListener("click", function () {
+                hideModal();
+                statusSpan.innerHTML = "❌ Cancelled. Tap any country to start over.";
+                statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                setTimeout(function () {
+                    if (pendingCountry === null && !modalOverlay.classList.contains("active")) {
+                        statusSpan.innerHTML = DEFAULT_STATUS;
+                    }
+                }, 2000);
+            });
+
+            document.getElementById("modalBackBtn").addEventListener("click", function () {
+                isTimeMode = false;
+                modalClock.style.display = 'none';
+                clockInfo.style.display = 'none';
+                radioInfo.style.display = 'none';
+                clockActions.style.display = 'none';
+                modalActions.style.display = 'flex';
+                stopClock();
+                stopRadio();
+                modalSubInfo.textContent = "Choose what you want to see";
+            });
+
+            document.getElementById("modalCloseBtn").addEventListener("click", function () {
+                stopClock();
+                stopRadio();
+                hideModal();
+                statusSpan.innerHTML = DEFAULT_STATUS;
+                statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+            });
+
+            modalOverlay.addEventListener("click", function (e) {
+                if (e.target === modalOverlay) {
+                    hideModal();
+                    statusSpan.innerHTML = "❌ Cancelled. Tap any country to start over.";
+                    statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                    setTimeout(function () {
+                        if (pendingCountry === null && !modalOverlay.classList.contains("active")) {
+                            statusSpan.innerHTML = DEFAULT_STATUS;
+                        }
+                    }, 2000);
+                }
+            });
+
+            // ====== УПРАВЛЕНИЕ ГЛОБУСОМ ======
+            const toggleBtn = document.getElementById("toggleRotation");
+            toggleBtn.addEventListener("click", function () {
+                if (rotationAnimation && !rotationAnimation.isStopped()) {
+                    rotationAnimation.stop();
+                    toggleBtn.innerHTML = '<i class="fas fa-play-circle"></i> <span>Resume Rotation</span>';
+                } else {
+                    rotationAnimation = chart.animate({
+                        key: "rotationX",
+                        from: chart.get("rotationX") || 0,
+                        to: (chart.get("rotationX") || 0) + 360,
+                        loops: Infinity,
+                        duration: 32000,
+                        easing: am5.ease.linear
+                    });
+                    toggleBtn.innerHTML = '<i class="fas fa-pause-circle"></i> <span>Stop Rotation</span>';
+                }
+            });
+
+            const resetBtn = document.getElementById("resetView");
+            resetBtn.addEventListener("click", function () {
+                if (rotationAnimation && !rotationAnimation.isStopped()) {
+                    rotationAnimation.stop();
+                    toggleBtn.innerHTML = '<i class="fas fa-play-circle"></i> <span>Resume Rotation</span>';
+                }
+                chart.animate({ key: "rotationX", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });
+                chart.animate({ key: "rotationY", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });
+                if (pendingTimeout) clearTimeout(pendingTimeout);
+                pendingCountry = null;
+                pendingTimeout = null;
+                hideModal();
+                statusSpan.innerHTML = "🌍 View reset! First click: country name, second click: action choice.";
+                statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
+                setTimeout(function () {
+                    if (pendingCountry === null) statusSpan.innerHTML = DEFAULT_STATUS;
+                }, 2800);
+            });
+
+            // ====== SHARE ======
+            function getShareUrl() { return window.location.href; }
+            const shareText = "Global Explorer: click any country twice — choose News, Wikipedia, Local Time or Radio! Interactive 3D globe. 🌐📰📖🕐📻";
+            const currentUrl = encodeURIComponent(getShareUrl());
+            const encodedText = encodeURIComponent(shareText);
+            document.getElementById("fbShare").href = "https://www.facebook.com/sharer/sharer.php?u=" + currentUrl;
+            document.getElementById("twShare").href = "https://twitter.com/intent/tweet?text=" + encodedText + "&url=" + currentUrl;
+            document.getElementById("vkShare").href = "https://vk.com/share.php?url=" + currentUrl + "&title=" + encodedText;
+            document.getElementById("tgShare").href = "https://t.me/share/url?url=" + currentUrl + "&text=" + encodedText;
+
+            setTimeout(function () {
+                chart.animate({ key: "rotationX", to: 25, duration: 1400, easing: am5.ease.out(am5.ease.cubic) });
+            }, 400);
+
+            const styleTag = document.createElement('style');
+            styleTag.textContent = '.am5-tooltip { background: #0f172ad9 !important; backdrop-filter: blur(8px); border-radius: 24px !important; border: 1px solid #3b82f6; color: white !important; }';
+            document.head.appendChild(styleTag);
+        });
+    </script>
+</body>
+</html>
