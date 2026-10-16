@@ -3315,5 +3315,219 @@ setTimeout(function () {
     }
 })();
 </script>
+<script>
+/* ============================================================
+   HARDWARE BACK BUTTON HANDLER (Android / mobile)
+   Управляет кнопкой "Назад" через History API.
+   ============================================================ */
+(function () {
+    "use strict";
+
+    // Не запускаем на десктопе — там кнопка "Назад" в браузере работает штатно
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent);
+    if (!isMobile) return;
+
+    const STATE_ROOT       = "root";        // большой глобус, ничего не открыто
+    const STATE_MODAL      = "modal";       // меню выбора: News / Wikipedia / Time / Radio
+    const STATE_SUB        = "submenu";     // часы или радио (подменю)
+    const STATE_VIZ_FS     = "vizFullscreen"; // визуализация на весь экран
+
+    let currentLayer = STATE_ROOT;
+    let isPopping    = false;   // защита от рекурсии при history.back() из кода
+
+    // ---- Хелперы для проверки состояния UI ----
+    function isModalOpen() {
+        const m = document.getElementById("actionModal");
+        return !!(m && m.classList.contains("active"));
+    }
+    function isRadioOpen() {
+        const r = document.getElementById("radioInfo");
+        return !!(r && r.style.display !== "none" && r.style.display !== "");
+    }
+    function isClockOpen() {
+        const c = document.getElementById("clockInfo");
+        return !!(c && c.style.display !== "none" && c.style.display !== "");
+    }
+    function isVizFullscreen() {
+        const v = document.getElementById("vizContainer");
+        if (!v) return false;
+        return document.fullscreenElement === v ||
+               document.webkitFullscreenElement === v;
+    }
+
+    // ---- Публичные действия, которые вызывает "Назад" ----
+    function goBackFromFullscreen() {
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+
+    function goBackFromSubmenu() {
+        // Если открыт полный экран визуализации — сначала выходим из него
+        if (isVizFullscreen()) {
+            goBackFromFullscreen();
+            return;
+        }
+
+        // Радио/часы → назад в меню выбора действий
+        const modalBackBtn = document.getElementById("modalBackBtn");
+        if (modalBackBtn) {
+            modalBackBtn.click();
+        } else {
+            // fallback: вручную показать меню действий
+            const radioInfo   = document.getElementById("radioInfo");
+            const clockInfo   = document.getElementById("clockInfo");
+            const clockActions= document.getElementById("clockActions");
+            const modalActions= document.getElementById("modalActions");
+            const modalSubInfo= document.getElementById("modalSubInfo");
+            if (radioInfo) radioInfo.style.display = "none";
+            if (clockInfo) clockInfo.style.display = "none";
+            if (clockActions) clockActions.style.display = "none";
+            if (modalActions) modalActions.style.display = "flex";
+            if (modalSubInfo) modalSubInfo.textContent = "Choose what you want to see";
+        }
+        currentLayer = STATE_MODAL;
+    }
+
+    function goBackFromModal() {
+        const cancelBtn = document.getElementById("modalCancelBtn");
+        if (cancelBtn) {
+            cancelBtn.click();
+        } else {
+            const m = document.getElementById("actionModal");
+            if (m) m.classList.remove("active");
+            document.body.classList.remove("modal-open");
+        }
+        currentLayer = STATE_ROOT;
+    }
+
+    // На корневом экране — НЕ выходим из сайта.
+    function stayOnRoot() {
+        // Ничего не делаем. Просто "съедаем" событие.
+        // Дополнительно можно показать подсказку:
+        showBackHint();
+    }
+
+    let hintTimer = null;
+    function showBackHint() {
+        let hint = document.getElementById("backHint");
+        if (!hint) {
+            hint = document.createElement("div");
+            hint.id = "backHint";
+            hint.style.cssText =
+                "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);" +
+                "background:rgba(15,23,42,0.95);color:#fff;padding:10px 22px;" +
+                "border-radius:40px;font-size:0.85rem;z-index:4000;" +
+                "border:1px solid #f59e0b;box-shadow:0 8px 24px rgba(0,0,0,0.5);" +
+                "opacity:0;transition:opacity .3s;pointer-events:none;" +
+                "font-family:inherit;white-space:nowrap;";
+            document.body.appendChild(hint);
+        }
+        hint.textContent = "🌍 Вы в главном меню";
+        requestAnimationFrame(() => { hint.style.opacity = "1"; });
+        clearTimeout(hintTimer);
+        hintTimer = setTimeout(() => { hint.style.opacity = "0"; }, 1400);
+    }
+
+    // ---- Пуш состояний в историю ----
+    function pushState(layer) {
+        if (isPopping) return;
+        currentLayer = layer;
+        try {
+            history.pushState({ layer: layer }, "", location.href);
+        } catch (e) {
+            // некоторые WebView могут кинуть — игнорируем
+        }
+    }
+
+    // ---- Инициализация ----
+    function initBackHandler() {
+        // Базовое состояние (root) — заменяем текущую запись, чтобы не плодить пустые
+        try {
+            history.replaceState({ layer: STATE_ROOT }, "", location.href);
+        } catch (e) {}
+        currentLayer = STATE_ROOT;
+
+        // Перехват popstate
+        window.addEventListener("popstate", function (e) {
+            if (isPopping) {
+                isPopping = false;
+                return;
+            }
+
+            const state = e.state || { layer: STATE_ROOT };
+            const layer = state.layer;
+
+            // Определяем, что реально открыто в UI (приоритет — UI, а не state)
+            if (isVizFullscreen()) {
+                // Назад из полного экрана визуализации
+                goBackFromFullscreen();
+                pushState(STATE_SUB);
+                return;
+            }
+
+            if (isRadioOpen() || isClockOpen()) {
+                goBackFromSubmenu();
+                pushState(STATE_MODAL);
+                return;
+            }
+
+            if (isModalOpen()) {
+                goBackFromModal();
+                pushState(STATE_ROOT);
+                return;
+            }
+
+            // Уже на корне — "съедаем" назад, не выходим
+            stayOnRoot();
+            // Восстанавливаем корневое состояние
+            isPopping = true;
+            try {
+                history.pushState({ layer: STATE_ROOT }, "", location.href);
+            } catch (err) {}
+            setTimeout(() => { isPopping = false; }, 0);
+        });
+
+        // Следим за открытием модального окна (кнопки/логика сайта)
+        const modal = document.getElementById("actionModal");
+        if (modal) {
+            const obs = new MutationObserver(function () {
+                if (isModalOpen() && currentLayer === STATE_ROOT) {
+                    pushState(STATE_MODAL);
+                }
+            });
+            obs.observe(modal, { attributes: true, attributeFilter: ["class"] });
+        }
+
+        // Следим за открытием радио / часов
+        ["radioInfo", "clockInfo"].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const obs = new MutationObserver(function () {
+                const visible = el.style.display !== "none" && el.style.display !== "";
+                if (visible && currentLayer === STATE_MODAL) {
+                    pushState(STATE_SUB);
+                }
+            });
+            obs.observe(el, { attributes: true, attributeFilter: ["style"] });
+        });
+
+        // Следим за входом в полноэкранную визуализацию
+        ["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) {
+            document.addEventListener(ev, function () {
+                if (isVizFullscreen() && currentLayer === STATE_SUB) {
+                    pushState(STATE_VIZ_FS);
+                }
+            });
+        });
+    }
+
+    // Запускаем после загрузки DOM
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initBackHandler);
+    } else {
+        initBackHandler();
+    }
+})();
+</script>
 </body>
 </html>
