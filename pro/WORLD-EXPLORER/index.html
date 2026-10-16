@@ -310,7 +310,6 @@
         .modal-btn.cancel-btn:hover { background: rgba(255, 255, 255, 0.15); color: white; }
         .modal-btn i { font-size: 1.3rem; }
 
-        /* Циферблат */
         .mechanical-clock {
             width: 200px;
             height: 200px;
@@ -615,6 +614,113 @@
             z-index: 1;
         }
         .cp-status.error { color: #ef4444; }
+
+        /* ============ ВИЗУАЛИЗАЦИЯ РАДИО ============ */
+        .viz-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 14px;
+            background: #05070f;
+            box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.25);
+            isolation: isolate;
+            z-index: 1;
+        }
+        .viz-layer {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0;
+            transform: scale(1.02);
+            transition: opacity 1.8s ease-in-out, transform 14s linear;
+            will-change: opacity, transform;
+        }
+        .viz-layer.active {
+            opacity: 1;
+            transform: scale(1.14);
+        }
+        .viz-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg,
+                rgba(0,0,0,0.05) 0%,
+                rgba(0,0,0,0.35) 60%,
+                rgba(0,0,0,0.75) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .viz-caption {
+            position: absolute;
+            left: 12px;
+            right: 42px;
+            bottom: 10px;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 500;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+            pointer-events: none;
+        }
+        .viz-caption i { color: #fbbf24; flex-shrink: 0; }
+        .viz-caption span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        .viz-caption span.ready { opacity: 0.95; }
+        .viz-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 4;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.55);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            backdrop-filter: blur(6px);
+            transition: all 0.2s;
+            padding: 0;
+        }
+        .viz-close:hover { background: #ef4444; border-color: #ef4444; transform: scale(1.1); }
+        .viz-spinner {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(251, 191, 36, 0.2);
+            border-top-color: #fbbf24;
+            border-radius: 50%;
+            animation: vizSpin 0.9s linear infinite;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .viz-spinner.active { opacity: 1; }
+        @keyframes vizSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .radio-fav-btn.active-viz {
+            background: #3b82f6 !important;
+            color: #fff !important;
+            border-color: #60a5fa !important;
+        }
 
         /* ====== ИЗБРАННЫЕ РАДИОСТАНЦИИ ====== */
         .favorites-section {
@@ -960,6 +1066,8 @@
                 right: auto;
                 width: calc(100vw - 24px);
             }
+            .viz-container { aspect-ratio: 4 / 3; border-radius: 14px; }
+            .viz-caption { font-size: 0.65rem; left: 8px; right: 36px; }
         }
         @media (prefers-color-scheme: dark) {
             .hour-hand {
@@ -1044,7 +1152,6 @@
                 <div class="am-pm-badge" id="ampmBadge">--</div>
             </div>
 
-            <!-- КАСТОМНЫЙ ПЛЕЕР В МОДАЛКЕ -->
             <div id="radioInfo" style="display:none;">
                 <div class="custom-player" id="customPlayer">
                     <div class="cp-station-name" id="radioStationName">Загрузка станций...</div>
@@ -1057,20 +1164,34 @@
                         <div class="cp-bar"></div><div class="cp-bar"></div><div class="cp-bar"></div>
                     </div>
 
+                    <!-- ===== ВИЗУАЛИЗАЦИЯ ===== -->
+                    <div class="viz-container" id="vizContainer" style="display:none;">
+                        <div class="viz-layer" id="vizLayerA"></div>
+                        <div class="viz-layer" id="vizLayerB"></div>
+                        <div class="viz-overlay"></div>
+                        <div class="viz-caption">
+                            <i class="fas fa-camera-retro"></i>
+                            <span id="vizCaption">—</span>
+                        </div>
+                        <button class="viz-close" id="vizClose" title="Скрыть визуализацию">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
                     <div class="cp-progress-wrap" id="cpProgressWrap">
                         <div class="cp-progress" id="cpProgress"></div>
                     </div>
 
                     <div class="cp-controls">
                         <button class="cp-btn" id="cpRewindBtn" title="Предыдущая станция">
-    <i class="fas fa-backward"></i>
-</button>
-<button class="cp-btn primary" id="cpPlayBtn" title="Играть/Пауза">
-    <i class="fas fa-play" id="cpPlayIcon"></i>
-</button>
-<button class="cp-btn" id="cpForwardBtn" title="Следующая станция">
-    <i class="fas fa-forward"></i>
-</button>
+                            <i class="fas fa-backward"></i>
+                        </button>
+                        <button class="cp-btn primary" id="cpPlayBtn" title="Играть/Пауза">
+                            <i class="fas fa-play" id="cpPlayIcon"></i>
+                        </button>
+                        <button class="cp-btn" id="cpForwardBtn" title="Следующая станция">
+                            <i class="fas fa-forward"></i>
+                        </button>
                         <div class="cp-volume">
                             <i class="fas fa-volume-up" id="cpVolumeIcon"></i>
                             <input type="range" class="cp-volume-slider" id="cpVolumeSlider" min="0" max="1" step="0.01" value="0.8">
@@ -1080,10 +1201,13 @@
                     <div class="cp-status" id="radioStatus"></div>
 
                     <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; position:relative; z-index:1;">
-    <button class="radio-fav-btn" id="radioFavBtn" style="flex:1; justify-content:center;">
-        <i class="far fa-heart"></i> <span>В избранное</span>
-    </button>
-</div>
+                        <button class="radio-fav-btn" id="radioFavBtn" style="flex:1; justify-content:center;">
+                            <i class="far fa-heart"></i> <span>В избранное</span>
+                        </button>
+                        <button class="radio-fav-btn" id="vizToggleBtn" style="flex:1; justify-content:center; background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.5); color:#93c5fd;">
+                            <i class="fas fa-image"></i> <span>Визуализация</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="favorites-section">
@@ -1113,7 +1237,6 @@
         </div>
     </div>
 
-    <!-- ПЛАВАЮЩИЙ МИНИ-ПЛЕЕР -->
     <div class="floating-player" id="floatingPlayer">
         <div class="fp-header">
             <span class="fp-flag" id="fpFlag">🌍</span>
@@ -1130,14 +1253,14 @@
         </div>
         <div class="fp-controls">
             <button class="fp-btn" id="fpRewindBtn" title="Предыдущая станция">
-    <i class="fas fa-backward"></i>
-</button>
-<button class="fp-btn primary" id="fpPlayBtn" title="Играть/Пауза">
-    <i class="fas fa-play" id="fpPlayIcon"></i>
-</button>
-<button class="fp-btn" id="fpForwardBtn" title="Следующая станция">
-    <i class="fas fa-forward"></i>
-</button>
+                <i class="fas fa-backward"></i>
+            </button>
+            <button class="fp-btn primary" id="fpPlayBtn" title="Играть/Пауза">
+                <i class="fas fa-play" id="fpPlayIcon"></i>
+            </button>
+            <button class="fp-btn" id="fpForwardBtn" title="Следующая станция">
+                <i class="fas fa-forward"></i>
+            </button>
             <div class="fp-volume">
                 <i class="fas fa-volume-up" id="fpVolumeIcon"></i>
                 <input type="range" class="fp-volume-slider" id="fpVolumeSlider" min="0" max="1" step="0.01" value="0.8">
@@ -1431,6 +1554,240 @@
             return "UTC";
         }
 
+        // ================================================================
+        // ==================== ВИЗУАЛИЗАЦИЯ РАДИО ========================
+        // ================================================================
+        const VizEngine = (function () {
+            const CACHE_PREFIX = 'ge_viz_cache_';
+            const CACHE_TTL = 1000 * 60 * 60 * 24;
+            const ROTATE_MS = 9000;
+            const PRELOAD_AHEAD = 3;
+
+            let active = false;
+            let currentCountry = null;
+            let timer = null;
+            let layerA = null, layerB = null;
+            let activeLayer = 'A';
+            let seenUrls = new Set();
+            let queue = [];
+            let fetching = false;
+            let captionEl = null;
+            let spinnerEl = null;
+
+            const QUERY_TEMPLATES = [
+                c => ({ q: `Nature of ${c}`,            cap: `🌿 Природа · ${c}` }),
+                c => ({ q: `${c} landscape mountains`,  cap: `⛰ Пейзажи · ${c}` }),
+                c => ({ q: `${c} city skyline`,         cap: `🌆 Города · ${c}` }),
+                c => ({ q: `${c} cultural landmark`,    cap: `🏛 Достопримечательности · ${c}` }),
+                c => ({ q: `${c} traditional food`,     cap: `🍽 Кухня · ${c}` }),
+                c => ({ q: `Wildlife of ${c}`,          cap: `🦌 Дикая природа · ${c}` }),
+                c => ({ q: `${c} architecture historic`,cap: `🏰 Архитектура · ${c}` }),
+                c => ({ q: `${c} people traditions`,    cap: `🎭 Традиции · ${c}` }),
+                c => ({ q: `${c} national park`,        cap: `🌳 Национальные парки · ${c}` }),
+                c => ({ q: `${c} sunset coast`,         cap: `🌅 Побережье · ${c}` })
+            ];
+
+            function cacheGet(key) {
+                try {
+                    const raw = sessionStorage.getItem(CACHE_PREFIX + key);
+                    if (!raw) return null;
+                    const obj = JSON.parse(raw);
+                    if (Date.now() - obj.t > CACHE_TTL) {
+                        sessionStorage.removeItem(CACHE_PREFIX + key);
+                        return null;
+                    }
+                    return obj.d;
+                } catch { return null; }
+            }
+            function cacheSet(key, data) {
+                try {
+                    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ t: Date.now(), d: data }));
+                } catch {}
+            }
+
+            async function searchWikimedia(query, width = 1600) {
+                const cacheKey = 'wm_' + query + '_' + width;
+                const cached = cacheGet(cacheKey);
+                if (cached) return cached;
+
+                const params = new URLSearchParams({
+                    action: 'query',
+                    format: 'json',
+                    origin: '*',
+                    generator: 'search',
+                    gsrsearch: `filetype:bitmap ${query}`,
+                    gsrnamespace: '6',
+                    gsrlimit: '20',
+                    prop: 'imageinfo',
+                    iiprop: 'url|extmetadata',
+                    iiurlwidth: width
+                });
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                try {
+                    const r = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`,
+                                          { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const data = await r.json();
+                    const pages = Object.values(data.query?.pages || {});
+                    if (!pages.length) throw new Error('empty');
+
+                    const results = pages
+                        .map(p => {
+                            const info = p.imageinfo?.[0];
+                            if (!info) return null;
+                            const url = info.thumburl || info.url;
+                            const meta = info.extmetadata || {};
+                            const title = p.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, '');
+                            const author = (meta.Artist?.value || '').replace(/<[^>]+>/g, '').trim();
+                            return { url, title, author, source: 'Wikimedia Commons' };
+                        })
+                        .filter(Boolean);
+
+                    if (!results.length) throw new Error('no images');
+                    cacheSet(cacheKey, results);
+                    return results;
+                } catch (e) {
+                    clearTimeout(timeoutId);
+                    const picsum = [];
+                    for (let i = 0; i < 10; i++) {
+                        picsum.push({
+                            url: `https://picsum.photos/seed/${encodeURIComponent(query)}_${i}/1600/900`,
+                            title: 'Random photography',
+                            author: 'Picsum',
+                            source: 'Picsum'
+                        });
+                    }
+                    return picsum;
+                }
+            }
+
+            async function fetchNext(country) {
+                for (let attempt = 0; attempt < 5; attempt++) {
+                    const tpl = QUERY_TEMPLATES[Math.floor(Math.random() * QUERY_TEMPLATES.length)](country);
+                    const list = await searchWikimedia(tpl.q);
+                    const fresh = list.filter(x => !seenUrls.has(x.url));
+                    if (fresh.length) {
+                        const pick = fresh[Math.floor(Math.random() * fresh.length)];
+                        return { ...pick, caption: tpl.cap };
+                    }
+                }
+                seenUrls.clear();
+                return null;
+            }
+
+            async function fillQueue() {
+                if (fetching || queue.length >= PRELOAD_AHEAD) return;
+                fetching = true;
+                try {
+                    while (queue.length < PRELOAD_AHEAD) {
+                        const img = await fetchNext(currentCountry);
+                        if (!img) break;
+                        await new Promise(res => {
+                            const im = new Image();
+                            im.onload = im.onerror = () => res();
+                            im.src = img.url;
+                        });
+                        seenUrls.add(img.url);
+                        queue.push(img);
+                    }
+                } finally {
+                    fetching = false;
+                }
+            }
+
+            function showImage(item) {
+                const layer = activeLayer === 'A' ? layerB : layerA;
+                const otherLayer = activeLayer === 'A' ? layerA : layerB;
+
+                layer.style.backgroundImage = `url("${item.url}")`;
+                layer.style.transition = 'none';
+                layer.style.transform = 'scale(1.02)';
+                layer.classList.remove('active');
+
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        layer.style.transition = '';
+                        layer.classList.add('active');
+                        otherLayer.classList.remove('active');
+                        activeLayer = activeLayer === 'A' ? 'B' : 'A';
+                    });
+                });
+
+                if (captionEl) {
+                    captionEl.classList.remove('ready');
+                    const author = item.author ? ` · ${item.author}` : '';
+                    captionEl.textContent = (item.caption || item.title) + author;
+                    setTimeout(() => captionEl.classList.add('ready'), 300);
+                }
+            }
+
+            async function tick() {
+                if (!active) return;
+                if (!queue.length) {
+                    if (spinnerEl) spinnerEl.classList.add('active');
+                    await fillQueue();
+                    if (spinnerEl) spinnerEl.classList.remove('active');
+                }
+                if (!active) return;
+                const item = queue.shift();
+                if (item) showImage(item);
+                fillQueue();
+            }
+
+            return {
+                start(country) {
+                    if (!country) return;
+                    this.stop();
+                    active = true;
+                    currentCountry = country;
+                    seenUrls.clear();
+                    queue = [];
+                    activeLayer = 'A';
+
+                    layerA = document.getElementById('vizLayerA');
+                    layerB = document.getElementById('vizLayerB');
+                    captionEl = document.getElementById('vizCaption');
+
+                    const container = document.getElementById('vizContainer');
+                    if (!container) return;
+
+                    spinnerEl = container.querySelector('.viz-spinner');
+                    if (!spinnerEl) {
+                        spinnerEl = document.createElement('div');
+                        spinnerEl.className = 'viz-spinner';
+                        container.appendChild(spinnerEl);
+                    }
+                    spinnerEl.classList.add('active');
+                    container.style.display = 'block';
+
+                    (async () => {
+                        await fillQueue();
+                        spinnerEl.classList.remove('active');
+                        const first = queue.shift();
+                        if (first) showImage(first);
+                        fillQueue();
+                        timer = setInterval(tick, ROTATE_MS);
+                    })();
+                },
+
+                stop() {
+                    active = false;
+                    if (timer) { clearInterval(timer); timer = null; }
+                    const container = document.getElementById('vizContainer');
+                    if (container) container.style.display = 'none';
+                    if (layerA) layerA.classList.remove('active');
+                    if (layerB) layerB.classList.remove('active');
+                    if (captionEl) { captionEl.classList.remove('ready'); captionEl.textContent = ''; }
+                },
+
+                isActive() { return active; }
+            };
+        })();
+
         // ====== МЕХАНИЧЕСКИЕ ЧАСЫ ======
         let clockInterval = null;
         let currentClockTimezone = null;
@@ -1533,7 +1890,6 @@
             }
         }
 
-        // ====== УПРАВЛЕНИЕ КАСТОМНЫМ ПЛЕЕРОМ ======
         const cpPlayer = document.getElementById("customPlayer");
         const cpAudio = new Audio();
         cpAudio.id = "radioAudio";
@@ -1584,14 +1940,14 @@
         });
 
         cpRewindBtn.addEventListener("click", function() {
-    if (!radioStations.length) return;
-    playRadioStation(radioCurrentIndex - 1);
-});
+            if (!radioStations.length) return;
+            playRadioStation(radioCurrentIndex - 1);
+        });
 
-cpForwardBtn.addEventListener("click", function() {
-    if (!radioStations.length) return;
-    playRadioStation(radioCurrentIndex + 1);
-});
+        cpForwardBtn.addEventListener("click", function() {
+            if (!radioStations.length) return;
+            playRadioStation(radioCurrentIndex + 1);
+        });
 
         cpProgressWrap.addEventListener("click", function(e) {
             if (!cpAudio.duration || !isFinite(cpAudio.duration)) return;
@@ -1660,14 +2016,14 @@ cpForwardBtn.addEventListener("click", function() {
         });
 
         fpRewindBtn.addEventListener("click", function() {
-    if (!radioStations.length) return;
-    playRadioStation(radioCurrentIndex - 1);
-});
+            if (!radioStations.length) return;
+            playRadioStation(radioCurrentIndex - 1);
+        });
 
-fpForwardBtn.addEventListener("click", function() {
-    if (!radioStations.length) return;
-    playRadioStation(radioCurrentIndex + 1);
-});
+        fpForwardBtn.addEventListener("click", function() {
+            if (!radioStations.length) return;
+            playRadioStation(radioCurrentIndex + 1);
+        });
 
         fpProgressWrap.addEventListener("click", function(e) {
             if (!cpAudio.duration || !isFinite(cpAudio.duration)) return;
@@ -1688,7 +2044,6 @@ fpForwardBtn.addEventListener("click", function() {
             floatingPlayer.classList.add("visible");
         }
 
-        // ====== ЗАПУСК СТАНЦИИ ======
         function playRadioStation(index) {
             if (!radioStations.length) return;
             if (index < 0) index = radioStations.length - 1;
@@ -1730,6 +2085,11 @@ fpForwardBtn.addEventListener("click", function() {
             };
 
             updateFavButtonState();
+
+            // Обновить визуализацию под новую страну/станцию
+            if (VizEngine.isActive() && radioCurrentCountry) {
+                VizEngine.start(radioCurrentCountry);
+            }
         }
 
         async function startRadioForCountry(countryName) {
@@ -1768,6 +2128,9 @@ fpForwardBtn.addEventListener("click", function() {
             const favBtn = document.getElementById('radioFavBtn');
             if (favBtn) favBtn.style.display = 'none';
             floatingPlayer.classList.remove("visible");
+            VizEngine.stop();
+            const vizBtn = document.getElementById('vizToggleBtn');
+            if (vizBtn) vizBtn.classList.remove('active-viz');
         }
 
         // ====== ИЗБРАННЫЕ РАДИОСТАНЦИИ ======
@@ -1952,6 +2315,33 @@ fpForwardBtn.addEventListener("click", function() {
             }, 2200);
         }
 
+        // ====== ПРИВЯЗКА ВИЗУАЛИЗАЦИИ (обработчики) ======
+        const vizToggleBtn = document.getElementById('vizToggleBtn');
+        vizToggleBtn.addEventListener('click', function() {
+            if (VizEngine.isActive()) {
+                VizEngine.stop();
+                this.classList.remove('active-viz');
+                showFavToast('🖼 Визуализация выключена');
+            } else {
+                if (!radioCurrentCountry) {
+                    showFavToast('⚠ Сначала включите радио');
+                    return;
+                }
+                VizEngine.start(radioCurrentCountry);
+                this.classList.add('active-viz');
+                showFavToast('🖼 Визуализация включена');
+            }
+        });
+
+        const vizCloseBtn = document.getElementById('vizClose');
+        if (vizCloseBtn) {
+            vizCloseBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                VizEngine.stop();
+                vizToggleBtn.classList.remove('active-viz');
+            });
+        }
+
         // ====== AMCHARTS GLOBE ======
         am5.ready(function () {
             let root = am5.Root.new("chartdiv");
@@ -1986,7 +2376,6 @@ fpForwardBtn.addEventListener("click", function() {
                 cursorOverStyle: "pointer"
             });
 
-            // Гарантированная раскраска через адаптер — работает поверх любой темы
             polygonTemplate.adapters.add("fill", function(fill, target) {
                 const ctx = target.dataItem && target.dataItem.dataContext;
                 const name = ctx && ctx.name;
@@ -1994,7 +2383,6 @@ fpForwardBtn.addEventListener("click", function() {
                 return am5.color(colorForCountry(name));
             });
 
-            // Храним базовый и hover-цвет для каждого полигона
             polygonSeries.events.on("datavalidated", function() {
                 polygonSeries.mapPolygons.each(function(polygon) {
                     const di = polygon.dataItem;
@@ -2080,7 +2468,6 @@ fpForwardBtn.addEventListener("click", function() {
                 currentCountryForModal = null;
                 isTimeMode = false;
                 stopClock();
-                // НЕ останавливаем радио — оно продолжает играть в мини-плеере!
             }
 
             function clearPendingState(resetStatusToDefault) {
@@ -2222,7 +2609,6 @@ fpForwardBtn.addEventListener("click", function() {
                 }
             });
 
-            // ====== КНОПКИ МОДАЛКИ ======
             document.getElementById("modalTimeBtn").addEventListener("click", function () {
                 if (currentCountryForModal) {
                     const tz = getTimezoneForCountry(currentCountryForModal);
@@ -2290,8 +2676,6 @@ fpForwardBtn.addEventListener("click", function() {
                 }
             });
 
-            
-
             document.getElementById("radioFavBtn").addEventListener("click", function () {
                 if (!radioStations.length) return;
                 const current = radioStations[radioCurrentIndex];
@@ -2332,7 +2716,6 @@ fpForwardBtn.addEventListener("click", function() {
                 clockActions.style.display = 'none';
                 modalActions.style.display = 'flex';
                 stopClock();
-                // НЕ трогаем радио — пусть играет в мини-плеере
                 modalSubInfo.textContent = "Choose what you want to see";
             });
 
@@ -2341,7 +2724,6 @@ fpForwardBtn.addEventListener("click", function() {
                 hideModal();
                 statusSpan.innerHTML = DEFAULT_STATUS;
                 statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
-                // Радио остаётся в мини-плеере
             });
 
             modalOverlay.addEventListener("click", function (e) {
@@ -2357,7 +2739,6 @@ fpForwardBtn.addEventListener("click", function() {
                 }
             });
 
-            // ====== УПРАВЛЕНИЕ ГЛОБУСОМ ======
             const toggleBtn = document.getElementById("toggleRotation");
             toggleBtn.addEventListener("click", function () {
                 if (rotationAnimation && !rotationAnimation.isStopped()) {
@@ -2395,7 +2776,6 @@ fpForwardBtn.addEventListener("click", function() {
                 }, 2800);
             });
 
-            // ====== SHARE ======
             function getShareUrl() { return window.location.href; }
             const shareText = "Global Explorer: click any country twice — choose News, Wikipedia, Local Time or Radio! Interactive 3D globe. 🌐📰📖🕐📻";
             const currentUrl = encodeURIComponent(getShareUrl());
