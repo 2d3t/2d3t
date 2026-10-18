@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>World Radio Explorer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; background: #0a0a0a; color: #fff; }
+
+#app { position: relative; height: 100%; width: 100%; overflow: hidden; }
+
+/* ================= ГЛАВНЫЙ ЭКРАН ================= */
+#mainScreen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  overflow-y: auto;
+  transition: opacity 0.4s;
+}
+
+header { padding: 24px 20px 12px; text-align: center; }
+header h1 {
+  font-size: 22px; font-weight: 700; letter-spacing: 1px;
+  background: linear-gradient(90deg, #ffd86f, #fc6262);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header p { font-size: 12px; opacity: 0.6; margin-top: 4px; }
+
+#playBtn {
+  margin: 20px auto; padding: 20px 36px;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border: none; border-radius: 60px;
+  color: #fff; font-size: 18px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 8px 30px rgba(238, 90, 36, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+#playBtn:active { transform: scale(0.95); }
+#playBtn .icon { font-size: 24px; }
+
+.section-title {
+  padding: 20px 20px 10px; font-size: 14px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.section-title .count {
+  background: rgba(255,255,255,0.12); padding: 2px 10px; border-radius: 20px;
+  font-size: 12px; letter-spacing: 0;
+}
+
+#favoritesList {
+  padding: 0 16px 40px;
+  display: grid; grid-template-columns: 1fr; gap: 10px;
+}
+
+.fav-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px; border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: background 0.2s, transform 0.1s;
+  user-select: none;
+}
+.fav-card:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
+.fav-card .flag { font-size: 32px; flex-shrink: 0; }
+.fav-card .info { flex: 1; min-width: 0; }
+.fav-card .name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-card .sub { font-size: 12px; opacity: 0.5; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-card .play-mini {
+  font-size: 18px; width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%; background: rgba(238,90,36,0.8);
+  display: flex; align-items: center; justify-content: center;
+}
+.fav-empty {
+  text-align: center; padding: 30px 20px; opacity: 0.4;
+  font-size: 14px; line-height: 1.6;
+}
+
+/* ================= ЭКРАН ВИЗУАЛИЗАЦИИ ================= */
+#vizScreen {
+  position: absolute; inset: 0; display: none;
+  background: #000; overflow: hidden;
+  z-index: 100;
+}
+
+#bgLayer, #bgLayerNext {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  transition: opacity 1.4s ease-in-out, transform 16s linear;
+  opacity: 0; transform: scale(1.02);
+  will-change: opacity, transform;
+}
+#bgLayer.visible, #bgLayerNext.visible { opacity: 1; transform: scale(1.14); }
+
+#bgLayer { z-index: 1; }
+#bgLayerNext { z-index: 2; }
+
+#overlayGrad {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.85) 100%);
+}
+
+#vizContent {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+#topBar {
+  padding: max(20px, env(safe-area-inset-top)) 20px 0;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 10px;
+}
+
+#countryName {
+  font-size: 28px; font-weight: 800; letter-spacing: 1px;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+  pointer-events: auto;
+  transition: opacity 0.5s;
+  min-width: 0;
+}
+#countryName .flag { display: block; font-size: 40px; margin-bottom: 6px; }
+#countryName .sub-station {
+  font-size: 12px; font-weight: 400; opacity: 0.75; margin-top: 6px;
+  letter-spacing: 0.5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 80vw;
+}
+
+/* Кнопки в топбаре (♥ всегда видна, остальное — выезжает) */
+#topButtons {
+  display: flex; gap: 10px; flex-shrink: 0;
+}
+
+#randomCountryBtn,
+#nextStationBtn,
+#heartBtn {
+  width: 52px; height: 52px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; pointer-events: auto;
+  transition: transform 0.2s, background 0.2s, opacity 0.25s, visibility 0.25s;
+}
+#heartBtn { font-size: 24px; }
+#randomCountryBtn:active,
+#nextStationBtn:active,
+#heartBtn:active { transform: scale(0.85); }
+#heartBtn.liked { color: #ff4757; }
+#randomCountryBtn { background: rgba(124, 58, 237, 0.65); }
+#randomCountryBtn:active { background: rgba(124, 58, 237, 0.9); }
+
+/* Скрытие второстепенных кнопок, когда панель убрана */
+#nextStationBtn, #randomCountryBtn {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.2s, background 0.2s, opacity 0.3s, visibility 0.3s;
+}
+#vizScreen.ui-visible #nextStationBtn,
+#vizScreen.ui-visible #randomCountryBtn {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+#bottomBar {
+  padding: 0 20px max(24px, env(safe-area-inset-bottom)) 20px;
+  pointer-events: auto;
+}
+
+#visualizer {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 4px; height: 40px; margin-bottom: 14px;
+}
+#visualizer .bar {
+  width: 4px; background: rgba(255,255,255,0.85);
+  border-radius: 2px; height: 6px;
+  transition: height 0.1s;
+}
+
+#statusLine {
+  text-align: center; font-size: 12px; opacity: 0.8;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #2ed573; animation: pulse 1.5s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+#vizCaption {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none;
+}
+#vizCaption.ready { opacity: 0.95; }
+
+/* ====== ПАНЕЛЬ ТЕМАТИКИ (выезжает вместе с крестиком) ====== */
+#themePanel {
+  position: absolute;
+  left: 50%;
+  bottom: max(90px, calc(env(safe-area-inset-bottom) + 80px));
+  transform: translateX(-50%) translateY(20px);
+  z-index: 15;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(10, 12, 20, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 40px;
+  border: 1px solid rgba(255,255,255,0.12);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+}
+#vizScreen.ui-visible #themePanel {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.theme-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  pointer-events: auto;
+  padding: 0;
+}
+.theme-btn:active { transform: scale(0.9); }
+.theme-btn.active {
+  background: rgba(255, 175, 60, 0.85);
+  border-color: rgba(255, 200, 100, 0.9);
+  box-shadow: 0 0 16px rgba(255, 175, 60, 0.4);
+}
+
+/* Кнопка закрытия (крестик) */
+#closeBtn {
+  position: absolute; top: max(20px, env(safe-area-inset-top)); right: 216px;
+transform: none;
+  z-index: 20; width: 56px; height: 56px;
+  border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff; font-size: 26px; line-height: 1;
+  display: none; align-items: center; justify-content: center;
+  cursor: pointer; transition: opacity 0.25s, transform 0.25s;
+  opacity: 0; border: 1px solid rgba(255,255,255,0.2);
+}
+#closeBtn.show { display: flex; opacity: 1; }
+#closeBtn:active { transform: translateX(-50%) translateX(-140px) scale(0.88); }
+
+/* Лоадер */
+#loader {
+  position: absolute; inset: 0; z-index: 10;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+}
+#loader.show { display: flex; }
+.spinner {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: #ff6b6b;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Тост */
+#toast {
+  position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: rgba(30,30,40,0.95); backdrop-filter: blur(10px);
+  padding: 12px 24px; border-radius: 30px; font-size: 14px;
+  z-index: 999; opacity: 0; transition: all 0.35s; pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;
+  max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* Десктоп адаптация */
+@media (min-width: 768px) {
+  #favoritesList { grid-template-columns: repeat(2, 1fr); max-width: 720px; margin: 0 auto; width: 100%; }
+  header h1 { font-size: 28px; }
+  #countryName { font-size: 40px; }
+  #countryName .flag { font-size: 56px; }
+  #playBtn { font-size: 20px; padding: 22px 48px; }
+  #mainScreen { padding-bottom: 20px; }
+  #vizCaption { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ ГЛАВНЫЙ ЭКРАН ============ -->
+  <div id="mainScreen">
+    <header>
+      <h1>🌍 World Radio Explorer</h1>
+      <p>Слушай мир — путешествуй глазами</p>
+    </header>
+
+    <button id="playBtn">
+      <span class="icon">🎲</span>
+      <span>Включить случайную страну</span>
+    </button>
+
+    <div class="section-title">
+      <span>❤️ Избранное</span>
+      <span class="count" id="favCount">0</span>
+    </div>
+    <div id="favoritesList"></div>
+  </div>
+
+  <!-- ============ ЭКРАН ВИЗУАЛИЗАЦИИ ============ -->
+  <div id="vizScreen">
+    <div id="bgLayer"></div>
+    <div id="bgLayerNext"></div>
+    <div id="overlayGrad"></div>
+
+    <div id="vizContent">
+      <div id="topBar">
+        <div id="countryName">
+          <span class="flag">🏳️</span>
+          <span class="name-text">Загрузка...</span>
+          <div class="sub-station" id="stationName"></div>
+        </div>
+        <div id="topButtons">
+          <button id="randomCountryBtn" title="Случайная страна">🎲</button>
+          <button id="nextStationBtn" title="Следующая станция">⏭</button>
+          <button id="heartBtn" title="В избранное">♡</button>
+        </div>
+      </div>
+
+      <div id="bottomBar">
+        <div id="visualizer"></div>
+        <div id="statusLine">
+          <span class="dot"></span>
+          <span id="statusText">Подключение к радио...</span>
+        </div>
+        <div id="vizCaption"></div>
+      </div>
+    </div>
+
+    <button id="closeBtn">✕</button>
+
+    <div id="themePanel">
+      <button class="theme-btn" data-theme="architecture" title="Архитектура">🏙</button>
+      <button class="theme-btn" data-theme="nature" title="Природа">🌿</button>
+      <button class="theme-btn" data-theme="mix" title="Микс">🎨</button>
+    </div>
+
+    <div id="loader"><div class="spinner"></div></div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   БАЗА СТРАН
+   ============================================================ */
+
+const COUNTRIES = [
+  { code:'JP', name:'Япония', flag:'🇯🇵', seed:'japan-tokyo-sakura' },
+  { code:'FR', name:'Франция', flag:'🇫🇷', seed:'france-paris-eiffel' },
+  { code:'IT', name:'Италия', flag:'🇮🇹', seed:'italy-rome-colosseum' },
+  { code:'BR', name:'Бразилия', flag:'🇧🇷', seed:'brazil-rio-carnival' },
+  { code:'US', name:'США', flag:'🇺🇸', seed:'usa-newyork-skyline' },
+  { code:'GB', name:'Великобритания', flag:'🇬🇧', seed:'uk-london-bigben' },
+  { code:'DE', name:'Германия', flag:'🇩🇪', seed:'germany-berlin-brandenburg' },
+  { code:'ES', name:'Испания', flag:'🇪🇸', seed:'spain-barcelona-sagrada' },
+  { code:'MX', name:'Мексика', flag:'🇲🇽', seed:'mexico-city-cathedral' },
+  { code:'IN', name:'Индия', flag:'🇮🇳', seed:'india-tajmahal-agra' },
+  { code:'CN', name:'Китай', flag:'🇨🇳', seed:'china-greatwall-beijing' },
+  { code:'RU', name:'Россия', flag:'🇷🇺', seed:'russia-moscow-kremlin' },
+  { code:'AU', name:'Австралия', flag:'🇦🇺', seed:'australia-sydney-opera' },
+  { code:'CA', name:'Канада', flag:'🇨🇦', seed:'canada-toronto-cn-tower' },
+  { code:'EG', name:'Египет', flag:'🇪🇬', seed:'egypt-pyramids-cairo' },
+  { code:'TR', name:'Турция', flag:'🇹🇷', seed:'turkey-istanbul-mosque' },
+  { code:'TH', name:'Таиланд', flag:'🇹🇭', seed:'thailand-bangkok-temple' },
+  { code:'GR', name:'Греция', flag:'🇬🇷', seed:'greece-athens-acropolis' },
+  { code:'ZA', name:'ЮАР', flag:'🇿🇦', seed:'southafrica-capetown-table' },
+  { code:'AR', name:'Аргентина', flag:'🇦🇷', seed:'argentina-buenosaires-obelisk' },
+  { code:'KR', name:'Южная Корея', flag:'🇰🇷', seed:'korea-seoul-palace' },
+  { code:'SE', name:'Швеция', flag:'🇸🇪', seed:'sweden-stockholm-gamla' },
+  { code:'NO', name:'Норвегия', flag:'🇳🇴', seed:'norway-fjord-oslo' },
+  { code:'NL', name:'Нидерланды', flag:'🇳🇱', seed:'netherlands-amsterdam-canals' },
+  { code:'PT', name:'Португалия', flag:'🇵🇹', seed:'portugal-lisbon-tram' },
+  { code:'CH', name:'Швейцария', flag:'🇨🇭', seed:'switzerland-alps-matterhorn' },
+  { code:'AT', name:'Австрия', flag:'🇦🇹', seed:'austria-vienna-palace' },
+  { code:'PL', name:'Польша', flag:'🇵🇱', seed:'poland-krakow-oldtown' },
+  { code:'CZ', name:'Чехия', flag:'🇨🇿', seed:'czech-prague-charlesbridge' },
+  { code:'IS', name:'Исландия', flag:'🇮🇸', seed:'iceland-reykjavik-aurora' },
+  { code:'NZ', name:'Новая Зеландия', flag:'🇳🇿', seed:'newzealand-milford-sound' },
+  { code:'VN', name:'Вьетнам', flag:'🇻🇳', seed:'vietnam-halong-bay' },
+  { code:'ID', name:'Индонезия', flag:'🇮🇩', seed:'indonesia-bali-temple' },
+  { code:'MA', name:'Марокко', flag:'🇲🇦', seed:'morocco-marrakech-market' },
+  { code:'KE', name:'Кения', flag:'🇰🇪', seed:'kenya-safari-savanna' },
+  { code:'PE', name:'Перу', flag:'🇵🇪', seed:'peru-machupicchu-andes' },
+  { code:'CU', name:'Куба', flag:'🇨🇺', seed:'cuba-havana-malecon' },
+  { code:'UA', name:'Украина', flag:'🇺🇦', seed:'ukraine-kyiv-sophia' },
+];
+
+/* ============================================================
+   ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+   ============================================================ */
+
+const $ = s => document.querySelector(s);
+const toastEl = $('#toast');
+let toastTimer;
+
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+/* ============================================================
+   ТЕМА ВИЗУАЛИЗАЦИИ (архитектура / природа / микс)
+   ============================================================ */
+
+const THEME_KEY = 'vizTheme';
+let currentTheme = 'architecture';
+try {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === 'architecture' || saved === 'nature' || saved === 'mix') currentTheme = saved;
+} catch(e){}
+
+function saveTheme(t) {
+  try { localStorage.setItem(THEME_KEY, t); } catch(e){}
+}
+
+function applyThemeUI() {
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === currentTheme);
+  });
+}
+
+/* ============================================================
+   СОСТОЯНИЕ
+   ============================================================ */
+
+let favorites = [];
+try { favorites = JSON.parse(localStorage.getItem('radioFavs') || '[]'); } catch(e){}
+
+let currentCountry = null;
+
+let audio = new Audio();
+audio.crossOrigin = 'anonymous';
+audio.preload = 'auto';
+
+let stationList = [];
+let stationIndex = 0;
+let stationPlaying = false;
+
+let uiVisible = false;
+let loadTimeout = null;
+let vizBars = [];
+
+/* ============================================================
+   ИЗБРАННОЕ (страны)
+   ============================================================ */
+
+function saveFavorites() {
+  try { localStorage.setItem('radioFavs', JSON.stringify(favorites)); } catch(e){}
+}
+
+function isFavorite(code) { return favorites.includes(code); }
+
+function toggleFavorite(code) {
+  if (isFavorite(code)) favorites = favorites.filter(c => c !== code);
+  else favorites.push(code);
+  saveFavorites();
+  renderFavorites();
+  updateHeart();
+}
+
+function updateHeart() {
+  const btn = $('#heartBtn');
+  if (currentCountry && isFavorite(currentCountry.code)) {
+    btn.classList.add('liked');
+    btn.textContent = '♥';
+  } else {
+    btn.classList.remove('liked');
+    btn.textContent = '♡';
+  }
+}
+
+function renderFavorites() {
+  const list = $('#favoritesList');
+  const favCountries = favorites
+    .map(code => COUNTRIES.find(c => c.code === code))
+    .filter(Boolean);
+
+  $('#favCount').textContent = favCountries.length;
+
+  if (favCountries.length === 0) {
+    list.innerHTML = '<div class="fav-empty">Пока пусто.<br>Включи случайную страну и добавь её в избранное ♥</div>';
+    return;
+  }
+
+  list.innerHTML = favCountries.map(c => `
+    <div class="fav-card" data-code="${c.code}">
+      <span class="flag">${c.flag}</span>
+      <div class="info">
+        <div class="name">${c.name}</div>
+        <div class="sub">${c.code}</div>
+      </div>
+      <div class="play-mini">▶</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.fav-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const country = COUNTRIES.find(c => c.code === card.dataset.code);
+      if (country) openCountry(country);
+    });
+  });
+}
+
+/* ============================================================
+   РАДИО
+   ============================================================ */
+
+async function fetchRadioStations(country) {
+  const code = country.code;
+  const cacheKey = 'radioStations_' + code;
+  try {
+    const raw = sessionStorage.getItem(cacheKey);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) return arr;
+    }
+  } catch(e){}
+
+  try {
+    const url = `https://de1.api.radio-browser.info/json/stations/bycountrycodeexact/${code}?limit=40&hidebroken=true&order=clickcount&reverse=true`;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 9000);
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const list = (data || [])
+      .filter(s => s.url_resolved && s.name && s.name.trim())
+      .map(s => ({
+        name: s.name.trim(),
+        url: s.url_resolved,
+        codec: s.codec || '?',
+        bitrate: s.bitrate || 0,
+        country: country.name,
+        flag: country.flag
+      }));
+    if (list.length) {
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(list)); } catch(e){}
+    }
+    return list;
+  } catch(e) {
+    console.warn('Radio fetch error:', e);
+    return [];
+  }
+}
+
+function tryPlayStationAt(idx, onFailMoveNext) {
+  if (!stationList.length) {
+    if (onFailMoveNext) onFailMoveNext();
+    return;
+  }
+  stationIndex = ((idx % stationList.length) + stationList.length) % stationList.length;
+  const st = stationList[stationIndex];
+
+  $('#stationName').textContent = st.name || '';
+
+  if (loadTimeout) { clearTimeout(loadTimeout); loadTimeout = null; }
+  audio.oncanplay = null;
+  audio.onerror = null;
+  audio.onplaying = null;
+
+  try { audio.pause(); } catch(e){}
+  audio.removeAttribute('src');
+  audio.src = st.url;
+  audio.load();
+
+  let hasStarted = false;
+
+  const fail = () => {
+    if (hasStarted) return;
+    hasStarted = true;
+    clearTimeout(loadTimeout);
+    audio.onplaying = null;
+    audio.onerror = null;
+    audio.oncanplay = null;
+    stationPlaying = false;
+    stopVisualizer();
+    if (onFailMoveNext) onFailMoveNext();
+  };
+
+  audio.onplaying = () => {
+    if (hasStarted) return;
+    hasStarted = true;
+    clearTimeout(loadTimeout);
+    audio.onerror = null;
+    audio.oncanplay = null;
+    stationPlaying = true;
+    $('#loader').classList.remove('show');
+    $('#statusText').textContent = 'В эфире: ' + st.name;
+    startVisualizer();
+  };
+
+  audio.onerror = fail;
+  audio.oncanplay = () => {
+    audio.play().catch(fail);
+  };
+
+  loadTimeout = setTimeout(() => {
+    if (!hasStarted) fail();
+  }, 8000);
+}
+
+async function startRadioForCountry(country) {
+  stationList = [];
+  stationIndex = 0;
+  stationPlaying = false;
+  stopVisualizer();
+  $('#statusText').textContent = 'Поиск радиостанций...';
+
+  stationList = await fetchRadioStations(country);
+
+  if (!stationList.length) {
+    $('#loader').classList.remove('show');
+    $('#statusText').textContent = 'Радио недоступно — ищем другую страну';
+    toast('⚠️ Нет станций, ищем другую страну');
+    setTimeout(() => openRandomCountry(country.code), 600);
+    return;
+  }
+
+  tryPlayStationAt(0, () => {
+    tryPlayStationAt(stationIndex + 1, () => {
+      $('#statusText').textContent = 'Все станции недоступны — ищем другую страну';
+      setTimeout(() => openRandomCountry(country.code), 600);
+    });
+  });
+}
+
+function nextStation() {
+  if (!stationList.length) {
+    openRandomCountry(currentCountry ? currentCountry.code : null);
+    return;
+  }
+  if (stationIndex + 1 >= stationList.length) {
+    toast('🔀 Станции закончились — другая страна');
+    openRandomCountry(currentCountry ? currentCountry.code : null);
+    return;
+  }
+  tryPlayStationAt(stationIndex + 1, () => {
+    if (stationIndex + 1 >= stationList.length) {
+      openRandomCountry(currentCountry ? currentCountry.code : null);
+    } else {
+      tryPlayStationAt(stationIndex + 1, () => openRandomCountry(currentCountry ? currentCountry.code : null));
+    }
+  });
+}
+
+function stopRadio() {
+  try { audio.pause(); } catch(e){}
+  audio.removeAttribute('src');
+  audio.load();
+  stopVisualizer();
+  clearTimeout(loadTimeout);
+  stationPlaying = false;
+}
+
+/* ============================================================
+   ВИЗУАЛИЗАЦИЯ-ПОЛОСКИ
+   ============================================================ */
+
+function buildVisualizer() {
+  const v = $('#visualizer');
+  v.innerHTML = '';
+  vizBars = [];
+  const count = window.innerWidth < 480 ? 24 : 40;
+  for (let i = 0; i < count; i++) {
+    const b = document.createElement('div');
+    b.className = 'bar';
+    v.appendChild(b);
+    vizBars.push(b);
+  }
+}
+
+let vizInterval = null;
+function startVisualizer() {
+  stopVisualizer();
+  vizInterval = setInterval(() => {
+    vizBars.forEach(b => {
+      const h = 6 + Math.random() * 34;
+      b.style.height = h + 'px';
+      b.style.opacity = 0.4 + Math.random() * 0.6;
+    });
+  }, 110);
+}
+function stopVisualizer() {
+  if (vizInterval) clearInterval(vizInterval);
+  vizInterval = null;
+  vizBars.forEach(b => { b.style.height = '6px'; b.style.opacity = '0.6'; });
+}
+
+/* ============================================================
+   ФОНОВЫЕ КАРТИНКИ (тема: архитектура / природа / микс)
+   ============================================================ */
+
+const VizEngine = (function () {
+  const CACHE_PREFIX = 'fg_viz_cache_';
+  const CACHE_TTL = 1000 * 60 * 60 * 24;
+  const PRELOAD_AHEAD = 3;
+
+  const ROTATE_FAST = 7000;
+  const ROTATE_MED  = 10000;
+  const ROTATE_SLOW = 14000;
+
+  const SIZE_FAST = 1600;
+  const SIZE_MED  = 1200;
+  const SIZE_SLOW = 800;
+
+  let active = false;
+  let country = null;
+  let timer = null;
+  let layerA = null, layerB = null;
+  let activeLayer = 'A';
+  let seenUrls = new Set();
+  let queue = [];
+  let fetching = false;
+  let captionEl = null;
+
+  let netTier = 'fast';
+  let rotateMs = ROTATE_FAST;
+  let targetSize = SIZE_FAST;
+  let loadTimes = [];
+
+  function detectInitialTier() {
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!c) return 'fast';
+    const et = c.effectiveType || '';
+    const dl = c.downlink || 10;
+    if (et.includes('2g') || dl < 1)   return 'slow';
+    if (et.includes('3g') || dl < 4)   return 'med';
+    return 'fast';
+  }
+
+  function applyTier(tier) {
+    if (tier === netTier) return;
+    netTier = tier;
+    if (tier === 'slow') { targetSize = SIZE_SLOW; rotateMs = ROTATE_SLOW; }
+    else if (tier === 'med') { targetSize = SIZE_MED; rotateMs = ROTATE_MED; }
+    else { targetSize = SIZE_FAST; rotateMs = ROTATE_FAST; }
+
+    if (active && timer) {
+      clearInterval(timer);
+      timer = setInterval(tick, rotateMs);
+    }
+  }
+
+  function evaluateSpeed(ms, ok) {
+    loadTimes.push(ok ? ms : 12000);
+    if (loadTimes.length > 5) loadTimes.shift();
+    const avg = loadTimes.reduce((a, b) => a + b, 0) / loadTimes.length;
+    if (avg > 6000)      applyTier('slow');
+    else if (avg > 2500) applyTier('med');
+    else                 applyTier('fast');
+  }
+
+  /* ===== ШАБЛОНЫ ПО ТЕМАМ ===== */
+  const ARCH_TEMPLATES = [
+    c => ({ q: `${c} modern architecture skyline skyscrapers`, cap: `🏙 Современная архитектура · ${c}` }),
+    c => ({ q: `${c} contemporary buildings design`,           cap: `🏗 Современные здания · ${c}` }),
+    c => ({ q: `${c} futuristic architecture city`,            cap: `🌐 Футуристичная архитектура · ${c}` }),
+    c => ({ q: `${c} city skyline night`,                     cap: `🌃 Ночной скайлайн · ${c}` }),
+    c => ({ q: `${c} glass tower skyscraper`,                 cap: `🏢 Небоскрёбы · ${c}` }),
+    c => ({ q: `${c} modern bridge architecture`,             cap: `🌉 Мосты · ${c}` }),
+    c => ({ q: `${c} modern cultural center building`,        cap: `🏛 Культурные центры · ${c}` }),
+    c => ({ q: `${c} urban cityscape aerial`,                 cap: `🌆 Городская панорама · ${c}` }),
+    c => ({ q: `${c} city skyline daytime`,                   cap: `🏙 Город днём · ${c}` }),
+    c => ({ q: `${c} modern museum building`,                 cap: `🖼 Современные музеи · ${c}` }),
+  ];
+
+  const NATURE_TEMPLATES = [
+    c => ({ q: `${c} beautiful landscape mountains`,          cap: `⛰ Пейзажи · ${c}` }),
+    c => ({ q: `Nature of ${c}`,                              cap: `🌿 Природа · ${c}` }),
+    c => ({ q: `${c} national park`,                          cap: `🌳 Национальные парки · ${c}` }),
+    c => ({ q: `${c} coastline sunset`,                       cap: `🌅 Побережье · ${c}` }),
+    c => ({ q: `Wildlife of ${c}`,                            cap: `🦌 Дикая природа · ${c}` }),
+    c => ({ q: `${c} forest nature`,                          cap: `🌲 Леса · ${c}` }),
+    c => ({ q: `${c} lakes rivers nature`,                    cap: `🏞 Реки и озёра · ${c}` }),
+    c => ({ q: `${c} flowers nature`,                         cap: `🌸 Цветы · ${c}` }),
+  ];
+
+  function pickTemplate() {
+    if (currentTheme === 'architecture') {
+      return ARCH_TEMPLATES[Math.floor(Math.random() * ARCH_TEMPLATES.length)];
+    }
+    if (currentTheme === 'nature') {
+      return NATURE_TEMPLATES[Math.floor(Math.random() * NATURE_TEMPLATES.length)];
+    }
+    // mix: 50/50
+    const arr = Math.random() < 0.5 ? ARCH_TEMPLATES : NATURE_TEMPLATES;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function cacheGet(key) {
+    try {
+      const raw = sessionStorage.getItem(CACHE_PREFIX + key);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (Date.now() - obj.t > CACHE_TTL) {
+        sessionStorage.removeItem(CACHE_PREFIX + key);
+        return null;
+      }
+      return obj.d;
+    } catch { return null; }
+  }
+  function cacheSet(key, data) {
+    try { sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ t: Date.now(), d: data })); } catch {}
+  }
+
+  function preloadImage(url, timeoutMs = 15000) {
+    return new Promise(resolve => {
+      const t0 = performance.now();
+      const img = new Image();
+      let done = false;
+      const finish = ok => {
+        if (done) return;
+        done = true;
+        resolve({ url, ms: performance.now() - t0, ok });
+      };
+      const to = setTimeout(() => finish(false), timeoutMs);
+      img.onload = () => { clearTimeout(to); finish(true); };
+      img.onerror = () => { clearTimeout(to); finish(false); };
+      img.src = url;
+    });
+  }
+
+  async function searchWikimedia(query, width) {
+    const cacheKey = 'wm_' + query + '_' + width;
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+
+    const params = new URLSearchParams({
+      action: 'query',
+      format: 'json',
+      origin: '*',
+      generator: 'search',
+      gsrsearch: `filetype:bitmap ${query}`,
+      gsrnamespace: '6',
+      gsrlimit: '20',
+      prop: 'imageinfo',
+      iiprop: 'url|extmetadata',
+      iiurlwidth: width
+    });
+
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 9000);
+
+    try {
+      const r = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      const pages = Object.values(data.query?.pages || {});
+      if (!pages.length) throw new Error('empty');
+
+      const results = pages.map(p => {
+        const info = p.imageinfo?.[0];
+        if (!info) return null;
+        const url = info.thumburl || info.url;
+        const meta = info.extmetadata || {};
+        const title = p.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, '');
+        const author = (meta.Artist?.value || '').replace(/<[^>]+>/g, '').trim();
+        return { url, title, author, source: 'Wikimedia Commons' };
+      }).filter(Boolean);
+
+      if (!results.length) throw new Error('no images');
+      cacheSet(cacheKey, results);
+      return results;
+    } catch(e) {
+      clearTimeout(tid);
+      const fallback = [];
+      for (let i = 0; i < 10; i++) {
+        fallback.push({
+          url: `https://picsum.photos/seed/${encodeURIComponent(query)}_${i}/800/450`,
+          title: 'Random photography',
+          author: 'Picsum',
+          source: 'Picsum'
+        });
+      }
+      return fallback;
+    }
+  }
+
+  async function fetchNextVerified() {
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const tpl = pickTemplate()(country.name);
+      const list = await searchWikimedia(tpl.q, targetSize);
+      const fresh = list.filter(x => !seenUrls.has(x.url));
+      if (!fresh.length) continue;
+
+      const tryCount = Math.min(3, fresh.length);
+      for (let i = 0; i < tryCount; i++) {
+        const pick = fresh[Math.floor(Math.random() * fresh.length)];
+        if (seenUrls.has(pick.url)) continue;
+        seenUrls.add(pick.url);
+
+        const res = await preloadImage(pick.url, 15000);
+        evaluateSpeed(res.ms, res.ok);
+
+        if (res.ok) {
+          return { ...pick, caption: tpl.cap };
+        }
+      }
+    }
+    return null;
+  }
+
+  async function fillQueue() {
+    if (fetching || queue.length >= PRELOAD_AHEAD) return;
+    fetching = true;
+    try {
+      while (queue.length < PRELOAD_AHEAD) {
+        const img = await fetchNextVerified();
+        if (!img) break;
+        queue.push(img);
+      }
+    } finally {
+      fetching = false;
+    }
+  }
+
+  function showImage(item) {
+    const layer = activeLayer === 'A' ? layerB : layerA;
+    const other = activeLayer === 'A' ? layerA : layerB;
+
+    layer.style.backgroundImage = `url("${item.url}")`;
+    layer.style.transition = 'none';
+    layer.style.transform = 'scale(1.02)';
+    layer.classList.remove('visible');
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        layer.style.transition = '';
+        layer.classList.add('visible');
+        other.classList.remove('visible');
+        activeLayer = activeLayer === 'A' ? 'B' : 'A';
+      });
+    });
+
+    if (captionEl) {
+      captionEl.classList.remove('ready');
+      const author = item.author ? ` · ${item.author}` : '';
+      captionEl.textContent = (item.caption || item.title) + author;
+      setTimeout(() => captionEl.classList.add('ready'), 300);
+    }
+  }
+
+  async function tick() {
+    if (!active) return;
+    if (!queue.length) {
+      await fillQueue();
+      if (!queue.length) return;
+    }
+    if (!active) return;
+    const item = queue.shift();
+    if (item) showImage(item);
+    fillQueue();
+  }
+
+  return {
+    start(c) {
+      if (!c) return;
+      this.stop();
+      active = true;
+      country = c;
+      seenUrls.clear();
+      queue = [];
+      activeLayer = 'A';
+      loadTimes = [];
+
+      netTier = detectInitialTier();
+      if (netTier === 'slow') { targetSize = SIZE_SLOW; rotateMs = ROTATE_SLOW; }
+      else if (netTier === 'med') { targetSize = SIZE_MED; rotateMs = ROTATE_MED; }
+      else { targetSize = SIZE_FAST; rotateMs = ROTATE_FAST; }
+
+      layerA = document.getElementById('bgLayer');
+      layerB = document.getElementById('bgLayerNext');
+      captionEl = document.getElementById('vizCaption');
+
+      if (layerA) { layerA.style.backgroundImage = ''; layerA.classList.remove('visible'); }
+      if (layerB) { layerB.style.backgroundImage = ''; layerB.classList.remove('visible'); }
+      if (captionEl) { captionEl.classList.remove('ready'); captionEl.textContent = ''; }
+
+      (async () => {
+        await fillQueue();
+        const first = queue.shift();
+        if (first) showImage(first);
+        fillQueue();
+        timer = setInterval(tick, rotateMs);
+      })();
+    },
+
+    // Перезапуск с сохранением текущей страны (при смене темы)
+    restart() {
+      if (!country) return;
+      const savedCountry = country;
+      this.start(savedCountry);
+    },
+
+    stop() {
+      active = false;
+      country = null;
+      if (timer) { clearInterval(timer); timer = null; }
+      if (layerA) { layerA.classList.remove('visible'); layerA.style.backgroundImage = ''; }
+      if (layerB) { layerB.classList.remove('visible'); layerB.style.backgroundImage = ''; }
+      if (captionEl) { captionEl.classList.remove('ready'); captionEl.textContent = ''; }
+      queue = [];
+      loadTimes = [];
+    },
+
+    isActive() { return active; },
+    setQuality(tier) { applyTier(tier); }
+  };
+})();
+
+/* ============================================================
+   UI: показ/скрытие панели управления (крестик + кнопки + темы)
+   ============================================================ */
+
+function showUI() {
+  if (uiVisible) return;
+  uiVisible = true;
+  $('#vizScreen').classList.add('ui-visible');
+  $('#closeBtn').classList.add('show');
+}
+
+function hideUI() {
+  if (!uiVisible) return;
+  uiVisible = false;
+  $('#vizScreen').classList.remove('ui-visible');
+  $('#closeBtn').classList.remove('show');
+}
+
+function toggleUI() {
+  if (uiVisible) hideUI();
+  else showUI();
+}
+
+/* ============================================================
+   ОТКРЫТИЕ / ЗАКРЫТИЕ ЭКРАНА ВИЗУАЛИЗАЦИИ
+   ============================================================ */
+
+function openCountry(country) {
+  if (!country) return;
+  currentCountry = country;
+
+  $('#vizScreen').style.display = 'block';
+  $('#mainScreen').style.opacity = '0';
+  $('#mainScreen').style.pointerEvents = 'none';
+
+  $('#countryName').querySelector('.flag').textContent = country.flag;
+  $('#countryName').querySelector('.name-text').textContent = country.name;
+  $('#stationName').textContent = '';
+
+  updateHeart();
+  hideUI();
+
+  $('#loader').classList.add('show');
+  $('#statusText').textContent = 'Подключение к радио...';
+
+  buildVisualizer();
+  stopRadio();
+
+  VizEngine.start(country);
+  startRadioForCountry(country);
+
+  applyThemeUI();
+
+  $('#vizScreen').addEventListener('click', onVizClick);
+  document.addEventListener('keydown', onKeyDown);
+}
+
+function onVizClick(e) {
+  if (e.target.closest('#heartBtn') ||
+      e.target.closest('#nextStationBtn') ||
+      e.target.closest('#randomCountryBtn') ||
+      e.target.closest('#closeBtn') ||
+      e.target.closest('#themePanel')) return;
+  toggleUI();
+}
+
+function onKeyDown(e) {
+  if (e.key === 'Escape') closeVisualization();
+}
+
+function closeVisualization() {
+  stopRadio();
+  VizEngine.stop();
+  $('#vizScreen').style.display = 'none';
+  $('#vizScreen').classList.remove('ui-visible');
+  $('#closeBtn').classList.remove('show');
+  uiVisible = false;
+  $('#mainScreen').style.opacity = '1';
+  $('#mainScreen').style.pointerEvents = 'auto';
+  $('#vizScreen').removeEventListener('click', onVizClick);
+  document.removeEventListener('keydown', onKeyDown);
+  currentCountry = null;
+}
+
+/* ============================================================
+   СЛУЧАЙНАЯ СТРАНА
+   ============================================================ */
+
+function openRandomCountry(excludeCode) {
+  let pool = COUNTRIES.filter(c => c.code !== excludeCode);
+  if (pool.length === 0) pool = COUNTRIES;
+  const country = pool[Math.floor(Math.random() * pool.length)];
+  openCountry(country);
+}
+
+/* ============================================================
+   ОБРАБОТЧИКИ
+   ============================================================ */
+
+$('#playBtn').addEventListener('click', () => openRandomCountry());
+
+$('#randomCountryBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  openRandomCountry(currentCountry ? currentCountry.code : null);
+});
+
+$('#heartBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!currentCountry) return;
+  toggleFavorite(currentCountry.code);
+  toast(isFavorite(currentCountry.code) ? '❤️ Добавлено в избранное' : 'Убрано из избранного');
+});
+
+$('#nextStationBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  nextStation();
+});
+
+$('#closeBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeVisualization();
+});
+
+/* ====== Переключатель тематики ====== */
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const t = btn.dataset.theme;
+    if (t === currentTheme) return;
+    currentTheme = t;
+    saveTheme(t);
+    applyThemeUI();
+    toast(t === 'architecture' ? '🏙 Архитектура'
+        : t === 'nature' ? '🌿 Природа'
+        : '🎨 Микс');
+    if (currentCountry) VizEngine.restart();
+  });
+});
+
+/* ============================================================
+   ИНИЦИАЛИЗАЦИЯ
+   ============================================================ */
+
+renderFavorites();
+buildVisualizer();
+applyThemeUI();
+</script>
+</body>
+</html>
