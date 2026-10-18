@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>World Radio Explorer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; background: #0a0a0a; color: #fff; }
+
+#app { position: relative; height: 100%; width: 100%; overflow: hidden; }
+
+/* ================= ГЛАВНЫЙ ЭКРАН ================= */
+#mainScreen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  overflow-y: auto;
+  transition: opacity 0.4s;
+}
+
+header {
+  padding: 24px 20px 12px;
+  text-align: center;
+}
+header h1 {
+  font-size: 22px; font-weight: 700; letter-spacing: 1px;
+  background: linear-gradient(90deg, #ffd86f, #fc6262);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+header p { font-size: 12px; opacity: 0.6; margin-top: 4px; }
+
+#playBtn {
+  margin: 20px auto; padding: 20px 36px;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border: none; border-radius: 60px;
+  color: #fff; font-size: 18px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 8px 30px rgba(238, 90, 36, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+#playBtn:active { transform: scale(0.95); }
+#playBtn .icon { font-size: 24px; }
+
+.section-title {
+  padding: 20px 20px 10px; font-size: 14px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.7;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.section-title .count {
+  background: rgba(255,255,255,0.12); padding: 2px 10px; border-radius: 20px;
+  font-size: 12px; letter-spacing: 0;
+}
+
+#favoritesList {
+  padding: 0 16px 40px;
+  display: grid; grid-template-columns: 1fr; gap: 10px;
+}
+
+.fav-card {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px; border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: background 0.2s, transform 0.1s;
+  user-select: none;
+}
+.fav-card:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
+.fav-card .flag { font-size: 32px; flex-shrink: 0; }
+.fav-card .info { flex: 1; min-width: 0; }
+.fav-card .name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-card .sub { font-size: 12px; opacity: 0.5; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-card .play-mini {
+  font-size: 18px; width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%; background: rgba(238,90,36,0.8);
+  display: flex; align-items: center; justify-content: center;
+}
+.fav-empty {
+  text-align: center; padding: 30px 20px; opacity: 0.4;
+  font-size: 14px; line-height: 1.6;
+}
+
+/* ================= ЭКРАН ВИЗУАЛИЗАЦИИ ================= */
+#vizScreen {
+  position: absolute; inset: 0; display: none;
+  background: #000; overflow: hidden;
+  z-index: 100;
+}
+
+#bgLayer, #bgLayerNext {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: center;
+  transition: opacity 1.2s ease-in-out;
+  opacity: 0;
+}
+#bgLayer.visible, #bgLayerNext.visible { opacity: 1; }
+
+#bgLayer { z-index: 1; }
+#bgLayerNext { z-index: 2; }
+
+#overlayGrad {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.75) 100%);
+}
+
+#vizContent {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+#topBar {
+  padding: max(20px, env(safe-area-inset-top)) 20px 0;
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+
+#countryName {
+  font-size: 28px; font-weight: 800; letter-spacing: 1px;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+  pointer-events: auto;
+  transition: opacity 0.5s;
+}
+#countryName .flag { display: block; font-size: 40px; margin-bottom: 6px; }
+#countryName .sub-station {
+  font-size: 12px; font-weight: 400; opacity: 0.75; margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+#heartBtn {
+  width: 52px; height: 52px; flex-shrink: 0;
+  border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.4); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff; font-size: 24px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; pointer-events: auto;
+  transition: transform 0.2s, background 0.2s;
+}
+#heartBtn:active { transform: scale(0.85); }
+#heartBtn.liked { color: #ff4757; }
+
+#bottomBar {
+  padding: 0 20px max(24px, env(safe-area-inset-bottom)) 20px;
+  pointer-events: auto;
+}
+
+#visualizer {
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: 4px; height: 40px; margin-bottom: 16px;
+}
+#visualizer .bar {
+  width: 4px; background: rgba(255,255,255,0.85);
+  border-radius: 2px; height: 6px;
+  transition: height 0.1s;
+}
+
+#statusLine {
+  text-align: center; font-size: 12px; opacity: 0.7;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #2ed573; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* Кнопка закрытия (крестик) */
+#closeBtn {
+  position: absolute; top: max(20px, env(safe-area-inset-top)); left: 50%;
+  transform: translateX(-50%);
+  z-index: 20; width: 56px; height: 56px;
+  border-radius: 50%; border: none;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff; font-size: 26px; line-height: 1;
+  display: none; align-items: center; justify-content: center;
+  cursor: pointer; transition: opacity 0.25s, transform 0.25s;
+  opacity: 0; border: 1px solid rgba(255,255,255,0.2);
+}
+#closeBtn.show { display: flex; opacity: 1; }
+#closeBtn:active { transform: translateX(-50%) scale(0.88); }
+
+/* Лоадер */
+#loader {
+  position: absolute; inset: 0; z-index: 10;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+}
+#loader.show { display: flex; }
+.spinner {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: #ff6b6b;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Тост */
+#toast {
+  position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(100px);
+  background: rgba(30,30,40,0.95); backdrop-filter: blur(10px);
+  padding: 12px 24px; border-radius: 30px; font-size: 14px;
+  z-index: 999; opacity: 0; transition: all 0.35s; pointer-events: none;
+  border: 1px solid rgba(255,255,255,0.1); white-space: nowrap;
+}
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* Десктоп адаптация */
+@media (min-width: 768px) {
+  #favoritesList { grid-template-columns: repeat(2, 1fr); max-width: 720px; margin: 0 auto; width: 100%; }
+  header h1 { font-size: 28px; }
+  #countryName { font-size: 40px; }
+  #countryName .flag { font-size: 56px; }
+  #playBtn { font-size: 20px; padding: 22px 48px; }
+  #mainScreen { padding-bottom: 20px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ ГЛАВНЫЙ ЭКРАН ============ -->
+  <div id="mainScreen">
+    <header>
+      <h1>🌍 World Radio Explorer</h1>
+      <p>Слушай мир — путешествуй глазами</p>
+    </header>
+
+    <button id="playBtn">
+      <span class="icon">🎲</span>
+      <span>Включить случайную страну</span>
+    </button>
+
+    <div class="section-title">
+      <span>❤️ Избранное</span>
+      <span class="count" id="favCount">0</span>
+    </div>
+    <div id="favoritesList"></div>
+  </div>
+
+  <!-- ============ ЭКРАН ВИЗУАЛИЗАЦИИ ============ -->
+  <div id="vizScreen">
+    <div id="bgLayer"></div>
+    <div id="bgLayerNext"></div>
+    <div id="overlayGrad"></div>
+
+    <div id="vizContent">
+      <div id="topBar">
+        <div id="countryName">
+          <span class="flag">🏳️</span>
+          <span class="name-text">Загрузка...</span>
+          <div class="sub-station" id="stationName"></div>
+        </div>
+        <button id="heartBtn">♡</button>
+      </div>
+
+      <div id="bottomBar">
+        <div id="visualizer"></div>
+        <div id="statusLine">
+          <span class="dot"></span>
+          <span id="statusText">Подключение к радио...</span>
+        </div>
+      </div>
+    </div>
+
+    <button id="closeBtn">✕</button>
+
+    <div id="loader"><div class="spinner"></div></div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   БАЗА СТРАН + РАДИОСТАНЦИЙ + ТЕМАТИЧЕСКИЕ КАРТИНКИ
+   Картинки берутся из picsum.photos (бесплатный сервис) —
+   каждому городу/стране назначен стабильный seed, чтобы
+   картинки были постоянными и подходили по теме.
+   ============================================================ */
+
+const COUNTRIES = [
+  { code:'JP', name:'Япония', flag:'🇯🇵', seed:'japan-tokyo-sakura', stations:[
+      'https://stream.radiosai.net/stream', 
+      'https://ice1.somafm.com/fluid-128-mp3'
+  ]},
+  { code:'FR', name:'Франция', flag:'🇫🇷', seed:'france-paris-eiffel', stations:[
+      'https://icecast.radiofrance.fr/fip-midfi.mp3',
+      'https://icecast.radiofrance.fr/franceinter-midfi.mp3'
+  ]},
+  { code:'IT', name:'Италия', flag:'🇮🇹', seed:'italy-rome-colosseum', stations:[
+      'https://icestreaming.rai.it/1.mp3',
+      'https://ice1.somafm.com/bootliquor-128-mp3'
+  ]},
+  { code:'BR', name:'Бразилия', flag:'🇧🇷', seed:'brazil-rio-carnival', stations:[
+      'https://ice1.somafm.com/fluid-128-mp3',
+      'https://stream.zeno.fm/0r0xa792kwzuv'
+  ]},
+  { code:'US', name:'США', flag:'🇺🇸', seed:'usa-newyork-skyline', stations:[
+      'https://ice1.somafm.com/groovesalad-128-mp3',
+      'https://ice1.somafm.com/indiepop-128-mp3'
+  ]},
+  { code:'GB', name:'Великобритания', flag:'🇬🇧', seed:'uk-london-bigben', stations:[
+      'https://ice1.somafm.com/lush-128-mp3',
+      'https://ice1.somafm.com/secretagent-128-mp3'
+  ]},
+  { code:'DE', name:'Германия', flag:'🇩🇪', seed:'germany-berlin-brandenburg', stations:[
+      'https://ice1.somafm.com/beatblender-128-mp3',
+      'https://ice1.somafm.com/dronezone-128-mp3'
+  ]},
+  { code:'ES', name:'Испания', flag:'🇪🇸', seed:'spain-barcelona-sagrada', stations:[
+      'https://ice1.somafm.com/defcon-128-mp3',
+      'https://ice1.somafm.com/dubstep-128-mp3'
+  ]},
+  { code:'MX', name:'Мексика', flag:'🇲🇽', seed:'mexico-city-cathedral', stations:[
+      'https://ice1.somafm.com/missioncontrol-128-mp3',
+      'https://ice1.somafm.com/poptron-128-mp3'
+  ]},
+  { code:'IN', name:'Индия', flag:'🇮🇳', seed:'india-tajmahal-agra', stations:[
+      'https://ice1.somafm.com/suburbsofgoa-128-mp3',
+      'https://ice1.somafm.com/thetrip-128-mp3'
+  ]},
+  { code:'CN', name:'Китай', flag:'🇨🇳', seed:'china-greatwall-beijing', stations:[
+      'https://ice1.somafm.com/folkfwd-128-mp3',
+      'https://ice1.somafm.com/bagel-128-mp3'
+  ]},
+  { code:'RU', name:'Россия', flag:'🇷🇺', seed:'russia-moscow-kremlin', stations:[
+      'https://ice1.somafm.com/u80s-128-mp3',
+      'https://ice1.somafm.com/80s-128-mp3'
+  ]},
+  { code:'AU', name:'Австралия', flag:'🇦🇺', seed:'australia-sydney-opera', stations:[
+      'https://ice1.somafm.com/seventies-128-mp3',
+      'https://ice1.somafm.com/60s-128-mp3'
+  ]},
+  { code:'CA', name:'Канада', flag:'🇨🇦', seed:'canada-toronto-cn-tower', stations:[
+      'https://ice1.somafm.com/classicfm-128-mp3',
+      'https://ice1.somafm.com/doomed-128-mp3'
+  ]},
+  { code:'EG', name:'Египет', flag:'🇪🇬', seed:'egypt-pyramids-cairo', stations:[
+      'https://ice1.somafm.com/spacestation-128-mp3',
+      'https://ice1.somafm.com/deepspaceone-128-mp3'
+  ]},
+  { code:'TR', name:'Турция', flag:'🇹🇷', seed:'turkey-istanbul-mosque', stations:[
+      'https://ice1.somafm.com/metal-128-mp3',
+      'https://ice1.somafm.com/punk-128-mp3'
+  ]},
+  { code:'TH', name:'Таиланд', flag:'🇹🇭', seed:'thailand-bangkok-temple', stations:[
+      'https://ice1.somafm.com/illstreet-128-mp3',
+      'https://ice1.somafm.com/cliqhop-128-mp3'
+  ]},
+  { code:'GR', name:'Греция', flag:'🇬🇷', seed:'greece-athens-acropolis', stations:[
+      'https://ice1.somafm.com/reggae-128-mp3',
+      'https://ice1.somafm.com/roots-128-mp3'
+  ]},
+  { code:'ZA', name:'ЮАР', flag:'🇿🇦', seed:'southafrica-capetown-table', stations:[
+      'https://ice1.somafm.com/afrobeat-128-mp3',
+      'https://ice1.somafm.com/fluid-128-mp3'
+  ]},
+  { code:'AR', name:'Аргентина', flag:'🇦🇷', seed:'argentina-buenosaires-obelisk', stations:[
+      'https://ice1.somafm.com/tango-128-mp3',
+      'https://ice1.somafm.com/latin-128-mp3'
+  ]},
+  { code:'KR', name:'Южная Корея', flag:'🇰🇷', seed:'korea-seoul-palace', stations:[
+      'https://ice1.somafm.com/kpop-128-mp3',
+      'https://ice1.somafm.com/fluid-128-mp3'
+  ]},
+  { code:'SE', name:'Швеция', flag:'🇸🇪', seed:'sweden-stockholm-gamla', stations:[
+      'https://ice1.somafm.com/indiepop-128-mp3',
+      'https://ice1.somafm.com/lush-128-mp3'
+  ]},
+  { code:'NO', name:'Норвегия', flag:'🇳🇴', seed:'norway-fjord-oslo', stations:[
+      'https://ice1.somafm.com/dronezone-128-mp3',
+      'https://ice1.somafm.com/spacestation-128-mp3'
+  ]},
+  { code:'NL', name:'Нидерланды', flag:'🇳🇱', seed:'netherlands-amsterdam-canals', stations:[
+      'https://ice1.somafm.com/beatblender-128-mp3',
+      'https://ice1.somafm.com/groovesalad-128-mp3'
+  ]},
+  { code:'PT', name:'Португалия', flag:'🇵🇹', seed:'portugal-lisbon-tram', stations:[
+      'https://ice1.somafm.com/secretagent-128-mp3',
+      'https://ice1.somafm.com/bootliquor-128-mp3'
+  ]},
+  { code:'CH', name:'Швейцария', flag:'🇨🇭', seed:'switzerland-alps-matterhorn', stations:[
+      'https://ice1.somafm.com/classicfm-128-mp3',
+      'https://ice1.somafm.com/thetrip-128-mp3'
+  ]},
+  { code:'AT', name:'Австрия', flag:'🇦🇹', seed:'austria-vienna-palace', stations:[
+      'https://ice1.somafm.com/classicfm-128-mp3',
+      'https://ice1.somafm.com/fluid-128-mp3'
+  ]},
+  { code:'PL', name:'Польша', flag:'🇵🇱', seed:'poland-krakow-oldtown', stations:[
+      'https://ice1.somafm.com/u80s-128-mp3',
+      'https://ice1.somafm.com/80s-128-mp3'
+  ]},
+  { code:'CZ', name:'Чехия', flag:'🇨🇿', seed:'czech-prague-charlesbridge', stations:[
+      'https://ice1.somafm.com/beatblender-128-mp3',
+      'https://ice1.somafm.com/lush-128-mp3'
+  ]},
+  { code:'IS', name:'Исландия', flag:'🇮🇸', seed:'iceland-reykjavik-aurora', stations:[
+      'https://ice1.somafm.com/dronezone-128-mp3',
+      'https://ice1.somafm.com/deepspaceone-128-mp3'
+  ]},
+  { code:'NZ', name:'Новая Зеландия', flag:'🇳🇿', seed:'newzealand-milford-sound', stations:[
+      'https://ice1.somafm.com/folkfwd-128-mp3',
+      'https://ice1.somafm.com/thetrip-128-mp3'
+  ]},
+  { code:'VN', name:'Вьетнам', flag:'🇻🇳', seed:'vietnam-halong-bay', stations:[
+      'https://ice1.somafm.com/suburbsofgoa-128-mp3',
+      'https://ice1.somafm.com/fluid-128-mp3'
+  ]},
+  { code:'ID', name:'Индонезия', flag:'🇮🇩', seed:'indonesia-bali-temple', stations:[
+      'https://ice1.somafm.com/reggae-128-mp3',
+      'https://ice1.somafm.com/roots-128-mp3'
+  ]},
+  { code:'MA', name:'Марокко', flag:'🇲🇦', seed:'morocco-marrakech-market', stations:[
+      'https://ice1.somafm.com/afrobeat-128-mp3',
+      'https://ice1.somafm.com/fluid-128-mp3'
+  ]},
+  { code:'KE', name:'Кения', flag:'🇰🇪', seed:'kenya-safari-savanna', stations:[
+      'https://ice1.somafm.com/afrobeat-128-mp3',
+      'https://ice1.somafm.com/reggae-128-mp3'
+  ]},
+  { code:'PE', name:'Перу', flag:'🇵🇪', seed:'peru-machupicchu-andes', stations:[
+      'https://ice1.somafm.com/folkfwd-128-mp3',
+      'https://ice1.somafm.com/latin-128-mp3'
+  ]},
+  { code:'CU', name:'Куба', flag:'🇨🇺', seed:'cuba-havana-malecon', stations:[
+      'https://ice1.somafm.com/latin-128-mp3',
+      'https://ice1.somafm.com/tango-128-mp3'
+  ]},
+  { code:'UA', name:'Украина', flag:'🇺🇦', seed:'ukraine-kyiv-sophia', stations:[
+      'https://ice1.somafm.com/folkfwd-128-mp3',
+      'https://ice1.somafm.com/u80s-128-mp3'
+  ]},
+];
+
+/* ============================================================
+   ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+   ============================================================ */
+
+const $ = s => document.querySelector(s);
+const toastEl = $('#toast');
+let toastTimer;
+
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+function getImageUrl(country, idx = 0) {
+  // picsum.photos — бесплатный источник фото. seed стабилен → одна и та же картинка.
+  // Для каждой страны свой seed + разные размеры для retina.
+  const size = window.innerWidth > 1200 ? 1600 : 1000;
+  return `https://picsum.photos/seed/${encodeURIComponent(country.seed + '-' + idx)}/${size}/${size}`;
+}
+
+/* ============================================================
+   СОСТОЯНИЕ
+   ============================================================ */
+
+let favorites = [];
+try { favorites = JSON.parse(localStorage.getItem('radioFavs') || '[]'); } catch(e){}
+
+let currentCountry = null;
+let currentStation = null;
+let currentCountryIndex = -1;
+let audio = new Audio();
+audio.crossOrigin = 'anonymous';
+audio.preload = 'auto';
+
+let bgIndices = { A: 0, B: 0 }; // чередование слоёв
+let activeLayer = 'A';
+let imageTimer = null;
+let closeBtnShown = false;
+let loadTimeout = null;
+let vizBars = [];
+
+/* ============================================================
+   ИЗБРАННОЕ
+   ============================================================ */
+
+function saveFavorites() {
+  try { localStorage.setItem('radioFavs', JSON.stringify(favorites)); } catch(e){}
+}
+
+function isFavorite(code) { return favorites.includes(code); }
+
+function toggleFavorite(code) {
+  if (isFavorite(code)) {
+    favorites = favorites.filter(c => c !== code);
+  } else {
+    favorites.push(code);
+  }
+  saveFavorites();
+  renderFavorites();
+  updateHeart();
+}
+
+function updateHeart() {
+  const btn = $('#heartBtn');
+  if (currentCountry && isFavorite(currentCountry.code)) {
+    btn.classList.add('liked');
+    btn.textContent = '♥';
+  } else {
+    btn.classList.remove('liked');
+    btn.textContent = '♡';
+  }
+}
+
+function renderFavorites() {
+  const list = $('#favoritesList');
+  const favCountries = favorites
+    .map(code => COUNTRIES.find(c => c.code === code))
+    .filter(Boolean);
+
+  $('#favCount').textContent = favCountries.length;
+
+  if (favCountries.length === 0) {
+    list.innerHTML = '<div class="fav-empty">Пока пусто.<br>Включи случайную страну и добавь её в избранное ♥</div>';
+    return;
+  }
+
+  list.innerHTML = favCountries.map(c => `
+    <div class="fav-card" data-code="${c.code}">
+      <span class="flag">${c.flag}</span>
+      <div class="info">
+        <div class="name">${c.name}</div>
+        <div class="sub">${c.stations.length} радиостанций</div>
+      </div>
+      <div class="play-mini">▶</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.fav-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const country = COUNTRIES.find(c => c.code === card.dataset.code);
+      if (country) openCountry(country);
+    });
+  });
+}
+
+/* ============================================================
+   РАДИО: воспроизведение с автоматическим перебором станций
+   ============================================================ */
+
+function tryPlayStations(country) {
+  const stations = [...country.stations];
+  let attempt = 0;
+
+  const cleanup = () => {
+    audio.removeEventListener('canplay', onOk);
+    audio.removeEventListener('error', onErr);
+    clearTimeout(loadTimeout);
+  };
+
+  const onOk = () => {
+    cleanup();
+    $('#loader').classList.remove('show');
+    $('#statusText').textContent = 'В эфире: ' + (currentStation || '');
+    toast('🎵 ' + country.name + ' в эфире');
+    startVisualizer();
+  };
+
+  const onErr = () => {
+    cleanup();
+    attempt++;
+    if (attempt >= stations.length) {
+      // Все станции не сработали — ищем в другой стране
+      $('#statusText').textContent = 'Подбираем другой эфир...';
+      toast('⚠️ Станция недоступна, ищем другую');
+      setTimeout(() => openRandomCountry(country.code), 400);
+      return;
+    }
+    playStation(stations[attempt], onOk, onErr, country);
+  };
+
+  if (stations.length === 0) {
+    setTimeout(() => openRandomCountry(country.code), 300);
+    return;
+  }
+
+  playStation(stations[0], onOk, onErr, country);
+}
+
+function playStation(url, okCb, errCb, country) {
+  currentStation = url;
+  audio.src = url;
+  audio.load();
+
+  loadTimeout = setTimeout(() => {
+    if (audio.readyState < 2) errCb();
+  }, 6000);
+
+  audio.addEventListener('canplay', function once() {
+    audio.removeEventListener('canplay', once);
+    clearTimeout(loadTimeout);
+    audio.play().then(okCb).catch(errCb);
+  });
+
+  audio.addEventListener('error', function onceErr() {
+    audio.removeEventListener('error', onceErr);
+    clearTimeout(loadTimeout);
+    errCb();
+  });
+}
+
+function stopRadio() {
+  try { audio.pause(); } catch(e){}
+  audio.removeAttribute('src');
+  audio.load();
+  stopVisualizer();
+  clearTimeout(loadTimeout);
+}
+
+/* ============================================================
+   ВИЗУАЛИЗАЦИЯ (фейковые полоски — без WebAudio, чтобы
+   избежать CORS-проблем на сторонних потоках)
+   ============================================================ */
+
+function buildVisualizer() {
+  const v = $('#visualizer');
+  v.innerHTML = '';
+  vizBars = [];
+  const count = window.innerWidth < 480 ? 24 : 40;
+  for (let i = 0; i < count; i++) {
+    const b = document.createElement('div');
+    b.className = 'bar';
+    v.appendChild(b);
+    vizBars.push(b);
+  }
+}
+
+let vizInterval = null;
+function startVisualizer() {
+  stopVisualizer();
+  vizInterval = setInterval(() => {
+    vizBars.forEach(b => {
+      const h = 6 + Math.random() * 34;
+      b.style.height = h + 'px';
+      b.style.opacity = 0.4 + Math.random() * 0.6;
+    });
+  }, 110);
+}
+function stopVisualizer() {
+  if (vizInterval) clearInterval(vizInterval);
+  vizInterval = null;
+  vizBars.forEach(b => b.style.height = '6px');
+}
+
+/* ============================================================
+   ФОНОВЫЕ КАРТИНКИ: смена каждые 6 сек с предзагрузкой
+   и мгновенным откатом на другую при ошибке.
+   ============================================================ */
+
+function setBackground(country) {
+  const layerA = $('#bgLayer');
+  const layerB = $('#bgLayerNext');
+  activeLayer = 'A';
+  bgIndices = { A: 0, B: 0 };
+
+  // Сброс
+  layerA.style.backgroundImage = '';
+  layerB.style.backgroundImage = '';
+  layerA.classList.remove('visible');
+  layerB.classList.remove('visible');
+
+  loadNextImage(country, 0, (img) => {
+    layerA.style.backgroundImage = `url("${img}")`;
+    layerA.classList.add('visible');
+  });
+
+  clearInterval(imageTimer);
+  imageTimer = setInterval(() => cycleBackground(country), 6000);
+}
+
+let pendingImageIdx = 0;
+function cycleBackground(country) {
+  pendingImageIdx++;
+  const nextLayer = activeLayer === 'A' ? 'B' : 'A';
+  const el = nextLayer === 'A' ? $('#bgLayer') : $('#bgLayerNext');
+
+  loadNextImage(country, pendingImageIdx, (imgUrl) => {
+    el.style.backgroundImage = `url("${imgUrl}")`;
+    el.classList.add('visible');
+    const old = nextLayer === 'A' ? $('#bgLayerNext') : $('#bgLayer');
+    setTimeout(() => old.classList.remove('visible'), 300);
+    activeLayer = nextLayer;
+  });
+}
+
+// Пробуем загрузить картинку; при ошибке — берём следующую по счёту
+function loadNextImage(country, startIdx, onSuccess, attempt = 0) {
+  if (attempt > 4) return; // сдаёмся после 5 попыток — оставляем текущий фон
+  const idx = startIdx + attempt;
+  const url = getImageUrl(country, idx);
+  const img = new Image();
+  img.onload = () => onSuccess(url);
+  img.onerror = () => loadNextImage(country, startIdx, onSuccess, attempt + 1);
+  img.src = url;
+}
+
+/* ============================================================
+   ОТКРЫТИЕ / ЗАКРЫТИЕ ЭКРАНА ВИЗУАЛИЗАЦИИ
+   ============================================================ */
+
+function openCountry(country) {
+  if (!country) return;
+  currentCountry = country;
+  currentCountryIndex = COUNTRIES.indexOf(country);
+
+  // Показываем экран визуализации
+  $('#vizScreen').style.display = 'block';
+  $('#mainScreen').style.opacity = '0';
+  $('#mainScreen').style.pointerEvents = 'none';
+
+  // Заголовок
+  $('#countryName').querySelector('.flag').textContent = country.flag;
+  $('#countryName').querySelector('.name-text').textContent = country.name;
+  $('#stationName').textContent = '';
+
+  updateHeart();
+  hideCloseBtn();
+
+  // Загрузка
+  $('#loader').classList.add('show');
+  $('#statusText').textContent = 'Подключение к радио...';
+
+  buildVisualizer();
+  stopRadio();
+
+  setBackground(country);
+  tryPlayStations(country);
+
+  // Клик по экрану → показать крестик
+  $('#vizScreen').addEventListener('click', onVizClick);
+  document.addEventListener('keydown', onKeyDown);
+}
+
+let vizClickTimer = null;
+function onVizClick(e) {
+  // Игнорируем клики по кнопкам
+  if (e.target.closest('#heartBtn') || e.target.closest('#closeBtn')) return;
+  showCloseBtn();
+}
+
+function onKeyDown(e) {
+  if (e.key === 'Escape') closeVisualization();
+}
+
+function showCloseBtn() {
+  if (closeBtnShown) return;
+  closeBtnShown = true;
+  $('#closeBtn').classList.add('show');
+}
+
+function hideCloseBtn() {
+  closeBtnShown = false;
+  $('#closeBtn').classList.remove('show');
+}
+
+function closeVisualization() {
+  stopRadio();
+  clearInterval(imageTimer);
+  imageTimer = null;
+  $('#vizScreen').style.display = 'none';
+  $('#mainScreen').style.opacity = '1';
+  $('#mainScreen').style.pointerEvents = 'auto';
+  $('#vizScreen').removeEventListener('click', onVizClick);
+  document.removeEventListener('keydown', onKeyDown);
+  currentCountry = null;
+  hideCloseBtn();
+}
+
+/* ============================================================
+   СЛУЧАЙНАЯ СТРАНА
+   ============================================================ */
+
+function openRandomCountry(excludeCode) {
+  let pool = COUNTRIES.filter(c => c.code !== excludeCode);
+  if (pool.length === 0) pool = COUNTRIES;
+  const country = pool[Math.floor(Math.random() * pool.length)];
+  openCountry(country);
+}
+
+/* ============================================================
+   ОБРАБОТЧИКИ
+   ============================================================ */
+
+$('#playBtn').addEventListener('click', () => openRandomCountry());
+
+$('#heartBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!currentCountry) return;
+  toggleFavorite(currentCountry.code);
+  toast(isFavorite(currentCountry.code) ? '❤️ Добавлено в избранное' : 'Убрано из избранного');
+});
+
+$('#closeBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeVisualization();
+});
+
+// Пересоздаём визуализатор при ресайзе
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if ($('#vizScreen').style.display === 'block') buildVisualizer();
+  }, 300);
+});
+
+/* ============================================================
+   ИНИЦИАЛИЗАЦИЯ
+   ============================================================ */
+
+renderFavorites();
+buildVisualizer();
+</script>
+</body>
+</html>
