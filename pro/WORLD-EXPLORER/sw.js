@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'worldexplorer-pwa-v-we-adaptyopcwm-backbutton-mapa';
+const CACHE_NAME = '1-worldexplorer-pwa-v-we-adaptyopcwm-backbutton-mapa';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/WORLD-EXPLORER/index.html',
