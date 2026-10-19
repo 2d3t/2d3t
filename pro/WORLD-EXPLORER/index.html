@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Global Explorer — Время, Новости, Википедия и Радио</title>
+    <title>Global Explorer — Время, Новости, Википедия, Радио и ТВ</title>
     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
     <meta name="theme-color" content="#0a0f2a">
 
     <link rel="manifest" href="manifest.json">
@@ -29,7 +30,6 @@
         overflow-x: hidden;
     }
 
-    /* ====== ОБЩИЙ КОНТЕЙНЕР ДЛЯ ШИРОКИХ ЭКРАНОВ ====== */
     .app-shell {
         width: 100%;
         max-width: 1600px;
@@ -114,7 +114,6 @@
         margin-left: 8px;
     }
 
-    /* ====== ГЛАВНАЯ СЕТКА: ГЛОБУС + ПАНЕЛЬ ====== */
     .main-layout {
         display: grid;
         grid-template-columns: 1fr;
@@ -221,7 +220,6 @@
         margin-top: 15px;
     }
 
-    /* ====== АДАПТИВ ДЛЯ ПЛАНШЕТОВ/ДЕСКТОПА ====== */
     @media (min-width: 900px) {
         .main-layout {
             grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr);
@@ -266,7 +264,6 @@
     }
     .click-hint { animation: pulse 0.6s ease; }
 
-    /* ====== МОДАЛЬНОЕ ОКНО ====== */
     .modal-overlay {
         display: none;
         position: fixed;
@@ -293,7 +290,10 @@
         box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
         animation: slideUp 0.3s ease;
         margin: auto;
+        transition: max-width 0.3s ease;
     }
+    /* Расширяем модалку при открытии TV */
+    .modal-box.tv-mode { max-width: 760px; }
     .modal-box h2 { font-size: 1.3rem; margin-bottom: 6px; color: #b3d9ff; }
     .modal-box .country-name {
         font-size: 1.7rem;
@@ -344,6 +344,8 @@
     .modal-btn.time-btn:hover { background: linear-gradient(135deg, #10b981, #059669); }
     .modal-btn.radio-btn { background: linear-gradient(135deg, #f59e0b, #d97706); }
     .modal-btn.radio-btn:hover { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .modal-btn.tv-btn { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
+    .modal-btn.tv-btn:hover { background: linear-gradient(135deg, #38bdf8, #0ea5e9); }
     .modal-btn.back-btn,
     .modal-btn.cancel-btn {
         background: rgba(255, 255, 255, 0.08);
@@ -356,7 +358,6 @@
     .modal-btn.cancel-btn:hover { background: rgba(255, 255, 255, 0.15); color: white; }
     .modal-btn i { font-size: 1.3rem; }
 
-    /* ====== ЧАСЫ ====== */
     .mechanical-clock {
         width: 200px;
         height: 200px;
@@ -466,7 +467,6 @@
     .date-info { font-size: 12px; color: #8888aa; margin-top: 2px; }
     .timezone-offset { font-size: 12px; color: #4a9eff; margin-top: 2px; }
 
-    /* ====== ПЛЕЕР ====== */
     .custom-player {
         background: linear-gradient(145deg, #1a2744, #0d1830);
         border-radius: 24px;
@@ -654,7 +654,6 @@
     }
     .cp-status.error { color: #ef4444; }
 
-    /* ====== ВИЗУАЛИЗАЦИЯ ====== */
     .viz-container {
         position: relative;
         width: 100%;
@@ -758,7 +757,6 @@
         border-color: #60a5fa !important;
     }
 
-    /* ====== ИЗБРАННОЕ ====== */
     .favorites-section {
         margin-top: 16px;
         border-top: 1px solid rgba(245, 158, 11, 0.3);
@@ -884,7 +882,6 @@
         100% { transform: scale(1); }
     }
 
-    /* ====== ПЛАВАЮЩИЙ ПЛЕЕР ====== */
     .floating-player {
         position: fixed;
         bottom: 20px;
@@ -1082,7 +1079,6 @@
         .clock-mark.large { background: #ccc; }
     }
 
-    /* ====== FULLSCREEN VIZ ====== */
     .viz-container:fullscreen,
     .viz-container:-webkit-full-screen {
         width: 100vw;
@@ -1145,6 +1141,143 @@
         font-size: 1.1rem;
     }
     .viz-container:fullscreen { background: #000; }
+
+    /* ====== TV PLAYER ====== */
+    .tv-video-wrap {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #000;
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 12px;
+        box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.3);
+        position: relative;
+        z-index: 1;
+    }
+    .tv-video-wrap video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #000;
+        cursor: pointer;
+        display: block;
+    }
+    .tv-video-wrap:fullscreen,
+    .tv-video-wrap:-webkit-full-screen {
+        border-radius: 0;
+        width: 100vw;
+        height: 100vh;
+        aspect-ratio: auto;
+    }
+    .tv-fs-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.55);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        backdrop-filter: blur(6px);
+        z-index: 5;
+        transition: all 0.2s;
+        padding: 0;
+    }
+    .tv-fs-btn:hover { background: #0ea5e9; border-color: #0ea5e9; transform: scale(1.08); }
+    .tv-video-wrap:fullscreen .tv-fs-btn,
+    .tv-video-wrap:-webkit-full-screen .tv-fs-btn {
+        top: 18px; right: 18px; width: 46px; height: 46px; font-size: 1.1rem;
+    }
+
+    .tv-country-list-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #38bdf8;
+        margin: 12px 0 8px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+    .tv-country-list {
+        max-height: 200px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-right: 4px;
+        position: relative;
+        z-index: 1;
+    }
+    .tv-country-list::-webkit-scrollbar { width: 6px; }
+    .tv-country-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+    .tv-country-list::-webkit-scrollbar-thumb { background: #0ea5e9; border-radius: 3px; }
+
+    .tv-channel-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(14, 165, 233, 0.25);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-size: 0.8rem;
+        color: #f0f3fa;
+        text-align: left;
+    }
+    .tv-channel-item:hover {
+        background: rgba(45, 60, 85, 0.85);
+        border-color: rgba(14, 165, 233, 0.6);
+        transform: translateX(2px);
+    }
+    .tv-channel-item.active {
+        background: rgba(14, 165, 233, 0.25);
+        border-color: #38bdf8;
+    }
+    .tv-channel-item .tv-ch-name {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .tv-channel-item .tv-ch-code {
+        font-size: 0.65rem;
+        color: #94a3b8;
+        flex-shrink: 0;
+    }
+    .tv-controls-tint {
+        position: relative;
+        z-index: 1;
+    }
+    .tv-player .cp-btn:hover {
+        background: rgba(14, 165, 233, 0.3);
+        border-color: #0ea5e9;
+    }
+    .tv-player .cp-btn.primary {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        border-color: #38bdf8;
+        box-shadow: 0 4px 16px rgba(14, 165, 233, 0.4);
+    }
+    .tv-player .cp-btn.primary:hover {
+        background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+    }
+    .tv-player .cp-volume-slider::-webkit-slider-thumb { background: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
+    .tv-player .cp-volume-slider::-moz-range-thumb { background: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
+    .tv-player .cp-progress { background: linear-gradient(90deg, #0ea5e9, #38bdf8); box-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
+    .tv-player::before {
+        background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%);
+    }
 </style>
 </head>
 <body>
@@ -1152,7 +1285,7 @@
     <div class="globe-header">
         <h1><i class="fas fa-globe-europe" style="margin-right: 10px;"></i> World Explorer</h1>
         <div class="sub">
-            <i class="fas fa-mouse-pointer"></i> <span>Click once → country name | Click twice → choose: <strong style="color:#ffb74d;">News</strong>, <strong style="color:#a78bfa;">Wikipedia</strong>, <strong style="color:#10b981;">Time</strong> or <strong style="color:#fbbf24;">Radio</strong></span>
+            <i class="fas fa-mouse-pointer"></i> <span>Click once → country name | Click twice → choose: <strong style="color:#ffb74d;">News</strong>, <strong style="color:#a78bfa;">Wikipedia</strong>, <strong style="color:#10b981;">Time</strong>, <strong style="color:#fbbf24;">Radio</strong> or <strong style="color:#38bdf8;">TV</strong></span>
             <i class="fas fa-language"></i>
         </div>
     </div>
@@ -1160,19 +1293,17 @@
     <div class="app-shell">
         <div class="main-layout">
 
-            <!-- ЛЕВАЯ КОЛОНКА: ГЛОБУС -->
             <div class="globe-col">
                 <div class="info-card" id="statusCard">
                     <p>
                         <i class="fas fa-info-circle"></i>
-                        <span id="statusText">🌍 Tap any country → first click shows the name, second click opens a choice: News, Wikipedia, Local Time or Radio</span>
+                        <span id="statusText">🌍 Tap any country → first click shows the name, second click opens a choice: News, Wikipedia, Local Time, Radio or TV</span>
                     </p>
                 </div>
 
                 <div id="chartdiv"></div>
             </div>
 
-            <!-- ПРАВАЯ КОЛОНКА: УПРАВЛЕНИЕ + SHARE -->
             <aside class="side-col">
                 <div class="controls-panel">
                     <button id="toggleRotation" class="btn"><i class="fas fa-pause-circle"></i> <span>Stop Rotation</span></button>
@@ -1200,9 +1331,8 @@
         </center>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО (без изменений) -->
     <div class="modal-overlay" id="actionModal">
-        <div class="modal-box">
+        <div class="modal-box" id="modalBox">
             <span class="country-flag" id="modalFlag">🌍</span>
             <div class="country-name" id="modalCountryName">Country</div>
             <div class="sub-info" id="modalSubInfo">Choose what you want to see</div>
@@ -1222,6 +1352,46 @@
                 <div class="am-pm-badge" id="ampmBadge">--</div>
             </div>
 
+            <!-- ===== TV INFO ===== -->
+            <div id="tvInfo" style="display:none;">
+                <div class="custom-player tv-player" id="tvPlayer">
+                    <div class="cp-station-name" id="tvChannelName">Загрузка каналов...</div>
+                    <div class="cp-station-meta" id="tvChannelMeta">—</div>
+
+                    <div class="tv-video-wrap" id="tvVideoWrap">
+                        <video id="tvVideo" controls playsinline></video>
+                        <button class="tv-fs-btn" id="tvFsBtn" title="На весь экран">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+
+                    <div class="cp-controls tv-controls-tint">
+                        <button class="cp-btn" id="tvPrevBtn" title="Предыдущий канал">
+                            <i class="fas fa-backward"></i>
+                        </button>
+                        <button class="cp-btn primary" id="tvRandomBtn" title="Случайный канал">
+                            <i class="fas fa-dice"></i>
+                        </button>
+                        <button class="cp-btn" id="tvNextBtn" title="Следующий канал">
+                            <i class="fas fa-forward"></i>
+                        </button>
+                        <div class="cp-volume">
+                            <i class="fas fa-volume-up" id="tvVolumeIcon"></i>
+                            <input type="range" class="cp-volume-slider" id="tvVolumeSlider" min="0" max="1" step="0.01" value="0.8">
+                        </div>
+                    </div>
+
+                    <div class="cp-status" id="tvStatus"></div>
+
+                    <div class="tv-country-list-title">
+                        <i class="fas fa-list"></i> Каналы страны
+                        <span id="tvCount" style="color:#94a3b8; font-weight:400;"></span>
+                    </div>
+                    <div class="tv-country-list" id="tvCountryList"></div>
+                </div>
+            </div>
+
+            <!-- ===== RADIO INFO ===== -->
             <div id="radioInfo" style="display:none;">
                 <div class="custom-player" id="customPlayer">
                     <div class="cp-station-name" id="radioStationName">Загрузка станций...</div>
@@ -1300,6 +1470,7 @@
                 <button class="modal-btn news-btn" id="modalNewsBtn"><i class="fas fa-newspaper"></i> 📰 Latest News</button>
                 <button class="modal-btn wiki-btn" id="modalWikiBtn"><i class="fab fa-wikipedia-w"></i> 📖 Wikipedia</button>
                 <button class="modal-btn radio-btn" id="modalRadioBtn"><i class="fas fa-radio"></i> 📻 Radio</button>
+                <button class="modal-btn tv-btn" id="modalTvBtn"><i class="fas fa-tv"></i> 📺 TV Channels</button>
                 <button class="modal-btn cancel-btn" id="modalCancelBtn"><i class="fas fa-times"></i> Cancel</button>
             </div>
             <div class="modal-actions" id="clockActions" style="display:none;">
@@ -1340,13 +1511,7 @@
         </div>
     </div>
 
-    <!-- ВАШИ <script> БЕЗ ИЗМЕНЕНИЙ -->
-
     <script>
-
-
-
-
         // ====== ЦВЕТ ДЛЯ КАЖДОЙ СТРАНЫ ======
         function hashCode(str) {
             let hash = 0;
@@ -1633,78 +1798,58 @@
         }
 
         // ================================================================
-// ==================== WAKE LOCK (экран не гаснет) ================
-// ================================================================
-const WakeLock = (function () {
-    let sentinel = null;
-    let wantLock = false;
-    let reacquireTimer = null;
+        // ==================== WAKE LOCK =================================
+        // ================================================================
+        const WakeLock = (function () {
+            let sentinel = null;
+            let wantLock = false;
+            let reacquireTimer = null;
+            const supported = 'wakeLock' in navigator;
 
-    const supported = 'wakeLock' in navigator;
-
-    async function acquire() {
-        if (!supported) return;
-        if (sentinel && !sentinel.released) return;
-
-        try {
-            sentinel = await navigator.wakeLock.request('screen');
-            console.log('[WakeLock] ✅ Экран удерживается');
-
-            sentinel.addEventListener('release', () => {
-                console.log('[WakeLock] ⚠️ Screen lock released');
+            async function acquire() {
+                if (!supported) return;
+                if (sentinel && !sentinel.released) return;
+                try {
+                    sentinel = await navigator.wakeLock.request('screen');
+                    sentinel.addEventListener('release', () => {
+                        sentinel = null;
+                        if (wantLock) scheduleReacquire();
+                    });
+                } catch (err) {
+                    sentinel = null;
+                    if (wantLock) scheduleReacquire();
+                }
+            }
+            function scheduleReacquire() {
+                if (reacquireTimer) return;
+                reacquireTimer = setTimeout(() => {
+                    reacquireTimer = null;
+                    if (wantLock && document.visibilityState === 'visible') acquire();
+                }, 2000);
+            }
+            async function release() {
+                wantLock = false;
+                if (reacquireTimer) { clearTimeout(reacquireTimer); reacquireTimer = null; }
+                if (sentinel && !sentinel.released) {
+                    try { await sentinel.release(); } catch (e) {}
+                }
                 sentinel = null;
-                if (wantLock) scheduleReacquire();
+            }
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && wantLock) acquire();
             });
-        } catch (err) {
-            console.warn('[WakeLock] ❌ Ошибка:', err.message);
-            sentinel = null;
-            if (wantLock) scheduleReacquire();
-        }
-    }
+            return {
+                enable() {
+                    wantLock = true;
+                    if (document.visibilityState === 'visible') acquire();
+                },
+                disable() { release(); },
+                isSupported() { return supported; },
+                isActive() { return !!sentinel && !sentinel.released; }
+            };
+        })();
 
-    function scheduleReacquire() {
-        if (reacquireTimer) return;
-        reacquireTimer = setTimeout(() => {
-            reacquireTimer = null;
-            if (wantLock && document.visibilityState === 'visible') {
-                acquire();
-            }
-        }, 2000);
-    }
-
-    async function release() {
-        wantLock = false;
-        if (reacquireTimer) { clearTimeout(reacquireTimer); reacquireTimer = null; }
-        if (sentinel && !sentinel.released) {
-            try { await sentinel.release(); } catch (e) {}
-            console.log('[WakeLock] 🔓 Экран отпущен');
-        }
-        sentinel = null;
-    }
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && wantLock) {
-            acquire();
-        }
-    });
-
-    return {
-        enable() {
-            wantLock = true;
-            if (document.visibilityState === 'visible') {
-                acquire();
-            }
-        },
-        disable() {
-            release();
-        },
-        isSupported() { return supported; },
-        isActive() { return !!sentinel && !sentinel.released; }
-    };
-})();
-
-
-// ================================================================
+        // ================================================================
         // ==================== ВИЗУАЛИЗАЦИЯ РАДИО ========================
         // ================================================================
         const VizEngine = (function () {
@@ -1912,12 +2057,12 @@ const WakeLock = (function () {
                         container.appendChild(spinnerEl);
                     }
                     spinnerEl.classList.add('active');
-container.style.display = 'block';
+                    container.style.display = 'block';
 
-WakeLock.enable();
+                    WakeLock.enable();
 
-(async () => {
-    await fillQueue();
+                    (async () => {
+                        await fillQueue();
                         spinnerEl.classList.remove('active');
                         const first = queue.shift();
                         if (first) showImage(first);
@@ -1926,39 +2071,376 @@ WakeLock.enable();
                     })();
                 },
 
-stop() {
-    active = false;
-    if (timer) { clearInterval(timer); timer = null; }
+                stop() {
+                    active = false;
+                    if (timer) { clearInterval(timer); timer = null; }
 
-    const container = document.getElementById('vizContainer');
+                    const container = document.getElementById('vizContainer');
+                    if (container) {
+                        const isFs = document.fullscreenElement === container ||
+                                     document.webkitFullscreenElement === container;
+                        if (isFs) {
+                            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                        }
+                        container.style.display = 'none';
+                    }
 
-    // Выходим из полноэкранного режима, если он активен
-    if (container) {
-        const isFs = document.fullscreenElement === container ||
-                     document.webkitFullscreenElement === container;
-        if (isFs) {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
-        }
-        container.style.display = 'none';
-    }
+                    if (layerA) layerA.classList.remove('active');
+                    if (layerB) layerB.classList.remove('active');
+                    if (captionEl) {
+                        captionEl.classList.remove('ready');
+                        captionEl.textContent = '';
+                    }
 
-    if (layerA) layerA.classList.remove('active');
-    if (layerB) layerB.classList.remove('active');
-    if (captionEl) {
-        captionEl.classList.remove('ready');
-        captionEl.textContent = '';
-    }
+                    WakeLock.disable();
+                },
 
-    WakeLock.disable();
-},
-
-isActive() { return active; }
+                isActive() { return active; }
             };
         })();
+
+        // ================================================================
+        // ==================== TV ENGINE =================================
+        // ================================================================
+        const TvEngine = (function () {
+            const IPTV_BASE = 'https://iptv-org.github.io/iptv/countries/';
+            const CACHE_PREFIX = 'map_tv_cache_';
+            const CACHE_TTL = 1000 * 60 * 60 * 6;
+
+            let hls = null;
+            let channels = [];
+            let currentIndex = -1;
+            let currentCountry = null;
+            let currentCode = null;
+            let failTimer = null;
+            let hasPlayed = false;
+            let bindDone = false;
+
+            const $ = id => document.getElementById(id);
+            const video = () => $('tvVideo');
+
+            function getCache(code) {
+                try {
+                    const raw = localStorage.getItem(CACHE_PREFIX + code);
+                    if (!raw) return null;
+                    const obj = JSON.parse(raw);
+                    if (Date.now() - obj.t > CACHE_TTL) return null;
+                    return obj.d;
+                } catch { return null; }
+            }
+            function setCache(code, data) {
+                try {
+                    localStorage.setItem(CACHE_PREFIX + code, JSON.stringify({ t: Date.now(), d: data }));
+                } catch {}
+            }
+
+            function parseM3U(text) {
+                const lines = text.split('\n');
+                const result = [];
+                let info = null;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    if (line.startsWith('#EXTINF:')) {
+                        const commaIdx = line.indexOf(',');
+                        const name = commaIdx !== -1 ? line.substring(commaIdx + 1).trim() : 'Unknown';
+                        info = { name };
+                    } else if (line.startsWith('http')) {
+                        if (info) result.push({ name: info.name, url: line });
+                        info = null;
+                    }
+                }
+                return result;
+            }
+
+            async function fetchChannels(code) {
+                const cached = getCache(code);
+                if (cached) return cached;
+                const resp = await fetch(IPTV_BASE + code.toLowerCase() + '.m3u');
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const text = await resp.text();
+                const parsed = parseM3U(text);
+                if (parsed.length) setCache(code, parsed);
+                return parsed;
+            }
+
+            function escapeHtml(s) {
+                return String(s == null ? '' : s)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            function renderList() {
+                const list = $('tvCountryList');
+                if (!list) return;
+                if (!channels.length) {
+                    list.innerHTML = '<div class="fav-empty">Нет доступных каналов</div>';
+                    return;
+                }
+                list.innerHTML = channels.map((ch, i) => `
+                    <div class="tv-channel-item ${i === currentIndex ? 'active' : ''}" data-idx="${i}">
+                        <i class="fas fa-tv" style="color:#38bdf8;"></i>
+                        <span class="tv-ch-name" title="${escapeHtml(ch.name)}">${escapeHtml(ch.name)}</span>
+                        <span class="tv-ch-code">${currentCode || ''}</span>
+                    </div>
+                `).join('');
+
+                list.querySelectorAll('.tv-channel-item').forEach(el => {
+                    el.addEventListener('click', () => play(parseInt(el.dataset.idx, 10)));
+                });
+
+                const activeEl = list.querySelector('.tv-channel-item.active');
+                if (activeEl && activeEl.scrollIntoView) {
+                    try { activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch {}
+                }
+            }
+
+            function clearFailTimer() {
+                if (failTimer) { clearTimeout(failTimer); failTimer = null; }
+            }
+
+            function play(index) {
+                if (index < 0 || index >= channels.length) return;
+                clearFailTimer();
+                hasPlayed = false;
+
+                currentIndex = index;
+                const ch = channels[index];
+
+                $('tvChannelName').textContent = '📺 ' + ch.name;
+                $('tvChannelMeta').textContent = currentCountry + ' · ' + (currentCode || '');
+                const statusEl = $('tvStatus');
+                statusEl.textContent = '⏳ Загрузка потока...';
+                statusEl.className = 'cp-status';
+
+                if (hls) { try { hls.destroy(); } catch {} hls = null; }
+
+                const v = video();
+                try { v.pause(); } catch {}
+                v.removeAttribute('src');
+                v.load();
+
+                v.onplaying = () => {
+                    hasPlayed = true;
+                    clearFailTimer();
+                    statusEl.textContent = '▶ Играет: ' + ch.name;
+                    statusEl.className = 'cp-status';
+                };
+                v.onerror = () => {
+                    if (hasPlayed) return;
+                    statusEl.textContent = '⚠ Ошибка потока. Пробую следующий...';
+                    statusEl.className = 'cp-status error';
+                    scheduleNext();
+                };
+
+                if (window.Hls && Hls.isSupported() && ch.url.includes('.m3u8')) {
+                    hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+                    hls.loadSource(ch.url);
+                    hls.attachMedia(v);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        v.play().catch(() => {
+                            statusEl.textContent = '▶ Нажмите Play';
+                        });
+                    });
+                    hls.on(Hls.Events.ERROR, (e, data) => {
+                        if (data.fatal) {
+                            if (hasPlayed) return;
+                            statusEl.textContent = '⚠ Ошибка потока. Пробую следующий...';
+                            statusEl.className = 'cp-status error';
+                            scheduleNext();
+                        }
+                    });
+                    // страховка: если через 6 секунд не заиграло — следующая
+                    clearFailTimer();
+                    failTimer = setTimeout(() => {
+                        if (!hasPlayed && currentIndex === index) {
+                            statusEl.textContent = '⚠ Поток не отвечает. Следующий...';
+                            statusEl.className = 'cp-status error';
+                            play((currentIndex + 1) % channels.length);
+                        }
+                    }, 6000);
+                } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                    v.src = ch.url;
+                    v.addEventListener('loadedmetadata', () => {
+                        v.play().catch(() => {});
+                    }, { once: true });
+                    clearFailTimer();
+                    failTimer = setTimeout(() => {
+                        if (!hasPlayed && currentIndex === index) {
+                            play((currentIndex + 1) % channels.length);
+                        }
+                    }, 6000);
+                } else {
+                    v.src = ch.url;
+                    v.play().catch(() => {
+                        statusEl.textContent = '⚠ Не удалось воспроизвести';
+                        statusEl.className = 'cp-status error';
+                    });
+                }
+
+                renderList();
+            }
+
+            function scheduleNext() {
+                clearFailTimer();
+                if (channels.length < 2) return;
+                failTimer = setTimeout(() => {
+                    play((currentIndex + 1) % channels.length);
+                }, 2000);
+            }
+
+            function next() { if (channels.length) play((currentIndex + 1) % channels.length); }
+            function prev() { if (channels.length) play((currentIndex - 1 + channels.length) % channels.length); }
+            function random() {
+                if (!channels.length) return;
+                if (channels.length < 2) return play(0);
+                let r = Math.floor(Math.random() * channels.length);
+                if (r === currentIndex) r = (r + 1) % channels.length;
+                play(r);
+            }
+
+            function stop() {
+                clearFailTimer();
+                hasPlayed = false;
+                if (hls) { try { hls.destroy(); } catch {} hls = null; }
+                const v = video();
+                if (v) {
+                    try { v.pause(); } catch {}
+                    v.removeAttribute('src');
+                    try { v.load(); } catch {}
+                    v.onplaying = null;
+                    v.onerror = null;
+                }
+                channels = [];
+                currentIndex = -1;
+                currentCountry = null;
+                currentCode = null;
+                const list = $('tvCountryList');
+                if (list) list.innerHTML = '';
+                const countEl = $('tvCount');
+                if (countEl) countEl.textContent = '';
+            }
+
+            async function start(countryName) {
+                stop();
+                currentCountry = countryName;
+
+                const nameEl = $('tvChannelName');
+                const metaEl = $('tvChannelMeta');
+                const statusEl = $('tvStatus');
+                const countEl = $('tvCount');
+
+                const code = countryCodeMap[countryName];
+                if (!code) {
+                    nameEl.textContent = '📺 TV недоступно';
+                    metaEl.textContent = countryName;
+                    statusEl.textContent = 'Нет кода страны для ' + countryName;
+                    statusEl.className = 'cp-status error';
+                    if (countEl) countEl.textContent = '(0)';
+                    return;
+                }
+                currentCode = code;
+
+                nameEl.textContent = '⏳ Загрузка каналов ' + countryName + '...';
+                metaEl.textContent = code;
+                statusEl.textContent = '';
+                statusEl.className = 'cp-status';
+                if (countEl) countEl.textContent = '';
+
+                try {
+                    channels = await fetchChannels(code);
+                } catch (e) {
+                    channels = [];
+                }
+
+                if (!channels.length) {
+                    nameEl.textContent = '📺 Нет каналов';
+                    metaEl.textContent = countryName + ' (' + code + ')';
+                    statusEl.textContent = 'IPTV-org не нашёл каналов для этой страны';
+                    statusEl.className = 'cp-status error';
+                    if (countEl) countEl.textContent = '(0)';
+                    return;
+                }
+
+                if (countEl) countEl.textContent = '(' + channels.length + ')';
+                renderList();
+                play(0);
+            }
+
+            function bindControls() {
+                if (bindDone) return;
+                bindDone = true;
+
+                const v = video();
+                if (!v) return;
+
+                const vol = $('tvVolumeSlider');
+                const volIcon = $('tvVolumeIcon');
+                const saved = parseFloat(localStorage.getItem('map_tv_volume'));
+                const initVol = isNaN(saved) ? 0.8 : saved;
+                v.volume = initVol;
+                if (vol) vol.value = initVol;
+
+                function updateVolIcon(val) {
+                    if (!volIcon) return;
+                    volIcon.className = val === 0 ? 'fas fa-volume-mute'
+                        : val < 0.5 ? 'fas fa-volume-down' : 'fas fa-volume-up';
+                }
+                updateVolIcon(initVol);
+
+                if (vol) {
+                    vol.addEventListener('input', e => {
+                        const val = parseFloat(e.target.value);
+                        v.volume = val;
+                        localStorage.setItem('map_tv_volume', val);
+                        updateVolIcon(val);
+                    });
+                }
+
+                const nextBtn = $('tvNextBtn'); if (nextBtn) nextBtn.addEventListener('click', next);
+                const prevBtn = $('tvPrevBtn'); if (prevBtn) prevBtn.addEventListener('click', prev);
+                const randBtn = $('tvRandomBtn'); if (randBtn) randBtn.addEventListener('click', random);
+
+                const wrap = $('tvVideoWrap');
+                const fsBtn = $('tvFsBtn');
+
+                function toggleFs() {
+                    if (!wrap) return;
+                    const isFs = document.fullscreenElement === wrap ||
+                                 document.webkitFullscreenElement === wrap;
+                    if (!isFs) {
+                        if (wrap.requestFullscreen) wrap.requestFullscreen().catch(() => {});
+                        else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
+                    } else {
+                        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                    }
+                }
+
+                if (fsBtn) fsBtn.addEventListener('click', e => { e.stopPropagation(); toggleFs(); });
+                v.addEventListener('dblclick', toggleFs);
+
+                function updateFsIcon() {
+                    if (!fsBtn) return;
+                    const isFs = document.fullscreenElement === wrap ||
+                                 document.webkitFullscreenElement === wrap;
+                    const icon = fsBtn.querySelector('i');
+                    if (icon) icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
+                }
+                document.addEventListener('fullscreenchange', updateFsIcon);
+                document.addEventListener('webkitfullscreenchange', updateFsIcon);
+            }
+
+            return { start, stop, bindControls };
+        })();
+
+        // навешиваем контролы TV один раз (после загрузки DOM)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', TvEngine.bindControls);
+        } else {
+            TvEngine.bindControls();
+        }
 
         // ====== МЕХАНИЧЕСКИЕ ЧАСЫ ======
         let clockInterval = null;
@@ -2129,17 +2611,17 @@ isActive() { return active; }
         });
 
         cpAudio.addEventListener("play", function() {
-    cpPlayIcon.className = "fas fa-pause";
-    cpPlayer.classList.add("playing");
-    fpPlayIcon.className = "fas fa-pause";
-    if (!VizEngine.isActive()) WakeLock.enable();
-});
-cpAudio.addEventListener("pause", function() {
-    cpPlayIcon.className = "fas fa-play";
-    cpPlayer.classList.remove("playing");
-    fpPlayIcon.className = "fas fa-play";
-    if (!VizEngine.isActive()) WakeLock.disable();
-});
+            cpPlayIcon.className = "fas fa-pause";
+            cpPlayer.classList.add("playing");
+            fpPlayIcon.className = "fas fa-pause";
+            if (!VizEngine.isActive()) WakeLock.enable();
+        });
+        cpAudio.addEventListener("pause", function() {
+            cpPlayIcon.className = "fas fa-play";
+            cpPlayer.classList.remove("playing");
+            fpPlayIcon.className = "fas fa-play";
+            if (!VizEngine.isActive()) WakeLock.disable();
+        });
         cpAudio.addEventListener("timeupdate", function() {
             if (cpAudio.duration && isFinite(cpAudio.duration)) {
                 const pct = (cpAudio.currentTime / cpAudio.duration) * 100;
@@ -2217,91 +2699,87 @@ cpAudio.addEventListener("pause", function() {
             fpCountry.textContent = countryName || "—";
             floatingPlayer.classList.add("visible");
         }
-function playRadioStation(index) {
-    if (!radioStations.length) return;
-    if (index < 0) index = radioStations.length - 1;
-    if (index >= radioStations.length) index = 0;
-    radioCurrentIndex = index;
-    const st = radioStations[index];
 
-    const nameEl = document.getElementById("radioStationName");
-    const metaEl = document.getElementById("radioStationMeta");
-    const statusEl = document.getElementById("radioStatus");
+        function playRadioStation(index) {
+            if (!radioStations.length) return;
+            if (index < 0) index = radioStations.length - 1;
+            if (index >= radioStations.length) index = 0;
+            radioCurrentIndex = index;
+            const st = radioStations[index];
 
-    nameEl.textContent = "📻 " + st.name;
-    metaEl.textContent =
-        (st.codec || "?") +
-        (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
-        (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
+            const nameEl = document.getElementById("radioStationName");
+            const metaEl = document.getElementById("radioStationMeta");
+            const statusEl = document.getElementById("radioStatus");
 
-    statusEl.textContent = "⏳ Подключение к " + st.name + "...";
-    statusEl.className = "cp-status";
+            nameEl.textContent = "📻 " + st.name;
+            metaEl.textContent =
+                (st.codec || "?") +
+                (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
+                (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
 
-    cpAudio.pause();
-    cpAudio.src = st.url;
-    cpAudio.load();
+            statusEl.textContent = "⏳ Подключение к " + st.name + "...";
+            statusEl.className = "cp-status";
 
-    // Флаг: станция реально заиграла
-    let hasPlayed = false;
-    let failTimer = null;
+            cpAudio.pause();
+            cpAudio.src = st.url;
+            cpAudio.load();
 
-    // Очищаем предыдущий таймер и обработчики
-    if (cpAudio._failTimer) { clearTimeout(cpAudio._failTimer); cpAudio._failTimer = null; }
-    cpAudio.onerror = null;
-    cpAudio.onplaying = null;
+            let hasPlayedR = false;
+            let failTimerR = null;
 
-    // Реальное начало воспроизведения
-    cpAudio.onplaying = () => {
-        if (hasPlayed) return;
-        hasPlayed = true;
-        if (failTimer) { clearTimeout(failTimer); failTimer = null; }
-        statusEl.textContent = "▶ Играет: " + st.name;
-        statusEl.className = "cp-status";
-        showFloatingPlayer(st, radioCurrentCountry);
-        cpAudio.onerror = null;
-    };
+            if (cpAudio._failTimer) { clearTimeout(cpAudio._failTimer); cpAudio._failTimer = null; }
+            cpAudio.onerror = null;
+            cpAudio.onplaying = null;
 
-    // Ошибка потока — ждём 3 секунды перед переключением
-    cpAudio.onerror = () => {
-        if (hasPlayed) return;
-        if (failTimer) return; // уже ждём
-        statusEl.textContent = "⚠ Поток " + st.name + " не отвечает. Пробую следующую через 3 сек...";
-        statusEl.className = "cp-status error";
-        failTimer = setTimeout(() => {
-            failTimer = null;
-            playRadioStation(radioCurrentIndex + 1);
-        }, 3000);
-    };
+            cpAudio.onplaying = () => {
+                if (hasPlayedR) return;
+                hasPlayedR = true;
+                if (failTimerR) { clearTimeout(failTimerR); failTimerR = null; }
+                statusEl.textContent = "▶ Играет: " + st.name;
+                statusEl.className = "cp-status";
+                showFloatingPlayer(st, radioCurrentCountry);
+                cpAudio.onerror = null;
+            };
 
-    const playPromise = cpAudio.play();
-    if (playPromise !== undefined) {
-        playPromise.then(() => {
-            // Если play() разрешился, но onplaying ещё не сработал —
-            // даём потоку до 4 секунд, чтобы реально начать звук
-            failTimer = setTimeout(() => {
-                if (!hasPlayed) {
-                    statusEl.textContent = "⚠ Нет звука от " + st.name + ". Следующая станция...";
-                    statusEl.className = "cp-status error";
+            cpAudio.onerror = () => {
+                if (hasPlayedR) return;
+                if (failTimerR) return;
+                statusEl.textContent = "⚠ Поток " + st.name + " не отвечает. Пробую следующую через 3 сек...";
+                statusEl.className = "cp-status error";
+                failTimerR = setTimeout(() => {
+                    failTimerR = null;
                     playRadioStation(radioCurrentIndex + 1);
-                }
-            }, 4000);
-        }).catch(() => {
-            if (hasPlayed) return;
-            statusEl.textContent = "⚠ Не удалось воспроизвести. Следующая через 3 сек...";
-            statusEl.className = "cp-status error";
-            failTimer = setTimeout(() => {
-                failTimer = null;
-                playRadioStation(radioCurrentIndex + 1);
-            }, 3000);
-        });
-    }
+                }, 3000);
+            };
 
-    updateFavButtonState();
+            const playPromise = cpAudio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    failTimerR = setTimeout(() => {
+                        if (!hasPlayedR) {
+                            statusEl.textContent = "⚠ Нет звука от " + st.name + ". Следующая станция...";
+                            statusEl.className = "cp-status error";
+                            playRadioStation(radioCurrentIndex + 1);
+                        }
+                    }, 4000);
+                }).catch(() => {
+                    if (hasPlayedR) return;
+                    statusEl.textContent = "⚠ Не удалось воспроизвести. Следующая через 3 сек...";
+                    statusEl.className = "cp-status error";
+                    failTimerR = setTimeout(() => {
+                        failTimerR = null;
+                        playRadioStation(radioCurrentIndex + 1);
+                    }, 3000);
+                });
+            }
 
-    if (VizEngine.isActive() && radioCurrentCountry) {
-        VizEngine.start(radioCurrentCountry);
-    }
-}
+            updateFavButtonState();
+
+            if (VizEngine.isActive() && radioCurrentCountry) {
+                VizEngine.start(radioCurrentCountry);
+            }
+        }
+
         async function startRadioForCountry(countryName) {
             const nameEl = document.getElementById("radioStationName");
             const metaEl = document.getElementById("radioStationMeta");
@@ -2353,44 +2831,30 @@ function playRadioStation(index) {
                 const parsed = JSON.parse(raw);
                 return Array.isArray(parsed) ? parsed : [];
             } catch (e) {
-                console.warn('Ошибка загрузки избранного:', e);
                 return [];
             }
         }
-
         function saveFavorites(favorites) {
-            try {
-                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-            } catch (e) {
-                console.warn('Ошибка сохранения избранного:', e);
-            }
+            try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); } catch (e) {}
         }
-
         function isStationFavorite(station) {
             if (!station || !station.url) return false;
-            const favorites = loadFavorites();
-            return favorites.some(f => f.url === station.url);
+            return loadFavorites().some(f => f.url === station.url);
         }
-
         function addFavorite(station, countryName) {
             if (!station || !station.url) return;
             const favorites = loadFavorites();
             if (favorites.some(f => f.url === station.url)) return;
             favorites.unshift({
-                name: station.name,
-                url: station.url,
-                codec: station.codec || '',
-                bitrate: station.bitrate || 0,
-                tags: station.tags || '',
-                country: countryName,
-                flag: flagMap[countryName] || '🌍',
-                addedAt: Date.now()
+                name: station.name, url: station.url,
+                codec: station.codec || '', bitrate: station.bitrate || 0,
+                tags: station.tags || '', country: countryName,
+                flag: flagMap[countryName] || '🌍', addedAt: Date.now()
             });
             saveFavorites(favorites);
             renderFavorites();
             updateFavButtonState();
         }
-
         function removeFavorite(url) {
             let favorites = loadFavorites();
             favorites = favorites.filter(f => f.url !== url);
@@ -2398,14 +2862,10 @@ function playRadioStation(index) {
             renderFavorites();
             updateFavButtonState();
         }
-
         function updateFavButtonState() {
             const btn = document.getElementById('radioFavBtn');
             if (!btn) return;
-            if (!radioStations.length) {
-                btn.style.display = 'none';
-                return;
-            }
+            if (!radioStations.length) { btn.style.display = 'none'; return; }
             btn.style.display = 'inline-flex';
             const current = radioStations[radioCurrentIndex];
             if (!current) return;
@@ -2419,11 +2879,8 @@ function playRadioStation(index) {
         function escapeHtml(str) {
             if (str == null) return '';
             return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
         function renderFavorites() {
@@ -2432,12 +2889,10 @@ function playRadioStation(index) {
             if (!list) return;
             const favorites = loadFavorites();
             if (countEl) countEl.textContent = '(' + favorites.length + ')';
-
             if (!favorites.length) {
                 list.innerHTML = '<div class="fav-empty">Пока нет избранных станций 💔</div>';
                 return;
             }
-
             list.innerHTML = favorites.map((fav, idx) => {
                 const safeName = escapeHtml(fav.name || 'Без названия');
                 const safeCountry = escapeHtml(fav.country || 'Неизвестно');
@@ -2462,8 +2917,7 @@ function playRadioStation(index) {
             list.querySelectorAll('.fav-play-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    const idx = parseInt(this.dataset.index, 10);
-                    playFavoriteByIndex(idx);
+                    playFavoriteByIndex(parseInt(this.dataset.index, 10));
                 });
             });
             list.querySelectorAll('.fav-remove-btn').forEach(btn => {
@@ -2483,13 +2937,9 @@ function playRadioStation(index) {
             const favorites = loadFavorites();
             const fav = favorites[idx];
             if (!fav) return;
-
             radioStations = [{
-                name: fav.name,
-                url: fav.url,
-                codec: fav.codec,
-                bitrate: fav.bitrate,
-                tags: fav.tags
+                name: fav.name, url: fav.url, codec: fav.codec,
+                bitrate: fav.bitrate, tags: fav.tags
             }];
             radioCurrentIndex = 0;
             radioCurrentCountry = fav.country;
@@ -2525,7 +2975,7 @@ function playRadioStation(index) {
             }, 2200);
         }
 
-        // ====== ПРИВЯЗКА ВИЗУАЛИЗАЦИИ (обработчики) ======
+        // ====== ПРИВЯЗКА ВИЗУАЛИЗАЦИИ ======
         const vizToggleBtn = document.getElementById('vizToggleBtn');
         vizToggleBtn.addEventListener('click', function() {
             if (VizEngine.isActive()) {
@@ -2552,57 +3002,45 @@ function playRadioStation(index) {
             });
         }
 
-// ====== ПОЛНОЭКРАННАЯ ВИЗУАЛИЗАЦИЯ ======
-const vizContainerEl = document.getElementById('vizContainer');
-const vizFsBtn = document.getElementById('vizFsBtn');
+        const vizContainerEl = document.getElementById('vizContainer');
+        const vizFsBtn = document.getElementById('vizFsBtn');
 
-function updateFsIcon() {
-    if (!vizFsBtn) return;
-    const isFs = document.fullscreenElement === vizContainerEl ||
-                 document.webkitFullscreenElement === vizContainerEl;
-    const icon = vizFsBtn.querySelector('i');
-    if (icon) {
-        icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
-    }
-    vizFsBtn.title = isFs ? 'Выйти из полноэкранного режима' : 'На весь экран';
-}
-
-function toggleVizFullscreen() {
-    if (!vizContainerEl) return;
-    const isFs = document.fullscreenElement === vizContainerEl ||
-                 document.webkitFullscreenElement === vizContainerEl;
-    if (isFs) {
-        if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-    } else {
-        if (vizContainerEl.requestFullscreen) {
-            vizContainerEl.requestFullscreen().catch(err => {
-                showFavToast('⚠ Не удалось открыть на весь экран');
-                console.warn('Fullscreen error:', err);
-            });
-        } else if (vizContainerEl.webkitRequestFullscreen) {
-            vizContainerEl.webkitRequestFullscreen();
-        } else {
-            showFavToast('⚠ Полноэкранный режим не поддерживается');
+        function updateFsIcon() {
+            if (!vizFsBtn) return;
+            const isFs = document.fullscreenElement === vizContainerEl ||
+                         document.webkitFullscreenElement === vizContainerEl;
+            const icon = vizFsBtn.querySelector('i');
+            if (icon) icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
         }
-    }
-}
 
-if (vizFsBtn) {
-    vizFsBtn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        toggleVizFullscreen();
-    });
-}
+        function toggleVizFullscreen() {
+            if (!vizContainerEl) return;
+            const isFs = document.fullscreenElement === vizContainerEl ||
+                         document.webkitFullscreenElement === vizContainerEl;
+            if (isFs) {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            } else {
+                if (vizContainerEl.requestFullscreen) {
+                    vizContainerEl.requestFullscreen().catch(() => {});
+                } else if (vizContainerEl.webkitRequestFullscreen) {
+                    vizContainerEl.webkitRequestFullscreen();
+                }
+            }
+        }
 
-document.addEventListener('fullscreenchange', updateFsIcon);
-document.addEventListener('webkitfullscreenchange', updateFsIcon);
-
-// Клик по визуализации (кроме кнопок) — тоже переключает полный экран
-vizContainerEl.addEventListener('dblclick', function(e) {
-    if (e.target.closest('.viz-close') || e.target.closest('.viz-fs-btn')) return;
-    toggleVizFullscreen();
-});
+        if (vizFsBtn) {
+            vizFsBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleVizFullscreen();
+            });
+        }
+        document.addEventListener('fullscreenchange', updateFsIcon);
+        document.addEventListener('webkitfullscreenchange', updateFsIcon);
+        vizContainerEl.addEventListener('dblclick', function(e) {
+            if (e.target.closest('.viz-close') || e.target.closest('.viz-fs-btn')) return;
+            toggleVizFullscreen();
+        });
 
         // ====== AMCHARTS GLOBE ======
         am5.ready(function () {
@@ -2623,9 +3061,9 @@ vizContainerEl.addEventListener('dblclick', function(e) {
                 fillOpacity: 1
             }));
 
-window.addEventListener('resize', function () {
-    if (chart && chart.resize) chart.resize();
-});
+            window.addEventListener('resize', function () {
+                if (chart && chart.resize) chart.resize();
+            });
 
             let polygonSeries = chart.series.push(
                 am5map.MapPolygonSeries.new(root, { geoJSON: am5geodata_worldLow })
@@ -2684,46 +3122,45 @@ window.addEventListener('resize', function () {
                 }
             });
 
-            // ====== ВРАЩЕНИЕ ГЛОБУСА (управляемое) ======
-let rotationAnimation = null;
-let rotationEnabled = true;
+            // ====== ВРАЩЕНИЕ ГЛОБУСА ======
+            let rotationAnimation = null;
+            let rotationEnabled = true;
 
-function startRotation() {
-    if (rotationAnimation) {
-        try { rotationAnimation.stop(); } catch (e) {}
-    }
-    const from = chart.get("rotationX") || 0;
-    rotationAnimation = chart.animate({
-        key: "rotationX",
-        from: from,
-        to: from + 360,
-        loops: Infinity,
-        duration: 32000,
-        easing: am5.ease.linear
-    });
-    rotationEnabled = true;
-    updateRotationButton();
-}
+            function startRotation() {
+                if (rotationAnimation) {
+                    try { rotationAnimation.stop(); } catch (e) {}
+                }
+                const from = chart.get("rotationX") || 0;
+                rotationAnimation = chart.animate({
+                    key: "rotationX",
+                    from: from,
+                    to: from + 360,
+                    loops: Infinity,
+                    duration: 32000,
+                    easing: am5.ease.linear
+                });
+                rotationEnabled = true;
+                updateRotationButton();
+            }
 
-function stopRotation() {
-    rotationEnabled = false;
-    if (rotationAnimation) {
-        try { rotationAnimation.stop(); } catch (e) {}
-        rotationAnimation = null;
-    }
-    updateRotationButton();
-}
+            function stopRotation() {
+                rotationEnabled = false;
+                if (rotationAnimation) {
+                    try { rotationAnimation.stop(); } catch (e) {}
+                    rotationAnimation = null;
+                }
+                updateRotationButton();
+            }
 
-function updateRotationButton() {
-    const btn = document.getElementById("toggleRotation");
-    if (!btn) return;
-    btn.innerHTML = rotationEnabled
-        ? '<i class="fas fa-pause-circle"></i> <span>Stop Rotation</span>'
-        : '<i class="fas fa-play-circle"></i> <span>Resume Rotation</span>';
-}
+            function updateRotationButton() {
+                const btn = document.getElementById("toggleRotation");
+                if (!btn) return;
+                btn.innerHTML = rotationEnabled
+                    ? '<i class="fas fa-pause-circle"></i> <span>Stop Rotation</span>'
+                    : '<i class="fas fa-play-circle"></i> <span>Resume Rotation</span>';
+            }
 
-// Первый запуск
-startRotation();
+            startRotation();
 
             let pendingCountry = null;
             let pendingTimeout = null;
@@ -2733,6 +3170,7 @@ startRotation();
             const statusSpan = document.getElementById("statusText");
             const statusCard = document.getElementById("statusCard");
             const modalOverlay = document.getElementById("actionModal");
+            const modalBox = document.getElementById("modalBox");
             const modalCountryName = document.getElementById("modalCountryName");
             const modalFlag = document.getElementById("modalFlag");
             const modalSubInfo = document.getElementById("modalSubInfo");
@@ -2741,8 +3179,17 @@ startRotation();
             const modalClock = document.getElementById("modalClock");
             const clockInfo = document.getElementById("clockInfo");
             const radioInfo = document.getElementById("radioInfo");
+            const tvInfo = document.getElementById("tvInfo");
 
-            const DEFAULT_STATUS = "🌍 Tap any country → first click shows the name, second click opens a choice: News, Wikipedia, Local Time or Radio";
+            const DEFAULT_STATUS = "🌍 Tap any country → first click shows the name, second click opens a choice: News, Wikipedia, Local Time, Radio or TV";
+
+            function hideAllSubPanels() {
+                modalClock.style.display = 'none';
+                clockInfo.style.display = 'none';
+                radioInfo.style.display = 'none';
+                if (tvInfo) tvInfo.style.display = 'none';
+                modalBox.classList.remove('tv-mode');
+            }
 
             function showModal(countryName) {
                 currentCountryForModal = countryName;
@@ -2752,13 +3199,12 @@ startRotation();
                 const tz = getTimezoneForCountry(countryName);
                 modalSubInfo.textContent = "🌐 " + langInfo.display + " · " + tz;
                 isTimeMode = false;
-                modalClock.style.display = 'none';
-                clockInfo.style.display = 'none';
-                radioInfo.style.display = 'none';
+                hideAllSubPanels();
                 modalActions.style.display = 'flex';
                 clockActions.style.display = 'none';
                 stopClock();
                 stopRadio();
+                TvEngine.stop();
                 modalOverlay.classList.add("active");
                 document.body.classList.add("modal-open");
             }
@@ -2768,59 +3214,57 @@ startRotation();
                 document.body.classList.remove("modal-open");
                 currentCountryForModal = null;
                 isTimeMode = false;
+                modalBox.classList.remove('tv-mode');
                 stopClock();
+                TvEngine.stop();
             }
 
-            // ====== СЛУЧАЙНАЯ СТРАНА ======
-function getRandomCountry() {
-    const candidates = Object.keys(timezoneMap).filter(function(name) {
-        return countryCodeMap[name] && name !== "Greenland" && name !== "Antarctica";
-    });
-    if (!candidates.length) return null;
-    return candidates[Math.floor(Math.random() * candidates.length)];
-}
-
-function openRandomCountry() {
-    const country = getRandomCountry();
-    if (!country) {
-        statusSpan.innerHTML = "⚠ Не удалось выбрать случайную страну.";
-        return;
-    }
-
-    if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
-    pendingCountry = null;
-
-    const langInfo = getLanguageForCountry(country);
-    const tz = getTimezoneForCountry(country);
-    statusSpan.innerHTML = '<i class="fas fa-dice"></i> 🎲 Random: <span class="country-badge">' +
-        (flagMap[country] || "🌍") + ' ' + country + '</span> <span class="language-tag">' +
-        langInfo.display + '</span> <span class="language-tag" style="background:#10b981;">' +
-        tz + '</span>';
-    statusCard.style.borderColor = "#a78bfa";
-
-    showModal(country);
-
-    try {
-        polygonSeries.mapPolygons.each(function(polygon) {
-            const di = polygon.dataItem;
-            if (!di) return;
-            const ctx = di.dataContext;
-            if (ctx && ctx.name === country) {
-                polygon.animate({ key: "stroke", to: am5.color(0xffaa66), duration: 300 });
-                polygon.animate({ key: "strokeWidth", to: 2.5, duration: 300 });
-                setTimeout(function() {
-                    if (polygon) {
-                        polygon.animate({ key: "stroke", to: am5.color(0x1a2744), duration: 600 });
-                        polygon.animate({ key: "strokeWidth", to: 0.6, duration: 600 });
-                    }
-                }, 1500);
+            function getRandomCountry() {
+                const candidates = Object.keys(timezoneMap).filter(function(name) {
+                    return countryCodeMap[name] && name !== "Greenland" && name !== "Antarctica";
+                });
+                if (!candidates.length) return null;
+                return candidates[Math.floor(Math.random() * candidates.length)];
             }
-        });
-    } catch (e) { /* игнорируем */ }
-}
 
+            function openRandomCountry() {
+                const country = getRandomCountry();
+                if (!country) {
+                    statusSpan.innerHTML = "⚠ Не удалось выбрать случайную страну.";
+                    return;
+                }
+                if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
+                pendingCountry = null;
 
-function clearPendingState(resetStatusToDefault) {
+                const langInfo = getLanguageForCountry(country);
+                const tz = getTimezoneForCountry(country);
+                statusSpan.innerHTML = '<i class="fas fa-dice"></i> 🎲 Random: <span class="country-badge">' +
+                    (flagMap[country] || "🌍") + ' ' + country + '</span> <span class="language-tag">' +
+                    langInfo.display + '</span> <span class="language-tag" style="background:#10b981;">' +
+                    tz + '</span>';
+                statusCard.style.borderColor = "#a78bfa";
+                showModal(country);
+
+                try {
+                    polygonSeries.mapPolygons.each(function(polygon) {
+                        const di = polygon.dataItem;
+                        if (!di) return;
+                        const ctx = di.dataContext;
+                        if (ctx && ctx.name === country) {
+                            polygon.animate({ key: "stroke", to: am5.color(0xffaa66), duration: 300 });
+                            polygon.animate({ key: "strokeWidth", to: 2.5, duration: 300 });
+                            setTimeout(function() {
+                                if (polygon) {
+                                    polygon.animate({ key: "stroke", to: am5.color(0x1a2744), duration: 600 });
+                                    polygon.animate({ key: "strokeWidth", to: 0.6, duration: 600 });
+                                }
+                            }, 1500);
+                        }
+                    });
+                } catch (e) {}
+            }
+
+            function clearPendingState(resetStatusToDefault) {
                 if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
                 pendingCountry = null;
                 if (resetStatusToDefault) {
@@ -2869,7 +3313,7 @@ function clearPendingState(resetStatusToDefault) {
                 statusSpan.innerHTML = '<i class="fas fa-globe"></i> <span class="country-badge"><i class="fas fa-flag"></i> ' +
                     countryName + '</span> <span class="language-tag"><i class="fas fa-language"></i> ' + langInfo.display +
                     '</span> <span class="language-tag" style="background:#10b981;"><i class="fas fa-clock"></i> ' + tz +
-                    '</span> → ✅ Click again to choose News, Wikipedia, Local Time or Radio!';
+                    '</span> → ✅ Click again to choose News, Wikipedia, Local Time, Radio or TV!';
                 statusCard.style.borderColor = "#ffb74d";
                 if (pendingTimeout) clearTimeout(pendingTimeout);
                 pendingTimeout = setTimeout(function () {
@@ -2968,7 +3412,10 @@ function clearPendingState(resetStatusToDefault) {
                     modalClock.style.display = 'block';
                     clockInfo.style.display = 'block';
                     radioInfo.style.display = 'none';
+                    if (tvInfo) tvInfo.style.display = 'none';
+                    modalBox.classList.remove('tv-mode');
                     stopRadio();
+                    TvEngine.stop();
                     startClock(tz);
                     modalSubInfo.textContent = "🕐 Local time in " + currentCountryForModal + " (" + tz + ")";
                     statusSpan.innerHTML = '<i class="fas fa-clock"></i> 🕐 Showing local time for <strong>' +
@@ -2981,7 +3428,7 @@ function clearPendingState(resetStatusToDefault) {
                 if (currentCountryForModal) {
                     const langDisplay = openNewsForCountry(currentCountryForModal);
                     statusSpan.innerHTML = '<i class="fas fa-newspaper"></i> 📰 Opening news for <strong>' +
-                        currentCountryForModal + '</strong> in <strong>' + langDisplay + '</strong>... (радио продолжает играть 🎵)';
+                        currentCountryForModal + '</strong> in <strong>' + langDisplay + '</strong>...';
                     statusCard.style.borderColor = "#4caf50";
                     hideModal();
                     setTimeout(function () {
@@ -2997,7 +3444,7 @@ function clearPendingState(resetStatusToDefault) {
                 if (currentCountryForModal) {
                     const langCode = openWikipediaForCountry(currentCountryForModal);
                     statusSpan.innerHTML = '<i class="fab fa-wikipedia-w"></i> 📖 Opening Wikipedia for <strong>' +
-                        currentCountryForModal + '</strong> (' + langCode + ')... (радио продолжает играть 🎵)';
+                        currentCountryForModal + '</strong> (' + langCode + ')...';
                     statusCard.style.borderColor = "#8b5cf6";
                     hideModal();
                     setTimeout(function () {
@@ -3016,13 +3463,37 @@ function clearPendingState(resetStatusToDefault) {
                     clockActions.style.display = 'flex';
                     modalClock.style.display = 'none';
                     clockInfo.style.display = 'none';
+                    if (tvInfo) tvInfo.style.display = 'none';
                     radioInfo.style.display = 'block';
+                    modalBox.classList.remove('tv-mode');
                     stopClock();
+                    TvEngine.stop();   // важно: гасим TV, чтобы звуки не пересекались
                     modalSubInfo.textContent = "📻 Радио " + country;
                     statusSpan.innerHTML = '<i class="fas fa-radio"></i> 📻 Загрузка радио для <strong>' + country + '</strong>...';
                     statusCard.style.borderColor = "#f59e0b";
                     renderFavorites();
                     startRadioForCountry(country);
+                }
+            });
+
+            // === TV ===
+            document.getElementById("modalTvBtn").addEventListener("click", function () {
+                if (currentCountryForModal) {
+                    const country = currentCountryForModal;
+                    modalActions.style.display = 'none';
+                    clockActions.style.display = 'flex';
+                    modalClock.style.display = 'none';
+                    clockInfo.style.display = 'none';
+                    radioInfo.style.display = 'none';
+                    if (tvInfo) tvInfo.style.display = 'block';
+                    modalBox.classList.add('tv-mode');
+                    stopClock();
+                    stopRadio();       // гасим радио
+                    TvEngine.stop();   // и предыдущий TV-поток
+                    modalSubInfo.textContent = "📺 TV " + country;
+                    statusSpan.innerHTML = '<i class="fas fa-tv"></i> 📺 Загрузка ТВ для <strong>' + country + '</strong>...';
+                    statusCard.style.borderColor = "#0ea5e9";
+                    TvEngine.start(country);
                 }
             });
 
@@ -3048,6 +3519,7 @@ function clearPendingState(resetStatusToDefault) {
             renderFavorites();
 
             document.getElementById("modalCancelBtn").addEventListener("click", function () {
+                TvEngine.stop();
                 hideModal();
                 statusSpan.innerHTML = "❌ Cancelled. Tap any country to start over.";
                 statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
@@ -3063,14 +3535,19 @@ function clearPendingState(resetStatusToDefault) {
                 modalClock.style.display = 'none';
                 clockInfo.style.display = 'none';
                 radioInfo.style.display = 'none';
+                if (tvInfo) tvInfo.style.display = 'none';
+                modalBox.classList.remove('tv-mode');
                 clockActions.style.display = 'none';
                 modalActions.style.display = 'flex';
                 stopClock();
+                stopRadio();
+                TvEngine.stop();
                 modalSubInfo.textContent = "Choose what you want to see";
             });
 
             document.getElementById("modalCloseBtn").addEventListener("click", function () {
                 stopClock();
+                TvEngine.stop();
                 hideModal();
                 statusSpan.innerHTML = DEFAULT_STATUS;
                 statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
@@ -3078,6 +3555,7 @@ function clearPendingState(resetStatusToDefault) {
 
             modalOverlay.addEventListener("click", function (e) {
                 if (e.target === modalOverlay) {
+                    TvEngine.stop();
                     hideModal();
                     statusSpan.innerHTML = "❌ Cancelled. Tap any country to start over.";
                     statusCard.style.borderColor = "rgba(100, 181, 246, 0.4)";
@@ -3091,21 +3569,18 @@ function clearPendingState(resetStatusToDefault) {
 
             document.getElementById("randomCountry").addEventListener("click", openRandomCountry);
 
-
-const toggleBtn = document.getElementById("toggleRotation");
-toggleBtn.addEventListener("click", function () {
-    if (rotationEnabled) {
-        stopRotation();
-    } else {
-        startRotation();
-    }
-});
+            const toggleBtn = document.getElementById("toggleRotation");
+            toggleBtn.addEventListener("click", function () {
+                if (rotationEnabled) stopRotation();
+                else startRotation();
+            });
 
             const resetBtn = document.getElementById("resetView");
-resetBtn.addEventListener("click", function () {
-    stopRotation();
-    chart.animate({ key: "rotationX", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });
-    chart.animate({ key: "rotationY", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });if (pendingTimeout) clearTimeout(pendingTimeout);
+            resetBtn.addEventListener("click", function () {
+                stopRotation();
+                chart.animate({ key: "rotationX", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });
+                chart.animate({ key: "rotationY", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });
+                if (pendingTimeout) clearTimeout(pendingTimeout);
                 pendingCountry = null;
                 pendingTimeout = null;
                 hideModal();
@@ -3114,13 +3589,11 @@ resetBtn.addEventListener("click", function () {
                 setTimeout(function () {
                     if (pendingCountry === null) statusSpan.innerHTML = DEFAULT_STATUS;
                 }, 2800);
-setTimeout(function () {
-    startRotation();
-}, 1100);
+                setTimeout(function () { startRotation(); }, 1100);
             });
 
             function getShareUrl() { return window.location.href; }
-            const shareText = "World Explorer: click any country twice — choose News, Wikipedia, Local Time or Radio! Interactive 3D globe. 🌐📰📖🕐📻";
+            const shareText = "World Explorer: click any country twice — choose News, Wikipedia, Local Time, Radio or TV! Interactive 3D globe. 🌐📰📖🕐📻📺";
             const currentUrl = encodeURIComponent(getShareUrl());
             const encodedText = encodeURIComponent(shareText);
             document.getElementById("fbShare").href = "https://www.facebook.com/sharer/sharer.php?u=" + currentUrl;
@@ -3137,397 +3610,204 @@ setTimeout(function () {
             document.head.appendChild(styleTag);
         });
     </script>
-<script>
-(function() {
-    "use strict";
 
-    function openGame(url, title) {
-        const oldOverlay = document.querySelector('.transition-overlay');
-        if (oldOverlay) oldOverlay.remove();
-
-        const overlay = document.createElement('div');
-        overlay.className = 'transition-overlay';
-
-        const topBar = document.createElement('div');
-        topBar.className = 'transition-topbar';
-
-        const backBtn = document.createElement('button');
-        backBtn.className = 'transition-back';
-        backBtn.textContent = '← Назад';
-        backBtn.onclick = function() { overlay.remove(); };
-
-        const titleEl = document.createElement('span');
-        titleEl.className = 'transition-title';
-        titleEl.textContent = title || '🌐 Загрузка...';
-
-        topBar.appendChild(backBtn);
-        topBar.appendChild(titleEl);
-        overlay.appendChild(topBar);
-
-        const iframe = document.createElement('iframe');
-        iframe.className = 'transition-iframe';
-        iframe.src = url;
-        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
-        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
-
-        overlay.appendChild(iframe);
-        document.body.appendChild(overlay);
-
-        const escapeHandler = function(e) {
-            if (e.key === 'Escape') {
-                overlay.remove();
-                document.removeEventListener('keydown', escapeHandler);
-            }
-        };
-        document.addEventListener('keydown', escapeHandler);
-
-        iframe.onload = function() {
-            try {
-                const frameTitle = iframe.contentDocument?.title;
-                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
-                    titleEl.textContent = frameTitle;
-                }
-            } catch (e) {}
-        };
-
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) overlay.remove();
-        });
-
-        window.addEventListener('message', function(event) {
-            if (event.source !== iframe.contentWindow) return;
-            const data = event.data;
-            if (data && data.type === 'download') {
-                handleDownload(data.content, data.filename, data.mimeType);
-            }
-        });
-
-        return overlay;
-    }
-
-    function handleDownload(content, filename, mimeType) {
-        try {
-            if (typeof content === 'string' && content.startsWith('http')) {
-                const a = document.createElement('a');
-                a.href = content;
-                a.download = filename || 'download';
-                a.target = '_blank';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                showNotification('✅ Скачивание началось!', 'success');
-                return;
-            }
-
-            let blob;
-            if (typeof content === 'string') {
-                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
-            } else if (content instanceof Blob) {
-                blob = content;
-            } else {
-                throw new Error('Неподдерживаемый формат данных');
-            }
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename || 'download';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
-            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
-        } catch (error) {
-            console.error('Ошибка скачивания:', error);
-            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+    <script>
+    (function() {
+        "use strict";
+        function registerSW() {
+            if (!('serviceWorker' in navigator)) return;
+            navigator.serviceWorker.getRegistration()
+                .then(function(registration) {
+                    if (registration) return;
+                    navigator.serviceWorker.register('sw.js').catch(function(){});
+                }).catch(function(){});
         }
-    }
+        function init() { registerSW(); }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else { init(); }
+    })();
+    </script>
 
-    function showNotification(message, type) {
-        const old = document.querySelector('.download-notification');
-        if (old) old.remove();
+    <script>
+    /* ============================================================
+       HARDWARE BACK BUTTON HANDLER
+       ============================================================ */
+    (function () {
+        "use strict";
+        const isMobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent);
+        if (!isMobile) return;
 
-        const notification = document.createElement('div');
-        notification.className = 'download-notification ' + (type || '');
-        notification.textContent = message;
-        document.body.appendChild(notification);
+        const STATE_ROOT   = "root";
+        const STATE_MODAL  = "modal";
+        const STATE_SUB    = "submenu";
+        const STATE_VIZ_FS = "vizFullscreen";
+        const STATE_TV_FS  = "tvFullscreen";
 
-        setTimeout(function() {
-            notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.5s';
-            setTimeout(function() { notification.remove(); }, 500);
-        }, 3000);
-    }
+        let currentLayer = STATE_ROOT;
+        let isPopping    = false;
 
-    window.openGame = openGame;
-    window.handleDownload = handleDownload;
-    window.showNotification = showNotification;
-
-    function registerSW() {
-        if (!('serviceWorker' in navigator)) {
-            console.warn('[SW] ❌ Service Worker не поддерживается');
-            return;
-        }
-        navigator.serviceWorker.getRegistration()
-            .then(function(registration) {
-                if (registration) return;
-                navigator.serviceWorker.register('sw.js')
-                    .then(function(reg) { console.log('[SW] ✅ Зарегистрирован:', reg); })
-                    .catch(function(err) { console.error('[SW] ❌ Ошибка:', err); });
-            })
-            .catch(function(err) { console.error('[SW] ❌ Ошибка проверки:', err); });
-    }
-
-    function checkNetwork() {
-        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
-        console.log('📡 ' + status);
-    }
-
-    function setupNetworkListeners() {
-        window.addEventListener('online', function() {
-            console.log('📡 Сеть восстановлена');
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.ready
-                    .then(function(registration) {
-                        registration.update();
-                        console.log('[SW] 🔄 Проверка обновлений...');
-                    })
-                    .catch(function() {});
-            }
-        });
-        window.addEventListener('offline', function() {
-            console.log('📡 Сеть отключена (работаем из кэша)');
-        });
-    }
-
-    function init() {
-        registerSW();
-        checkNetwork();
-        setupNetworkListeners();
-        console.log('[APP] ✅ Офлайн-функционал активирован');
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-})();
-</script>
-<script>
-/* ============================================================
-   HARDWARE BACK BUTTON HANDLER (Android / mobile)
-   Управляет кнопкой "Назад" через History API.
-   ============================================================ */
-(function () {
-    "use strict";
-
-    // Не запускаем на десктопе — там кнопка "Назад" в браузере работает штатно
-    const isMobile = /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent);
-    if (!isMobile) return;
-
-    const STATE_ROOT       = "root";        // большой глобус, ничего не открыто
-    const STATE_MODAL      = "modal";       // меню выбора: News / Wikipedia / Time / Radio
-    const STATE_SUB        = "submenu";     // часы или радио (подменю)
-    const STATE_VIZ_FS     = "vizFullscreen"; // визуализация на весь экран
-
-    let currentLayer = STATE_ROOT;
-    let isPopping    = false;   // защита от рекурсии при history.back() из кода
-
-    // ---- Хелперы для проверки состояния UI ----
-    function isModalOpen() {
-        const m = document.getElementById("actionModal");
-        return !!(m && m.classList.contains("active"));
-    }
-    function isRadioOpen() {
-        const r = document.getElementById("radioInfo");
-        return !!(r && r.style.display !== "none" && r.style.display !== "");
-    }
-    function isClockOpen() {
-        const c = document.getElementById("clockInfo");
-        return !!(c && c.style.display !== "none" && c.style.display !== "");
-    }
-    function isVizFullscreen() {
-        const v = document.getElementById("vizContainer");
-        if (!v) return false;
-        return document.fullscreenElement === v ||
-               document.webkitFullscreenElement === v;
-    }
-
-    // ---- Публичные действия, которые вызывает "Назад" ----
-    function goBackFromFullscreen() {
-        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-    }
-
-    function goBackFromSubmenu() {
-        // Если открыт полный экран визуализации — сначала выходим из него
-        if (isVizFullscreen()) {
-            goBackFromFullscreen();
-            return;
-        }
-
-        // Радио/часы → назад в меню выбора действий
-        const modalBackBtn = document.getElementById("modalBackBtn");
-        if (modalBackBtn) {
-            modalBackBtn.click();
-        } else {
-            // fallback: вручную показать меню действий
-            const radioInfo   = document.getElementById("radioInfo");
-            const clockInfo   = document.getElementById("clockInfo");
-            const clockActions= document.getElementById("clockActions");
-            const modalActions= document.getElementById("modalActions");
-            const modalSubInfo= document.getElementById("modalSubInfo");
-            if (radioInfo) radioInfo.style.display = "none";
-            if (clockInfo) clockInfo.style.display = "none";
-            if (clockActions) clockActions.style.display = "none";
-            if (modalActions) modalActions.style.display = "flex";
-            if (modalSubInfo) modalSubInfo.textContent = "Choose what you want to see";
-        }
-        currentLayer = STATE_MODAL;
-    }
-
-    function goBackFromModal() {
-        const cancelBtn = document.getElementById("modalCancelBtn");
-        if (cancelBtn) {
-            cancelBtn.click();
-        } else {
+        function isModalOpen() {
             const m = document.getElementById("actionModal");
-            if (m) m.classList.remove("active");
-            document.body.classList.remove("modal-open");
+            return !!(m && m.classList.contains("active"));
         }
-        currentLayer = STATE_ROOT;
-    }
-
-    // На корневом экране — НЕ выходим из сайта.
-    function stayOnRoot() {
-        // Ничего не делаем. Просто "съедаем" событие.
-        // Дополнительно можно показать подсказку:
-        showBackHint();
-    }
-
-    let hintTimer = null;
-    function showBackHint() {
-        let hint = document.getElementById("backHint");
-        if (!hint) {
-            hint = document.createElement("div");
-            hint.id = "backHint";
-            hint.style.cssText =
-                "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);" +
-                "background:rgba(15,23,42,0.95);color:#fff;padding:10px 22px;" +
-                "border-radius:40px;font-size:0.85rem;z-index:4000;" +
-                "border:1px solid #f59e0b;box-shadow:0 8px 24px rgba(0,0,0,0.5);" +
-                "opacity:0;transition:opacity .3s;pointer-events:none;" +
-                "font-family:inherit;white-space:nowrap;";
-            document.body.appendChild(hint);
+        function isRadioOpen() {
+            const r = document.getElementById("radioInfo");
+            return !!(r && r.style.display !== "none" && r.style.display !== "");
         }
-        hint.textContent = "🌍 Вы в главном меню";
-        requestAnimationFrame(() => { hint.style.opacity = "1"; });
-        clearTimeout(hintTimer);
-        hintTimer = setTimeout(() => { hint.style.opacity = "0"; }, 1400);
-    }
-
-    // ---- Пуш состояний в историю ----
-    function pushState(layer) {
-        if (isPopping) return;
-        currentLayer = layer;
-        try {
-            history.pushState({ layer: layer }, "", location.href);
-        } catch (e) {
-            // некоторые WebView могут кинуть — игнорируем
+        function isClockOpen() {
+            const c = document.getElementById("clockInfo");
+            return !!(c && c.style.display !== "none" && c.style.display !== "");
         }
-    }
+        function isTvOpen() {
+            const t = document.getElementById("tvInfo");
+            return !!(t && t.style.display !== "none" && t.style.display !== "");
+        }
+        function isVizFullscreen() {
+            const v = document.getElementById("vizContainer");
+            if (!v) return false;
+            return document.fullscreenElement === v ||
+                   document.webkitFullscreenElement === v;
+        }
+        function isTvFullscreen() {
+            const v = document.getElementById("tvVideoWrap");
+            if (!v) return false;
+            return document.fullscreenElement === v ||
+                   document.webkitFullscreenElement === v;
+        }
 
-    // ---- Инициализация ----
-    function initBackHandler() {
-        // Базовое состояние (root) — заменяем текущую запись, чтобы не плодить пустые
-        try {
-            history.replaceState({ layer: STATE_ROOT }, "", location.href);
-        } catch (e) {}
-        currentLayer = STATE_ROOT;
+        function exitAnyFullscreen() {
+            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
 
-        // Перехват popstate
-        window.addEventListener("popstate", function (e) {
-            if (isPopping) {
-                isPopping = false;
+        function goBackFromSubmenu() {
+            if (isTvFullscreen() || isVizFullscreen()) {
+                exitAnyFullscreen();
                 return;
             }
-
-            const state = e.state || { layer: STATE_ROOT };
-            const layer = state.layer;
-
-            // Определяем, что реально открыто в UI (приоритет — UI, а не state)
-            if (isVizFullscreen()) {
-                // Назад из полного экрана визуализации
-                goBackFromFullscreen();
-                pushState(STATE_SUB);
-                return;
-            }
-
-            if (isRadioOpen() || isClockOpen()) {
-                goBackFromSubmenu();
-                pushState(STATE_MODAL);
-                return;
-            }
-
-            if (isModalOpen()) {
-                goBackFromModal();
-                pushState(STATE_ROOT);
-                return;
-            }
-
-            // Уже на корне — "съедаем" назад, не выходим
-            stayOnRoot();
-            // Восстанавливаем корневое состояние
-            isPopping = true;
+            // Останавливаем TV / радио при выходе из подменю
             try {
-                history.pushState({ layer: STATE_ROOT }, "", location.href);
-            } catch (err) {}
-            setTimeout(() => { isPopping = false; }, 0);
-        });
+                if (window.TvEngine) window.TvEngine.stop();
+            } catch (e) {}
+            const tvInfo = document.getElementById('tvInfo');
+            if (tvInfo) tvInfo.style.display = 'none';
+            const modalBox = document.getElementById('modalBox');
+            if (modalBox) modalBox.classList.remove('tv-mode');
 
-        // Следим за открытием модального окна (кнопки/логика сайта)
-        const modal = document.getElementById("actionModal");
-        if (modal) {
-            const obs = new MutationObserver(function () {
-                if (isModalOpen() && currentLayer === STATE_ROOT) {
-                    pushState(STATE_MODAL);
-                }
-            });
-            obs.observe(modal, { attributes: true, attributeFilter: ["class"] });
+            const modalBackBtn = document.getElementById("modalBackBtn");
+            if (modalBackBtn) {
+                modalBackBtn.click();
+            }
+            currentLayer = STATE_MODAL;
         }
 
-        // Следим за открытием радио / часов
-        ["radioInfo", "clockInfo"].forEach(function (id) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const obs = new MutationObserver(function () {
-                const visible = el.style.display !== "none" && el.style.display !== "";
-                if (visible && currentLayer === STATE_MODAL) {
+        function goBackFromModal() {
+            const cancelBtn = document.getElementById("modalCancelBtn");
+            if (cancelBtn) {
+                cancelBtn.click();
+            } else {
+                const m = document.getElementById("actionModal");
+                if (m) m.classList.remove("active");
+                document.body.classList.remove("modal-open");
+            }
+            currentLayer = STATE_ROOT;
+        }
+
+        let hintTimer = null;
+        function showBackHint() {
+            let hint = document.getElementById("backHint");
+            if (!hint) {
+                hint = document.createElement("div");
+                hint.id = "backHint";
+                hint.style.cssText =
+                    "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);" +
+                    "background:rgba(15,23,42,0.95);color:#fff;padding:10px 22px;" +
+                    "border-radius:40px;font-size:0.85rem;z-index:4000;" +
+                    "border:1px solid #f59e0b;box-shadow:0 8px 24px rgba(0,0,0,0.5);" +
+                    "opacity:0;transition:opacity .3s;pointer-events:none;" +
+                    "font-family:inherit;white-space:nowrap;";
+                document.body.appendChild(hint);
+            }
+            hint.textContent = "🌍 Вы в главном меню";
+            requestAnimationFrame(() => { hint.style.opacity = "1"; });
+            clearTimeout(hintTimer);
+            hintTimer = setTimeout(() => { hint.style.opacity = "0"; }, 1400);
+        }
+
+        function pushState(layer) {
+            if (isPopping) return;
+            currentLayer = layer;
+            try { history.pushState({ layer: layer }, "", location.href); } catch (e) {}
+        }
+
+        function initBackHandler() {
+            try { history.replaceState({ layer: STATE_ROOT }, "", location.href); } catch (e) {}
+            currentLayer = STATE_ROOT;
+
+            window.addEventListener("popstate", function (e) {
+                if (isPopping) { isPopping = false; return; }
+
+                if (isTvFullscreen() || isVizFullscreen()) {
+                    exitAnyFullscreen();
                     pushState(STATE_SUB);
+                    return;
                 }
-            });
-            obs.observe(el, { attributes: true, attributeFilter: ["style"] });
-        });
-
-        // Следим за входом в полноэкранную визуализацию
-        ["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) {
-            document.addEventListener(ev, function () {
-                if (isVizFullscreen() && currentLayer === STATE_SUB) {
-                    pushState(STATE_VIZ_FS);
+                if (isRadioOpen() || isClockOpen() || isTvOpen()) {
+                    goBackFromSubmenu();
+                    pushState(STATE_MODAL);
+                    return;
                 }
+                if (isModalOpen()) {
+                    goBackFromModal();
+                    pushState(STATE_ROOT);
+                    return;
+                }
+                showBackHint();
+                isPopping = true;
+                try { history.pushState({ layer: STATE_ROOT }, "", location.href); } catch (err) {}
+                setTimeout(() => { isPopping = false; }, 0);
             });
-        });
-    }
 
-    // Запускаем после загрузки DOM
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", initBackHandler);
-    } else {
-        initBackHandler();
-    }
-})();
-</script>
+            const modal = document.getElementById("actionModal");
+            if (modal) {
+                const obs = new MutationObserver(function () {
+                    if (isModalOpen() && currentLayer === STATE_ROOT) {
+                        pushState(STATE_MODAL);
+                    }
+                });
+                obs.observe(modal, { attributes: true, attributeFilter: ["class"] });
+            }
+
+            ["radioInfo", "clockInfo", "tvInfo"].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const obs = new MutationObserver(function () {
+                    const visible = el.style.display !== "none" && el.style.display !== "";
+                    if (visible && currentLayer === STATE_MODAL) {
+                        pushState(STATE_SUB);
+                    }
+                });
+                obs.observe(el, { attributes: true, attributeFilter: ["style"] });
+            });
+
+            ["fullscreenchange", "webkitfullscreenchange"].forEach(function (ev) {
+                document.addEventListener(ev, function () {
+                    if (isTvFullscreen() && currentLayer === STATE_SUB) {
+                        pushState(STATE_TV_FS);
+                    } else if (isVizFullscreen() && currentLayer === STATE_SUB) {
+                        pushState(STATE_VIZ_FS);
+                    }
+                });
+            });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", initBackHandler);
+        } else {
+            initBackHandler();
+        }
+    })();
+    </script>
 </body>
 </html>
