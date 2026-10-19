@@ -1383,15 +1383,30 @@
 
                     <div class="cp-status" id="tvStatus"></div>
 
-                    <div class="tv-country-list-title">
+<button class="radio-fav-btn" id="tvFavBtn" style="width:100%; justify-content:center; margin-top:4px; display:none;">
+    <i class="far fa-heart"></i> <span>В избранное</span>
+</button>
+
+<div class="tv-country-list-title">
                         <i class="fas fa-list"></i> Каналы страны
                         <span id="tvCount" style="color:#94a3b8; font-weight:400;"></span>
-                    </div>
-                    <div class="tv-country-list" id="tvCountryList"></div>
-                </div>
-            </div>
+                    </div>        <div class="tv-country-list" id="tvCountryList"></div>
+    </div>
 
-            <!-- ===== RADIO INFO ===== -->
+    <div class="favorites-section">
+        <div class="favorites-title" id="tvFavoritesToggle">
+            <i class="fas fa-heart" style="color:#ef4444;"></i>
+            <span>Избранные каналы</span>
+            <span id="tvFavoritesCount" style="color:#94a3b8; font-weight:400;">(0)</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+        <div class="favorites-list" id="tvFavoritesList">
+            <div class="fav-empty">Пока нет избранных каналов 💔</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== RADIO INFO ====== -->
             <div id="radioInfo" style="display:none;">
                 <div class="custom-player" id="customPlayer">
                     <div class="cp-station-name" id="radioStationName">Загрузка станций...</div>
@@ -2277,12 +2292,11 @@
                         statusEl.textContent = '⚠ Не удалось воспроизвести';
                         statusEl.className = 'cp-status error';
                     });
-                }
+                }    renderList();
+    updateTvFavButtonState();
+}
 
-                renderList();
-            }
-
-            function scheduleNext() {
+function scheduleNext() {
                 clearFailTimer();
                 if (channels.length < 2) return;
                 failTimer = setTimeout(() => {
@@ -2317,14 +2331,15 @@
                 currentCountry = null;
                 currentCode = null;
                 const list = $('tvCountryList');
-                if (list) list.innerHTML = '';
-                const countEl = $('tvCount');
-                if (countEl) countEl.textContent = '';
-            }
+                if (list) list.innerHTML = '';    const countEl = $('tvCount');
+    if (countEl) countEl.textContent = '';
+    const favBtn = $('tvFavBtn');
+    if (favBtn) favBtn.style.display = 'none';
+}
 
-            async function start(countryName) {
-                stop();
-                currentCountry = countryName;
+async function start(countryName) {
+    stop();
+    currentCountry = countryName;
 
                 const nameEl = $('tvChannelName');
                 const metaEl = $('tvChannelMeta');
@@ -2430,10 +2445,74 @@
                 }
                 document.addEventListener('fullscreenchange', updateFsIcon);
                 document.addEventListener('webkitfullscreenchange', updateFsIcon);
-            }
+            }    function findChannelIndex(url) {
+        return channels.findIndex(c => c.url === url);
+    }
 
-            return { start, stop, bindControls };
-        })();
+    function playUrl(name, url) {
+        clearFailTimer();
+        hasPlayed = false;
+        if (hls) { try { hls.destroy(); } catch {} hls = null; }
+        currentIndex = -1;
+
+        $('tvChannelName').textContent = '📺 ' + name;
+        $('tvChannelMeta').textContent = (currentCountry || '') + ' · ' + (currentCode || '');
+        const statusEl = $('tvStatus');
+        statusEl.textContent = '⏳ Загрузка потока...';
+        statusEl.className = 'cp-status';
+
+        const v = video();
+        try { v.pause(); } catch {}
+        v.removeAttribute('src');
+        v.load();
+
+        v.onplaying = () => {
+            hasPlayed = true;
+            clearFailTimer();
+            statusEl.textContent = '▶ Играет: ' + name;
+            statusEl.className = 'cp-status';
+        };
+        v.onerror = () => {
+            if (hasPlayed) return;
+            statusEl.textContent = '⚠ Ошибка потока';
+            statusEl.className = 'cp-status error';
+        };
+
+        if (window.Hls && Hls.isSupported() && url.includes('.m3u8')) {
+            hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+            hls.loadSource(url);
+            hls.attachMedia(v);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+            hls.on(Hls.Events.ERROR, (e, data) => {
+                if (data.fatal && !hasPlayed) {
+                    statusEl.textContent = '⚠ Ошибка потока';
+                    statusEl.className = 'cp-status error';
+                }
+            });
+        } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+            v.src = url;
+            v.addEventListener('loadedmetadata', () => v.play().catch(() => {}), { once: true });
+        } else {
+            v.src = url;
+            v.play().catch(() => {
+                statusEl.textContent = '⚠ Не удалось воспроизвести';
+                statusEl.className = 'cp-status error';
+            });
+        }
+        updateTvFavButtonState();
+    }
+
+    function _debug() {
+        return {
+            channel: channels[currentIndex] || null,
+            index: currentIndex,
+            country: currentCountry,
+            code: currentCode
+        };
+    }
+
+    return { start, stop, bindControls, findChannelIndex, playUrl, play, _debug };
+})();
 
         // навешиваем контролы TV один раз (после загрузки DOM)
         if (document.readyState === 'loading') {
@@ -2442,7 +2521,175 @@
             TvEngine.bindControls();
         }
 
-        // ====== МЕХАНИЧЕСКИЕ ЧАСЫ ======
+        // ====== ИЗБРАННЫЕ ТВ-КАНАЛЫ ======
+const TV_FAVORITES_KEY = 'globalExplorer_favoriteTvChannels_v1';
+
+function loadTvFavorites() {
+    try {
+        const raw = localStorage.getItem(TV_FAVORITES_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) { return []; }
+}
+function saveTvFavorites(list) {
+    try { localStorage.setItem(TV_FAVORITES_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function isTvChannelFavorite(channel) {
+    if (!channel || !channel.url) return false;
+    return loadTvFavorites().some(f => f.url === channel.url);
+}
+function addTvFavorite(channel, countryName) {
+    if (!channel || !channel.url) return;
+    const list = loadTvFavorites();
+    if (list.some(f => f.url === channel.url)) return;
+    list.unshift({
+        name: channel.name,
+        url: channel.url,
+        country: countryName,
+        flag: flagMap[countryName] || '🌍',
+        code: countryCodeMap[countryName] || '',
+        addedAt: Date.now()
+    });
+    saveTvFavorites(list);
+    renderTvFavorites();
+    updateTvFavButtonState();
+}
+function removeTvFavorite(url) {
+    let list = loadTvFavorites();
+    list = list.filter(f => f.url !== url);
+    saveTvFavorites(list);
+    renderTvFavorites();
+    updateTvFavButtonState();
+}
+
+function updateTvFavButtonState() {
+    const btn = document.getElementById('tvFavBtn');
+    if (!btn) return;
+    const info = (typeof TvEngine !== 'undefined' && TvEngine._debug) ? TvEngine._debug() : null;
+    if (!info || !info.channel) { btn.style.display = 'none'; return; }
+    btn.style.display = 'inline-flex';
+    const isFav = isTvChannelFavorite(info.channel);
+    btn.classList.toggle('active', isFav);
+    btn.innerHTML = isFav
+        ? '<i class="fas fa-heart"></i> <span>В избранном</span>'
+        : '<i class="far fa-heart"></i> <span>В избранное</span>';
+}
+
+function renderTvFavorites() {
+    const list = document.getElementById('tvFavoritesList');
+    const countEl = document.getElementById('tvFavoritesCount');
+    if (!list) return;
+    const favs = loadTvFavorites();
+    if (countEl) countEl.textContent = '(' + favs.length + ')';
+    if (!favs.length) {
+        list.innerHTML = '<div class="fav-empty">Пока нет избранных каналов 💔</div>';
+        return;
+    }
+    list.innerHTML = favs.map((fav, idx) => {
+        const safeName = escapeHtml(fav.name || 'Без названия');
+        const safeCountry = escapeHtml(fav.country || 'Неизвестно');
+        return `
+            <div class="fav-item" data-url="${escapeHtml(fav.url)}">
+                <span class="fav-flag" title="${safeCountry}">${fav.flag || '🌍'}</span>
+                <div class="fav-info">
+                    <div class="fav-name" title="${safeName}">${safeName}</div>
+                    <div class="fav-country">${safeCountry}${fav.code ? ' · ' + fav.code : ''}</div>
+                </div>
+                <button class="fav-play-btn" data-action="play" data-index="${idx}" title="Смотреть">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="fav-remove-btn" data-action="remove" data-index="${idx}" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    list.querySelectorAll('.fav-play-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            playTvFavoriteByIndex(parseInt(this.dataset.index, 10));
+        });
+    });
+    list.querySelectorAll('.fav-remove-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const idx = parseInt(this.dataset.index, 10);
+            const favs2 = loadTvFavorites();
+            if (favs2[idx]) {
+                removeTvFavorite(favs2[idx].url);
+                showFavToast('🗑 Удалено из избранного ТВ');
+            }
+        });
+    });
+}
+
+function playTvFavoriteByIndex(idx) {
+    const favs = loadTvFavorites();
+    const fav = favs[idx];
+    if (!fav) return;
+    if (!fav.country) {
+        showFavToast('⚠ Не указана страна канала');
+        return;
+    }
+    const info = (typeof TvEngine !== 'undefined' && TvEngine._debug) ? TvEngine._debug() : null;
+    if (info && info.country === fav.country) {
+        const found = TvEngine.findChannelIndex(fav.url);
+        if (found >= 0) {
+            TvEngine.play(found);
+            showFavToast('▶ Включён: ' + fav.name);
+            return;
+        }
+        TvEngine.playUrl(fav.name, fav.url);
+        showFavToast('▶ Включён: ' + fav.name);
+        return;
+    }
+    TvEngine.start(fav.country).then(() => {
+        const found = TvEngine.findChannelIndex(fav.url);
+        if (found >= 0) {
+            TvEngine.play(found);
+        } else {
+            TvEngine.playUrl(fav.name, fav.url);
+        }
+        showFavToast('▶ Включён: ' + fav.name);
+    });
+}
+
+function bindTvFavoritesUI() {
+    const favBtn = document.getElementById('tvFavBtn');
+    if (favBtn && !favBtn.dataset.bound) {
+        favBtn.dataset.bound = '1';
+        favBtn.addEventListener('click', function () {
+            const info = (typeof TvEngine !== 'undefined' && TvEngine._debug) ? TvEngine._debug() : null;
+            if (!info || !info.channel) return;
+            if (isTvChannelFavorite(info.channel)) {
+                removeTvFavorite(info.channel.url);
+                showFavToast('💔 Удалено из избранного ТВ');
+            } else {
+                addTvFavorite(info.channel, info.country || 'Неизвестно');
+                showFavToast('❤️ Добавлено в избранное: ' + info.channel.name);
+            }
+            updateTvFavButtonState();
+        });
+    }
+    const toggle = document.getElementById('tvFavoritesToggle');
+    if (toggle && !toggle.dataset.bound) {
+        toggle.dataset.bound = '1';
+        toggle.addEventListener('click', function () {
+            this.classList.toggle('collapsed');
+            document.getElementById('tvFavoritesList').classList.toggle('collapsed');
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindTvFavoritesUI);
+} else {
+    bindTvFavoritesUI();
+}
+
+// ====== МЕХАНИЧЕСКИЕ ЧАСЫ ======// ====== МЕХАНИЧЕСКИЕ ЧАСЫ ======
         let clockInterval = null;
         let currentClockTimezone = null;
 
@@ -3493,7 +3740,8 @@
                     modalSubInfo.textContent = "📺 TV " + country;
                     statusSpan.innerHTML = '<i class="fas fa-tv"></i> 📺 Загрузка ТВ для <strong>' + country + '</strong>...';
                     statusCard.style.borderColor = "#0ea5e9";
-                    TvEngine.start(country);
+renderTvFavorites();
+TvEngine.start(country);
                 }
             });
 
@@ -3691,9 +3939,10 @@
                 if (window.TvEngine) window.TvEngine.stop();
             } catch (e) {}
             const tvInfo = document.getElementById('tvInfo');
-            if (tvInfo) tvInfo.style.display = 'none';
-            const modalBox = document.getElementById('modalBox');
-            if (modalBox) modalBox.classList.remove('tv-mode');
+if (tvInfo) tvInfo.style.display = 'none';
+const modalBox = document.getElementById('modalBox');
+if (modalBox) modalBox.classList.remove('tv-mode');
+try { if (typeof TvEngine !== 'undefined' && TvEngine.stop) TvEngine.stop(); } catch (e) {}
 
             const modalBackBtn = document.getElementById("modalBackBtn");
             if (modalBackBtn) {
