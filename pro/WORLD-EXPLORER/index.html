@@ -2365,7 +2365,7 @@
                             statusEl.className = 'cp-status error';
                             play((currentIndex + 1) % channels.length);
                         }
-                    }, 6000);
+                    }, 12000);
                 } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
                     v.src = ch.url;
                     v.addEventListener('loadedmetadata', () => {
@@ -2376,7 +2376,7 @@
                         if (!hasPlayed && currentIndex === index) {
                             play((currentIndex + 1) % channels.length);
                         }
-                    }, 6000);
+                    }, 12000);
                 } else {
                     v.src = ch.url;
                     v.play().catch(() => {
