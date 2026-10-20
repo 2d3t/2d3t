@@ -1323,6 +1323,8 @@
                     <button id="resetView" class="btn"><i class="fas fa-sync-alt"></i> Reset View</button>
                     <button id="randomCountry" class="btn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border-color: #a78bfa;"><i class="fas fa-dice"></i> <span>Random Country</span></button>
 <button id="okCountry" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399;"><i class="fas fa-check"></i> <span>OK</span></button>
+<button id="openFavRadio" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #fbbf24;"><i class="fas fa-heart"></i> <span>Radio ❤</span></button>
+<button id="openFavTv" class="btn" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); border-color: #38bdf8;"><i class="fas fa-heart"></i> <span>TV ❤</span></button>
                 </div>
 
                 <div class="share-section">
@@ -1508,6 +1510,26 @@
             </div>
         </div>
     </div>
+<div class="modal-overlay" id="favModal">
+    <div class="modal-box" style="max-width: 580px;">
+        <h2 style="margin-bottom:16px; color:#b3d9ff;">
+            <i class="fas fa-heart" style="color:#ef4444;"></i> Избранное
+        </h2>
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <button class="fav-tab active" data-tab="radio" style="flex:1; padding:10px; border-radius:40px; border:1px solid rgba(245,158,11,0.6); background:rgba(245,158,11,0.25); color:#fbbf24; font-weight:600; cursor:pointer; font-family:inherit; font-size:0.9rem; transition:all 0.2s;">
+                📻 Радио <span id="favRadioTabCount">(0)</span>
+            </button>
+            <button class="fav-tab" data-tab="tv" style="flex:1; padding:10px; border-radius:40px; border:1px solid rgba(14,165,233,0.3); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; font-family:inherit; font-size:0.9rem; transition:all 0.2s;">
+                📺 ТВ <span id="favTvTabCount">(0)</span>
+            </button>
+        </div>
+        <div id="favRadioList" class="favorites-list" style="max-height:400px; display:flex;"></div>
+        <div id="favTvList" class="favorites-list" style="max-height:400px; display:none;"></div>
+        <button class="modal-btn cancel-btn" id="favModalClose" style="margin-top:16px;">
+            <i class="fas fa-times"></i> Закрыть
+        </button>
+    </div>
+</div>
 
     <div class="floating-player" id="floatingPlayer">
         <div class="fp-header">
@@ -3235,6 +3257,193 @@ if (document.readyState === 'loading') {
                 toast.style.transform = 'translateX(-50%) translateY(10px)';
             }, 2200);
         }
+// ====== МОДАЛКА ИЗБРАННОГО НА ГЛАВНОЙ ======
+const favModal = document.getElementById('favModal');
+
+function switchFavTab(tab) {
+    document.querySelectorAll('.fav-tab').forEach(t => {
+        t.classList.remove('active');
+        t.style.background = 'transparent';
+        t.style.color = '#94a3b8';
+        t.style.borderColor = t.dataset.tab === 'radio'
+            ? 'rgba(245,158,11,0.3)'
+            : 'rgba(14,165,233,0.3)';
+    });
+    const active = document.querySelector(`.fav-tab[data-tab="${tab}"]`);
+    if (active) {
+        active.classList.add('active');
+        active.style.background = tab === 'radio'
+            ? 'rgba(245,158,11,0.25)' : 'rgba(14,165,233,0.25)';
+        active.style.color = tab === 'radio' ? '#fbbf24' : '#38bdf8';
+        active.style.borderColor = tab === 'radio'
+            ? 'rgba(245,158,11,0.6)' : 'rgba(14,165,233,0.6)';
+    }
+    document.getElementById('favRadioList').style.display = tab === 'radio' ? 'flex' : 'none';
+    document.getElementById('favTvList').style.display = tab === 'tv' ? 'flex' : 'none';
+}
+
+function renderFavModalLists() {
+    const radioFavs = loadFavorites();
+    const tvFavs = loadTvFavorites();
+
+    document.getElementById('favRadioTabCount').textContent = '(' + radioFavs.length + ')';
+    document.getElementById('favTvTabCount').textContent = '(' + tvFavs.length + ')';
+
+    const radioList = document.getElementById('favRadioList');
+    if (!radioFavs.length) {
+        radioList.innerHTML = '<div class="fav-empty">Пока нет избранных станций 💔</div>';
+    } else {
+        radioList.innerHTML = radioFavs.map((fav, idx) => `
+            <div class="fav-item">
+                <span class="fav-flag" title="${escapeHtml(fav.country || '')}">${fav.flag || '🌍'}</span>
+                <div class="fav-info">
+                    <div class="fav-name" title="${escapeHtml(fav.name || '')}">${escapeHtml(fav.name || '')}</div>
+                    <div class="fav-country">${escapeHtml(fav.country || 'Неизвестно')}</div>
+                </div>
+                <button class="fav-play-btn" data-type="radio" data-index="${idx}" title="Играть">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="fav-remove-btn" data-type="radio" data-index="${idx}" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    const tvList = document.getElementById('favTvList');
+    if (!tvFavs.length) {
+        tvList.innerHTML = '<div class="fav-empty">Пока нет избранных каналов 💔</div>';
+    } else {
+        tvList.innerHTML = tvFavs.map((fav, idx) => `
+            <div class="fav-item">
+                <span class="fav-flag" title="${escapeHtml(fav.country || '')}">${fav.flag || '🌍'}</span>
+                <div class="fav-info">
+                    <div class="fav-name" title="${escapeHtml(fav.name || '')}">${escapeHtml(fav.name || '')}</div>
+                    <div class="fav-country">${escapeHtml(fav.country || 'Неизвестно')}${fav.code ? ' · ' + fav.code : ''}</div>
+                </div>
+                <button class="fav-play-btn" data-type="tv" data-index="${idx}" title="Смотреть">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="fav-remove-btn" data-type="tv" data-index="${idx}" title="Удалить">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    document.querySelectorAll('#favRadioList .fav-play-btn, #favTvList .fav-play-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const type = this.dataset.type;
+            const idx = parseInt(this.dataset.index, 10);
+            closeFavModal();
+            if (type === 'radio') openRadioFromFavorite(idx);
+            else openTvFromFavorite(idx);
+        });
+    });
+
+    document.querySelectorAll('#favRadioList .fav-remove-btn, #favTvList .fav-remove-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const type = this.dataset.type;
+            const idx = parseInt(this.dataset.index, 10);
+            if (type === 'radio') {
+                const favs = loadFavorites();
+                if (favs[idx]) { removeFavorite(favs[idx].url); showFavToast('🗑 Удалено из избранного'); }
+            } else {
+                const favs = loadTvFavorites();
+                if (favs[idx]) { removeTvFavorite(favs[idx].url); showFavToast('🗑 Удалено из избранного ТВ'); }
+            }
+            renderFavModalLists();
+        });
+    });
+}
+
+function openFavModal(tab) {
+    favModal.classList.add('active');
+    document.body.classList.add('modal-open');
+    switchFavTab(tab);
+    renderFavModalLists();
+}
+
+function closeFavModal() {
+    favModal.classList.remove('active');
+    document.body.classList.remove('modal-open');
+}
+
+function openRadioFromFavorite(idx) {
+    const favs = loadFavorites();
+    const fav = favs[idx];
+    if (!fav || !fav.country) { showFavToast('⚠ Не указана страна'); return; }
+
+    radioStations = [{
+        name: fav.name, url: fav.url,
+        codec: fav.codec, bitrate: fav.bitrate, tags: fav.tags
+    }];
+    radioCurrentIndex = 0;
+    radioCurrentCountry = fav.country;
+
+    showModal(fav.country);
+    setTimeout(() => {
+        document.getElementById('modalActions').style.display = 'none';
+        document.getElementById('clockActions').style.display = 'flex';
+        document.getElementById('modalClock').style.display = 'none';
+        document.getElementById('clockInfo').style.display = 'none';
+        const tvInfo = document.getElementById('tvInfo');
+        if (tvInfo) tvInfo.style.display = 'none';
+        document.getElementById('radioInfo').style.display = 'block';
+        document.getElementById('modalBox').classList.remove('tv-mode');
+        document.getElementById('modalSubInfo').textContent = '📻 Радио ' + fav.country;
+        document.getElementById('radioStatus').textContent = '';
+        document.getElementById('radioStatus').className = 'cp-status';
+        renderFavorites();
+        playRadioStation(0);
+        showFavToast('▶ ' + fav.name);
+    }, 120);
+}
+
+function openTvFromFavorite(idx) {
+    const favs = loadTvFavorites();
+    const fav = favs[idx];
+    if (!fav || !fav.country) { showFavToast('⚠ Не указана страна'); return; }
+
+    showModal(fav.country);
+    setTimeout(() => {
+        document.getElementById('modalActions').style.display = 'none';
+        document.getElementById('clockActions').style.display = 'flex';
+        document.getElementById('modalClock').style.display = 'none';
+        document.getElementById('clockInfo').style.display = 'none';
+        document.getElementById('radioInfo').style.display = 'none';
+        const tvInfo = document.getElementById('tvInfo');
+        if (tvInfo) tvInfo.style.display = 'block';
+        document.getElementById('modalBox').classList.add('tv-mode');
+        document.getElementById('modalSubInfo').textContent = '📺 TV ' + fav.country;
+        renderTvFavorites();
+        TvEngine.start(fav.country).then(() => {
+            const found = TvEngine.findChannelIndex(fav.url);
+            if (found >= 0) TvEngine.play(found);
+            else TvEngine.playUrl(fav.name, fav.url);
+            showFavToast('▶ ' + fav.name);
+        });
+    }, 120);
+}
+
+document.getElementById('openFavRadio').addEventListener('click', () => openFavModal('radio'));
+document.getElementById('openFavTv').addEventListener('click', () => openFavModal('tv'));
+
+document.querySelectorAll('.fav-tab').forEach(tab => {
+    tab.addEventListener('click', function () { switchFavTab(this.dataset.tab); });
+});
+
+document.getElementById('favModalClose').addEventListener('click', closeFavModal);
+
+favModal.addEventListener('click', function (e) {
+    if (e.target === favModal) closeFavModal();
+});
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && favModal.classList.contains('active')) closeFavModal();
+});
 
         // ====== ПРИВЯЗКА ВИЗУАЛИЗАЦИИ ======
         const vizToggleBtn = document.getElementById('vizToggleBtn');
@@ -4125,7 +4334,14 @@ document.getElementById("okCountry").addEventListener("click", function () {
         }
 
         function goBackFromSubmenu() {
-            if (isTvFullscreen() || isVizFullscreen()) {
+          const favModalEl = document.getElementById("favModal");
+if (favModalEl && favModalEl.classList.contains("active")) {
+    favModalEl.classList.remove("active");
+    document.body.classList.remove("modal-open");
+    pushState(STATE_ROOT);
+    return;
+}
+  if (isTvFullscreen() || isVizFullscreen()) {
                 exitAnyFullscreen();
                 return;
             }
