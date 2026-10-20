@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Global Explorer — Время, Новости, Википедия, Радио и ТВ</title>
     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
     <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
@@ -1153,7 +1153,26 @@
         height: 46px;
         font-size: 1.1rem;
     }
-    .viz-container:fullscreen { background: #000; }
+    .viz-container:fullscreen { background: #000; }/* ====== ПОВОРОТ ЭКРАНА В FULLSCREEN ВИЗУАЛИЗАЦИИ ====== */
+.viz-container:fullscreen .viz-layer,
+.viz-container:-webkit-full-screen .viz-layer {
+    background-size: cover;
+    background-position: center;
+}
+@media (orientation: landscape) {
+    .viz-container:fullscreen,
+    .viz-container:-webkit-full-screen {
+        width: 100vw;
+        height: 100vh;
+    }
+    .viz-container:fullscreen .viz-caption,
+    .viz-container:-webkit-full-screen .viz-caption {
+        font-size: 1rem;
+        left: 30px;
+        right: 100px;
+        bottom: 20px;
+    }
+}
 
     /* ====== TV PLAYER ====== */
     .tv-video-wrap {
@@ -2457,17 +2476,25 @@ async function start(countryName) {
                 const fsBtn = $('tvFsBtn');
 
                 function toggleFs() {
-                    if (!wrap) return;
-                    const isFs = document.fullscreenElement === wrap ||
-                                 document.webkitFullscreenElement === wrap;
-                    if (!isFs) {
-                        if (wrap.requestFullscreen) wrap.requestFullscreen().catch(() => {});
-                        else if (wrap.webkitRequestFullscreen) wrap.webkitRequestFullscreen();
-                    } else {
-                        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                    }
-                }
+    if (!wrap) return;
+    const isFs = document.fullscreenElement === wrap ||
+                 document.webkitFullscreenElement === wrap;
+    if (!isFs) {
+        try { screen.orientation?.unlock?.(); } catch (e) {}
+        if (wrap.requestFullscreen) {
+            wrap.requestFullscreen()
+                .then(() => { try { screen.orientation?.unlock?.(); } catch (e) {} })
+                .catch(() => {});
+        } else if (wrap.webkitRequestFullscreen) {
+            wrap.webkitRequestFullscreen();
+            setTimeout(() => { try { screen.orientation?.unlock?.(); } catch (e) {} }, 100);
+        }
+    } else {
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        try { screen.orientation?.unlock?.(); } catch (e) {}
+    }
+}
 
                 if (fsBtn) fsBtn.addEventListener('click', e => { e.stopPropagation(); toggleFs(); });
                 v.addEventListener('dblclick', toggleFs);
@@ -3370,64 +3397,124 @@ function closeFavModal() {
     favModal.classList.remove('active');
     document.body.classList.remove('modal-open');
 }
-
 function openRadioFromFavorite(idx) {
     const favs = loadFavorites();
     const fav = favs[idx];
-    if (!fav || !fav.country) { showFavToast('⚠ Не указана страна'); return; }
+    if (!fav || !fav.url) { showFavToast('⚠ Станция не найдена'); return; }
 
+    // НЕ вызываем showModal — работаем напрямую с радио-плеером
     radioStations = [{
         name: fav.name, url: fav.url,
         codec: fav.codec, bitrate: fav.bitrate, tags: fav.tags
     }];
     radioCurrentIndex = 0;
-    radioCurrentCountry = fav.country;
+    radioCurrentCountry = fav.country || 'Неизвестно';
 
-    showModal(fav.country);
-    setTimeout(() => {
-        document.getElementById('modalActions').style.display = 'none';
-        document.getElementById('clockActions').style.display = 'flex';
-        document.getElementById('modalClock').style.display = 'none';
-        document.getElementById('clockInfo').style.display = 'none';
-        const tvInfo = document.getElementById('tvInfo');
-        if (tvInfo) tvInfo.style.display = 'none';
-        document.getElementById('radioInfo').style.display = 'block';
-        document.getElementById('modalBox').classList.remove('tv-mode');
-        document.getElementById('modalSubInfo').textContent = '📻 Радио ' + fav.country;
-        document.getElementById('radioStatus').textContent = '';
-        document.getElementById('radioStatus').className = 'cp-status';
-        renderFavorites();
-        playRadioStation(0);
-        showFavToast('▶ ' + fav.name);
-    }, 120);
+    // Открываем actionModal, но сразу переключаем на радио-панель
+    const actionModal = document.getElementById('actionModal');
+    const modalBox = document.getElementById('modalBox');
+    const modalCountryName = document.getElementById('modalCountryName');
+    const modalFlag = document.getElementById('modalFlag');
+    const modalSubInfo = document.getElementById('modalSubInfo');
+    const modalActions = document.getElementById('modalActions');
+    const clockActions = document.getElementById('clockActions');
+    const modalClock = document.getElementById('modalClock');
+    const clockInfo = document.getElementById('clockInfo');
+    const tvInfo = document.getElementById('tvInfo');
+    const radioInfo = document.getElementById('radioInfo');
+
+    // Заголовок модалки
+    modalCountryName.textContent = '❤ Избранное радио';
+    modalFlag.textContent = '📻';
+    modalSubInfo.textContent = '📻 ' + fav.name + (fav.country ? ' · ' + fav.country : '');
+
+    // Скрываем всё лишнее, показываем только радио
+    modalClock.style.display = 'none';
+    clockInfo.style.display = 'none';
+    if (tvInfo) tvInfo.style.display = 'none';
+    radioInfo.style.display = 'block';
+    modalBox.classList.remove('tv-mode');
+modalActions.style.display = 'none';
+clockActions.style.display = 'flex';
+document.getElementById('modalBackBtn').style.display = 'none';
+
+actionModal.classList.add('active');
+document.body.classList.add('modal-open');
+
+renderFavorites();
+playRadioStation(0);
+showFavToast('▶ ' + fav.name);
 }
 
 function openTvFromFavorite(idx) {
     const favs = loadTvFavorites();
     const fav = favs[idx];
-    if (!fav || !fav.country) { showFavToast('⚠ Не указана страна'); return; }
+    if (!fav || !fav.url) { showFavToast('⚠ Канал не найден'); return; }
 
-    showModal(fav.country);
-    setTimeout(() => {
-        document.getElementById('modalActions').style.display = 'none';
-        document.getElementById('clockActions').style.display = 'flex';
-        document.getElementById('modalClock').style.display = 'none';
-        document.getElementById('clockInfo').style.display = 'none';
-        document.getElementById('radioInfo').style.display = 'none';
-        const tvInfo = document.getElementById('tvInfo');
-        if (tvInfo) tvInfo.style.display = 'block';
-        document.getElementById('modalBox').classList.add('tv-mode');
-        document.getElementById('modalSubInfo').textContent = '📺 TV ' + fav.country;
-        renderTvFavorites();
-        TvEngine.start(fav.country).then(() => {
+    const actionModal = document.getElementById('actionModal');
+    const modalBox = document.getElementById('modalBox');
+    const modalCountryName = document.getElementById('modalCountryName');
+    const modalFlag = document.getElementById('modalFlag');
+    const modalSubInfo = document.getElementById('modalSubInfo');
+    const modalActions = document.getElementById('modalActions');
+    const clockActions = document.getElementById('clockActions');
+    const modalClock = document.getElementById('modalClock');
+    const clockInfo = document.getElementById('clockInfo');
+    const tvInfo = document.getElementById('tvInfo');
+    const radioInfo = document.getElementById('radioInfo');
+
+    modalCountryName.textContent = '❤ Избранное ТВ';
+    modalFlag.textContent = '📺';
+    modalSubInfo.textContent = '📺 ' + fav.name + (fav.country ? ' · ' + fav.country : '');
+
+    modalClock.style.display = 'none';
+    clockInfo.style.display = 'none';
+    radioInfo.style.display = 'none';
+    if (tvInfo) tvInfo.style.display = 'block';
+modalBox.classList.add('tv-mode');
+modalActions.style.display = 'none';
+clockActions.style.display = 'flex';
+document.getElementById('modalBackBtn').style.display = 'none';
+
+actionModal.classList.add('active');
+    document.body.classList.add('modal-open');
+
+    // Стопим радио, чтобы звуки не смешивались
+    try { stopRadio(); } catch (e) {}
+    try { TvEngine.stop(); } catch (e) {}
+
+    // Запускаем ТВ: пробуем найти канал в стране, иначе — прямо по URL
+    const country = fav.country;
+    const code = fav.code || (countryCodeMap[country] || '');
+
+    // Показываем имя канала сразу
+    document.getElementById('tvChannelName').textContent = '📺 ' + fav.name;
+    document.getElementById('tvChannelMeta').textContent = (country || '—') + ' · ' + (code || '');
+    document.getElementById('tvStatus').textContent = '';
+    document.getElementById('tvStatus').className = 'cp-status';
+
+    if (country) {
+        TvEngine.start(country).then(() => {
             const found = TvEngine.findChannelIndex(fav.url);
-            if (found >= 0) TvEngine.play(found);
-            else TvEngine.playUrl(fav.name, fav.url);
+            if (found >= 0) {
+                TvEngine.play(found);
+            } else {
+                TvEngine.playUrl(fav.name, fav.url);
+            }
+            showFavToast('▶ ' + fav.name);
+        }).catch(() => {
+            // Фолбэк — прямо по URL
+            TvEngine.playUrl(fav.name, fav.url);
             showFavToast('▶ ' + fav.name);
         });
-    }, 120);
-}
+    } else {
+        // Нет страны — только прямой URL
+        TvEngine.playUrl(fav.name, fav.url);
+        showFavToast('▶ ' + fav.name);
+    }
 
+    renderTvFavorites();
+}
 document.getElementById('openFavRadio').addEventListener('click', () => openFavModal('radio'));
 document.getElementById('openFavTv').addEventListener('click', () => openFavModal('tv'));
 
@@ -3483,21 +3570,34 @@ document.addEventListener('keydown', function (e) {
             if (icon) icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
         }
 
-        function toggleVizFullscreen() {
-            if (!vizContainerEl) return;
-            const isFs = document.fullscreenElement === vizContainerEl ||
-                         document.webkitFullscreenElement === vizContainerEl;
-            if (isFs) {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            } else {
-                if (vizContainerEl.requestFullscreen) {
-                    vizContainerEl.requestFullscreen().catch(() => {});
-                } else if (vizContainerEl.webkitRequestFullscreen) {
-                    vizContainerEl.webkitRequestFullscreen();
-                }
-            }
+        function unlockOrientation() {
+    try {
+        if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
         }
+    } catch (e) {}
+}
+
+function toggleVizFullscreen() {
+    if (!vizContainerEl) return;
+    const isFs = document.fullscreenElement === vizContainerEl ||
+                 document.webkitFullscreenElement === vizContainerEl;
+    if (isFs) {
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        unlockOrientation();
+    } else {
+        unlockOrientation();
+        if (vizContainerEl.requestFullscreen) {
+            vizContainerEl.requestFullscreen()
+                .then(() => { unlockOrientation(); })
+                .catch(() => {});
+        } else if (vizContainerEl.webkitRequestFullscreen) {
+            vizContainerEl.webkitRequestFullscreen();
+            setTimeout(unlockOrientation, 100);
+        }
+    }
+}
 
         if (vizFsBtn) {
             vizFsBtn.addEventListener('click', function(e) {
@@ -3794,13 +3894,14 @@ polygonSeries.events.on("datavalidated", function() {
                 const tz = getTimezoneForCountry(countryName);
                 modalSubInfo.textContent = "🌐 " + langInfo.display + " · " + tz;
                 isTimeMode = false;
-                hideAllSubPanels();
-                modalActions.style.display = 'flex';
-                clockActions.style.display = 'none';
-                stopClock();
-                stopRadio();
-                TvEngine.stop();
-                modalOverlay.classList.add("active");
+hideAllSubPanels();
+modalActions.style.display = 'flex';
+clockActions.style.display = 'none';
+document.getElementById('modalBackBtn').style.display = '';
+stopClock();
+stopRadio();
+TvEngine.stop();
+modalOverlay.classList.add("active");
                 document.body.classList.add("modal-open");
             }
 
@@ -4048,8 +4149,9 @@ function clearPendingState(resetStatusToDefault) {
                     const tz = getTimezoneForCountry(currentCountryForModal);
                     isTimeMode = true;
                     modalActions.style.display = 'none';
-                    clockActions.style.display = 'flex';
-                    modalClock.style.display = 'block';
+clockActions.style.display = 'flex';
+document.getElementById('modalBackBtn').style.display = '';
+modalClock.style.display = 'block';
                     clockInfo.style.display = 'block';
                     radioInfo.style.display = 'none';
                     if (tvInfo) tvInfo.style.display = 'none';
@@ -4100,11 +4202,12 @@ function clearPendingState(resetStatusToDefault) {
                 if (currentCountryForModal) {
                     const country = currentCountryForModal;
                     modalActions.style.display = 'none';
-                    clockActions.style.display = 'flex';
-                    modalClock.style.display = 'none';
-                    clockInfo.style.display = 'none';
-                    if (tvInfo) tvInfo.style.display = 'none';
-                    radioInfo.style.display = 'block';
+clockActions.style.display = 'flex';
+document.getElementById('modalBackBtn').style.display = '';
+modalClock.style.display = 'none';
+clockInfo.style.display = 'none';
+if (tvInfo) tvInfo.style.display = 'none';
+radioInfo.style.display = 'block';
                     modalBox.classList.remove('tv-mode');
                     stopClock();
                     TvEngine.stop();   // важно: гасим TV, чтобы звуки не пересекались
@@ -4121,11 +4224,12 @@ function clearPendingState(resetStatusToDefault) {
                 if (currentCountryForModal) {
                     const country = currentCountryForModal;
                     modalActions.style.display = 'none';
-                    clockActions.style.display = 'flex';
-                    modalClock.style.display = 'none';
-                    clockInfo.style.display = 'none';
-                    radioInfo.style.display = 'none';
-                    if (tvInfo) tvInfo.style.display = 'block';
+clockActions.style.display = 'flex';
+document.getElementById('modalBackBtn').style.display = '';
+modalClock.style.display = 'none';
+clockInfo.style.display = 'none';
+radioInfo.style.display = 'none';
+if (tvInfo) tvInfo.style.display = 'block';
                     modalBox.classList.add('tv-mode');
                     stopClock();
                     stopRadio();       // гасим радио
