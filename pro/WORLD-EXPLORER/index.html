@@ -1322,6 +1322,7 @@
                     <button id="toggleRotation" class="btn"><i class="fas fa-pause-circle"></i> <span>Stop Rotation</span></button>
                     <button id="resetView" class="btn"><i class="fas fa-sync-alt"></i> Reset View</button>
                     <button id="randomCountry" class="btn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border-color: #a78bfa;"><i class="fas fa-dice"></i> <span>Random Country</span></button>
+<button id="okCountry" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399;"><i class="fas fa-check"></i> <span>OK</span></button>
                 </div>
 
                 <div class="share-section">
@@ -3649,7 +3650,52 @@ polygonSeries.events.on("datavalidated", function() {
                 } catch (e) {}
             }
 
-            function clearPendingState(resetStatusToDefault) {
+            let lastRandomCountry = null;
+
+openRandomCountry = function() {
+    let country = getRandomCountry();
+    if (!country) {
+        statusSpan.innerHTML = "⚠ Не удалось выбрать случайную страну.";
+        return;
+    }
+    // не повторять ту же страну подряд
+    let guard = 0;
+    while (country === lastRandomCountry && guard++ < 10) {
+        country = getRandomCountry();
+    }
+    lastRandomCountry = country;
+
+    // центрируем глобус + радужная подсветка (без модалки!)
+    startRainbowHighlight(country);
+
+    const langInfo = getLanguageForCountry(country);
+    const tz = getTimezoneForCountry(country);
+    statusSpan.innerHTML = '<i class="fas fa-dice"></i> 🎲 Random: <span class="country-badge">' +
+        (flagMap[country] || "🌍") + ' ' + country + '</span> <span class="language-tag">' +
+        langInfo.display + '</span> <span class="language-tag" style="background:#10b981;">' +
+        tz + '</span> — нажмите <strong>OK</strong> чтобы открыть';
+    statusCard.style.borderColor = "#a78bfa";
+
+    try {
+        polygonSeries.mapPolygons.each(function(polygon) {
+            const di = polygon.dataItem;
+            if (!di) return;
+            const ctx = di.dataContext;
+            if (ctx && ctx.name === country) {
+                polygon.animate({ key: "stroke", to: am5.color(0xffaa66), duration: 300 });
+                polygon.animate({ key: "strokeWidth", to: 2.5, duration: 300 });
+                setTimeout(function() {
+                    if (polygon) {
+                        polygon.animate({ key: "stroke", to: am5.color(0x1a2744), duration: 600 });
+                        polygon.animate({ key: "strokeWidth", to: 0.6, duration: 600 });
+                    }
+                }, 1500);
+            }
+        });
+    } catch (e) {}
+};
+
+function clearPendingState(resetStatusToDefault) {
                 if (pendingTimeout) { clearTimeout(pendingTimeout); pendingTimeout = null; }
                 pendingCountry = null;
                 if (resetStatusToDefault) {
@@ -3954,6 +4000,16 @@ TvEngine.start(country);
             });
 
             document.getElementById("randomCountry").addEventListener("click", openRandomCountry);
+document.getElementById("okCountry").addEventListener("click", function () {
+    if (!lastRandomCountry) {
+        showFavToast('⚠ Сначала нажмите Random Country');
+        return;
+    }
+    showModal(lastRandomCountry);
+    statusSpan.innerHTML = '<i class="fas fa-hand-pointer"></i> Choose action for <strong>' +
+        lastRandomCountry + '</strong> in the popup';
+    statusCard.style.borderColor = "#a78bfa";
+});
 
             const toggleBtn = document.getElementById("toggleRotation");
             toggleBtn.addEventListener("click", function () {
