@@ -1093,14 +1093,50 @@
     }
 
     .viz-container:fullscreen,
-    .viz-container:-webkit-full-screen {
-        width: 100vw;
-        height: 100vh;
-        aspect-ratio: auto;
-        border-radius: 0;
-        margin: 0;
-        box-shadow: none;
-    }
+.viz-container:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    aspect-ratio: auto;
+    border-radius: 0;
+    margin: 0;
+    box-shadow: none;
+    /* ПОВОРОТ ЭКРАНА: поворачиваем визуализацию на 90° и масштабируем под landscape */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.viz-container:fullscreen .viz-layer,
+.viz-container:-webkit-full-screen .viz-layer {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+}
+/* Контент внутри fullscreen остаётся прямоориентированным */
+.viz-container:fullscreen .viz-overlay,
+.viz-container:-webkit-full-screen .viz-overlay {
+    position: absolute;
+    inset: 0;
+}
+.viz-container:fullscreen .viz-caption,
+.viz-container:-webkit-full-screen .viz-caption {
+    font-size: 1.1rem;
+    left: 24px;
+    right: 80px;
+    bottom: 24px;
+    padding: 10px 18px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 40px;
+    backdrop-filter: blur(10px);
+}
+.viz-container:fullscreen .viz-close,
+.viz-container:-webkit-full-screen .viz-close {
+    top: 18px;
+    right: 18px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+}
     .viz-container:fullscreen .viz-caption,
     .viz-container:-webkit-full-screen .viz-caption {
         font-size: 1.1rem;
@@ -3590,11 +3626,24 @@ function toggleVizFullscreen() {
         unlockOrientation();
         if (vizContainerEl.requestFullscreen) {
             vizContainerEl.requestFullscreen()
-                .then(() => { unlockOrientation(); })
+                .then(() => {
+                    unlockOrientation();
+                    // ПОВОРОТ ЭКРАНА: пытаемся перевести в landscape (работает на Android и части iOS)
+                    try {
+                        if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('landscape').catch(() => {});
+                        } else if (screen.orientation && screen.orientation.lock) {
+                            screen.orientation.lock('landscape');
+                        }
+                    } catch (e) {}
+                })
                 .catch(() => {});
         } else if (vizContainerEl.webkitRequestFullscreen) {
             vizContainerEl.webkitRequestFullscreen();
-            setTimeout(unlockOrientation, 100);
+            setTimeout(() => {
+                unlockOrientation();
+                try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
+            }, 100);
         }
     }
 }
