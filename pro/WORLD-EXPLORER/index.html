@@ -1092,31 +1092,44 @@
         .clock-mark.large { background: #ccc; }
     }
 
-    .viz-container:fullscreen,
+/* ====== FULLSCREEN ВИЗУАЛИЗАЦИИ — ЗАПОЛНЯЕТ ВЕСЬ ЭКРАН ====== */
+.viz-container:fullscreen,
 .viz-container:-webkit-full-screen {
+    position: fixed;
+    inset: 0;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
+    max-width: 100vw;
+    max-height: 100vh;
+    max-height: 100dvh;
     aspect-ratio: auto;
     border-radius: 0;
     margin: 0;
+    padding: 0;
     box-shadow: none;
-    /* ПОВОРОТ ЭКРАНА: поворачиваем визуализацию на 90° и масштабируем под landscape */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: #000;
+    display: block;
+    overflow: hidden;
+    isolation: isolate;
+    z-index: 2147483647;
 }
 .viz-container:fullscreen .viz-layer,
 .viz-container:-webkit-full-screen .viz-layer {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
 }
-/* Контент внутри fullscreen остаётся прямоориентированным */
 .viz-container:fullscreen .viz-overlay,
 .viz-container:-webkit-full-screen .viz-overlay {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
 }
 .viz-container:fullscreen .viz-caption,
 .viz-container:-webkit-full-screen .viz-caption {
@@ -1137,69 +1150,27 @@
     height: 46px;
     font-size: 1.1rem;
 }
-    .viz-container:fullscreen .viz-caption,
-    .viz-container:-webkit-full-screen .viz-caption {
-        font-size: 1.1rem;
-        left: 24px;
-        right: 80px;
-        bottom: 24px;
-        padding: 10px 18px;
-        background: rgba(0,0,0,0.45);
-        border-radius: 40px;
-        backdrop-filter: blur(10px);
-    }
-    .viz-container:fullscreen .viz-close,
-    .viz-container:-webkit-full-screen .viz-close {
-        top: 18px;
-        right: 18px;
-        width: 46px;
-        height: 46px;
-        font-size: 1.1rem;
-    }
-    .viz-fs-btn {
-        position: absolute;
-        top: 8px;
-        right: 42px;
-        z-index: 4;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        background: rgba(0,0,0,0.55);
-        border: 1px solid rgba(255,255,255,0.2);
-        color: #fff;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.7rem;
-        backdrop-filter: blur(6px);
-        transition: all 0.2s;
-        padding: 0;
-    }
-    .viz-fs-btn:hover {
-        background: #3b82f6;
-        border-color: #3b82f6;
-        transform: scale(1.1);
-    }
-    .viz-container:fullscreen .viz-fs-btn,
-    .viz-container:-webkit-full-screen .viz-fs-btn {
-        top: 18px;
-        right: 74px;
-        width: 46px;
-        height: 46px;
-        font-size: 1.1rem;
-    }
-    .viz-container:fullscreen { background: #000; }/* ====== ПОВОРОТ ЭКРАНА В FULLSCREEN ВИЗУАЛИЗАЦИИ ====== */
-.viz-container:fullscreen .viz-layer,
-.viz-container:-webkit-full-screen .viz-layer {
-    background-size: cover;
-    background-position: center;
+.viz-container:fullscreen .viz-fs-btn,
+.viz-container:-webkit-full-screen .viz-fs-btn {
+    top: 18px;
+    right: 74px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+}
+.viz-container:fullscreen .viz-spinner,
+.viz-container:-webkit-full-screen .viz-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 @media (orientation: landscape) {
     .viz-container:fullscreen,
     .viz-container:-webkit-full-screen {
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
     }
     .viz-container:fullscreen .viz-caption,
     .viz-container:-webkit-full-screen .viz-caption {
@@ -1209,6 +1180,79 @@
         bottom: 20px;
     }
 }
+/* iOS fallback — псевдо-fullscreen (Safari не поддерживает requestFullscreen) */
+.viz-container.viz-pseudo-fs {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 100vw;
+    max-height: 100dvh;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+    z-index: 2147483647;
+    display: block;
+    background: #000;
+    overflow: hidden;
+}
+.viz-container.viz-pseudo-fs .viz-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+.viz-container.viz-pseudo-fs .viz-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+.viz-container.viz-pseudo-fs .viz-caption {
+    font-size: 1.1rem;
+    left: 24px;
+    right: 80px;
+    bottom: 24px;
+    padding: 10px 18px;
+    background: rgba(0,0,0,0.45);
+    border-radius: 40px;
+    backdrop-filter: blur(10px);
+}
+.viz-container.viz-pseudo-fs .viz-close {
+    top: 18px;
+    right: 18px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+}
+.viz-container.viz-pseudo-fs .viz-fs-btn {
+    top: 18px;
+    right: 74px;
+    width: 46px;
+    height: 46px;
+    font-size: 1.1rem;
+}/* ====== СКРЫТИЕ UI ВИЗУАЛИЗАЦИИ ПО ТАПУ ====== */
+.viz-container .viz-caption,
+.viz-container .viz-close,
+.viz-container .viz-fs-btn {
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.viz-container.ui-hidden .viz-caption {
+    opacity: 0 !important;
+    transform: translateY(8px);
+    pointer-events: none;
+}
+.viz-container.ui-hidden .viz-close,
+.viz-container.ui-hidden .viz-fs-btn {
+    opacity: 0 !important;
+    transform: scale(0.8);
+    pointer-events: none;
+}
+/* ====== TV PLAYER ====== */
 
     /* ====== TV PLAYER ====== */
     .tv-video-wrap {
@@ -2081,24 +2125,19 @@
             }
 
             async function fillQueue() {
-                if (fetching || queue.length >= PRELOAD_AHEAD) return;
-                fetching = true;
-                try {
-                    while (queue.length < PRELOAD_AHEAD) {
-                        const img = await fetchNext(currentCountry);
-                        if (!img) break;
-                        await new Promise(res => {
-                            const im = new Image();
-                            im.onload = im.onerror = () => res();
-                            im.src = img.url;
-                        });
-                        seenUrls.add(img.url);
-                        queue.push(img);
-                    }
-                } finally {
-                    fetching = false;
-                }
-            }
+    if (fetching || queue.length >= PRELOAD_AHEAD) return;
+    fetching = true;
+    try {
+        while (queue.length < PRELOAD_AHEAD) {
+            const img = await fetchNext(currentCountry);
+            if (!img) break;
+            seenUrls.add(img.url);
+            queue.push(img);
+        }
+    } finally {
+        fetching = false;
+    }
+}
 
             function showImage(item) {
                 const layer = activeLayer === 'A' ? layerB : layerA;
@@ -2119,25 +2158,76 @@
                 });
 
                 if (captionEl) {
-                    captionEl.classList.remove('ready');
-                    const author = item.author ? ` · ${item.author}` : '';
-                    captionEl.textContent = (item.caption || item.title) + author;
-                    setTimeout(() => captionEl.classList.add('ready'), 300);
-                }
+    captionEl.classList.remove('ready');
+    const author = item.author ? ` · ${item.author}` : '';
+    captionEl.textContent = (item.caption || item.title) + author;
+    setTimeout(() => captionEl.classList.add('ready'), 300);
+
+    const container = document.getElementById('vizContainer');
+    if (container) {
+        if (container._hideUiTimer) clearTimeout(container._hideUiTimer);
+        container._hideUiTimer = setTimeout(function () {
+            if (document.fullscreenElement === container ||
+                document.webkitFullscreenElement === container ||
+                container.classList.contains('viz-pseudo-fs') ||
+                container.style.display === 'block') {
+                container.classList.add('ui-hidden');
+            }
+        }, 5000);
+    }
+}
             }
 
-            async function tick() {
-                if (!active) return;
-                if (!queue.length) {
-                    if (spinnerEl) spinnerEl.classList.add('active');
-                    await fillQueue();
-                    if (spinnerEl) spinnerEl.classList.remove('active');
-                }
-                if (!active) return;
-                const item = queue.shift();
-                if (item) showImage(item);
-                fillQueue();
-            }
+            // Гарантированно грузит картинку; возвращает Promise<boolean>
+function preloadImage(url, timeoutMs = 12000) {
+    return new Promise(resolve => {
+        if (!url) { resolve(false); return; }
+        let done = false;
+        const img = new Image();
+        const finish = (ok) => {
+            if (done) return;
+            done = true;
+            img.onload = img.onerror = null;
+            resolve(ok);
+        };
+        const timer = setTimeout(() => finish(false), timeoutMs);
+        img.onload = () => { clearTimeout(timer); finish(true); };
+        img.onerror = () => { clearTimeout(timer); finish(false); };
+        img.src = url;
+    });
+}
+
+async function tick() {
+    if (!active) return;
+
+    // Пытаемся взять картинку из очереди
+    let item = queue.shift();
+
+    // Если очередь пуста — попробуем подгрузить на месте
+    if (!item) {
+        if (spinnerEl) spinnerEl.classList.add('active');
+        item = await fetchNext(currentCountry);
+        if (spinnerEl) spinnerEl.classList.remove('active');
+    }
+
+    // Нет картинки — НЕ трогаем текущий слой (нет чёрного экрана)
+    if (!item) {
+        fillQueue();
+        return;
+    }
+
+    // КЛЮЧЕВОЕ: не переключаем слой, пока картинка не загрузилась
+    const ok = await preloadImage(item.url);
+    if (!ok) {
+        seenUrls.add(item.url);
+        fillQueue();
+        return; // текущее изображение продолжает висеть
+    }
+
+    if (!active) return;
+    showImage(item);
+    fillQueue();
+}
 
             return {
                 start(country) {
@@ -3599,12 +3689,13 @@ document.addEventListener('keydown', function (e) {
         const vizFsBtn = document.getElementById('vizFsBtn');
 
         function updateFsIcon() {
-            if (!vizFsBtn) return;
-            const isFs = document.fullscreenElement === vizContainerEl ||
-                         document.webkitFullscreenElement === vizContainerEl;
-            const icon = vizFsBtn.querySelector('i');
-            if (icon) icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
-        }
+    if (!vizFsBtn) return;
+    const isFs = document.fullscreenElement === vizContainerEl ||
+                 document.webkitFullscreenElement === vizContainerEl ||
+                 vizContainerEl.classList.contains('viz-pseudo-fs');
+    const icon = vizFsBtn.querySelector('i');
+    if (icon) icon.className = isFs ? 'fas fa-compress' : 'fas fa-expand';
+}
 
         function unlockOrientation() {
     try {
@@ -3622,30 +3713,31 @@ function toggleVizFullscreen() {
         if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
         unlockOrientation();
-    } else {
-        unlockOrientation();
-        if (vizContainerEl.requestFullscreen) {
-            vizContainerEl.requestFullscreen()
-                .then(() => {
-                    unlockOrientation();
-                    // ПОВОРОТ ЭКРАНА: пытаемся перевести в landscape (работает на Android и части iOS)
-                    try {
-                        if (screen.orientation && screen.orientation.lock) {
-                            screen.orientation.lock('landscape').catch(() => {});
-                        } else if (screen.orientation && screen.orientation.lock) {
-                            screen.orientation.lock('landscape');
-                        }
-                    } catch (e) {}
-                })
-                .catch(() => {});
-        } else if (vizContainerEl.webkitRequestFullscreen) {
-            vizContainerEl.webkitRequestFullscreen();
-            setTimeout(() => {
-                unlockOrientation();
-                try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
-            }, 100);
-        }
+        return;
     }
+    if (vizContainerEl.classList.contains('viz-pseudo-fs')) {
+        vizContainerEl.classList.remove('viz-pseudo-fs');
+        unlockOrientation();
+        return;
+    }
+    const supportsFs = !!(vizContainerEl.requestFullscreen || vizContainerEl.webkitRequestFullscreen);
+    if (!supportsFs) {
+        vizContainerEl.classList.add('viz-pseudo-fs');
+        unlockOrientation();
+        return;
+    }
+    unlockOrientation();
+    const req = vizContainerEl.requestFullscreen
+        ? vizContainerEl.requestFullscreen()
+        : vizContainerEl.webkitRequestFullscreen();
+    Promise.resolve(req).then(() => {
+        unlockOrientation();
+        try {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        } catch (e) {}
+    }).catch(() => {});
 }
 
         if (vizFsBtn) {
@@ -3659,7 +3751,34 @@ function toggleVizFullscreen() {
         vizContainerEl.addEventListener('dblclick', function(e) {
             if (e.target.closest('.viz-close') || e.target.closest('.viz-fs-btn')) return;
             toggleVizFullscreen();
-        });
+        });// ====== ТАП ПО КАРТИНКЕ → СКРЫТЬ/ПОКАЗАТЬ UI ======
+(function bindVizTapToHideUI() {
+    if (!vizContainerEl) return;
+
+    let tapTimer = null;
+
+    vizContainerEl.addEventListener('click', function (e) {
+        if (e.target.closest('.viz-close') || e.target.closest('.viz-fs-btn')) return;
+        if (e.target.closest('.viz-caption')) return;
+
+        if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; return; }
+
+        tapTimer = setTimeout(function () {
+            tapTimer = null;
+            vizContainerEl.classList.toggle('ui-hidden');
+        }, 280);
+    });
+
+    vizContainerEl.addEventListener('dblclick', function () {
+        if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+    });
+
+    const origStop = VizEngine.stop.bind(VizEngine);
+    VizEngine.stop = function () {
+        vizContainerEl.classList.remove('ui-hidden');
+        origStop();
+    };
+})();
 
         // ====== AMCHARTS GLOBE ======
         am5.ready(function () {
@@ -4482,9 +4601,18 @@ document.getElementById("okCountry").addEventListener("click", function () {
         }
 
         function exitAnyFullscreen() {
-            if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
-            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        }
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+}
+
+function exitPseudoVizFs() {
+    const v = document.getElementById('vizContainer');
+    if (v && v.classList.contains('viz-pseudo-fs')) {
+        v.classList.remove('viz-pseudo-fs');
+        return true;
+    }
+    return false;
+}
 
         function goBackFromSubmenu() {
           const favModalEl = document.getElementById("favModal");
@@ -4561,11 +4689,15 @@ try { if (typeof TvEngine !== 'undefined' && TvEngine.stop) TvEngine.stop(); } c
             window.addEventListener("popstate", function (e) {
                 if (isPopping) { isPopping = false; return; }
 
-                if (isTvFullscreen() || isVizFullscreen()) {
-                    exitAnyFullscreen();
-                    pushState(STATE_SUB);
-                    return;
-                }
+                if (exitPseudoVizFs()) {
+    pushState(STATE_SUB);
+    return;
+}
+if (isTvFullscreen() || isVizFullscreen()) {
+    exitAnyFullscreen();
+    pushState(STATE_SUB);
+    return;
+}
                 if (isRadioOpen() || isClockOpen() || isTvOpen()) {
                     goBackFromSubmenu();
                     pushState(STATE_MODAL);
