@@ -264,7 +264,20 @@
     }
     .click-hint { animation: pulse 0.6s ease; }
 
-    .modal-overlay {
+    /* ====== РАДУЖНОЕ ПЕРЕЛИВАНИЕ ВЫБРАННОЙ СТРАНЫ ====== */
+@keyframes rainbowGlow {
+    0%   { filter: drop-shadow(0 0 6px #ff0000) drop-shadow(0 0 12px #ff0000); }
+    14%  { filter: drop-shadow(0 0 6px #ff8800) drop-shadow(0 0 12px #ff8800); }
+    28%  { filter: drop-shadow(0 0 6px #ffff00) drop-shadow(0 0 12px #ffff00); }
+    42%  { filter: drop-shadow(0 0 6px #00ff00) drop-shadow(0 0 12px #00ff00); }
+    57%  { filter: drop-shadow(0 0 6px #00ffff) drop-shadow(0 0 12px #00ffff); }
+    71%  { filter: drop-shadow(0 0 6px #0088ff) drop-shadow(0 0 12px #0088ff); }
+    85%  { filter: drop-shadow(0 0 6px #8800ff) drop-shadow(0 0 12px #8800ff); }
+    100% { filter: drop-shadow(0 0 6px #ff0000) drop-shadow(0 0 12px #ff0000); }
+}
+
+
+.modal-overlay {
         display: none;
         position: fixed;
         top: 0; left: 0;
@@ -3334,7 +3347,131 @@ if (document.readyState === 'loading') {
                 return am5.color(colorForCountry(name));
             });
 
-            polygonSeries.events.on("datavalidated", function() {
+            // ====== РАДУЖНАЯ ПОДСВЕТКА ВЫБРАННОЙ СТРАНЫ ======
+let rainbowPolygon = null;
+let rainbowTimer = null;
+let rainbowHue = 0;
+let rainbowTargetCountry = null;
+
+function hslToHex(h, s, l) {
+    h /= 360; s /= 100; l /= 100;
+    let r, g, b;
+    if (s === 0) {
+        r = g = b = l;
+    } else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+    }
+    const toHex = x => {
+        const hex = Math.round(x * 255).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    };
+    return '#' + toHex(r) + toHex(g) + toHex(b);
+}
+
+function stopRainbowHighlight() {
+    if (rainbowTimer) {
+        clearInterval(rainbowTimer);
+        rainbowTimer = null;
+    }
+    if (rainbowPolygon) {
+        const di = rainbowPolygon.dataItem;
+        if (di) {
+            const base = di.get("_baseColor");
+            if (base) {
+                rainbowPolygon.animate({ key: "fill", to: am5.color(base), duration: 400 });
+            }
+        }
+        try {
+            rainbowPolygon.set("stroke", am5.color(0x1a2744));
+            rainbowPolygon.set("strokeWidth", 0.6);
+            rainbowPolygon.set("scale", 1);
+        } catch (e) {}
+        rainbowPolygon = null;
+    }
+    rainbowTargetCountry = null;
+}
+
+function startRainbowHighlight(countryName) {
+    if (!countryName) return;
+    if (rainbowTargetCountry === countryName && rainbowPolygon) return;
+
+    stopRainbowHighlight();
+    rainbowTargetCountry = countryName;
+
+    let found = null;
+    polygonSeries.mapPolygons.each(function (polygon) {
+        const di = polygon.dataItem;
+        if (!di) return;
+        const ctx = di.dataContext;
+        if (ctx && ctx.name === countryName) {
+            found = polygon;
+        }
+    });
+
+    if (!found) return;
+    rainbowPolygon = found;
+    rainbowHue = 0;
+
+    rainbowTimer = setInterval(function () {
+        if (!rainbowPolygon) return;
+        rainbowHue = (rainbowHue + 4) % 360;
+        const hex = hslToHex(rainbowHue, 90, 55);
+        try {
+            rainbowPolygon.set("fill", am5.color(hex));
+            rainbowPolygon.set("stroke", am5.color(0xffffff));
+            rainbowPolygon.set("strokeWidth", 2);
+        } catch (e) {}
+    }, 60);
+
+    found.animate({ key: "scale", to: 1.03, duration: 600, easing: am5.ease.out(am5.ease.cubic) });
+    setTimeout(function () {
+        if (rainbowPolygon === found) {
+            found.animate({ key: "scale", to: 1, duration: 600, easing: am5.ease.inOut(am5.ease.cubic) });
+        }
+    }, 600);
+
+    // Автоцентрирование на стране
+    try {
+        const geo = am5geodata_worldLow.features.find(f => f.properties.name === countryName);
+        if (geo) {
+            const coords = [];
+            const collect = (c) => {
+                if (typeof c[0] === 'number') coords.push(c);
+                else c.forEach(collect);
+            };
+            collect(geo.geometry.coordinates);
+            if (coords.length) {
+                let minLon = 180, maxLon = -180, minLat = 90, maxLat = -90;
+                coords.forEach(([lon, lat]) => {
+                    if (lon < minLon) minLon = lon;
+                    if (lon > maxLon) maxLon = lon;
+                    if (lat < minLat) minLat = lat;
+                    if (lat > maxLat) maxLat = lat;
+                });
+                const centerLon = (minLon + maxLon) / 2;
+                const centerLat = (minLat + maxLat) / 2;
+                stopRotation();
+                chart.animate({ key: "rotationX", to: -centerLon, duration: 1200, easing: am5.ease.out(am5.ease.cubic) });
+                chart.animate({ key: "rotationY", to: -centerLat, duration: 1200, easing: am5.ease.out(am5.ease.cubic) });
+            }
+        }
+    } catch (e) {}
+}
+
+
+polygonSeries.events.on("datavalidated", function() {
                 polygonSeries.mapPolygons.each(function(polygon) {
                     const di = polygon.dataItem;
                     if (!di) return;
@@ -3439,8 +3576,9 @@ if (document.readyState === 'loading') {
             }
 
             function showModal(countryName) {
-                currentCountryForModal = countryName;
-                modalCountryName.textContent = countryName;
+    currentCountryForModal = countryName;
+    modalCountryName.textContent = countryName;
+    startRainbowHighlight(countryName);
                 modalFlag.textContent = flagMap[countryName] || "🌍";
                 const langInfo = getLanguageForCountry(countryName);
                 const tz = getTimezoneForCountry(countryName);
@@ -3825,7 +3963,8 @@ TvEngine.start(country);
 
             const resetBtn = document.getElementById("resetView");
             resetBtn.addEventListener("click", function () {
-                stopRotation();
+    stopRotation();
+    stopRainbowHighlight();
                 chart.animate({ key: "rotationX", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });
                 chart.animate({ key: "rotationY", to: 0, duration: 1000, easing: am5.ease.out(am5.ease.cubic) });
                 if (pendingTimeout) clearTimeout(pendingTimeout);
