@@ -8377,6 +8377,383 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END CF FIX
      ============================================================ -->
+<!-- ============================================================
+     VIZ RADIO PATCH v1
+     Размытая подложка + правильная работа fullscreen/orientation
+     Вставлять в самый конец <body>, после всех скриптов.
+     ============================================================ -->
+<style id="vizRadioPatchStyles">
+    /* Контейнер визуализации — чёрный фон + изоляция слоёв */
+    #vizContainer {
+        background: #000 !important;
+        isolation: isolate;
+    }
 
+    /* Размытая подложка — та же картинка, размытая, растянутая */
+    #vizContainer .viz-blur-bg {
+        position: absolute;
+        inset: -30px;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        filter: blur(28px) brightness(0.35) saturate(1.2);
+        transform: scale(1.12);
+        z-index: 0;
+        opacity: 0;
+        transition: opacity 1.8s ease-in-out, background-image 0.4s ease;
+        pointer-events: none;
+        will-change: opacity;
+    }
+    #vizContainer .viz-blur-bg.active {
+        opacity: 1;
+    }
+
+    /* Основное фото — contain, чтобы НЕ обрезать горизонтальные кадры */
+    #vizContainer .viz-layer {
+        background-size: contain !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        z-index: 1;
+    }
+
+    /* Подсказка "поверните телефон" — только в портретном fullscreen */
+    #vizContainer .viz-rotate-hint {
+        display: none;
+        position: absolute;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
+        background: rgba(15, 23, 42, 0.85);
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 40px;
+        font-size: 0.8rem;
+        z-index: 6;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(251, 191, 36, 0.5);
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.4s ease, transform 0.4s ease;
+        pointer-events: none;
+        font-family: inherit;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+    #vizContainer .viz-rotate-hint i {
+        color: #fbbf24;
+        font-size: 1rem;
+        animation: vizRotateAnim 2.2s ease-in-out infinite;
+    }
+    @keyframes vizRotateAnim {
+        0%, 100% { transform: rotate(0deg); }
+        50%      { transform: rotate(90deg); }
+    }
+
+    /* Показываем подсказку только когда визуализация реально на весь экран
+       И устройство в портретной ориентации */
+    @media (orientation: portrait) {
+        #vizContainer:fullscreen .viz-rotate-hint,
+        #vizContainer:-webkit-full-screen .viz-rotate-hint,
+        #vizContainer.viz-pseudo-fs .viz-rotate-hint {
+            display: flex;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+
+    /* Скрытие подсказки по тапу вместе с остальным UI */
+    #vizContainer.ui-hidden .viz-rotate-hint {
+        opacity: 0 !important;
+        pointer-events: none;
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log = (...a) => { if (DEBUG) console.log("[VIZ-PATCH]", ...a); };
+
+    // ============================================================
+    // 1. ДОБАВЛЯЕМ РАЗМЫТУЮ ПОДЛОЖКУ И ПОДСКАЗКУ В DOM
+    // ============================================================
+    function injectElements() {
+        const container = document.getElementById("vizContainer");
+        if (!container) return false;
+
+        // Размытая подложка
+        if (!container.querySelector(".viz-blur-bg")) {
+            const blur = document.createElement("div");
+            blur.className = "viz-blur-bg";
+            blur.id = "vizBlurBg";
+            // Вставляем ПЕРВЫМ дочерним элементом, чтобы был под всеми слоями
+            container.insertBefore(blur, container.firstChild);
+            log("✅ blur-bg добавлен");
+        }
+
+        // Подсказка "поверните телефон"
+        if (!container.querySelector(".viz-rotate-hint")) {
+            const hint = document.createElement("div");
+            hint.className = "viz-rotate-hint";
+            hint.innerHTML =
+                '<i class="fas fa-mobile-alt"></i>' +
+                '<span>Поверните телефон горизонтально</span>';
+            const overlay = container.querySelector(".viz-overlay");
+            if (overlay && overlay.nextSibling) {
+                container.insertBefore(hint, overlay.nextSibling);
+            } else {
+                container.appendChild(hint);
+            }
+            log("✅ rotate-hint добавлен");
+        }
+
+        return true;
+    }
+
+    // ============================================================
+    // 2. ПАТЧ VizEngine.showImage — обновляем подложку
+    // ============================================================
+    function patchVizEngine() {
+        if (typeof VizEngine === "undefined") return false;
+        if (VizEngine.__blurPatched) return true;
+
+        // Перехватываем showImage через оригинальный tick:
+        // проще всего — обернуть showImage, но он внутри замыкания.
+        // Поэтому вешаем MutationObserver на визуальные слои: как только
+        // у активного слоя меняется background-image — копируем в подложку.
+
+        const layerA = document.getElementById("vizLayerA");
+        const layerB = document.getElementById("vizLayerB");
+        const blurBg = document.getElementById("vizBlurBg");
+
+        if (!layerA || !layerB || !blurBg) return false;
+
+        let lastUrl = "";
+        let blurTimer = null;
+
+        function syncBlurFromLayers() {
+            const aActive = layerA.classList.contains("active");
+            const bActive = layerB.classList.contains("active");
+            const src = aActive ? layerA : (bActive ? layerB : null);
+            if (!src) return;
+
+            const bg = src.style.backgroundImage || "";
+            if (!bg || bg === "none") return;
+            if (bg === lastUrl) return;
+            lastUrl = bg;
+
+            // Плавно: сначала убираем active, меняем фон, потом возвращаем
+            if (blurTimer) clearTimeout(blurTimer);
+            blurBg.classList.remove("active");
+            blurTimer = setTimeout(function () {
+                blurBg.style.backgroundImage = bg;
+                // Форсируем reflow, чтобы transition сработал
+                void blurBg.offsetWidth;
+                blurBg.classList.add("active");
+                log("🖼 blur обновлён");
+            }, 300);
+        }
+
+        // Следим за сменой класса active на обоих слоях
+        const obs = new MutationObserver(syncBlurFromLayers);
+        obs.observe(layerA, { attributes: true, attributeFilter: ["class", "style"] });
+        obs.observe(layerB, { attributes: true, attributeFilter: ["class", "style"] });
+
+        // Также периодически проверяем — на случай, если showImage
+        // меняет стиль без смены класса
+        setInterval(syncBlurFromLayers, 500);
+
+        // Первичная синхронизация
+        setTimeout(syncBlurFromLayers, 300);
+
+        VizEngine.__blurPatched = true;
+        log("✅ VizEngine blur-патч установлен");
+        return true;
+    }
+
+    // ============================================================
+    // 3. ФИКС toggleVizFullscreen — убираем unlockOrientation() перед lock()
+    // ============================================================
+    function patchFullscreenToggle() {
+        const container = document.getElementById("vizContainer");
+        if (!container) return false;
+
+        // Находим кнопку и заменяем на клон, чтобы снять старые слушатели
+        const oldBtn = document.getElementById("vizFsBtn");
+        if (!oldBtn) return false;
+        if (oldBtn.dataset.vizPatchBound === "1") return true;
+
+        const newBtn = oldBtn.cloneNode(true);
+        newBtn.dataset.vizPatchBound = "1";
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+        newBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleFsCorrect();
+        });
+
+        // Двойной клик по контейнеру — тоже
+        if (!container.dataset.vizDblBound) {
+            container.dataset.vizDblBound = "1";
+            container.addEventListener("dblclick", function (e) {
+                if (e.target.closest(".viz-close") || e.target.closest(".viz-fs-btn")) return;
+                toggleFsCorrect();
+            });
+        }
+
+        log("✅ Кнопка fullscreen перепривязана");
+        return true;
+    }
+
+    function toggleFsCorrect() {
+        const container = document.getElementById("vizContainer");
+        if (!container) return;
+
+        const isFs = document.fullscreenElement === container ||
+                     document.webkitFullscreenElement === container;
+
+        // === ВЫХОД ===
+        if (isFs) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+            unlockOrientation();
+            return;
+        }
+
+        // === ВЫХОД из pseudo-fs ===
+        if (container.classList.contains("viz-pseudo-fs")) {
+            container.classList.remove("viz-pseudo-fs");
+            unlockOrientation();
+            return;
+        }
+
+        // === ВХОД ===
+        const supportsFs = !!(container.requestFullscreen || container.webkitRequestFullscreen);
+
+        if (!supportsFs) {
+            // iOS / старая Safari: только CSS-фуллскрин, ориентацию не трогаем
+            container.classList.add("viz-pseudo-fs");
+            log("pseudo-fs (iOS fallback) — orientation lock недоступен");
+            return;
+        }
+
+        // ВАЖНО: НЕ вызываем unlockOrientation() перед lock() — это ломает lock
+        const req = container.requestFullscreen
+            ? container.requestFullscreen()
+            : container.webkitRequestFullscreen();
+
+        Promise.resolve(req)
+            .then(function () {
+                // Сначала fullscreen уже активен — теперь можно lock
+                try {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock("landscape")
+                            .then(() => log("✅ landscape locked"))
+                            .catch(err => log("lock отклонён:", err && err.name));
+                    } else {
+                        log("screen.orientation.lock не поддерживается");
+                    }
+                } catch (e) {
+                    log("lock exception:", e);
+                }
+            })
+            .catch(err => log("requestFullscreen отклонён:", err && err.name));
+    }
+
+    function unlockOrientation() {
+        try {
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
+                log("🔓 orientation unlocked");
+            }
+        } catch (e) {}
+    }
+
+    // ============================================================
+    // 4. ПРИ ВЫХОДЕ ИЗ FULLSCREEN — разблокировать ориентацию
+    // ============================================================
+    function bindFullscreenChange() {
+        if (window.__vizFsChangeBound) return;
+        window.__vizFsChangeBound = true;
+
+        function onChange() {
+            const container = document.getElementById("vizContainer");
+            const isFs = container && (
+                document.fullscreenElement === container ||
+                document.webkitFullscreenElement === container
+            );
+            const isPseudo = container && container.classList.contains("viz-pseudo-fs");
+
+            if (!isFs && !isPseudo) {
+                unlockOrientation();
+            }
+        }
+
+        document.addEventListener("fullscreenchange", onChange);
+        document.addEventListener("webkitfullscreenchange", onChange);
+    }
+
+    // ============================================================
+    // 5. ПРИ СТАРТЕ ВИЗУАЛИЗАЦИИ — показать подложку сразу
+    // ============================================================
+    function bindVizStartHook() {
+        if (typeof VizEngine === "undefined") return false;
+        if (VizEngine.__startHookInstalled) return true;
+
+        const origStart = VizEngine.start.bind(VizEngine);
+        VizEngine.start = function (country) {
+            const r = origStart(country);
+            // Сбрасываем подложку при новом старте
+            const blurBg = document.getElementById("vizBlurBg");
+            if (blurBg) {
+                blurBg.classList.remove("active");
+                blurBg.style.backgroundImage = "";
+            }
+            log("▶ VizEngine.start → подложка сброшена");
+            return r;
+        };
+        VizEngine.__startHookInstalled = true;
+        return true;
+    }
+
+    // ============================================================
+    // 6. INIT
+    // ============================================================
+    function init() {
+        let tries = 0;
+        const iv = setInterval(function () {
+            tries++;
+            const a = injectElements();
+            const b = patchVizEngine();
+            const c = patchFullscreenToggle();
+            const d = bindVizStartHook();
+            if ((a && b && c && d) || tries > 30) {
+                clearInterval(iv);
+                if (tries > 30) log("⚠ не все патчи применились за 15с");
+                else log("✅ Все патчи применены за", tries, "попыток");
+            }
+        }, 500);
+
+        bindFullscreenChange();
+
+        log("VIZ RADIO PATCH установлен");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END VIZ RADIO PATCH
+     ============================================================ -->
 </body>
 </html>
