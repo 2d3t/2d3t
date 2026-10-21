@@ -4811,5 +4811,405 @@ if (isTvFullscreen() || isVizFullscreen()) {
         }
     })();
     </script>
+<!-- ============================================================
+     SHARE PATCH v1 — deep links для радио и ТВ
+     Вставлять перед </body>, после блока HARDWARE BACK BUTTON
+     ============================================================ -->
+<style id="sharePatchStyles">
+    .fav-share-btn {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #38bdf8;
+        width: 30px; height: 30px;
+        border-radius: 50%; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.7rem; flex-shrink: 0;
+        transition: all 0.2s ease; padding: 0;
+    }
+    .fav-share-btn:hover { background: #0ea5e9; border-color: #0ea5e9; color: #fff; transform: scale(1.1); }
+    .fav-share-btn.radio { color: #fbbf24; }
+    .fav-share-btn.radio:hover { background: #f59e0b; border-color: #f59e0b; }
+
+    #shareToast {
+        position: fixed; left: 50%; bottom: 24px;
+        transform: translateX(-50%) translateY(10px);
+        background: rgba(15,23,42,0.97); color: #fff;
+        padding: 12px 22px; border-radius: 40px;
+        font-size: 0.85rem; z-index: 5000;
+        border: 1px solid #38bdf8;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        opacity: 0; transition: opacity 0.3s, transform 0.3s;
+        pointer-events: none; max-width: 90vw; text-align: center;
+        font-family: inherit;
+    }
+    #shareToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    // ========== ENCODE / DECODE (base64url + UTF-8) ==========
+    function encodePayload(obj) {
+        try {
+            const bytes = new TextEncoder().encode(JSON.stringify(obj));
+            let bin = "";
+            bytes.forEach(b => bin += String.fromCharCode(b));
+            return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        } catch (e) { return null; }
+    }
+    function decodePayload(str) {
+        try {
+            let s = str.replace(/-/g, "+").replace(/_/g, "/");
+            while (s.length % 4) s += "=";
+            const bin = atob(s);
+            const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+            return JSON.parse(new TextDecoder().decode(bytes));
+        } catch (e) { return null; }
+    }
+
+    // ========== BUILD URL ==========
+    function buildShareUrl(type, item) {
+        const payload = type === "radio"
+            ? { t: "r", n: item.name, u: item.url, c: item.country || "",
+                f: item.flag || "📻", cd: item.codec || "", b: item.bitrate || 0,
+                tg: item.tags || "" }
+            : { t: "v", n: item.name, u: item.url, c: item.country || "",
+                f: item.flag || "📺", cd: item.code || "" };
+        const enc = encodePayload(payload);
+        if (!enc) return null;
+        return location.origin + location.pathname + "#" + enc;
+    }
+
+    // ========== TOAST ==========
+    function toast(msg) {
+        let el = document.getElementById("shareToast");
+        if (!el) {
+            el = document.createElement("div");
+            el.id = "shareToast";
+            document.body.appendChild(el);
+        }
+        el.textContent = msg;
+        el.classList.add("show");
+        clearTimeout(el._t);
+        el._t = setTimeout(() => el.classList.remove("show"), 2400);
+    }
+
+    // ========== SHARE ==========
+    async function shareItem(type, item) {
+        if (!item || !item.url) { toast("⚠ Нечего делиться"); return; }
+        const url = buildShareUrl(type, item);
+        if (!url) { toast("⚠ Ошибка генерации ссылки"); return; }
+
+        const kind  = type === "radio" ? "📻" : "📺";
+        const title = kind + " " + item.name;
+        const text  = type === "radio"
+            ? "Слушаю «" + item.name + "»" + (item.country ? " (" + item.country + ")" : "") + " — World Explorer 🌍"
+            : "Смотрю «" + item.name + "»" + (item.country ? " (" + item.country + ")" : "") + " — World Explorer 🌍";
+
+        // 1) Нативное меню (Android/iOS)
+        if (navigator.share) {
+            try {
+                await navigator.share({ title, text, url });
+                toast("✅ Отправлено");
+                return;
+            } catch (e) {
+                if (e && e.name === "AbortError") return;
+            }
+        }
+
+        // 2) Fallback: буфер + Telegram
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(url);
+            } else {
+                const ta = document.createElement("textarea");
+                ta.value = url;
+                ta.style.position = "fixed"; ta.style.opacity = "0";
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand("copy"); } catch (e) {}
+                document.body.removeChild(ta);
+            }
+            toast("🔗 Скопировано + открываю Telegram");
+        } catch (e) {
+            toast("🔗 Открываю Telegram");
+        }
+        window.open(
+            "https://t.me/share/url?url=" + encodeURIComponent(url) +
+            "&text=" + encodeURIComponent(text),
+            "_blank", "noopener"
+        );
+    }
+
+    // Публичный API
+    window.WEShare = { share: shareItem, buildUrl: buildShareUrl };
+
+    // ========== INJECT SHARE BUTTONS ==========
+    // Патчим рендер избранного, добавляя кнопку «поделиться»
+    function injectShareButtons(containerId, type, loader) {
+        const list = document.getElementById(containerId);
+        if (!list) return;
+
+        const favs = loader();
+        if (!favs || !favs.length) return;
+
+        list.querySelectorAll(".fav-item").forEach((row, idx) => {
+            // защита от повторной вставки
+            if (row.querySelector(".fav-share-btn")) return;
+
+            const removeBtn = row.querySelector(".fav-remove-btn");
+            if (!removeBtn) return;
+
+            const btn = document.createElement("button");
+            btn.className = "fav-share-btn" + (type === "radio" ? " radio" : "");
+            btn.title = "Поделиться";
+            btn.innerHTML = '<i class="fas fa-share-alt"></i>';
+            btn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                const data = loader();
+                if (data && data[idx]) shareItem(type, data[idx]);
+            });
+
+            removeBtn.parentNode.insertBefore(btn, removeBtn);
+        });
+    }
+
+    // Дожидаемся существующих рендеров и заворачиваем их
+    function patchRenderers() {
+        // Обёртка renderFavorites (радио)
+        if (typeof window.renderFavorites === "function" && !window.renderFavorites._patched) {
+            const orig = window.renderFavorites;
+            window.renderFavorites = function () {
+                orig.apply(this, arguments);
+                injectShareButtons("favoritesList", "radio", loadFavorites);
+            };
+            window.renderFavorites._patched = true;
+        }
+        // Обёртка renderTvFavorites (ТВ)
+        if (typeof window.renderTvFavorites === "function" && !window.renderTvFavorites._patched) {
+            const orig = window.renderTvFavorites;
+            window.renderTvFavorites = function () {
+                orig.apply(this, arguments);
+                injectShareButtons("tvFavoritesList", "tv", loadTvFavorites);
+            };
+            window.renderTvFavorites._patched = true;
+        }
+        // Обёртка рендера в модалке избранного
+        if (typeof window.renderFavModalLists === "function" && !window.renderFavModalLists._patched) {
+            const orig = window.renderFavModalLists;
+            window.renderFavModalLists = function () {
+                orig.apply(this, arguments);
+                injectShareButtons("favRadioList", "radio", loadFavorites);
+                injectShareButtons("favTvList",   "tv",    loadTvFavorites);
+            };
+            window.renderFavModalLists._patched = true;
+        }
+    }
+
+    // Кнопка «Поделиться» в плеере радио
+    function bindPlayerShareBtn() {
+        const player = document.getElementById("radioInfo");
+        if (!player || player._shareBtnAdded) return;
+
+        const favBtn = document.getElementById("radioFavBtn");
+        if (!favBtn) return;
+        const parent = favBtn.parentNode;
+
+        const btn = document.createElement("button");
+        btn.className = "radio-fav-btn";
+        btn.id = "radioShareBtn";
+        btn.style.cssText = "flex:1; justify-content:center; background: rgba(56,189,248,0.15); border-color: rgba(56,189,248,0.5); color:#7dd3fc;";
+        btn.innerHTML = '<i class="fas fa-share-alt"></i> <span>Поделиться</span>';
+        btn.addEventListener("click", function () {
+            if (!radioStations || !radioStations.length) { toast("⚠ Нет активной станции"); return; }
+            const cur = radioStations[radioCurrentIndex];
+            if (!cur) { toast("⚠ Нет активной станции"); return; }
+            shareItem("radio", {
+                name: cur.name, url: cur.url,
+                country: radioCurrentCountry || "",
+                flag: (window.flagMap && window.flagMap[radioCurrentCountry]) || "📻",
+                codec: cur.codec, bitrate: cur.bitrate, tags: cur.tags
+            });
+        });
+        parent.appendChild(btn);
+        player._shareBtnAdded = true;
+    }
+
+    // Кнопка «Поделиться» в плеере ТВ
+    function bindTvPlayerShareBtn() {
+        const tvInfo = document.getElementById("tvInfo");
+        if (!tvInfo || tvInfo._shareBtnAdded) return;
+        const favBtn = document.getElementById("tvFavBtn");
+        if (!favBtn) return;
+        const parent = favBtn.parentNode;
+
+        const btn = document.createElement("button");
+        btn.className = "radio-fav-btn";
+        btn.id = "tvShareBtn";
+        btn.style.cssText = "width:100%; justify-content:center; margin-top:4px; background: rgba(56,189,248,0.15); border-color: rgba(56,189,248,0.5); color:#7dd3fc; display:none;";
+        btn.innerHTML = '<i class="fas fa-share-alt"></i> <span>Поделиться</span>';
+        btn.addEventListener("click", function () {
+            if (typeof TvEngine === "undefined" || !TvEngine._debug) return;
+            const info = TvEngine._debug();
+            if (!info || !info.channel) { toast("⚠ Нет активного канала"); return; }
+            shareItem("tv", {
+                name: info.channel.name, url: info.channel.url,
+                country: info.country || "",
+                flag: (window.flagMap && window.flagMap[info.country]) || "📺",
+                code: info.code || ""
+            });
+        });
+        parent.appendChild(btn);
+        tvInfo._shareBtnAdded = true;
+
+        // Показываем кнопку синхронно с кнопкой избранного
+        const origUpdate = window.updateTvFavButtonState;
+        if (typeof origUpdate === "function" && !origUpdate._sharePatched) {
+            window.updateTvFavButtonState = function () {
+                origUpdate.apply(this, arguments);
+                const dbg = (typeof TvEngine !== "undefined" && TvEngine._debug) ? TvEngine._debug() : null;
+                const sb = document.getElementById("tvShareBtn");
+                if (sb) sb.style.display = (dbg && dbg.channel) ? "inline-flex" : "none";
+            };
+            window.updateTvFavButtonState._sharePatched = true;
+        }
+    }
+
+    // ========== HANDLE INCOMING DEEP LINK ==========
+    function handleIncomingShare() {
+        const hash = location.hash;
+        if (!hash || hash.length < 2) return;
+
+        const payload = decodePayload(hash.slice(1));
+        if (!payload || !payload.u || !payload.n) return;
+
+        // чистим hash, чтобы F5 не перезапускал станцию
+        try {
+            history.replaceState(null, "", location.pathname + location.search);
+        } catch (e) {}
+
+        const isRadio = payload.t === "r";
+
+        setTimeout(function () {
+            try {
+                const actionModal  = document.getElementById("actionModal");
+                const modalBox     = document.getElementById("modalBox");
+                const modalCountry = document.getElementById("modalCountryName");
+                const modalFlag    = document.getElementById("modalFlag");
+                const modalSubInfo = document.getElementById("modalSubInfo");
+                const modalActions = document.getElementById("modalActions");
+                const clockActions = document.getElementById("clockActions");
+                const radioInfo    = document.getElementById("radioInfo");
+                const tvInfo       = document.getElementById("tvInfo");
+                const statusSpan   = document.getElementById("statusText");
+                const statusCard   = document.getElementById("statusCard");
+
+                if (!actionModal) return;
+
+                document.getElementById("modalClock").style.display = "none";
+                document.getElementById("clockInfo").style.display = "none";
+
+                modalCountry.textContent = payload.n;
+                modalFlag.textContent    = payload.f || (isRadio ? "📻" : "📺");
+                modalSubInfo.textContent = (isRadio ? "📻 " : "📺 ") + payload.n +
+                                           (payload.c ? " · " + payload.c : "");
+
+                modalActions.style.display = "none";
+                clockActions.style.display = "flex";
+                const backBtn = document.getElementById("modalBackBtn");
+                if (backBtn) backBtn.style.display = "none";
+
+                actionModal.classList.add("active");
+                document.body.classList.add("modal-open");
+
+                if (isRadio) {
+                    if (tvInfo) tvInfo.style.display = "none";
+                    radioInfo.style.display = "block";
+                    modalBox.classList.remove("tv-mode");
+
+                    try {
+                        if (typeof stopRadio === "function") stopRadio();
+                    } catch (e) {}
+
+                    // Подставляем станцию напрямую
+                    try {
+                        window.radioStations = [{
+                            name: payload.n, url: payload.u,
+                            codec: payload.cd || "", bitrate: payload.b || 0,
+                            tags: payload.tg || ""
+                        }];
+                        window.radioCurrentIndex = 0;
+                        window.radioCurrentCountry = payload.c || "Неизвестно";
+                    } catch (e) {}
+
+                    if (typeof renderFavorites === "function") renderFavorites();
+                    if (typeof playRadioStation === "function") playRadioStation(0);
+
+                    if (statusSpan) statusSpan.innerHTML =
+                        '<i class="fas fa-link"></i> Открыто по ссылке: <strong>' + payload.n + '</strong>';
+                    if (statusCard) statusCard.style.borderColor = "#f59e0b";
+                } else {
+                    if (radioInfo) radioInfo.style.display = "none";
+                    if (tvInfo) tvInfo.style.display = "block";
+                    modalBox.classList.add("tv-mode");
+
+                    document.getElementById("tvChannelName").textContent = "📺 " + payload.n;
+                    document.getElementById("tvChannelMeta").textContent =
+                        (payload.c || "—") + " · " + (payload.cd || "");
+                    const st = document.getElementById("tvStatus");
+                    st.textContent = "⏳ Загрузка потока...";
+                    st.className = "cp-status";
+
+                    if (typeof renderTvFavorites === "function") renderTvFavorites();
+                    try { if (typeof TvEngine !== "undefined") TvEngine.stop(); } catch (e) {}
+                    try { if (typeof TvEngine !== "undefined") TvEngine.playUrl(payload.n, payload.u); } catch (e) {}
+
+                    if (statusSpan) statusSpan.innerHTML =
+                        '<i class="fas fa-link"></i> Открыто по ссылке: <strong>' + payload.n + '</strong>';
+                    if (statusCard) statusCard.style.borderColor = "#0ea5e9";
+                }
+            } catch (err) {
+                console.warn("[WEShare] incoming error:", err);
+            }
+        }, 500);
+    }
+
+    // ========== INIT ==========
+    function init() {
+        // Патчим рендеры (могут быть ещё не определены — пробуем несколько раз)
+        let tries = 0;
+        const iv = setInterval(function () {
+            patchRenderers();
+            bindPlayerShareBtn();
+            bindTvPlayerShareBtn();
+            if (++tries > 10) clearInterval(iv);
+        }, 300);
+
+        // Первичная инъекция кнопок в уже отрисованные списки
+        setTimeout(function () {
+            try { if (typeof renderFavorites === "function") renderFavorites(); } catch (e) {}
+            try { if (typeof renderTvFavorites === "function") renderTvFavorites(); } catch (e) {}
+            bindPlayerShareBtn();
+            bindTvPlayerShareBtn();
+        }, 800);
+
+        // Обработка входящей ссылки
+        handleIncomingShare();
+        window.addEventListener("hashchange", handleIncomingShare);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END SHARE PATCH v1
+     ============================================================ -->
+
+
 </body>
 </html>
