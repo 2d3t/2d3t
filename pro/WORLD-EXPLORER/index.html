@@ -6454,5 +6454,908 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END ADAPTIVE VIDEO QUALITY PATCH v2
      ============================================================ -->
+
+<!-- ============================================================
+     RADIO PREFETCH PATCH v1
+     Double-buffer + range-GET прогрев + prefetch next/prev.
+     Вставлять в самый конец <body>, после всех скриптов.
+     ============================================================ -->
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log   = (...a) => { if (DEBUG) console.log("[R-PREF]", ...a); };
+    const warn  = (...a) => { if (DEBUG) console.warn("[R-PREF]", ...a); };
+
+    const RANGE_BYTES = 65536;      // 64 КБ — прогрев TCP/TLS + первые байты
+    const PREFETCH_AHEAD  = 1;      // сколько вперёд
+    const PREFETCH_BEHIND = 1;      // сколько назад
+    const PREFETCH_DELAY  = 2500;   // через сколько после старта текущей
+
+    // ---------- Определение сети ----------
+    function isSlowNetwork() {
+        const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!c) return false;
+        const et = c.effectiveType || "";
+        if (et === "slow-2g" || et === "2g" || et === "3g") return true;
+        if (typeof c.saveData === "boolean" && c.saveData) return true;
+        return false;
+    }
+    function isCellular() {
+        const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!c) return false;
+        return c.type === "cellular";
+    }
+
+    // ---------- Состояние ----------
+    let prefetchTimer = null;
+    let prefetchAbort = null;
+    let lastPlayedKey = null;
+    const warmed = new Set(); // url → true (уже прогревали в этой сессии)
+
+    // ---------- Прогрев одного URL ----------
+    async function warmUrl(url, { fetchBody = true } = {}) {
+        if (!url) return false;
+        if (warmed.has(url)) return true;
+
+        if (prefetchAbort) { try { prefetchAbort.abort(); } catch (e) {} }
+        prefetchAbort = new AbortController();
+        const ac = prefetchAbort;
+
+        try {
+            const headers = fetchBody ? { Range: `bytes=0-${RANGE_BYTES - 1}` } : {};
+            const resp = await fetch(url, {
+                method: "GET",
+                headers,
+                signal: ac.signal,
+                mode: "cors",
+                cache: "no-store",
+                credentials: "omit"
+            });
+            // Даже «не ok» считаем прогревом соединения (DNS/TCP/TLS уже сделаны)
+            if (!resp.ok && resp.status !== 206 && resp.status !== 200) {
+                log("warm non-ok:", resp.status, url);
+                return false;
+            }
+            if (fetchBody) {
+                // Читаем ровно первые байты, не тянем весь поток
+                try {
+                    const reader = resp.body && resp.body.getReader ? resp.body.getReader() : null;
+                    if (reader) {
+                        let got = 0;
+                        while (got < RANGE_BYTES) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+                            got += value.length;
+                        }
+                        try { reader.cancel(); } catch (e) {}
+                    } else {
+                        await resp.arrayBuffer();
+                    }
+                } catch (e) {
+                    // ignore — соединение уже прогрето
+                }
+            } else {
+                try { await resp.body?.cancel?.(); } catch (e) {}
+            }
+            warmed.add(url);
+            log("✅ warmed:", url.slice(0, 60) + "…");
+            return true;
+        } catch (e) {
+            if (e.name !== "AbortError") warn("warm fail:", e && e.message);
+            return false;
+        }
+    }
+
+    // ---------- Планировщик ----------
+    function schedulePrefetch() {
+        if (prefetchTimer) { clearTimeout(prefetchTimer); prefetchTimer = null; }
+        prefetchTimer = setTimeout(runPrefetch, PREFETCH_DELAY);
+    }
+
+    async function runPrefetch() {
+        prefetchTimer = null;
+
+        const st = (typeof window.radioStations !== "undefined") ? window.radioStations : null;
+        const idx = (typeof window.radioCurrentIndex !== "undefined") ? window.radioCurrentIndex : -1;
+        if (!st || !st.length || idx < 0) return;
+
+        // не prefetch'им, если уже идёт буферизация текущей
+        const audio = document.getElementById("radioAudio");
+        if (audio && audio.readyState < 3 && !audio.paused) {
+            log("текущая ещё грузится — отложим prefetch");
+            schedulePrefetch();
+            return;
+        }
+
+        const light = isSlowNetwork();
+        const fetchBody = !light; // на медленной сети — только заголовки (прогрев соединения)
+
+        const targets = [];
+        for (let k = 1; k <= PREFETCH_AHEAD; k++) {
+            const i = (idx + k) % st.length;
+            if (st[i] && st[i].url) targets.push(st[i]);
+        }
+        for (let k = 1; k <= PREFETCH_BEHIND; k++) {
+            const i = (idx - k + st.length) % st.length;
+            if (st[i] && st[i].url && !targets.some(t => t.url === st[i].url)) {
+                targets.push(st[i]);
+            }
+        }
+        if (!targets.length) return;
+
+        log("prefetch:", targets.map(t => t.name).join(", "),
+            "| light =", light, "| body =", fetchBody);
+
+        for (const t of targets) {
+            if (prefetchAbort && prefetchAbort.signal.aborted) break;
+            await warmUrl(t.url, { fetchBody });
+        }
+
+        // Если включено double-buffer — положим next в скрытый Audio
+        if (window.__RADIO_BUFFER && targets[0]) {
+            try {
+                const buf = window.__RADIO_BUFFER;
+                if (buf.src !== targets[0].url) {
+                    buf.preload = "auto";
+                    buf.src = targets[0].url;
+                    try { buf.load(); } catch (e) {}
+                    log("double-buffer → next:", targets[0].name);
+                }
+            } catch (e) {}
+        }
+    }
+
+    // ---------- Double-buffer Audio ----------
+    function ensureBufferAudio() {
+        if (window.__RADIO_BUFFER) return window.__RADIO_BUFFER;
+        const a = new Audio();
+        a.preload = "auto";
+        a.crossOrigin = "anonymous";
+        a.style.display = "none";
+        a.muted = true; // чтобы не звучало случайно
+        document.body.appendChild(a);
+        window.__RADIO_BUFFER = a;
+        log("double-buffer Audio создан");
+        return a;
+    }
+
+    // ---------- Патч playRadioStation ----------
+    function patchPlayRadioStation() {
+        if (typeof window.playRadioStation !== "function") return false;
+        if (window.playRadioStation.__rPrefPatched) return true;
+
+        const orig = window.playRadioStation;
+        window.playRadioStation = function (index) {
+            const r = orig.apply(this, arguments);
+            try {
+                const st = window.radioStations || [];
+                const cur = st[window.radioCurrentIndex];
+                const key = cur ? cur.url : null;
+                // Если переключились на URL, который был в буфере — сбрасываем буфер
+                const buf = window.__RADIO_BUFFER;
+                if (buf && key && buf.src === key) {
+                    try { buf.pause(); } catch (e) {}
+                    buf.removeAttribute("src");
+                    try { buf.load(); } catch (e) {}
+                }
+                lastPlayedKey = key;
+                schedulePrefetch();
+            } catch (e) { warn("post-play hook:", e); }
+            return r;
+        };
+        window.playRadioStation.__rPrefPatched = true;
+        log("✅ playRadioStation пропатчен");
+        return true;
+    }
+
+    // ---------- Патч startRadioForCountry ----------
+    function patchStartRadio() {
+        if (typeof window.startRadioForCountry !== "function") return false;
+        if (window.startRadioForCountry.__rPrefPatched) return true;
+
+        const orig = window.startRadioForCountry;
+        window.startRadioForCountry = async function () {
+            // Сбрасываем буфер при смене страны
+            const buf = window.__RADIO_BUFFER;
+            if (buf) {
+                try { buf.pause(); } catch (e) {}
+                buf.removeAttribute("src");
+                try { buf.load(); } catch (e) {}
+            }
+            warmed.clear();
+            const r = await orig.apply(this, arguments);
+            schedulePrefetch();
+            return r;
+        };
+        window.startRadioForCountry.__rPrefPatched = true;
+        log("✅ startRadioForCountry пропатчен");
+        return true;
+    }
+
+    // ---------- Патч stopRadio ----------
+    function patchStopRadio() {
+        if (typeof window.stopRadio !== "function") return false;
+        if (window.stopRadio.__rPrefPatched) return true;
+
+        const orig = window.stopRadio;
+        window.stopRadio = function () {
+            if (prefetchTimer) { clearTimeout(prefetchTimer); prefetchTimer = null; }
+            if (prefetchAbort) { try { prefetchAbort.abort(); } catch (e) {} prefetchAbort = null; }
+            warmed.clear();
+            const buf = window.__RADIO_BUFFER;
+            if (buf) {
+                try { buf.pause(); } catch (e) {}
+                buf.removeAttribute("src");
+                try { buf.load(); } catch (e) {}
+            }
+            return orig.apply(this, arguments);
+        };
+        window.stopRadio.__rPrefPatched = true;
+        log("✅ stopRadio пропатчен");
+        return true;
+    }
+
+    // ---------- Init ----------
+    function init() {
+        ensureBufferAudio();
+
+        let tries = 0;
+        const iv = setInterval(function () {
+            tries++;
+            const ok1 = patchPlayRadioStation();
+            const ok2 = patchStartRadio();
+            const ok3 = patchStopRadio();
+            if ((ok1 && ok2 && ok3) || tries > 30) clearInterval(iv);
+        }, 250);
+
+        // Если пользователь листает вперёд/назад кнопками — тоже prefetch
+        document.addEventListener("click", function (e) {
+            const b = e.target.closest("button");
+            if (!b) return;
+            if (b.id === "cpForwardBtn" || b.id === "cpRewindBtn" ||
+                b.id === "fpForwardBtn" || b.id === "fpRewindBtn") {
+                schedulePrefetch();
+            }
+        }, true);
+
+        log("Radio Prefetch Patch установлен. isCellular:", isCellular(), "isSlow:", isSlowNetwork());
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END RADIO PREFETCH PATCH
+     ============================================================ -->
+<!-- ============================================================
+     TV HEALTH PATCH v3  (заменяет v2)
+     ✅-каналы переключаются мгновенно (без таймера).
+     Перепроверка — вручную через 🔄 или при входе в страну.
+     Вставлять в самый конец <body>, после всех скриптов.
+     ============================================================ -->
+<style id="tvHealthStyles">
+    .tv-channel-item .tv-ch-health {
+        flex-shrink: 0;
+        width: 16px;
+        text-align: center;
+        font-size: 0.72rem;
+        line-height: 1;
+        margin-left: 2px;
+    }
+    .tv-channel-item.health-ok   .tv-ch-health { color: #22c55e; }
+    .tv-channel-item.health-dead .tv-ch-health { color: #ef4444; }
+    .tv-channel-item.health-checking .tv-ch-health { color: #fbbf24; }
+    .tv-channel-item.health-dead {
+        opacity: 0.55;
+        text-decoration: line-through;
+        text-decoration-color: rgba(239, 68, 68, 0.5);
+    }
+    .tv-channel-item.health-dead .tv-ch-name { color: #94a3b8; }
+
+    .tv-health-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 8px 0 6px;
+        padding: 8px 10px;
+        background: rgba(34, 197, 94, 0.08);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        border-radius: 12px;
+        font-size: 0.72rem;
+        color: #86efac;
+        position: relative;
+        z-index: 1;
+    }
+    .tv-health-bar .tv-health-progress {
+        flex: 1;
+        height: 4px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .tv-health-bar .tv-health-progress-inner {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #22c55e, #4ade80);
+        transition: width 0.3s ease;
+    }
+    .tv-health-bar .tv-health-recheck {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(34,197,94,0.5);
+        color: #86efac;
+        border-radius: 8px;
+        padding: 3px 8px;
+        font-size: 0.68rem;
+        cursor: pointer;
+        font-family: inherit;
+        flex-shrink: 0;
+        transition: all 0.15s;
+    }
+    .tv-health-bar .tv-health-recheck:hover {
+        background: rgba(34,197,94,0.25);
+        border-color: #22c55e;
+    }
+    .tv-health-bar .tv-health-recheck:active { transform: scale(0.95); }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log   = (...a) => { if (DEBUG) console.log("[TV-HEALTH-v3]", ...a); };
+    const warn  = (...a) => { if (DEBUG) console.warn("[TV-HEALTH-v3]", ...a); };
+
+    // ======== Настройки ========
+    const PROBE_BYTES            = 2048;
+    const PROBE_TIMEOUT          = 4000;
+    const PROBE_CONCURRENCY      = 4;
+    const PLAY_TIMEOUT_UNKNOWN   = 1500;  // только для «неизвестных» (CORS/null)
+    // для ✅-каналов таймер не ставится вообще → мгновенно
+    const HEALTH_TTL             = 1000 * 60 * 10;
+    const PREFETCH_AHEAD         = 1;
+
+    // ======== Глобальное состояние ========
+    let healthCache = new Map();
+    let probeGeneration = 0;
+    let probeAbortAll = null;
+    let currentChannels = [];
+    let currentCountry = null;
+    let probeRunning = false;
+
+    // ======== Утилиты ========
+    function getHealth(url) {
+        const h = healthCache.get(url);
+        if (!h) return null;
+        if (Date.now() - h.t > HEALTH_TTL) {
+            healthCache.delete(url);
+            return null;
+        }
+        return h.ok;
+    }
+    function setHealth(url, ok) {
+        healthCache.set(url, { ok: !!ok, t: Date.now() });
+    }
+    function resetHealth() {
+        healthCache = new Map();
+    }
+
+    // ======== Проверка одного канала ========
+    async function probeChannel(ch, signal) {
+        if (!ch || !ch.url) return false;
+        const cached = getHealth(ch.url);
+        if (cached !== null) return cached;
+
+        const ac = new AbortController();
+        const onAbort = () => { try { ac.abort(); } catch (e) {} };
+        if (signal) signal.addEventListener("abort", onAbort, { once: true });
+        const timer = setTimeout(() => ac.abort(), PROBE_TIMEOUT);
+
+        try {
+            const resp = await fetch(ch.url, {
+                method: "GET",
+                headers: { Range: `bytes=0-${PROBE_BYTES - 1}` },
+                signal: ac.signal,
+                mode: "cors",
+                cache: "no-store",
+                credentials: "omit"
+            });
+            clearTimeout(timer);
+            const ok = resp.ok || resp.status === 206;
+            setHealth(ch.url, ok);
+            try { await resp.body?.cancel?.(); } catch (e) {}
+            return ok;
+        } catch (e) {
+            clearTimeout(timer);
+            if (signal) signal.removeEventListener("abort", onAbort);
+            if (e.name === "AbortError") {
+                if (signal && signal.aborted) return null;
+                setHealth(ch.url, false);
+                return false;
+            }
+            return null; // CORS/сеть
+        }
+    }
+
+    // ======== DOM ========
+    function updateChannelDOM(idx, status) {
+        const items = document.querySelectorAll("#tvCountryList .tv-channel-item");
+        const el = items[idx];
+        if (!el) return;
+        el.classList.remove("health-ok", "health-dead", "health-checking");
+        el.classList.add("health-" + status);
+        let badge = el.querySelector(".tv-ch-health");
+        if (!badge) {
+            badge = document.createElement("span");
+            badge.className = "tv-ch-health";
+            el.appendChild(badge);
+        }
+        if (status === "ok")         badge.textContent = "✅";
+        else if (status === "dead")  badge.textContent = "❌";
+        else                          badge.textContent = "⏳";
+    }
+
+    function renderAllFromCache() {
+        if (!currentChannels.length) return;
+        currentChannels.forEach((ch, i) => {
+            const h = getHealth(ch.url);
+            if (h === true)       updateChannelDOM(i, "ok");
+            else if (h === false) updateChannelDOM(i, "dead");
+        });
+    }
+
+    // ======== Прогресс-бар ========
+    function ensureHealthBar() {
+        const player = document.querySelector("#tvPlayer");
+        if (!player) return null;
+        let bar = player.querySelector(".tv-health-bar");
+        if (bar) return bar;
+        bar = document.createElement("div");
+        bar.className = "tv-health-bar";
+        bar.innerHTML =
+            '<i class="fas fa-heartbeat"></i>' +
+            '<span class="tv-health-label">Проверка каналов…</span>' +
+            '<div class="tv-health-progress"><div class="tv-health-progress-inner"></div></div>' +
+            '<span class="tv-health-count">0/0</span>' +
+            '<button class="tv-health-recheck" type="button" title="Перепроверить">' +
+            '<i class="fas fa-sync-alt"></i></button>';
+        const listTitle = player.querySelector(".tv-country-list-title");
+        if (listTitle && listTitle.parentNode) {
+            listTitle.parentNode.insertBefore(bar, listTitle);
+        } else {
+            player.appendChild(bar);
+        }
+        const btn = bar.querySelector(".tv-health-recheck");
+        if (btn) {
+            btn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                log("manual recheck requested");
+                resetHealth();
+                document.querySelectorAll("#tvCountryList .tv-channel-item").forEach(el => {
+                    el.classList.remove("health-ok", "health-dead", "health-checking");
+                    const b = el.querySelector(".tv-ch-health");
+                    if (b) b.remove();
+                });
+                if (currentChannels.length) probeAllChannels(currentChannels, true);
+            });
+        }
+        return bar;
+    }
+
+    function updateHealthProgress(done, total) {
+        const bar = ensureHealthBar();
+        if (!bar) return;
+        const inner = bar.querySelector(".tv-health-progress-inner");
+        const count = bar.querySelector(".tv-health-count");
+        const label = bar.querySelector(".tv-health-label");
+        if (inner) inner.style.width = total ? (done / total * 100) + "%" : "0%";
+        if (count) count.textContent = done + "/" + total;
+        if (label && done >= total && total > 0) {
+            label.textContent = "✅ Проверено";
+        } else if (label) {
+            label.textContent = "Проверка каналов…";
+        }
+    }
+
+    // ======== Массовая проверка ========
+    async function probeAllChannels(channels, force) {
+        if (!channels || !channels.length) return;
+
+        if (probeAbortAll) { try { probeAbortAll.abort(); } catch (e) {} }
+        probeAbortAll = new AbortController();
+        const abortAll = probeAbortAll;
+
+        const gen = ++probeGeneration;
+        probeRunning = true;
+        currentChannels = channels;
+
+        ensureHealthBar();
+        updateHealthProgress(0, channels.length);
+
+        let done = 0;
+        const queue = channels.map((ch, i) => ({ ch, i }));
+
+        async function worker() {
+            while (queue.length) {
+                if (gen !== probeGeneration) return;
+                if (abortAll.signal.aborted) return;
+                const { ch, i } = queue.shift();
+
+                if (!force) {
+                    const cached = getHealth(ch.url);
+                    if (cached !== null) {
+                        updateChannelDOM(i, cached ? "ok" : "dead");
+                        done++;
+                        updateHealthProgress(done, channels.length);
+                        continue;
+                    }
+                }
+
+                updateChannelDOM(i, "checking");
+                const ok = await probeChannel(ch, abortAll.signal);
+                if (gen !== probeGeneration) return;
+                if (ok === true)       updateChannelDOM(i, "ok");
+                else if (ok === false) updateChannelDOM(i, "dead");
+                else                    updateChannelDOM(i, "ok");
+                done++;
+                updateHealthProgress(done, channels.length);
+            }
+        }
+
+        const workers = [];
+        for (let k = 0; k < PROBE_CONCURRENCY; k++) workers.push(worker());
+        await Promise.all(workers);
+
+        if (gen === probeGeneration) {
+            probeRunning = false;
+            log("probeAllChannels done:", done, "of", channels.length,
+                "| ok:", channels.filter(c => getHealth(c.url) === true).length,
+                "| dead:", channels.filter(c => getHealth(c.url) === false).length);
+
+            try {
+                const dbg = (typeof TvEngine !== "undefined" && TvEngine._debug) ? TvEngine._debug() : null;
+                if (dbg && dbg.channel && getHealth(dbg.channel.url) === false) {
+                    const next = findNextAlive(dbg.index, +1);
+                    if (next !== dbg.index && next >= 0) {
+                        warn("current dead after probe → jump to", channels[next].name);
+                        if (typeof TvEngine !== "undefined" && TvEngine.play) {
+                            TvEngine.play(next);
+                        }
+                    }
+                }
+            } catch (e) {}
+
+            prefetchNextAlive();
+        }
+    }
+
+    // ======== Поиск следующего живого ========
+    function findNextAlive(currentIdx, dir) {
+        const channels = currentChannels;
+        if (!channels || !channels.length) return -1;
+        const N = channels.length;
+        let i = currentIdx;
+        for (let step = 0; step < N; step++) {
+            i = (i + dir + N) % N;
+            const h = getHealth(channels[i].url);
+            if (h === true || h === null) return i;
+        }
+        return currentIdx;
+    }
+
+    // ======== Патч TvEngine.play (мгновенное ✅→✅) ========
+    function patchTvPlay() {
+        if (typeof TvEngine === "undefined" || !TvEngine.play) return false;
+        if (TvEngine.play.__healthPatchedV3) return true;
+
+        const orig = TvEngine.play;
+        TvEngine.play = function (index) {
+            const channels = currentChannels;
+            const ch = channels[index];
+
+            // ❌ — сразу пропускаем
+            if (ch && getHealth(ch.url) === false) {
+                warn("skip dead:", ch.name, "→ next alive");
+                const next = findNextAlive(index, +1);
+                if (next !== index && next >= 0) {
+                    return orig.call(this, next);
+                }
+            }
+
+            const r = orig.apply(this, arguments);
+
+            const video = document.getElementById("tvVideo");
+            if (!video || !ch) return r;
+
+            const playGen = (window.__tvPlayGen || 0) + 1;
+            window.__tvPlayGen = playGen;
+
+            const h = getHealth(ch.url);
+
+            // === МГНОВЕННЫЙ РЕЖИМ: ✅-канал — таймер не ставим ===
+            if (h === true) {
+                log("⚡ instant switch →", ch.name, "(✅)");
+                // Только error-обработчик на случай, если канал внезапно упал
+                const onErrorInstant = () => {
+                    if (window.__tvPlayGen !== playGen) return;
+                    warn("⛔ error on ✅-channel:", ch.name);
+                    setHealth(ch.url, false);
+                    const curInfo = TvEngine._debug ? TvEngine._debug() : null;
+                    const curIdx = curInfo ? curInfo.index : -1;
+                    if (curIdx >= 0) updateChannelDOM(curIdx, "dead");
+                    video.removeEventListener("error", onErrorInstant);
+                    const next = findNextAlive(index, +1);
+                    if (next !== index && next >= 0) {
+                        warn("→ jump to alive:", channels[next].name);
+                        orig.call(TvEngine, next);
+                    }
+                };
+                video.addEventListener("error", onErrorInstant, { once: true });
+                // Снимаем обработчик при playing, чтобы не сработал позже
+                const onPlayingInstant = () => {
+                    if (window.__tvPlayGen !== playGen) return;
+                    video.removeEventListener("error", onErrorInstant);
+                    video.removeEventListener("playing", onPlayingInstant);
+                };
+                video.addEventListener("playing", onPlayingInstant, { once: true });
+                prefetchNextAlive();
+                return r;
+            }
+
+            // === «Неизвестный» (CORS) — короткий таймер ===
+            const killTimer = setTimeout(() => {
+                if (window.__tvPlayGen !== playGen) return;
+                if (video.readyState >= 3 || !video.paused) return;
+                warn("⛔ timeout (unknown):", ch.name);
+                setHealth(ch.url, false);
+                const curInfo = TvEngine._debug ? TvEngine._debug() : null;
+                const curIdx = curInfo ? curInfo.index : -1;
+                if (curIdx >= 0) updateChannelDOM(curIdx, "dead");
+                const next = findNextAlive(index, +1);
+                if (next !== index && next >= 0) {
+                    warn("→ jump to alive:", channels[next].name);
+                    orig.call(TvEngine, next);
+                }
+            }, PLAY_TIMEOUT_UNKNOWN);
+
+            const onPlaying = () => {
+                clearTimeout(killTimer);
+                if (window.__tvPlayGen !== playGen) return;
+                if (ch && getHealth(ch.url) === null) setHealth(ch.url, true);
+                const curInfo = TvEngine._debug ? TvEngine._debug() : null;
+                const curIdx = curInfo ? curInfo.index : -1;
+                if (curIdx >= 0 && getHealth(ch.url) === true) {
+                    updateChannelDOM(curIdx, "ok");
+                }
+                video.removeEventListener("playing", onPlaying);
+                video.removeEventListener("loadeddata", onLoadedData);
+                prefetchNextAlive();
+            };
+            const onLoadedData = () => {
+                if (window.__tvPlayGen !== playGen) return;
+                if (video.readyState >= 2) clearTimeout(killTimer);
+            };
+            video.addEventListener("playing", onPlaying);
+            video.addEventListener("loadeddata", onLoadedData);
+            return r;
+        };
+        TvEngine.play.__healthPatchedV3 = true;
+        log("✅ TvEngine.play пропатчен (мгновенный ✅→✅)");
+        return true;
+    }
+
+    // ======== Патч next/prev ========
+    function patchNextPrevButtons() {
+        const nextBtn = document.getElementById("tvNextBtn");
+        const prevBtn = document.getElementById("tvPrevBtn");
+        if (!nextBtn || !prevBtn) return false;
+        if (nextBtn.dataset.healthPatchedV3 === "1") return true;
+
+        const newNext = nextBtn.cloneNode(true);
+        const newPrev = prevBtn.cloneNode(true);
+        nextBtn.parentNode.replaceChild(newNext, nextBtn);
+        prevBtn.parentNode.replaceChild(newPrev, prevBtn);
+        newNext.dataset.healthPatchedV3 = "1";
+        newPrev.dataset.healthPatchedV3 = "1";
+
+        newNext.addEventListener("click", function () {
+            const info = TvEngine._debug ? TvEngine._debug() : null;
+            if (!info || !currentChannels.length) return;
+            const next = findNextAlive(info.index, +1);
+            if (next >= 0) TvEngine.play(next);
+        });
+        newPrev.addEventListener("click", function () {
+            const info = TvEngine._debug ? TvEngine._debug() : null;
+            if (!info || !currentChannels.length) return;
+            const prev = findNextAlive(info.index, -1);
+            if (prev >= 0) TvEngine.play(prev);
+        });
+
+        log("✅ next/prev buttons пропатчены");
+        return true;
+    }
+
+    // ======== fetch-хук m3u — только кеш каналов ========
+    function patchFetchForM3U() {
+        if (window.fetch.__healthM3UPatchedV3) return true;
+        const origFetch = window.fetch;
+
+        window.fetch = async function (input, init) {
+            const url = typeof input === "string" ? input : (input && input.url) || "";
+            const resp = await origFetch.apply(this, arguments);
+            try {
+                if (/iptv-org\.github\.io\/iptv\/countries\/.+\.m3u/i.test(url) && resp.ok) {
+                    const clone = resp.clone();
+                    const text = await clone.text();
+                    const lines = text.split("\n");
+                    const chs = [];
+                    let info = null;
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+                        if (line.startsWith("#EXTINF:")) {
+                            const commaIdx = line.indexOf(",");
+                            const name = commaIdx !== -1 ? line.substring(commaIdx + 1).trim() : "Unknown";
+                            info = { name };
+                        } else if (line.startsWith("http")) {
+                            if (info) chs.push({ name: info.name, url: line });
+                            info = null;
+                        }
+                    }
+                    if (chs.length) {
+                        currentChannels = chs;
+                        window.__TV_CHANNELS_CACHE = chs;
+                        log("✅ cached", chs.length, "channels from", url.split("/").pop());
+                    }
+                }
+            } catch (e) {
+                warn("fetch clone error:", e);
+            }
+            return resp;
+        };
+        window.fetch.__healthM3UPatchedV3 = true;
+        return true;
+    }
+
+    // ======== TvEngine.start-хук ========
+    function patchTvStart() {
+        if (typeof TvEngine === "undefined" || !TvEngine.start) return false;
+        if (TvEngine.start.__healthPatchedV3) return true;
+
+        const orig = TvEngine.start;
+
+        TvEngine.start = async function (country) {
+            log("TvEngine.start:", country);
+
+            if (probeAbortAll) { try { probeAbortAll.abort(); } catch (e) {} probeAbortAll = null; }
+            probeGeneration++;
+            probeRunning = false;
+            currentCountry = country;
+            currentChannels = [];
+            resetHealth();
+
+            document.querySelectorAll("#tvCountryList .tv-channel-item").forEach(el => {
+                el.classList.remove("health-ok", "health-dead", "health-checking");
+                const b = el.querySelector(".tv-ch-health");
+                if (b) b.remove();
+            });
+            const oldBar = document.querySelector(".tv-health-bar");
+            if (oldBar) oldBar.remove();
+
+            const r = await orig.apply(this, arguments);
+
+            let waited = 0;
+            const waitIv = setInterval(() => {
+                waited += 100;
+                const items = document.querySelectorAll("#tvCountryList .tv-channel-item");
+                if (items.length > 0 || waited > 3000) {
+                    clearInterval(waitIv);
+                    const chs = currentChannels.length ? currentChannels : (window.__TV_CHANNELS_CACHE || []);
+                    if (chs.length) {
+                        log("запускаю проверку для", country, "| каналов:", chs.length);
+                        setTimeout(() => probeAllChannels(chs, false), 200);
+                    }
+                }
+            }, 100);
+
+            return r;
+        };
+        TvEngine.start.__healthPatchedV3 = true;
+        log("✅ TvEngine.start пропатчен");
+        return true;
+    }
+
+    // ======== Prefetch m3u8 next-живого ========
+    async function prefetchNextAlive() {
+        try {
+            const info = (typeof TvEngine !== "undefined" && TvEngine._debug) ? TvEngine._debug() : null;
+            if (!info || !currentChannels.length) return;
+            const nextIdx = findNextAlive(info.index, +1);
+            if (nextIdx < 0 || nextIdx === info.index) return;
+            const ch = currentChannels[nextIdx];
+            if (!ch.url.includes(".m3u8")) return;
+            await fetch(ch.url, { method: "GET", mode: "cors", cache: "force-cache", credentials: "omit" });
+            log("✅ m3u8 prefetched:", ch.name);
+        } catch (e) {
+            log("m3u8 prefetch skip");
+        }
+    }
+
+    // ======== MutationObserver ========
+    function patchRenderList() {
+        const list = document.getElementById("tvCountryList");
+        if (!list) return false;
+        if (list.__healthObserverV3) return true;
+        const obs = new MutationObserver(() => {
+            if (!currentChannels.length) return;
+            renderAllFromCache();
+            if (!probeRunning && currentChannels.length) {
+                const checkedCount = currentChannels.filter(c => getHealth(c.url) !== null).length;
+                if (checkedCount === 0) {
+                    setTimeout(() => probeAllChannels(currentChannels, false), 150);
+                }
+            }
+        });
+        obs.observe(list, { childList: true, subtree: false });
+        list.__healthObserverV3 = obs;
+        return true;
+    }
+
+    // ======== TvEngine.stop ========
+    function patchTvStop() {
+        if (typeof TvEngine === "undefined" || !TvEngine.stop) return false;
+        if (TvEngine.stop.__healthPatchedV3) return true;
+        const orig = TvEngine.stop;
+        TvEngine.stop = function () {
+            if (probeAbortAll) { try { probeAbortAll.abort(); } catch (e) {} probeAbortAll = null; }
+            probeGeneration++;
+            probeRunning = false;
+            currentChannels = [];
+            window.__TV_CHANNELS_CACHE = [];
+            const bar = document.querySelector(".tv-health-bar");
+            if (bar) bar.remove();
+            return orig.apply(this, arguments);
+        };
+        TvEngine.stop.__healthPatchedV3 = true;
+        return true;
+    }
+
+    // ======== Init ========
+    function init() {
+        let tries = 0;
+        const iv = setInterval(function () {
+            tries++;
+            const a = patchFetchForM3U();
+            const b = patchTvStart();
+            const c = patchTvPlay();
+            const d = patchNextPrevButtons();
+            const e = patchRenderList();
+            const f = patchTvStop();
+            if ((a && b && c && d && e && f) || tries > 40) {
+                clearInterval(iv);
+                log("init завершён за", tries, "попыток");
+            }
+        }, 250);
+
+        log("TV Health Patch v3 установлен. ✅→✅ мгновенно, unknown timeout:", PLAY_TIMEOUT_UNKNOWN, "ms");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END TV HEALTH PATCH v3
+     ============================================================ -->
+
 </body>
 </html>
