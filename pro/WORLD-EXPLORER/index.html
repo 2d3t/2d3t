@@ -2950,9 +2950,17 @@ if (document.readyState === 'loading') {
 
         // ====== РАДИО ======
         let radioStations = [];
-        let radioCurrentIndex = 0;
-        let radioCurrentCountry = null;
-        let radioFetchAbort = null;
+let radioCurrentIndex = 0;
+let radioCurrentCountry = null;
+let radioFetchAbort = null;
+let radioPlaySessionId = 0;
+let radioFailTimer = null;
+let radioSilentTimer = null;
+
+function clearRadioTimers() {
+    if (radioFailTimer) { clearTimeout(radioFailTimer); radioFailTimer = null; }
+    if (radioSilentTimer) { clearTimeout(radioSilentTimer); radioSilentTimer = null; }
+}
 
         async function fetchRadioStations(countryName) {
             const code = countryCodeMap[countryName];
@@ -3066,6 +3074,16 @@ if (document.readyState === 'loading') {
             }
         });
 
+cpAudio.addEventListener("timeupdate", function() {
+    if (cpAudio.currentTime > 0.1 && !cpAudio.paused) {
+        if (radioFailTimer) { clearTimeout(radioFailTimer); radioFailTimer = null; }
+        if (radioSilentTimer) { clearTimeout(radioSilentTimer); radioSilentTimer = null; }
+        if (cpAudio.onplaying && !cpAudio._playingFired) {
+            try { cpAudio.onplaying(); } catch (e) {}
+        }
+    }
+});
+
         // ====== ПЛАВАЮЩИЙ МИНИ-ПЛЕЕР ======
         const floatingPlayer = document.getElementById("floatingPlayer");
         const fpFlag = document.getElementById("fpFlag");
@@ -3135,87 +3153,120 @@ if (document.readyState === 'loading') {
             fpCountry.textContent = countryName || "—";
             floatingPlayer.classList.add("visible");
         }
+function playRadioStation(index) {
+    if (!radioStations.length) return;
+    if (index < 0) index = radioStations.length - 1;
+    if (index >= radioStations.length) index = 0;
+    radioCurrentIndex = index;
+    const st = radioStations[index];
 
-        function playRadioStation(index) {
-            if (!radioStations.length) return;
-            if (index < 0) index = radioStations.length - 1;
-            if (index >= radioStations.length) index = 0;
-            radioCurrentIndex = index;
-            const st = radioStations[index];
+    const mySession = ++radioPlaySessionId;
+    clearRadioTimers();
 
-            const nameEl = document.getElementById("radioStationName");
-            const metaEl = document.getElementById("radioStationMeta");
-            const statusEl = document.getElementById("radioStatus");
+    const nameEl = document.getElementById("radioStationName");
+    const metaEl = document.getElementById("radioStationMeta");
+    const statusEl = document.getElementById("radioStatus");
 
-            nameEl.textContent = "📻 " + st.name;
-            metaEl.textContent =
-                (st.codec || "?") +
-                (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
-                (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
+    nameEl.textContent = "📻 " + st.name;
+    metaEl.textContent =
+        (st.codec || "?") +
+        (st.bitrate ? " · " + st.bitrate + " kbps" : "") +
+        (st.tags ? " · " + st.tags.split(",").slice(0, 3).join(", ") : "");
 
-            statusEl.textContent = "⏳ Подключение к " + st.name + "...";
-            statusEl.className = "cp-status";
+    statusEl.textContent = "⏳ Подключение к " + st.name + "...";
+    statusEl.className = "cp-status";
 
-            cpAudio.pause();
-            cpAudio.src = st.url;
-            cpAudio.load();
+    cpAudio.pause();
+    cpAudio.onerror = null;
+    cpAudio.onplaying = null;
+    cpAudio.onwaiting = null;
+    cpAudio.onstalled = null;
+    cpAudio.removeAttribute("src");
+    try { cpAudio.load(); } catch (e) {}
 
-            let hasPlayedR = false;
-            let failTimerR = null;
+    cpAudio._playingFired = false;
+    const isCurrent = () => mySession === radioPlaySessionId;
+    let hasPlayedR = false;
 
-            if (cpAudio._failTimer) { clearTimeout(cpAudio._failTimer); cpAudio._failTimer = null; }
-            cpAudio.onerror = null;
-            cpAudio.onplaying = null;
+    cpAudio.onplaying = () => {
+        if (!isCurrent()) return;
+        if (hasPlayedR) return;
+        hasPlayedR = true;
+        cpAudio._playingFired = true;
 
-            cpAudio.onplaying = () => {
-                if (hasPlayedR) return;
-                hasPlayedR = true;
-                if (failTimerR) { clearTimeout(failTimerR); failTimerR = null; }
-                statusEl.textContent = "▶ Играет: " + st.name;
-                statusEl.className = "cp-status";
-                showFloatingPlayer(st, radioCurrentCountry);
-                cpAudio.onerror = null;
-            };
+        clearRadioTimers();
 
-            cpAudio.onerror = () => {
-                if (hasPlayedR) return;
-                if (failTimerR) return;
-                statusEl.textContent = "⚠ Поток " + st.name + " не отвечает. Пробую следующую через 3 сек...";
-                statusEl.className = "cp-status error";
-                failTimerR = setTimeout(() => {
-                    failTimerR = null;
-                    playRadioStation(radioCurrentIndex + 1);
-                }, 3000);
-            };
+        statusEl.textContent = "▶ Играет: " + st.name;
+        statusEl.className = "cp-status";
+        showFloatingPlayer(st, radioCurrentCountry);
 
-            const playPromise = cpAudio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    failTimerR = setTimeout(() => {
-                        if (!hasPlayedR) {
-                            statusEl.textContent = "⚠ Нет звука от " + st.name + ". Следующая станция...";
-                            statusEl.className = "cp-status error";
-                            playRadioStation(radioCurrentIndex + 1);
-                        }
-                    }, 4000);
-                }).catch(() => {
-                    if (hasPlayedR) return;
-                    statusEl.textContent = "⚠ Не удалось воспроизвести. Следующая через 3 сек...";
-                    statusEl.className = "cp-status error";
-                    failTimerR = setTimeout(() => {
-                        failTimerR = null;
-                        playRadioStation(radioCurrentIndex + 1);
-                    }, 3000);
-                });
-            }
+        cpAudio.onerror = null;
+        cpAudio.onstalled = null;
+        cpAudio.onwaiting = null;
 
-            updateFavButtonState();
+        updateFavButtonState();
 
-            if (VizEngine.isActive() && radioCurrentCountry) {
-                VizEngine.start(radioCurrentCountry);
-            }
+        if (VizEngine.isActive() && radioCurrentCountry) {
+            VizEngine.start(radioCurrentCountry);
         }
+    };
 
+    cpAudio.onerror = () => {
+        if (!isCurrent()) return;
+        if (hasPlayedR) return;
+        if (radioFailTimer) return;
+
+        statusEl.textContent = "⚠ Поток " + st.name + " не отвечает. Пробую следующую через 2 сек...";
+        statusEl.className = "cp-status error";
+
+        clearRadioTimers();
+        radioFailTimer = setTimeout(() => {
+            radioFailTimer = null;
+            if (!isCurrent() || hasPlayedR) return;
+            playRadioStation(radioCurrentIndex + 1);
+        }, 2000);
+    };
+
+    cpAudio.src = st.url;
+    cpAudio.load();
+
+    const playPromise = cpAudio.play();
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            if (!isCurrent()) return;
+            clearRadioTimers();
+            radioSilentTimer = setTimeout(() => {
+                radioSilentTimer = null;
+                if (!isCurrent() || hasPlayedR) return;
+                if (cpAudio.currentTime > 0.05 || !cpAudio.paused) {
+                    hasPlayedR = true;
+                    cpAudio._playingFired = true;
+                    clearRadioTimers();
+                    statusEl.textContent = "▶ Играет: " + st.name;
+                    statusEl.className = "cp-status";
+                    showFloatingPlayer(st, radioCurrentCountry);
+                    return;
+                }
+                statusEl.textContent = "⚠ Нет звука от " + st.name + ". Следующая станция...";
+                statusEl.className = "cp-status error";
+                playRadioStation(radioCurrentIndex + 1);
+            }, 6000);
+        }).catch(() => {
+            if (!isCurrent()) return;
+            if (hasPlayedR) return;
+            statusEl.textContent = "⚠ Не удалось воспроизвести. Следующая через 2 сек...";
+            statusEl.className = "cp-status error";
+            clearRadioTimers();
+            radioFailTimer = setTimeout(() => {
+                radioFailTimer = null;
+                if (!isCurrent() || hasPlayedR) return;
+                playRadioStation(radioCurrentIndex + 1);
+            }, 2000);
+        });
+    }
+
+    updateFavButtonState();
+}
         async function startRadioForCountry(countryName) {
             const nameEl = document.getElementById("radioStationName");
             const metaEl = document.getElementById("radioStationMeta");
@@ -3228,8 +3279,10 @@ if (document.readyState === 'loading') {
             statusEl.className = "cp-status";
 
             radioStations = await fetchRadioStations(countryName);
+++radioPlaySessionId;
+clearRadioTimers();
 
-            if (!radioStations.length) {
+if (!radioStations.length) {
                 nameEl.textContent = "📻 Радио недоступно";
                 metaEl.textContent = "Не удалось найти станции для " + countryName;
                 statusEl.textContent = "Попробуйте другую страну";
@@ -3240,11 +3293,15 @@ if (document.readyState === 'loading') {
         }
 
         function stopRadio() {
-            if (cpAudio) {
-                try { cpAudio.pause(); } catch (e) {}
-                cpAudio.removeAttribute('src');
-                cpAudio.load();
-            }
+    ++radioPlaySessionId;
+    clearRadioTimers();
+    if (cpAudio) {
+        cpAudio.onplaying = null;
+        cpAudio.onerror = null;
+        try { cpAudio.pause(); } catch (e) {}
+        cpAudio.removeAttribute('src');
+        cpAudio.load();
+    }
             if (radioFetchAbort) { radioFetchAbort.abort(); radioFetchAbort = null; }
             radioStations = [];
             radioCurrentIndex = 0;
