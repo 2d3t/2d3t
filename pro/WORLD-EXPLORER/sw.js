@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'radtvgood2-autofillhd';
+const CACHE_NAME = 'radiotv3fast';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/WORLD-EXPLORER/index.html',
