@@ -5995,6 +5995,464 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END TV FULLSCREEN AUTO-HIDE FS BUTTON PATCH v2
      ============================================================ -->
+<!-- ============================================================
+     ADAPTIVE VIDEO QUALITY PATCH v2 (FIX: не ломает TvEngine)
+     ============================================================ -->
+<style id="aqStyles">
+    .aq-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        padding: 8px 10px;
+        background: rgba(14, 165, 233, 0.08);
+        border: 1px solid rgba(14, 165, 233, 0.25);
+        border-radius: 12px;
+        font-size: 0.75rem;
+        color: #cbd5e1;
+        position: relative;
+        z-index: 1;
+        flex-wrap: wrap;
+    }
+    .aq-bar .aq-label {
+        display: flex; align-items: center; gap: 6px;
+        color: #38bdf8; font-weight: 600; white-space: nowrap;
+    }
+    .aq-bar .aq-net {
+        font-size: 0.7rem; color: #94a3b8; white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis; max-width: 140px;
+    }
+    .aq-bar select {
+        margin-left: auto;
+        background: rgba(30, 41, 59, 0.9); color: #f0f3fa;
+        border: 1px solid rgba(14, 165, 233, 0.5);
+        border-radius: 8px; padding: 5px 8px;
+        font-size: 0.75rem; font-family: inherit;
+        cursor: pointer; outline: none; flex-shrink: 0;
+    }
+    .aq-bar select:hover { border-color: #38bdf8; }
+    .aq-badge {
+        display: inline-block; padding: 2px 8px; border-radius: 20px;
+        font-size: 0.65rem; font-weight: 700;
+        background: #0ea5e9; color: #fff; letter-spacing: 0.5px;
+    }
+    .aq-badge.low  { background: #f59e0b; }
+    .aq-badge.vlow { background: #ef4444; }
+    .aq-badge.hd   { background: #10b981; }
+    .aq-stall { color: #fbbf24; font-size: 0.68rem; margin-left: 6px; }
+</style>
 
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log = (...a) => { if (DEBUG) console.log("[AQ]", ...a); };
+
+    let aqBarEl = null, qualitySelect = null, badgeEl = null, netInfoEl = null, stallInfoEl = null;
+    let currentHls = null;
+    let manualLevel = -1;
+    let measuredDownlink = 0;
+    let connDownlink = 0;
+    let effectiveType = "unknown";
+    let stallCount = 0;
+    let lastLevelSwitch = 0;
+    let autoDowngradeLock = 0;
+
+    function getVideo() { return document.getElementById("tvVideo"); }
+    function fmtMbps(v) { return (v >= 1 ? v.toFixed(1) : (v * 1000).toFixed(0) + "k") + " Мб/с"; }
+
+    // ============ Определение сети ============
+    function detectConnection() {
+        const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!c) { log("navigator.connection недоступен"); return; }
+        effectiveType = c.effectiveType || "unknown";
+        if (typeof c.downlink === "number" && c.downlink > 0) connDownlink = c.downlink;
+        log("Connection:", effectiveType, "downlink:", connDownlink, "Мб/с");
+        if (c.addEventListener) {
+            c.addEventListener("change", function () {
+                effectiveType = c.effectiveType || "unknown";
+                connDownlink = c.downlink || 0;
+                log("Сеть изменилась:", effectiveType, connDownlink);
+                updateNetInfo();
+                applyQualityPolicy(true);
+            });
+        }
+    }
+
+    function measureRealSpeed() {
+        return new Promise(resolve => {
+            const url = "https://speed.cloudflare.com/__down?bytes=300000&r=" + Math.random();
+            const t0 = performance.now();
+            let received = 0, done = false;
+            const finish = (ok) => {
+                if (done) return;
+                done = true;
+                const dt = (performance.now() - t0) / 1000;
+                if (ok && received > 0 && dt > 0.05) {
+                    measuredDownlink = (received * 8) / dt / 1e6;
+                    log("Реальный замер:", measuredDownlink.toFixed(2), "Мб/с");
+                }
+                resolve(measuredDownlink);
+            };
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            xhr.responseType = "arraybuffer";
+            const timeout = setTimeout(() => { try { xhr.abort(); } catch (e) {} finish(false); }, 5000);
+            xhr.onprogress = (e) => { received = e.loaded; };
+            xhr.onload = () => { clearTimeout(timeout); finish(xhr.status === 200); };
+            xhr.onerror = () => { clearTimeout(timeout); finish(false); };
+            xhr.send();
+        });
+    }
+
+    // ============ Политика ============
+    function computeMaxHeight() {
+        const speed = Math.max(measuredDownlink, connDownlink);
+        const safe = speed * 0.6;
+        if (safe < 0.4)  return 240;
+        if (safe < 0.8)  return 360;
+        if (safe < 1.5)  return 480;
+        if (safe < 3.0)  return 720;
+        if (safe < 6.0)  return 1080;
+        return 2160;
+    }
+    function computeStallPenalty(height) {
+        if (stallCount >= 4) return Math.min(height, 240);
+        if (stallCount >= 3) return Math.min(height, 360);
+        if (stallCount >= 2) return Math.min(height, 480);
+        if (stallCount >= 1) return Math.min(height, 720);
+        return height;
+    }
+
+    function findLevelByHeight(hls, maxHeight) {
+        const levels = hls.levels || [];
+        if (!levels.length) return -1;
+        let best = -1, bestH = 0;
+        for (let i = 0; i < levels.length; i++) {
+            const h = levels[i].height || 0;
+            if (h > 0 && h <= maxHeight && h > bestH) { bestH = h; best = i; }
+        }
+        if (best === -1) {
+            let minH = Infinity;
+            for (let i = 0; i < levels.length; i++) {
+                const h = levels[i].height || 0;
+                if (h > 0 && h < minH) { minH = h; best = i; }
+            }
+        }
+        return best;
+    }
+
+    function applyQualityPolicy(force) {
+        if (!currentHls) return;
+        if (manualLevel >= 0) return;
+        const now = Date.now();
+        if (!force && now - lastLevelSwitch < 4000) return;
+
+        const speed = Math.max(measuredDownlink, connDownlink);
+        const maxH = computeStallPenalty(computeMaxHeight());
+        try {
+            currentHls.autoLevelCapping = findLevelByHeight(currentHls, maxH);
+            if (force && currentHls.abrController && currentHls.abrController.resetEstimator) {
+                currentHls.abrController.resetEstimator();
+            }
+        } catch (e) { log("applyQualityPolicy error:", e); }
+        lastLevelSwitch = now;
+        log("Политика: maxHeight =", maxH, "capping =", currentHls.autoLevelCapping, "stall =", stallCount);
+        updateBadge();
+    }
+
+    // ============ ГЛАВНЫЙ ФИКС: патчим ТОЛЬКО конструктор ============
+    // Не трогаем Hls.isSupported, Hls.Events, Hls.ErrorTypes и т.д.
+    function patchHlsConstructor() {
+        if (!window.Hls) {
+            log("window.Hls ещё не загружен — ждём");
+            return false;
+        }
+        if (window.Hls.__aqPatchedV2) return true;
+
+        const OrigHls = window.Hls;
+
+        // Создаём функцию, которая вызывает оригинальный конструктор через new
+        const PatchedHls = function (config) {
+            const cfg = Object.assign({}, config || {});
+            cfg.capLevelToPlayerSize = true;
+            cfg.abrEwmaDefaultEstimate = Math.max(150000, Math.round(
+                Math.max(measuredDownlink, connDownlink || 1) * 1e6 * 0.5));
+            cfg.maxBufferLength = 30;
+            cfg.maxMaxBufferLength = 60;
+            cfg.maxBufferSize = 30 * 1024 * 1024;
+            cfg.maxBufferHole = 0.5;
+            cfg.lowLatencyMode = false;
+            cfg.enableWorker = true;
+
+            // Вызываем оригинал через Reflect.construct — правильно для классов
+            const inst = Reflect.construct(OrigHls, [cfg]);
+            currentHls = inst;
+            log("Hls создан, оценка скорости:",
+                (cfg.abrEwmaDefaultEstimate / 1e6).toFixed(2), "Мб/с");
+
+            try {
+                inst.on(OrigHls.Events.LEVEL_SWITCHED, () => updateBadge());
+                inst.on(OrigHls.Events.ERROR, (e, data) => {
+                    if (data && data.details === "bufferStalledError") onStall();
+                });
+                inst.on(OrigHls.Events.LEVEL_LOADED, () => {
+                    setTimeout(() => applyQualityPolicy(true), 200);
+                });
+            } catch (e) { log("hls.on error:", e); }
+
+            return inst;
+        };
+
+        // Сохраняем прототип и ВСЕ статические свойства правильно
+        Object.setPrototypeOf(PatchedHls, OrigHls);
+        PatchedHls.prototype = OrigHls.prototype;
+        // Явно копируем критичные статические поля (isSupported, Events и т.д.)
+        try {
+            PatchedHls.isSupported = OrigHls.isSupported.bind(OrigHls);
+        } catch (e) { PatchedHls.isSupported = OrigHls.isSupported; }
+        PatchedHls.Events = OrigHls.Events;
+        PatchedHls.ErrorTypes = OrigHls.ErrorTypes;
+        PatchedHls.ErrorDetails = OrigHls.ErrorDetails;
+        PatchedHls.DefaultConfig = OrigHls.DefaultConfig;
+        PatchedHls.version = OrigHls.version;
+        PatchedHls.__aqPatchedV2 = true;
+
+        window.Hls = PatchedHls;
+        log("✅ Конструктор Hls пропатчен (v2), isSupported:", PatchedHls.isSupported());
+        return true;
+    }
+
+    // ============ Stall ============
+    function onStall() {
+        stallCount++;
+        log("Stall #" + stallCount);
+        autoDowngradeLock = Date.now() + 30000;
+        if (currentHls && manualLevel < 0) {
+            const levels = currentHls.levels || [];
+            if (levels.length > 1) {
+                const cur = currentHls.currentLevel;
+                const next = Math.max(0, cur - 1);
+                if (next !== cur) {
+                    log("Принудительное понижение", cur, "→", next);
+                    try { currentHls.nextLevel = next; } catch (e) {}
+                }
+            }
+            applyQualityPolicy(true);
+        }
+        updateStallInfo();
+        if (stallCount >= 2) showToast("⚠ Сеть нестабильна — понижаю качество");
+    }
+
+    let stableTimer = null;
+    function resetStallCounterIfStable() {
+        if (stableTimer) clearTimeout(stableTimer);
+        stableTimer = setTimeout(() => {
+            if (stallCount > 0) {
+                log("Стабильно 20с — сброс stall");
+                stallCount = 0;
+                updateStallInfo();
+                applyQualityPolicy(true);
+            }
+        }, 20000);
+    }
+
+    // ============ UI ============
+    function buildUI() {
+        const player = document.querySelector("#tvPlayer");
+        if (!player || player.querySelector(".aq-bar")) return;
+
+        const bar = document.createElement("div");
+        bar.className = "aq-bar";
+
+        const label = document.createElement("span");
+        label.className = "aq-label";
+        label.innerHTML = '<i class="fas fa-signal"></i> Качество';
+        bar.appendChild(label);
+
+        badgeEl = document.createElement("span");
+        badgeEl.className = "aq-badge";
+        badgeEl.textContent = "auto";
+        bar.appendChild(badgeEl);
+
+        netInfoEl = document.createElement("span");
+        netInfoEl.className = "aq-net";
+        netInfoEl.textContent = "—";
+        bar.appendChild(netInfoEl);
+
+        stallInfoEl = document.createElement("span");
+        stallInfoEl.className = "aq-stall";
+        bar.appendChild(stallInfoEl);
+
+        qualitySelect = document.createElement("select");
+        qualitySelect.innerHTML = [
+            '<option value="-1">Auto</option>',
+            '<option value="240">240p</option>',
+            '<option value="360">360p</option>',
+            '<option value="480">480p</option>',
+            '<option value="720">720p</option>',
+            '<option value="1080">1080p</option>'
+        ].join("");
+        qualitySelect.addEventListener("change", function () {
+            const v = parseInt(this.value, 10);
+            if (v === -1) {
+                manualLevel = -1; stallCount = 0;
+                log("Auto-режим");
+                applyQualityPolicy(true);
+            } else {
+                manualLevel = v;
+                applyManualLevel(v);
+            }
+            updateBadge();
+        });
+        bar.appendChild(qualitySelect);
+
+        const controls = player.querySelector(".cp-controls");
+        if (controls) player.insertBefore(bar, controls);
+        else player.appendChild(bar);
+        aqBarEl = bar;
+        updateNetInfo();
+    }
+
+    function applyManualLevel(height) {
+        if (!currentHls) return;
+        const idx = findLevelByHeight(currentHls, height);
+        if (idx >= 0) {
+            try {
+                currentHls.currentLevel = idx;
+                log("Ручной уровень:", height + "p (idx " + idx + ")");
+            } catch (e) {}
+        }
+        updateBadge();
+    }
+
+    function updateBadge() {
+        if (!badgeEl) return;
+        let text = "auto", cls = "aq-badge";
+        if (manualLevel >= 0) {
+            text = manualLevel + "p"; cls += " hd";
+        } else if (currentHls) {
+            const lvl = currentHls.currentLevel >= 0 ? currentHls.currentLevel : currentHls.autoLevelCapping;
+            const levels = currentHls.levels || [];
+            const h = levels[lvl] && levels[lvl].height;
+            if (h) {
+                text = "auto " + h + "p";
+                if (h <= 360) cls += " vlow";
+                else if (h <= 480) cls += " low";
+                else if (h >= 720) cls += " hd";
+            }
+        }
+        badgeEl.className = cls;
+        badgeEl.textContent = text;
+    }
+
+    function updateNetInfo() {
+        if (!netInfoEl) return;
+        const parts = [];
+        if (effectiveType !== "unknown") parts.push(effectiveType.toUpperCase());
+        const speed = measuredDownlink || connDownlink;
+        if (speed > 0) parts.push("≈" + fmtMbps(speed));
+        netInfoEl.textContent = parts.length ? "(" + parts.join(" · ") + ")" : "";
+    }
+
+    function updateStallInfo() {
+        if (!stallInfoEl) return;
+        stallInfoEl.textContent = stallCount > 0 ? "⚠ stall×" + stallCount : "";
+    }
+
+    function showToast(msg) {
+        let t = document.getElementById("aqToast");
+        if (!t) {
+            t = document.createElement("div");
+            t.id = "aqToast";
+            t.style.cssText = "position:fixed;left:50%;bottom:80px;transform:translateX(-50%) translateY(10px);" +
+                "background:rgba(15,23,42,0.96);color:#fff;padding:10px 20px;border-radius:40px;" +
+                "font-size:0.82rem;z-index:5000;border:1px solid #38bdf8;" +
+                "box-shadow:0 8px 24px rgba(0,0,0,0.5);opacity:0;transition:opacity .3s,transform .3s;" +
+                "pointer-events:none;max-width:90vw;text-align:center;font-family:inherit;";
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        requestAnimationFrame(() => { t.style.opacity = "1"; t.style.transform = "translateX(-50%) translateY(0)"; });
+        clearTimeout(t._t);
+        t._t = setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(-50%) translateY(10px)"; }, 2600);
+    }
+
+    function bindVideoEvents() {
+        const v = getVideo();
+        if (!v || v.dataset.aqBound) return;
+        v.dataset.aqBound = "1";
+        v.addEventListener("waiting", () => {
+            setTimeout(() => {
+                if (v.readyState < 3 && !v.paused) onStall();
+            }, 3000);
+        });
+        v.addEventListener("playing", () => {
+            log("video: playing");
+            resetStallCounterIfStable();
+        });
+    }
+
+    // ============ Init ============
+    function init() {
+        detectConnection();
+
+        // Патчим Hls с ретраями — он может грузиться после нас
+        let patchTries = 0;
+        const patchIv = setInterval(() => {
+            if (patchHlsConstructor() || ++patchTries > 30) clearInterval(patchIv);
+        }, 200);
+
+        setTimeout(() => {
+            measureRealSpeed().then(() => {
+                updateNetInfo();
+                applyQualityPolicy(true);
+            });
+        }, 1500);
+
+        const tvBtn = document.getElementById("modalTvBtn");
+        if (tvBtn) {
+            tvBtn.addEventListener("click", () => {
+                setTimeout(buildUI, 400);
+                setTimeout(bindVideoEvents, 600);
+                measureRealSpeed().then(() => { updateNetInfo(); applyQualityPolicy(true); });
+            });
+        }
+
+        // Перехват share-открытия
+        const origOpenTv = window.openCountryShare;
+        if (typeof origOpenTv === "function" && !origOpenTv.__aqPatchedV2) {
+            window.openCountryShare = function (country, kind, name) {
+                const r = origOpenTv.apply(this, arguments);
+                if (kind === "tv") {
+                    setTimeout(buildUI, 400);
+                    setTimeout(bindVideoEvents, 600);
+                }
+                return r;
+            };
+            window.openCountryShare.__aqPatchedV2 = true;
+        }
+
+        setInterval(updateNetInfo, 5000);
+        setInterval(() => {
+            if (currentHls && manualLevel < 0 && Date.now() > autoDowngradeLock) {
+                applyQualityPolicy(false);
+            }
+        }, 8000);
+
+        log("Adaptive Quality Patch v2 установлен");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END ADAPTIVE VIDEO QUALITY PATCH v2
+     ============================================================ -->
 </body>
 </html>
