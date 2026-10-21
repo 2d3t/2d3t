@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'radiotv3fast';
+const CACHE_NAME = 'favhist2';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/WORLD-EXPLORER/index.html',
