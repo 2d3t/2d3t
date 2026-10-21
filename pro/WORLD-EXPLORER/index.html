@@ -5210,6 +5210,395 @@ if (isTvFullscreen() || isVizFullscreen()) {
      END SHARE PATCH v2
      ============================================================ -->
 
+<!-- ============================================================
+     FIX: Back-меню после перехода по share-ссылке
+     Вставить в самый конец <body>, после всех скриптов.
+     ============================================================ -->
+<script>
+(function () {
+    "use strict";
 
+    // ---------- Хелперы ----------
+    const $ = id => document.getElementById(id);
+
+    function getActiveCountry() {
+        // 1) Пытаемся взять из глобального состояния основного скрипта (если он его выставил)
+        if (window.__WE_activeCountry) return window.__WE_activeCountry;
+
+        // 2) Иначе — читаем из заголовка модалки. Он всегда содержит имя страны,
+        //    кроме случаев "❤ Избранное радио/ТВ" — их пропускаем.
+        const el = $("modalCountryName");
+        if (!el) return null;
+        const txt = (el.textContent || "").trim();
+        if (!txt) return null;
+        if (txt.startsWith("❤")) return null;              // избранное
+        if (txt === "Country") return null;                // дефолт
+        if (txt === "—") return null;
+        return txt;
+    }
+
+    // ---------- Мост к внутренним функциям основного скрипта ----------
+    // Основной скрипт объявляет timezoneMap, countryCodeMap, flagMap и т.д.
+    // в глобальной области (через <script> без module) — они доступны как window.*
+    // Проверим и запомним ссылки.
+    function hasGlobals() {
+        return typeof window.timezoneMap !== "undefined" &&
+               typeof window.countryCodeMap !== "undefined" &&
+               typeof window.getTimezoneForCountry === "function" &&
+               typeof window.getLanguageForCountry === "function";
+    }
+
+    // ---------- Действия (дублируют логику основного скрипта) ----------
+    function actionOpenNews(country) {
+        if (!country || !hasGlobals()) return false;
+        const langInfo = getLanguageForCountry(country);
+        const q = encodeURIComponent("latest news from " + country);
+        let url = "https://www.google.com/search?q=" + q + "&tbm=nws";
+        if (langInfo.lr) url += "&lr=" + langInfo.lr;
+        window.open(url, "_blank");
+        return true;
+    }
+
+    function actionOpenWiki(country) {
+        if (!country || !hasGlobals()) return false;
+        const langInfo = getLanguageForCountry(country);
+        let lang = "en";
+        if (langInfo.lr && langInfo.lr.startsWith("lang_")) lang = langInfo.lr.replace("lang_", "");
+        const map = {
+            iw:"he", zh:"zh", vi:"vi", th:"th", ko:"ko", ja:"ja", ru:"ru", uk:"uk", pl:"pl",
+            de:"de", fr:"fr", es:"es", it:"it", pt:"pt", nl:"nl", sv:"sv", no:"no", da:"da",
+            fi:"fi", el:"el", cs:"cs", hu:"hu", ro:"ro", bg:"bg", sr:"sr", hr:"hr", sk:"sk",
+            sl:"sl", lt:"lt", lv:"lv", et:"et", is:"is", hi:"hi", id:"id", ms:"ms", tl:"tl",
+            ur:"ur", bn:"bn", tr:"tr", fa:"fa", ar:"ar", kk:"kk", uz:"uz", ps:"ps", ne:"ne",
+            si:"si", my:"my", km:"km", mn:"mn", am:"am", sw:"sw", mg:"mg", af:"af"
+        };
+        if (map[lang]) lang = map[lang];
+        window.open("https://" + lang + ".wikipedia.org/wiki/" + encodeURIComponent(country), "_blank");
+        return true;
+    }
+
+    function actionOpenTime(country) {
+        if (!country || !hasGlobals()) return false;
+        const tz = getTimezoneForCountry(country);
+
+        // Показываем часы так же, как штатный обработчик
+        const modalActions = $("modalActions");
+        const clockActions = $("clockActions");
+        const modalClock   = $("modalClock");
+        const clockInfo    = $("clockInfo");
+        const radioInfo    = $("radioInfo");
+        const tvInfo       = $("tvInfo");
+        const modalBox     = $("modalBox");
+        const backBtn      = $("modalBackBtn");
+
+        if (modalActions) modalActions.style.display = "none";
+        if (clockActions) clockActions.style.display = "flex";
+        if (backBtn) backBtn.style.display = "";
+        if (modalClock) modalClock.style.display = "block";
+        if (clockInfo) clockInfo.style.display = "block";
+        if (radioInfo) radioInfo.style.display = "none";
+        if (tvInfo) tvInfo.style.display = "none";
+        if (modalBox) modalBox.classList.remove("tv-mode");
+
+        try { if (typeof stopRadio === "function") stopRadio(); } catch (e) {}
+        try { if (typeof TvEngine !== "undefined") TvEngine.stop(); } catch (e) {}
+        try { if (typeof startClock === "function") startClock(tz); } catch (e) {}
+
+        const sub = $("modalSubInfo");
+        if (sub) sub.textContent = "🕐 Local time in " + country + " (" + tz + ")";
+        const status = $("statusText");
+        if (status) status.innerHTML = '<i class="fas fa-clock"></i> 🕐 Showing local time for <strong>' + country + '</strong>';
+        const card = $("statusCard");
+        if (card) card.style.borderColor = "#10b981";
+        return true;
+    }
+
+    function actionOpenRadio(country) {
+        if (!country) return false;
+
+        const modalActions = $("modalActions");
+        const clockActions = $("clockActions");
+        const modalClock   = $("modalClock");
+        const clockInfo    = $("clockInfo");
+        const radioInfo    = $("radioInfo");
+        const tvInfo       = $("tvInfo");
+        const modalBox     = $("modalBox");
+        const backBtn      = $("modalBackBtn");
+
+        if (modalActions) modalActions.style.display = "none";
+        if (clockActions) clockActions.style.display = "flex";
+        if (backBtn) backBtn.style.display = "";
+        if (modalClock) modalClock.style.display = "none";
+        if (clockInfo) clockInfo.style.display = "none";
+        if (tvInfo) tvInfo.style.display = "none";
+        if (radioInfo) radioInfo.style.display = "block";
+        if (modalBox) modalBox.classList.remove("tv-mode");
+
+        try { if (typeof stopClock === "function") stopClock(); } catch (e) {}
+        try { if (typeof TvEngine !== "undefined") TvEngine.stop(); } catch (e) {}
+        try { if (typeof renderFavorites === "function") renderFavorites(); } catch (e) {}
+        try { if (typeof startRadioForCountry === "function") startRadioForCountry(country); } catch (e) {}
+
+        const sub = $("modalSubInfo");
+        if (sub) sub.textContent = "📻 Радио " + country;
+        const status = $("statusText");
+        if (status) status.innerHTML = '<i class="fas fa-radio"></i> 📻 Загрузка радио для <strong>' + country + '</strong>...';
+        const card = $("statusCard");
+        if (card) card.style.borderColor = "#f59e0b";
+        return true;
+    }
+
+    function actionOpenTv(country) {
+        if (!country) return false;
+
+        const modalActions = $("modalActions");
+        const clockActions = $("clockActions");
+        const modalClock   = $("modalClock");
+        const clockInfo    = $("clockInfo");
+        const radioInfo    = $("radioInfo");
+        const tvInfo       = $("tvInfo");
+        const modalBox     = $("modalBox");
+        const backBtn      = $("modalBackBtn");
+
+        if (modalActions) modalActions.style.display = "none";
+        if (clockActions) clockActions.style.display = "flex";
+        if (backBtn) backBtn.style.display = "";
+        if (modalClock) modalClock.style.display = "none";
+        if (clockInfo) clockInfo.style.display = "none";
+        if (radioInfo) radioInfo.style.display = "none";
+        if (tvInfo) tvInfo.style.display = "block";
+        if (modalBox) modalBox.classList.add("tv-mode");
+
+        try { if (typeof stopClock === "function") stopClock(); } catch (e) {}
+        try { if (typeof stopRadio === "function") stopRadio(); } catch (e) {}
+        try { if (typeof TvEngine !== "undefined") TvEngine.stop(); } catch (e) {}
+        try { if (typeof renderTvFavorites === "function") renderTvFavorites(); } catch (e) {}
+        try { if (typeof TvEngine !== "undefined") TvEngine.start(country); } catch (e) {}
+
+        const sub = $("modalSubInfo");
+        if (sub) sub.textContent = "📺 TV " + country;
+        const status = $("statusText");
+        if (status) status.innerHTML = '<i class="fas fa-tv"></i> 📺 Загрузка ТВ для <strong>' + country + '</strong>...';
+        const card = $("statusCard");
+        if (card) card.style.borderColor = "#0ea5e9";
+        return true;
+    }
+
+    // ---------- Патч Back-меню кнопок ----------
+    // Перехватываем клики в capture-фазе. Если штатный обработчик не сработает
+    // (потому что currentCountryForModal = null), мы выполним действие сами.
+    const BUTTON_ACTIONS = {
+        modalTimeBtn:  actionOpenTime,
+        modalNewsBtn:  actionOpenNews,
+        modalWikiBtn:  actionOpenWiki,
+        modalRadioBtn: actionOpenRadio,
+        modalTvBtn:    actionOpenTv
+    };
+
+    function handleBackMenuClick(e) {
+        const btn = e.target.closest("button");
+        if (!btn || !btn.id || !BUTTON_ACTIONS[btn.id]) return;
+
+        // Если штатный обработчик уже отработал — не мешаем.
+        // Признак: кнопки скрыты (modalActions display = none) ИЛИ открылась подпанель.
+        const modalActions = $("modalActions");
+        const radioInfo = $("radioInfo");
+        const tvInfo = $("tvInfo");
+        const clockInfo = $("clockInfo");
+
+        const mainMenuVisible = modalActions && modalActions.style.display !== "none";
+        const submenuOpen = (radioInfo && radioInfo.style.display === "block")
+                          || (tvInfo && tvInfo.style.display === "block")
+                          || (clockInfo && clockInfo.style.display === "block");
+
+        // Если подменю ещё не открылось (main menu ещё виден) — значит штатный
+        // обработчик ничего не сделал (currentCountryForModal = null). Выполняем сами.
+        if (mainMenuVisible && !submenuOpen) {
+            const country = getActiveCountry();
+            if (country) {
+                // Небольшая задержка, чтобы штатный обработчик успел (если он есть)
+                setTimeout(function () {
+                    const m = $("modalActions");
+                    const r = $("radioInfo");
+                    const t = $("tvInfo");
+                    const c = $("clockInfo");
+                    const stillMain = m && m.style.display !== "none";
+                    const stillNoSub = !((r && r.style.display === "block")
+                                      || (t && t.style.display === "block")
+                                      || (c && c.style.display === "block"));
+                    if (stillMain && stillNoSub) {
+                        BUTTON_ACTIONS[btn.id](country);
+                    }
+                }, 80);
+            }
+        }
+    }
+
+    // ---------- Запоминаем активную страну по заголовку модалки ----------
+    let lastCountry = null;
+    function rememberCountry() {
+        const country = getActiveCountry();
+        if (country && country !== lastCountry) {
+            lastCountry = country;
+            window.__WE_activeCountry = country;
+        }
+    }
+
+    // ---------- Патч openCountryShare (переопределяем из SHARE PATCH v2) ----------
+    // Старая версия открывала подпанель напрямую, не выставляя активную страну.
+    // Наша версия сначала запоминает страну, потом вызывает штатные действия.
+    function installOpenCountrySharePatch() {
+        window.openCountryShare = function (country, kind, wantName) {
+            if (!country) return;
+
+            // Запоминаем страну — это ключ к тому, что Back-меню кнопки заработают.
+            window.__WE_activeCountry = country;
+            lastCountry = country;
+
+            // Показываем модалку (заголовок/флаг/подпись) — как штатный showModal
+            const actionModal  = $("actionModal");
+            const modalCountry = $("modalCountryName");
+            const modalFlag    = $("modalFlag");
+            const modalSubInfo = $("modalSubInfo");
+            const modalActions = $("modalActions");
+            const clockActions = $("clockActions");
+            const backBtn      = $("modalBackBtn");
+
+            if (!actionModal) return;
+
+            if (modalCountry) modalCountry.textContent = country;
+            if (modalFlag) {
+                const f = (window.flagMap && window.flagMap[country]) || "🌍";
+                modalFlag.textContent = f;
+            }
+            if (modalSubInfo) modalSubInfo.textContent =
+                kind === "tv" ? "📺 TV " + country : "📻 Радио " + country;
+
+            // Сброс всех подпанелей
+            const modalClock = $("modalClock");
+            const clockInfo  = $("clockInfo");
+            const radioInfo  = $("radioInfo");
+            const tvInfo     = $("tvInfo");
+            const modalBox   = $("modalBox");
+            if (modalClock) modalClock.style.display = "none";
+            if (clockInfo)  clockInfo.style.display  = "none";
+            if (radioInfo)  radioInfo.style.display  = "none";
+            if (tvInfo)     tvInfo.style.display     = "none";
+            if (modalBox)   modalBox.classList.remove("tv-mode");
+
+            if (modalActions) modalActions.style.display = "flex";
+            if (clockActions) clockActions.style.display = "none";
+            if (backBtn) backBtn.style.display = "";
+
+            actionModal.classList.add("active");
+            document.body.classList.add("modal-open");
+
+            // Гасим всё лишнее
+            try { if (typeof stopClock === "function") stopClock(); } catch (e) {}
+            try { if (typeof stopRadio === "function") stopRadio(); } catch (e) {}
+            try { if (typeof TvEngine !== "undefined") TvEngine.stop(); } catch (e) {}
+
+            // Открываем нужную подпанель
+            if (kind === "tv") actionOpenTv(country);
+            else actionOpenRadio(country);
+
+            // Через секунду попробуем выбрать нужный канал/станцию по имени
+            if (wantName) {
+                setTimeout(function () {
+                    try {
+                        if (kind === "tv") {
+                            const items = document.querySelectorAll("#tvCountryList .tv-channel-item");
+                            for (let i = 0; i < items.length; i++) {
+                                const nm = items[i].querySelector(".tv-ch-name");
+                                if (nm && nm.textContent.trim() === wantName) {
+                                    if (typeof TvEngine !== "undefined") TvEngine.play(i);
+                                    return;
+                                }
+                            }
+                        } else {
+                            if (window.radioStations && radioStations.length) {
+                                const idx = radioStations.findIndex(s => s.name === wantName);
+                                if (idx >= 0 && typeof playRadioStation === "function") {
+                                    playRadioStation(idx);
+                                }
+                            }
+                        }
+                    } catch (e) { console.warn("[WEFix] wantName select", e); }
+                }, 900);
+            }
+
+            // Статус-бар
+            const statusSpan = $("statusText");
+            const statusCard = $("statusCard");
+            if (statusSpan) statusSpan.innerHTML =
+                '<i class="fas fa-link"></i> Открыто по ссылке: <strong>' + country +
+                '</strong> (' + (kind === "tv" ? "ТВ" : "радио") + ') — Back to Menu работает.';
+            if (statusCard) statusCard.style.borderColor = kind === "tv" ? "#0ea5e9" : "#f59e0b";
+        };
+    }
+
+    // ---------- Наблюдение за заголовком модалки ----------
+    function watchModalCountry() {
+        const el = $("modalCountryName");
+        if (!el) return;
+        const obs = new MutationObserver(rememberCountry);
+        obs.observe(el, { childList: true, characterData: true, subtree: true });
+    }
+
+    // ---------- Init ----------
+    function init() {
+        // 1) Слушаем клики по кнопкам Back-меню (capture — раньше штатных)
+        document.addEventListener("click", handleBackMenuClick, true);
+
+        // 2) Следим за заголовком модалки
+        watchModalCountry();
+
+        // 3) Патчим openCountryShare — с задержкой, чтобы SHARE PATCH v2 уже объявил его
+        let tries = 0;
+        const iv = setInterval(function () {
+            tries++;
+            if (typeof window.openCountryShare === "function") {
+                installOpenCountrySharePatch();
+                clearInterval(iv);
+            } else if (tries > 20) {
+                clearInterval(iv);
+                // Если по какой-то причине SHARE PATCH v2 не загрузился — 
+                // объявим openCountryShare сами, чтобы handleIncomingShare не упал.
+                if (typeof window.openCountryShare !== "function") {
+                    installOpenCountrySharePatch();
+                }
+            }
+        }, 200);
+
+        // 4) Также дублируем на случай, если модалка была открыта «мимо» —
+        //    при клике на modalBackBtn проверим, что страна запомнена.
+        document.addEventListener("click", function (e) {
+            const btn = e.target.closest("button");
+            if (btn && btn.id === "modalBackBtn") {
+                // Перед возвратом в меню — зафиксируем страну из заголовка
+                const c = $("modalCountryName");
+                if (c) {
+                    const txt = (c.textContent || "").trim();
+                    if (txt && !txt.startsWith("❤") && txt !== "Country" && txt !== "—") {
+                        window.__WE_activeCountry = txt;
+                        lastCountry = txt;
+                    }
+                }
+            }
+        }, true);
+
+        console.log("[WEFix] Back-меню фикс установлен");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END FIX
+     ============================================================ -->
 </body>
 </html>
