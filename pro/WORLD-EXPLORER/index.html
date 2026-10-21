@@ -6733,9 +6733,11 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END RADIO PREFETCH PATCH
      ============================================================ -->
+
 <!-- ============================================================
-     TV HEALTH PATCH v3  (заменяет v2)
-     ✅-каналы переключаются мгновенно (без таймера).
+     TV HEALTH PATCH v3.1  (заменяет v3 полностью)
+     ✅-каналы переключаются с защитным окном GRACE_MS (6 сек).
+     Временные ошибки HLS не считаются мёртвыми.
      Перепроверка — вручную через 🔄 или при входе в страну.
      Вставлять в самый конец <body>, после всех скриптов.
      ============================================================ -->
@@ -6809,15 +6811,15 @@ if (isTvFullscreen() || isVizFullscreen()) {
     "use strict";
 
     const DEBUG = true;
-    const log   = (...a) => { if (DEBUG) console.log("[TV-HEALTH-v3]", ...a); };
-    const warn  = (...a) => { if (DEBUG) console.warn("[TV-HEALTH-v3]", ...a); };
+    const log   = (...a) => { if (DEBUG) console.log("[TV-HEALTH-v3.1]", ...a); };
+    const warn  = (...a) => { if (DEBUG) console.warn("[TV-HEALTH-v3.1]", ...a); };
 
     // ======== Настройки ========
     const PROBE_BYTES            = 2048;
     const PROBE_TIMEOUT          = 4000;
     const PROBE_CONCURRENCY      = 4;
-    const PLAY_TIMEOUT_UNKNOWN   = 1500;  // только для «неизвестных» (CORS/null)
-    // для ✅-каналов таймер не ставится вообще → мгновенно
+    const PLAY_TIMEOUT_UNKNOWN   = 1500;  // для «неизвестных» (CORS/null)
+    const GRACE_MS               = 6000;  // ← защитное окно для ✅-каналов
     const HEALTH_TTL             = 1000 * 60 * 10;
     const PREFETCH_AHEAD         = 1;
 
@@ -6879,7 +6881,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
                 setHealth(ch.url, false);
                 return false;
             }
-            return null; // CORS/сеть
+            return null; // CORS/сеть — не считаем мёртвым
         }
     }
 
@@ -7049,10 +7051,10 @@ if (isTvFullscreen() || isVizFullscreen()) {
         return currentIdx;
     }
 
-    // ======== Патч TvEngine.play (мгновенное ✅→✅) ========
+    // ======== Патч TvEngine.play ========
     function patchTvPlay() {
         if (typeof TvEngine === "undefined" || !TvEngine.play) return false;
-        if (TvEngine.play.__healthPatchedV3) return true;
+        if (TvEngine.play.__healthPatchedV31) return true;
 
         const orig = TvEngine.play;
         TvEngine.play = function (index) {
@@ -7078,33 +7080,45 @@ if (isTvFullscreen() || isVizFullscreen()) {
 
             const h = getHealth(ch.url);
 
-            // === МГНОВЕННЫЙ РЕЖИМ: ✅-канал — таймер не ставим ===
+            // === ✅-канал: защитное окно GRACE_MS ===
             if (h === true) {
-                log("⚡ instant switch →", ch.name, "(✅)");
-                // Только error-обработчик на случай, если канал внезапно упал
-                const onErrorInstant = () => {
+                log("⚡ instant switch →", ch.name, "(✅) grace:", GRACE_MS, "ms");
+
+                let graceTimer = setTimeout(() => {
                     if (window.__tvPlayGen !== playGen) return;
-                    warn("⛔ error on ✅-channel:", ch.name);
+                    if (video.readyState >= 3 || !video.paused) return;
+                    warn("⛔ grace timeout on ✅-channel:", ch.name);
                     setHealth(ch.url, false);
                     const curInfo = TvEngine._debug ? TvEngine._debug() : null;
                     const curIdx = curInfo ? curInfo.index : -1;
                     if (curIdx >= 0) updateChannelDOM(curIdx, "dead");
-                    video.removeEventListener("error", onErrorInstant);
                     const next = findNextAlive(index, +1);
                     if (next !== index && next >= 0) {
                         warn("→ jump to alive:", channels[next].name);
                         orig.call(TvEngine, next);
                     }
-                };
-                video.addEventListener("error", onErrorInstant, { once: true });
-                // Снимаем обработчик при playing, чтобы не сработал позже
-                const onPlayingInstant = () => {
+                }, GRACE_MS);
+
+                const onPlayingGrace = () => {
                     if (window.__tvPlayGen !== playGen) return;
-                    video.removeEventListener("error", onErrorInstant);
-                    video.removeEventListener("playing", onPlayingInstant);
+                    clearTimeout(graceTimer);
+                    graceTimer = null;
+                    video.removeEventListener("error", onErrorGrace);
+                    video.removeEventListener("playing", onPlayingGrace);
+                    const curInfo = TvEngine._debug ? TvEngine._debug() : null;
+                    const curIdx = curInfo ? curInfo.index : -1;
+                    if (curIdx >= 0) updateChannelDOM(curIdx, "ok");
+                    prefetchNextAlive();
                 };
-                video.addEventListener("playing", onPlayingInstant, { once: true });
-                prefetchNextAlive();
+
+                // При ошибке — НЕ прыгаем сразу, даём grace-таймеру доработать
+                const onErrorGrace = () => {
+                    if (window.__tvPlayGen !== playGen) return;
+                    warn("⚠ error on ✅-channel (даём grace):", ch.name);
+                };
+
+                video.addEventListener("playing", onPlayingGrace, { once: true });
+                video.addEventListener("error", onErrorGrace);
                 return r;
             }
 
@@ -7145,8 +7159,8 @@ if (isTvFullscreen() || isVizFullscreen()) {
             video.addEventListener("loadeddata", onLoadedData);
             return r;
         };
-        TvEngine.play.__healthPatchedV3 = true;
-        log("✅ TvEngine.play пропатчен (мгновенный ✅→✅)");
+        TvEngine.play.__healthPatchedV31 = true;
+        log("✅ TvEngine.play пропатчен (GRACE_MS =", GRACE_MS, "ms)");
         return true;
     }
 
@@ -7155,14 +7169,14 @@ if (isTvFullscreen() || isVizFullscreen()) {
         const nextBtn = document.getElementById("tvNextBtn");
         const prevBtn = document.getElementById("tvPrevBtn");
         if (!nextBtn || !prevBtn) return false;
-        if (nextBtn.dataset.healthPatchedV3 === "1") return true;
+        if (nextBtn.dataset.healthPatchedV31 === "1") return true;
 
         const newNext = nextBtn.cloneNode(true);
         const newPrev = prevBtn.cloneNode(true);
         nextBtn.parentNode.replaceChild(newNext, nextBtn);
         prevBtn.parentNode.replaceChild(newPrev, prevBtn);
-        newNext.dataset.healthPatchedV3 = "1";
-        newPrev.dataset.healthPatchedV3 = "1";
+        newNext.dataset.healthPatchedV31 = "1";
+        newPrev.dataset.healthPatchedV31 = "1";
 
         newNext.addEventListener("click", function () {
             const info = TvEngine._debug ? TvEngine._debug() : null;
@@ -7183,7 +7197,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
 
     // ======== fetch-хук m3u — только кеш каналов ========
     function patchFetchForM3U() {
-        if (window.fetch.__healthM3UPatchedV3) return true;
+        if (window.fetch.__healthM3UPatchedV31) return true;
         const origFetch = window.fetch;
 
         window.fetch = async function (input, init) {
@@ -7219,14 +7233,14 @@ if (isTvFullscreen() || isVizFullscreen()) {
             }
             return resp;
         };
-        window.fetch.__healthM3UPatchedV3 = true;
+        window.fetch.__healthM3UPatchedV31 = true;
         return true;
     }
 
     // ======== TvEngine.start-хук ========
     function patchTvStart() {
         if (typeof TvEngine === "undefined" || !TvEngine.start) return false;
-        if (TvEngine.start.__healthPatchedV3) return true;
+        if (TvEngine.start.__healthPatchedV31) return true;
 
         const orig = TvEngine.start;
 
@@ -7266,7 +7280,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
 
             return r;
         };
-        TvEngine.start.__healthPatchedV3 = true;
+        TvEngine.start.__healthPatchedV31 = true;
         log("✅ TvEngine.start пропатчен");
         return true;
     }
@@ -7291,7 +7305,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
     function patchRenderList() {
         const list = document.getElementById("tvCountryList");
         if (!list) return false;
-        if (list.__healthObserverV3) return true;
+        if (list.__healthObserverV31) return true;
         const obs = new MutationObserver(() => {
             if (!currentChannels.length) return;
             renderAllFromCache();
@@ -7303,14 +7317,14 @@ if (isTvFullscreen() || isVizFullscreen()) {
             }
         });
         obs.observe(list, { childList: true, subtree: false });
-        list.__healthObserverV3 = obs;
+        list.__healthObserverV31 = obs;
         return true;
     }
 
     // ======== TvEngine.stop ========
     function patchTvStop() {
         if (typeof TvEngine === "undefined" || !TvEngine.stop) return false;
-        if (TvEngine.stop.__healthPatchedV3) return true;
+        if (TvEngine.stop.__healthPatchedV31) return true;
         const orig = TvEngine.stop;
         TvEngine.stop = function () {
             if (probeAbortAll) { try { probeAbortAll.abort(); } catch (e) {} probeAbortAll = null; }
@@ -7322,7 +7336,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
             if (bar) bar.remove();
             return orig.apply(this, arguments);
         };
-        TvEngine.stop.__healthPatchedV3 = true;
+        TvEngine.stop.__healthPatchedV31 = true;
         return true;
     }
 
@@ -7343,7 +7357,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
             }
         }, 250);
 
-        log("TV Health Patch v3 установлен. ✅→✅ мгновенно, unknown timeout:", PLAY_TIMEOUT_UNKNOWN, "ms");
+        log("TV Health Patch v3.1 установлен. GRACE_MS:", GRACE_MS, "ms, unknown timeout:", PLAY_TIMEOUT_UNKNOWN, "ms");
     }
 
     if (document.readyState === "loading") {
@@ -7354,8 +7368,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
 })();
 </script>
 <!-- ============================================================
-     END TV HEALTH PATCH v3
+     END TV HEALTH PATCH v3.1
      ============================================================ -->
-
 </body>
 </html>
