@@ -5600,5 +5600,243 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END FIX
      ============================================================ -->
+
+<!-- ============================================================
+     TV FULLSCREEN LANDSCAPE LOCK PATCH v1
+     Заставляет видео разворачиваться горизонтально в fullscreen
+     на Android. На iOS Safari — игнорируется (ограничение Apple).
+     Вставлять в самый конец <body>, после всех скриптов.
+     ============================================================ -->
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true; // ← поставьте false, когда протестируете
+    const log = (...a) => { if (DEBUG) console.log("[TV-FS]", ...a); };
+    const warn = (...a) => { if (DEBUG) console.warn("[TV-FS]", ...a); };
+
+    // ---------- Проверка поддержки ----------
+    const orientationSupported = !!(
+        screen.orientation &&
+        typeof screen.orientation.lock === "function"
+    );
+
+    log("screen.orientation.lock поддерживается:", orientationSupported);
+    log("UA:", navigator.userAgent);
+
+    // ---------- Блокировка landscape ----------
+    function lockLandscape() {
+        if (!orientationSupported) {
+            log("lock() недоступен на этом устройстве — пропуск");
+            return;
+        }
+        try {
+            screen.orientation.lock("landscape")
+                .then(() => log("✅ Ориентация заблокирована в landscape"))
+                .catch(err => {
+                    warn("lock('landscape') отклонён:", err && err.name, err && err.message);
+                    // Пробуем "landscape-primary" как запасной вариант
+                    if (err && err.name !== "NotSupportedError") {
+                        screen.orientation.lock("landscape-primary")
+                            .then(() => log("✅ Заблокировано в landscape-primary"))
+                            .catch(e2 => warn("landscape-primary тоже не сработал:", e2 && e2.name));
+                    }
+                });
+        } catch (e) {
+            warn("lock() выбросил исключение:", e);
+        }
+    }
+
+    // ---------- Разблокировка ----------
+    function unlockOrientation() {
+        if (!orientationSupported || typeof screen.orientation.unlock !== "function") return;
+        try {
+            screen.orientation.unlock();
+            log("🔓 Ориентация разблокирована");
+        } catch (e) {
+            warn("unlock() выбросил исключение:", e);
+        }
+    }
+
+    // ---------- Поиск элементов ----------
+    function getWrap() {
+        return document.getElementById("tvVideoWrap");
+    }
+
+    // ---------- Патч кнопки fullscreen для ТВ ----------
+    // Существующий обработчик на tvFsBtn уже есть в TvEngine.bindControls.
+    // Мы перехватываем клик в capture-фазе РАНЬШЕ него, снимаем старый
+    // обработчик через клон кнопки и вешаем свой.
+    function patchTvFsButton() {
+        const wrap = getWrap();
+        const fsBtn = document.getElementById("tvFsBtn");
+        if (!wrap || !fsBtn) {
+            log("tvVideoWrap или tvFsBtn не найдены — повтор через 500мс");
+            return false;
+        }
+
+        // Чтобы не патчить дважды
+        if (fsBtn.dataset.landscapePatch === "1") {
+            log("Кнопка уже пропатчена");
+            return true;
+        }
+
+        // Заменяем кнопку на клон, чтобы снять все старые слушатели
+        const clone = fsBtn.cloneNode(true);
+        clone.dataset.landscapePatch = "1";
+        fsBtn.parentNode.replaceChild(clone, fsBtn);
+
+        clone.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            toggleFsWithOrientation();
+        });
+
+        log("✅ Кнопка tvFsBtn пропатчена");
+
+        // Также вешаем двойной клик на само видео (как было в оригинале)
+        const video = document.getElementById("tvVideo");
+        if (video && !video.dataset.landscapePatch) {
+            video.dataset.landscapePatch = "1";
+            video.addEventListener("dblclick", function (e) {
+                e.preventDefault();
+                toggleFsWithOrientation();
+            });
+            log("✅ Двойной клик по видео пропатчен");
+        }
+
+        return true;
+    }
+
+    // ---------- Основная функция toggle ----------
+    function toggleFsWithOrientation() {
+        const wrap = getWrap();
+        if (!wrap) return;
+
+        const isFs = document.fullscreenElement === wrap ||
+                     document.webkitFullscreenElement === wrap;
+
+        log("toggleFs вызван, isFs =", isFs);
+
+        if (!isFs) {
+            // ===== ВХОД =====
+            // ВАЖНО: блокировку orientation вызываем ПОСЛЕ входа в fullscreen,
+            // т.к. до fullscreen браузер её отклонит с NotAllowedError.
+            const doEnter = () => {
+                const p = wrap.requestFullscreen
+                    ? wrap.requestFullscreen()
+                    : wrap.webkitRequestFullscreen
+                        ? wrap.webkitRequestFullscreen()
+                        : null;
+
+                if (!p) {
+                    warn("requestFullscreen недоступен");
+                    return;
+                }
+
+                Promise.resolve(p)
+                    .then(() => {
+                        log("✅ Вошли в fullscreen");
+                        // Небольшая задержка — некоторые браузеры требуют,
+                        // чтобы fullscreenchange уже отработал
+                        setTimeout(lockLandscape, 120);
+                    })
+                    .catch(err => warn("requestFullscreen отклонён:", err && err.name));
+            };
+            doEnter();
+        } else {
+            // ===== ВЫХОД =====
+            if (document.exitFullscreen) {
+                document.exitFullscreen()
+                    .then(() => { log("✅ Вышли из fullscreen"); unlockOrientation(); })
+                    .catch(err => { warn("exitFullscreen ошибка:", err); unlockOrientation(); });
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+                setTimeout(unlockOrientation, 100);
+            } else {
+                unlockOrientation();
+            }
+        }
+    }
+
+    // ---------- Синхронизация иконки (независимо от TvEngine) ----------
+    function updateFsIconSync() {
+        const wrap = getWrap();
+        const fsBtn = document.getElementById("tvFsBtn");
+        if (!wrap || !fsBtn) return;
+        const isFs = document.fullscreenElement === wrap ||
+                     document.webkitFullscreenElement === wrap;
+        const icon = fsBtn.querySelector("i");
+        if (icon) icon.className = isFs ? "fas fa-compress" : "fas fa-expand";
+    }
+
+    // ---------- Глобальный обработчик fullscreenchange ----------
+    // Ловит выход из fullscreen жестом/кнопкой "назад", чтобы разблокировать
+    // ориентацию и не оставить телефон "залипшим" в landscape.
+    function onFullscreenChange() {
+        const wrap = getWrap();
+        const isFs = wrap && (document.fullscreenElement === wrap ||
+                             document.webkitFullscreenElement === wrap);
+
+        log("fullscreenchange, isFs =", isFs, "fullscreenElement =",
+            document.fullscreenElement && document.fullscreenElement.id);
+
+        if (isFs) {
+            // На случай, если кто-то вошёл в fullscreen не через нашу кнопку
+            setTimeout(lockLandscape, 120);
+        } else {
+            unlockOrientation();
+        }
+        updateFsIconSync();
+    }
+
+    // ---------- Init ----------
+    function init() {
+        // Ждём, пока TvEngine.bindControls отработает и навесит свои слушатели,
+        // затем заменяем кнопку на клон без старых слушателей.
+        let tries = 0;
+        const iv = setInterval(function () {
+            tries++;
+            if (patchTvFsButton() || tries > 30) {
+                clearInterval(iv);
+                if (tries > 30) warn("Не удалось пропатчить кнопку за 15 секунд");
+            }
+        }, 500);
+
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+
+        // Если пользователь уходит со страницы / сворачивает — снимаем блокировку
+        document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "hidden") {
+                unlockOrientation();
+            }
+        });
+
+        log("Патч инициализирован. Поддержка orientation.lock:", orientationSupported);
+
+        // Полезная подсказка в консоль
+        if (!orientationSupported) {
+            console.warn(
+                "[TV-FS] ⚠ screen.orientation.lock НЕ поддерживается на этом устройстве.\n" +
+                "На iPhone/iPad (Safari) это ограничение Apple — блокировка landscape " +
+                "недоступна в принципе. На Android Chrome всё должно работать.\n" +
+                "Проверьте: https://caniuse.com/screen-orientation"
+            );
+        }
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END TV FULLSCREEN LANDSCAPE LOCK PATCH
+     ============================================================ -->
+
+
 </body>
 </html>
