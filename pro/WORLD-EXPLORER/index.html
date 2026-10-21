@@ -7370,5 +7370,1013 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END TV HEALTH PATCH v3.1
      ============================================================ -->
+
+<!-- ============================================================
+     COUNTRIES HISTORY & FAVORITES PATCH v1
+     История посещений + любимые страны (не радио/ТВ)
+     ============================================================ -->
+<style id="cfStyles">
+    /* Кнопки в панели управления */
+    .cf-btn-history {
+        background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+        border-color: #a5b4fc !important;
+    }
+    .cf-btn-fav {
+        background: linear-gradient(135deg, #ec4899, #db2777) !important;
+        border-color: #f9a8d4 !important;
+    }
+
+    /* Кнопка ❤ в модалке страны */
+    .cf-fav-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px auto 12px;
+        padding: 8px 18px;
+        background: rgba(236, 72, 153, 0.15);
+        border: 1px solid rgba(236, 72, 153, 0.5);
+        color: #f9a8d4;
+        border-radius: 40px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.2s;
+    }
+    .cf-fav-toggle:hover {
+        background: rgba(236, 72, 153, 0.3);
+        transform: scale(1.03);
+    }
+    .cf-fav-toggle.active {
+        background: #ec4899;
+        color: #fff;
+        border-color: #f9a8d4;
+    }
+    .cf-fav-toggle.active i { animation: cfHeart 0.35s ease; }
+    @keyframes cfHeart {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.35); }
+        100% { transform: scale(1); }
+    }
+
+    /* Вкладки в модалке */
+    .cf-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .cf-tab {
+        flex: 1;
+        padding: 10px;
+        border-radius: 40px;
+        border: 1px solid rgba(255,255,255,0.15);
+        background: transparent;
+        color: #94a3b8;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    .cf-tab.active[data-tab="history"] {
+        background: rgba(99, 102, 241, 0.25);
+        color: #a5b4fc;
+        border-color: rgba(99, 102, 241, 0.6);
+    }
+    .cf-tab.active[data-tab="fav"] {
+        background: rgba(236, 72, 153, 0.25);
+        color: #f9a8d4;
+        border-color: rgba(236, 72, 153, 0.6);
+    }
+
+    /* Список стран */
+    .cf-list {
+        max-height: 420px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-right: 4px;
+    }
+    .cf-list::-webkit-scrollbar { width: 6px; }
+    .cf-list::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+    .cf-list::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 3px; }
+
+    .cf-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 14px;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+    }
+    .cf-item:hover {
+        background: rgba(45, 60, 85, 0.9);
+        border-color: rgba(99, 102, 241, 0.6);
+        transform: translateX(3px);
+    }
+    .cf-item .cf-flag {
+        font-size: 1.6rem;
+        flex-shrink: 0;
+        line-height: 1;
+    }
+    .cf-item .cf-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .cf-item .cf-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #f0f3fa;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .cf-item .cf-meta {
+        font-size: 0.7rem;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .cf-item .cf-remove {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #94a3b8;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        flex-shrink: 0;
+        transition: all 0.2s;
+        padding: 0;
+    }
+    .cf-item .cf-remove:hover {
+        background: #ef4444;
+        border-color: #ef4444;
+        color: #fff;
+        transform: scale(1.1);
+    }
+    .cf-item .cf-remove.fav-remove:hover {
+        background: #ec4899;
+        border-color: #ec4899;
+    }
+
+    .cf-empty {
+        text-align: center;
+        font-size: 0.8rem;
+        color: #64748b;
+        padding: 24px 12px;
+        font-style: italic;
+    }
+
+    .cf-clear-btn {
+        width: 100%;
+        margin-top: 14px;
+        padding: 10px;
+        border-radius: 40px;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.5);
+        color: #fca5a5;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .cf-clear-btn:hover {
+        background: rgba(239, 68, 68, 0.3);
+    }
+
+    /* Панель слева на десктопе */
+    .cf-side-panel {
+        display: none;
+        margin-top: 16px;
+        background: rgba(20, 28, 58, 0.75);
+        backdrop-filter: blur(12px);
+        border-radius: 20px;
+        padding: 14px;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    @media (min-width: 900px) {
+        .cf-side-panel { display: block; }
+    }
+    .cf-side-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #a5b4fc;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .cf-side-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 280px;
+        overflow-y: auto;
+    }
+    .cf-side-list::-webkit-scrollbar { width: 5px; }
+    .cf-side-list::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 3px; }
+
+    .cf-mini-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .cf-mini-item:hover {
+        background: rgba(45, 60, 85, 0.9);
+        border-color: rgba(99, 102, 241, 0.5);
+    }
+    .cf-mini-item .cf-flag { font-size: 1.1rem; }
+    .cf-mini-item .cf-mini-name {
+        flex: 1;
+        font-size: 0.78rem;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .cf-mini-item .cf-mini-time {
+        font-size: 0.65rem;
+        color: #64748b;
+        flex-shrink: 0;
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log = (...a) => { if (DEBUG) console.log("[CF]", ...a); };
+
+    // ========== ХРАНИЛИЩЕ ==========
+    const HISTORY_KEY = "we_countryHistory_v1";
+    const FAV_KEY     = "we_favoriteCountries_v1";
+    const MAX_HISTORY = 20;
+
+    function loadHistory() {
+        try {
+            const raw = localStorage.getItem(HISTORY_KEY);
+            if (!raw) return [];
+            const arr = JSON.parse(raw);
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function saveHistory(arr) {
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, MAX_HISTORY))); } catch (e) {}
+    }
+    function loadFavCountries() {
+        try {
+            const raw = localStorage.getItem(FAV_KEY);
+            if (!raw) return [];
+            const arr = JSON.parse(raw);
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+    }
+    function saveFavCountries(arr) {
+        try { localStorage.setItem(FAV_KEY, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function isFavCountry(name) {
+        return loadFavCountries().some(f => f.name === name);
+    }
+    function addFavCountry(name) {
+        if (!name) return;
+        const list = loadFavCountries();
+        if (list.some(f => f.name === name)) return;
+        list.unshift({ name, addedAt: Date.now() });
+        saveFavCountries(list);
+    }
+    function removeFavCountry(name) {
+        const list = loadFavCountries().filter(f => f.name !== name);
+        saveFavCountries(list);
+    }
+
+    function pushHistory(name) {
+        if (!name) return;
+        if (name === "Greenland" || name === "Antarctica") return;
+        let list = loadHistory();
+        // Убираем дубль
+        list = list.filter(h => h.name !== name);
+        // Добавляем в начало
+        list.unshift({ name, visitedAt: Date.now() });
+        saveHistory(list);
+        renderSidePanel();
+    }
+
+    // ========== УТИЛИТЫ ==========
+    function getFlag(name) {
+        return (window.flagMap && flagMap[name]) || "🌍";
+    }
+    function getLang(name) {
+        try {
+            const li = window.getLanguageForCountry ? getLanguageForCountry(name) : null;
+            return li ? li.display : "";
+        } catch (e) { return ""; }
+    }
+    function getTz(name) {
+        try {
+            return window.getTimezoneForCountry ? getTimezoneForCountry(name) : "";
+        } catch (e) { return ""; }
+    }
+    function escapeHtml(s) {
+        return String(s == null ? "" : s)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+    function formatAgo(ts) {
+        const diff = Date.now() - ts;
+        const sec = Math.floor(diff / 1000);
+        if (sec < 60) return "только что";
+        const min = Math.floor(sec / 60);
+        if (min < 60) return min + " мин назад";
+        const hrs = Math.floor(min / 60);
+        if (hrs < 24) return hrs + " ч назад";
+        const days = Math.floor(hrs / 24);
+        if (days < 30) return days + " дн назад";
+        const d = new Date(ts);
+        return d.toLocaleDateString("ru-RU");
+    }
+
+    // ========== ОТКРЫТИЕ СТРАНЫ ==========
+    // Пытаемся вызвать штатный showModal из основного скрипта (если он глобальный),
+    // иначе — эмулируем через клик по модалке.
+    function openCountryModal(name) {
+        if (!name) return;
+
+        // Пробуем найти глобальную функцию showModal
+        // (в основном скрипте она объявлена внутри am5.ready — не глобальна,
+        // поэтому используем window.openCountryShare из SHARE PATCH v2,
+        // который делает то же самое: показывает модалку страны).
+        if (typeof window.openCountryShare === "function") {
+            // НЕ выбираем radio/tv — показываем меню действий.
+            // openCountryShare всегда открывает подпанель, поэтому
+            // сделаем «пустой» вызов через эмуляцию клика по стране.
+            // Проще: показать модалку вручную.
+        }
+
+        // Ручной показ модалки (дублирует showModal из основного скрипта)
+        const actionModal  = document.getElementById("actionModal");
+        const modalBox     = document.getElementById("modalBox");
+        const modalCountry = document.getElementById("modalCountryName");
+        const modalFlag    = document.getElementById("modalFlag");
+        const modalSubInfo = document.getElementById("modalSubInfo");
+        const modalActions = document.getElementById("modalActions");
+        const clockActions = document.getElementById("clockActions");
+        const modalClock   = document.getElementById("modalClock");
+        const clockInfo    = document.getElementById("clockInfo");
+        const radioInfo    = document.getElementById("radioInfo");
+        const tvInfo       = document.getElementById("tvInfo");
+        const backBtn      = document.getElementById("modalBackBtn");
+        const statusSpan   = document.getElementById("statusText");
+        const statusCard   = document.getElementById("statusCard");
+
+        if (!actionModal) return;
+
+        if (modalCountry) modalCountry.textContent = name;
+        if (modalFlag) modalFlag.textContent = getFlag(name);
+        if (modalSubInfo) {
+            const lang = getLang(name);
+            const tz = getTz(name);
+            modalSubInfo.textContent = "🌐 " + (lang || "—") + " · " + (tz || "—");
+        }
+
+        if (modalClock) modalClock.style.display = "none";
+        if (clockInfo) clockInfo.style.display = "none";
+        if (radioInfo) radioInfo.style.display = "none";
+        if (tvInfo) tvInfo.style.display = "none";
+        if (modalBox) modalBox.classList.remove("tv-mode");
+        if (modalActions) modalActions.style.display = "flex";
+        if (clockActions) clockActions.style.display = "none";
+        if (backBtn) backBtn.style.display = "";
+
+        actionModal.classList.add("active");
+        document.body.classList.add("modal-open");
+
+        // Гасим всё лишнее
+        try { if (typeof stopClock === "function") stopClock(); } catch (e) {}
+        try { if (typeof stopRadio === "function") stopRadio(); } catch (e) {}
+        try { if (typeof TvEngine !== "undefined") TvEngine.stop(); } catch (e) {}
+
+        // Запоминаем страну — чтобы кнопки работали
+        window.__WE_activeCountry = name;
+        window.__WE_lastRandomCountry = name;
+
+        // Пуш в историю
+        pushHistory(name);
+        updateFavToggle(name);
+
+        // Радужная подсветка
+        try {
+            if (typeof startRainbowHighlight === "function") startRainbowHighlight(name);
+        } catch (e) {}
+
+        if (statusSpan) statusSpan.innerHTML =
+            '<i class="fas fa-hand-pointer"></i> Choose action for <strong>' + escapeHtml(name) + '</strong> in the popup';
+        if (statusCard) statusCard.style.borderColor = "#a78bfa";
+    }
+
+    // ========== КНОПКА ❤ В МОДАЛКЕ СТРАНЫ ==========
+    function updateFavToggle(name) {
+        let btn = document.getElementById("cfFavToggle");
+        if (!btn) {
+            btn = document.createElement("button");
+            btn.id = "cfFavToggle";
+            btn.className = "cf-fav-toggle";
+            btn.type = "button";
+            btn.addEventListener("click", function () {
+                const nm = document.getElementById("modalCountryName");
+                const country = nm ? nm.textContent.trim() : "";
+                if (!country || country === "Country" || country.startsWith("❤")) return;
+                if (isFavCountry(country)) {
+                    removeFavCountry(country);
+                    showToast("💔 Удалено из любимых стран");
+                } else {
+                    addFavCountry(country);
+                    showToast("❤️ Добавлено в любимые: " + country);
+                }
+                updateFavToggle(country);
+                renderFavList();
+                renderSidePanel();
+            });
+            // Вставляем после subInfo
+            const subInfo = document.getElementById("modalSubInfo");
+            if (subInfo && subInfo.parentNode) {
+                subInfo.parentNode.insertBefore(btn, subInfo.nextSibling);
+            } else {
+                const box = document.getElementById("modalBox");
+                if (box) box.appendChild(btn);
+            }
+        }
+        if (!name) { btn.style.display = "none"; return; }
+        if (name === "Country" || name === "—" || name.startsWith("❤")) {
+            btn.style.display = "none";
+            return;
+        }
+        btn.style.display = "inline-flex";
+        const fav = isFavCountry(name);
+        btn.classList.toggle("active", fav);
+        btn.innerHTML = fav
+            ? '<i class="fas fa-heart"></i> <span>В любимых странах</span>'
+            : '<i class="far fa-heart"></i> <span>В любимые страны</span>';
+    }
+
+    // ========== МОДАЛКА «МОИ СТРАНЫ» ==========
+    function ensureCountriesModal() {
+        let m = document.getElementById("cfCountriesModal");
+        if (m) return m;
+        m = document.createElement("div");
+        m.id = "cfCountriesModal";
+        m.className = "modal-overlay";
+        m.innerHTML = `
+            <div class="modal-box" style="max-width: 560px;">
+                <h2 style="margin-bottom:16px; color:#b3d9ff;">
+                    <i class="fas fa-globe"></i> Мои страны
+                </h2>
+                <div class="cf-tabs">
+                    <button class="cf-tab active" data-tab="history">
+                        🕓 История <span id="cfHistCount" style="color:#94a3b8; font-weight:400;">(0)</span>
+                    </button>
+                    <button class="cf-tab" data-tab="fav">
+                        ❤ Любимые <span id="cfFavCount" style="color:#94a3b8; font-weight:400;">(0)</span>
+                    </button>
+                </div>
+                <div id="cfHistList" class="cf-list"></div>
+                <div id="cfFavList" class="cf-list" style="display:none;"></div>
+                <button class="cf-clear-btn" id="cfClearHist" style="display:none;">
+                    <i class="fas fa-trash"></i> Очистить историю
+                </button>
+                <button class="modal-btn cancel-btn" id="cfCloseModal" style="margin-top:14px;">
+                    <i class="fas fa-times"></i> Закрыть
+                </button>
+            </div>
+        `;
+        document.body.appendChild(m);
+
+        // Вкладки
+        m.querySelectorAll(".cf-tab").forEach(tab => {
+            tab.addEventListener("click", function () {
+                m.querySelectorAll(".cf-tab").forEach(t => t.classList.remove("active"));
+                this.classList.add("active");
+                const isHist = this.dataset.tab === "history";
+                document.getElementById("cfHistList").style.display = isHist ? "flex" : "none";
+                document.getElementById("cfFavList").style.display = isHist ? "none" : "flex";
+                document.getElementById("cfClearHist").style.display = isHist ? "block" : "none";
+            });
+        });
+
+        document.getElementById("cfCloseModal").addEventListener("click", () => closeCountriesModal());
+        m.addEventListener("click", function (e) {
+            if (e.target === m) closeCountriesModal();
+        });
+        document.getElementById("cfClearHist").addEventListener("click", function () {
+            if (!confirm("Очистить всю историю посещений?")) return;
+            saveHistory([]);
+            renderHistList();
+            renderSidePanel();
+            showToast("🗑 История очищена");
+        });
+
+        return m;
+    }
+
+    function openCountriesModal(tab) {
+        const m = ensureCountriesModal();
+        m.classList.add("active");
+        document.body.classList.add("modal-open");
+        // Переключаем вкладку
+        m.querySelectorAll(".cf-tab").forEach(t => {
+            t.classList.toggle("active", t.dataset.tab === (tab || "history"));
+        });
+        const isHist = (tab || "history") === "history";
+        document.getElementById("cfHistList").style.display = isHist ? "flex" : "none";
+        document.getElementById("cfFavList").style.display = isHist ? "none" : "flex";
+        document.getElementById("cfClearHist").style.display = isHist ? "block" : "none";
+        renderHistList();
+        renderFavList();
+    }
+
+    function closeCountriesModal() {
+        const m = document.getElementById("cfCountriesModal");
+        if (m) m.classList.remove("active");
+        document.body.classList.remove("modal-open");
+    }
+
+    // ========== РЕНДЕР СПИСКОВ ==========
+    function renderHistList() {
+        const list = document.getElementById("cfHistList");
+        const count = document.getElementById("cfHistCount");
+        if (!list) return;
+        const hist = loadHistory();
+        if (count) count.textContent = "(" + hist.length + ")";
+        if (!hist.length) {
+            list.innerHTML = '<div class="cf-empty">История пуста — откройте любую страну на глобусе 🌍</div>';
+            return;
+        }
+        list.innerHTML = hist.map((h, i) => `
+            <div class="cf-item" data-idx="${i}" data-name="${escapeHtml(h.name)}">
+                <span class="cf-flag">${getFlag(h.name)}</span>
+                <div class="cf-info">
+                    <div class="cf-name">${escapeHtml(h.name)}</div>
+                    <div class="cf-meta">${escapeHtml(getLang(h.name))} · ${formatAgo(h.visitedAt)}</div>
+                </div>
+                <button class="cf-remove" data-action="remove" data-idx="${i}" title="Убрать">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join("");
+        bindListClicks(list);
+    }
+
+    function renderFavList() {
+        const list = document.getElementById("cfFavList");
+        const count = document.getElementById("cfFavCount");
+        if (!list) return;
+        const favs = loadFavCountries();
+        if (count) count.textContent = "(" + favs.length + ")";
+        if (!favs.length) {
+            list.innerHTML = '<div class="cf-empty">Нет любимых стран — нажмите ❤ в модалке страны</div>';
+            return;
+        }
+        list.innerHTML = favs.map((f, i) => `
+            <div class="cf-item" data-idx="${i}" data-name="${escapeHtml(f.name)}">
+                <span class="cf-flag">${getFlag(f.name)}</span>
+                <div class="cf-info">
+                    <div class="cf-name">${escapeHtml(f.name)}</div>
+                    <div class="cf-meta">${escapeHtml(getLang(f.name))} · ${getTz(f.name)}</div>
+                </div>
+                <button class="cf-remove fav-remove" data-action="remove-fav" data-idx="${i}" title="Убрать из любимых">
+                    <i class="fas fa-heart-broken"></i>
+                </button>
+            </div>
+        `).join("");
+        bindListClicks(list);
+    }
+
+    function bindListClicks(list) {
+        list.querySelectorAll(".cf-item").forEach(el => {
+            el.addEventListener("click", function (e) {
+                if (e.target.closest(".cf-remove")) return;
+                const name = this.dataset.name;
+                closeCountriesModal();
+                setTimeout(() => openCountryModal(name), 150);
+            });
+        });
+        list.querySelectorAll(".cf-remove").forEach(btn => {
+            btn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                const action = this.dataset.action;
+                const idx = parseInt(this.dataset.idx, 10);
+                if (action === "remove") {
+                    const hist = loadHistory();
+                    hist.splice(idx, 1);
+                    saveHistory(hist);
+                    renderHistList();
+                } else if (action === "remove-fav") {
+                    const favs = loadFavCountries();
+                    const removed = favs.splice(idx, 1)[0];
+                    saveFavCountries(favs);
+                    renderFavList();
+                    renderSidePanel();
+                    if (removed) {
+                        const cur = document.getElementById("modalCountryName");
+                        if (cur && cur.textContent.trim() === removed.name) {
+                            updateFavToggle(removed.name);
+                        }
+                        showToast("💔 Удалено из любимых: " + removed.name);
+                    }
+                }
+            });
+        });
+    }
+
+    // ========== ПАНЕЛЬ СЛЕВА ==========
+    function renderSidePanel() {
+        const panel = document.getElementById("cfSidePanel");
+        if (!panel) return;
+        const hist = loadHistory().slice(0, 10);
+        const list = panel.querySelector(".cf-side-list");
+        if (!list) return;
+        if (!hist.length) {
+            list.innerHTML = '<div class="cf-empty" style="padding:10px; font-size:0.72rem;">Пока пусто</div>';
+            return;
+        }
+        list.innerHTML = hist.map((h, i) => `
+            <div class="cf-mini-item" data-name="${escapeHtml(h.name)}">
+                <span class="cf-flag">${getFlag(h.name)}</span>
+                <span class="cf-mini-name">${escapeHtml(h.name)}</span>
+                <span class="cf-mini-time">${formatAgo(h.visitedAt)}</span>
+            </div>
+        `).join("");
+        list.querySelectorAll(".cf-mini-item").forEach(el => {
+            el.addEventListener("click", function () {
+                openCountryModal(this.dataset.name);
+            });
+        });
+    }
+
+    function ensureSidePanel() {
+        const sideCol = document.querySelector(".side-col");
+        if (!sideCol) return null;
+        let panel = document.getElementById("cfSidePanel");
+        if (panel) return panel;
+        panel = document.createElement("div");
+        panel.id = "cfSidePanel";
+        panel.className = "cf-side-panel";
+        panel.innerHTML = `
+            <div class="cf-side-title">
+                <i class="fas fa-history"></i> Последние 10 стран
+            </div>
+            <div class="cf-side-list"></div>
+        `;
+        // Вставляем после controls-panel (или в конец side-col)
+        const controls = sideCol.querySelector(".controls-panel");
+        if (controls && controls.nextSibling) {
+            sideCol.insertBefore(panel, controls.nextSibling);
+        } else {
+            sideCol.appendChild(panel);
+        }
+        return panel;
+    }
+
+    // ========== КНОПКИ В ПАНЕЛИ УПРАВЛЕНИЯ ==========
+    function addControlButtons() {
+        const panel = document.querySelector(".controls-panel");
+        if (!panel) return false;
+        if (document.getElementById("cfBtnHistory")) return true;
+
+        const histBtn = document.createElement("button");
+        histBtn.id = "cfBtnHistory";
+        histBtn.className = "btn cf-btn-history";
+        histBtn.innerHTML = '<i class="fas fa-history"></i> <span>История</span>';
+        histBtn.addEventListener("click", () => openCountriesModal("history"));
+
+        const favBtn = document.createElement("button");
+        favBtn.id = "cfBtnFav";
+        favBtn.className = "btn cf-btn-fav";
+        favBtn.innerHTML = '<i class="fas fa-heart"></i> <span>Любимые страны</span>';
+        favBtn.addEventListener("click", () => openCountriesModal("fav"));
+
+        // Вставляем перед кнопкой Radio ❤ (или в конец)
+        const radioFav = document.getElementById("openFavRadio");
+        if (radioFav && radioFav.parentNode) {
+            radioFav.parentNode.insertBefore(histBtn, radioFav);
+            radioFav.parentNode.insertBefore(favBtn, radioFav);
+        } else {
+            panel.appendChild(histBtn);
+            panel.appendChild(favBtn);
+        }
+        return true;
+    }
+
+    // ========== ТОСТ ==========
+    function showToast(msg) {
+        if (typeof window.showFavToast === "function") {
+            window.showFavToast(msg);
+            return;
+        }
+        let t = document.getElementById("cfToast");
+        if (!t) {
+            t = document.createElement("div");
+            t.id = "cfToast";
+            t.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(10px);" +
+                "background:rgba(15,23,42,0.95);color:#fff;padding:10px 20px;border-radius:40px;" +
+                "font-size:0.85rem;z-index:6000;border:1px solid #ec4899;" +
+                "box-shadow:0 8px 24px rgba(0,0,0,0.5);opacity:0;transition:opacity .3s,transform .3s;" +
+                "pointer-events:none;max-width:90vw;text-align:center;font-family:inherit;";
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        requestAnimationFrame(() => {
+            t.style.opacity = "1";
+            t.style.transform = "translateX(-50%) translateY(0)";
+        });
+        clearTimeout(t._t);
+        t._t = setTimeout(() => {
+            t.style.opacity = "0";
+            t.style.transform = "translateX(-50%) translateY(10px)";
+        }, 2400);
+    }
+
+    // ========== ПЕРЕХВАТ ОТКРЫТИЯ СТРАНЫ ==========
+    // Наблюдаем за модалкой: как только показана страна (не избранное радио/ТВ),
+    // пушим в историю и обновляем ❤-кнопку.
+    function watchModal() {
+        const modal = document.getElementById("actionModal");
+        const countryName = document.getElementById("modalCountryName");
+        if (!modal || !countryName) return;
+
+        const obs = new MutationObserver(() => {
+            if (!modal.classList.contains("active")) {
+                // при закрытии прячем кнопку ❤
+                const btn = document.getElementById("cfFavToggle");
+                if (btn) btn.style.display = "none";
+                return;
+            }
+            const txt = (countryName.textContent || "").trim();
+            if (!txt || txt === "Country" || txt === "—" || txt.startsWith("❤")) return;
+            updateFavToggle(txt);
+        });
+        obs.observe(countryName, { childList: true, characterData: true, subtree: true });
+        obs.observe(modal, { attributes: true, attributeFilter: ["class"] });
+
+        // Также слушаем клик по глобусу — чтобы добавить в историю,
+        // даже если модалка не открылась (первый клик по стране).
+        document.addEventListener("click", function (e) {
+            // Клик по кнопке OK (открывает случайную страну)
+            const ok = e.target.closest("#okCountry");
+            if (ok) {
+                setTimeout(() => {
+                    const nm = document.getElementById("modalCountryName");
+                    const t = nm ? nm.textContent.trim() : "";
+                    if (t && t !== "Country" && t !== "—" && !t.startsWith("❤")) {
+                        pushHistory(t);
+                        updateFavToggle(t);
+                    }
+                }, 100);
+            }
+        }, true);
+    }
+
+    // ========== ПАТЧ startRainbowHighlight ==========
+    // При клике по стране на глобусе (первый клик) — страна уже выбрана.
+    // Навешиваем на функцию startRainbowHighlight: она вызывается и в showModal,
+    // и в openRandomCountry. Это лучший хук для истории.
+    function patchRainbow() {
+        if (typeof window.startRainbowHighlight !== "function") return false;
+        if (window.startRainbowHighlight.__cfPatched) return true;
+
+        const orig = window.startRainbowHighlight;
+        window.startRainbowHighlight = function (countryName) {
+            const r = orig.apply(this, arguments);
+            if (countryName) {
+                pushHistory(countryName);
+                setTimeout(() => updateFavToggle(countryName), 50);
+            }
+            return r;
+        };
+        window.startRainbowHighlight.__cfPatched = true;
+        log("✅ startRainbowHighlight пропатчен");
+        return true;
+    }
+
+    // ========== INIT ==========
+    function init() {
+        addControlButtons();
+        ensureSidePanel();
+        renderSidePanel();
+        watchModal();
+
+        let tries = 0;
+        const iv = setInterval(() => {
+            tries++;
+            const a = patchRainbow();
+            const b = addControlButtons();
+            if ((a && b) || tries > 30) clearInterval(iv);
+        }, 300);
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") {
+                const m = document.getElementById("cfCountriesModal");
+                if (m && m.classList.contains("active")) closeCountriesModal();
+            }
+        });
+
+        log("Countries History & Favorites Patch установлен");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END COUNTRIES HISTORY & FAVORITES PATCH
+     ============================================================ -->
+<!-- ============================================================
+     CF FIX: News / Wiki / Time buttons in modal opened from
+     history / favorites / share-link (when currentCountryForModal = null)
+     ============================================================ -->
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log = (...a) => { if (DEBUG) console.log("[CF-FIX]", ...a); };
+
+    const $ = id => document.getElementById(id);
+
+    function getActiveCountry() {
+        // 1) глобальная переменная, которую выставляют наши патчи
+        if (window.__WE_activeCountry) return window.__WE_activeCountry;
+
+        // 2) заголовок модалки
+        const el = $("modalCountryName");
+        if (!el) return null;
+        const txt = (el.textContent || "").trim();
+        if (!txt) return null;
+        if (txt.startsWith("❤")) return null;
+        if (txt === "Country" || txt === "—") return null;
+        return txt;
+    }
+
+    // ============ Действия (дубликаты из FIX-патча) ============
+    function openNews(country) {
+        if (!country) return false;
+        try {
+            const langInfo = (typeof getLanguageForCountry === "function")
+                ? getLanguageForCountry(country)
+                : { lr: "lang_en" };
+            const q = encodeURIComponent("latest news from " + country);
+            let url = "https://www.google.com/search?q=" + q + "&tbm=nws";
+            if (langInfo.lr) url += "&lr=" + langInfo.lr;
+            window.open(url, "_blank");
+            return true;
+        } catch (e) { log("news error", e); return false; }
+    }
+
+    function openWiki(country) {
+        if (!country) return false;
+        try {
+            const langInfo = (typeof getLanguageForCountry === "function")
+                ? getLanguageForCountry(country)
+                : { lr: "lang_en" };
+            let lang = "en";
+            if (langInfo.lr && langInfo.lr.startsWith("lang_")) lang = langInfo.lr.replace("lang_", "");
+            const map = {
+                iw:"he", zh:"zh", vi:"vi", th:"th", ko:"ko", ja:"ja", ru:"ru", uk:"uk", pl:"pl",
+                de:"de", fr:"fr", es:"es", it:"it", pt:"pt", nl:"nl", sv:"sv", no:"no", da:"da",
+                fi:"fi", el:"el", cs:"cs", hu:"hu", ro:"ro", bg:"bg", sr:"sr", hr:"hr", sk:"sk",
+                sl:"sl", lt:"lt", lv:"lv", et:"et", is:"is", hi:"hi", id:"id", ms:"ms", tl:"tl",
+                ur:"ur", bn:"bn", tr:"tr", fa:"fa", ar:"ar", kk:"kk", uz:"uz", ps:"ps", ne:"ne",
+                si:"si", my:"my", km:"km", mn:"mn", am:"am", sw:"sw", mg:"mg", af:"af"
+            };
+            if (map[lang]) lang = map[lang];
+            const url = "https://" + lang + ".wikipedia.org/wiki/" + encodeURIComponent(country);
+            window.open(url, "_blank");
+            return true;
+        } catch (e) { log("wiki error", e); return false; }
+    }
+
+    function openTime(country) {
+        if (!country) return false;
+        try {
+            const tz = (typeof getTimezoneForCountry === "function")
+                ? getTimezoneForCountry(country)
+                : "UTC";
+
+            const modalActions = $("modalActions");
+            const clockActions = $("clockActions");
+            const modalClock   = $("modalClock");
+            const clockInfo    = $("clockInfo");
+            const radioInfo    = $("radioInfo");
+            const tvInfo       = $("tvInfo");
+            const modalBox     = $("modalBox");
+            const backBtn      = $("modalBackBtn");
+
+            if (modalActions) modalActions.style.display = "none";
+            if (clockActions) clockActions.style.display = "flex";
+            if (backBtn) backBtn.style.display = "";
+            if (modalClock) modalClock.style.display = "block";
+            if (clockInfo) clockInfo.style.display = "block";
+            if (radioInfo) radioInfo.style.display = "none";
+            if (tvInfo) tvInfo.style.display = "none";
+            if (modalBox) modalBox.classList.remove("tv-mode");
+
+            try { if (typeof stopRadio === "function") stopRadio(); } catch (e) {}
+            try { if (typeof TvEngine !== "undefined") TvEngine.stop(); } catch (e) {}
+            try { if (typeof startClock === "function") startClock(tz); } catch (e) {}
+
+            const sub = $("modalSubInfo");
+            if (sub) sub.textContent = "🕐 Local time in " + country + " (" + tz + ")";
+            const status = $("statusText");
+            if (status) status.innerHTML =
+                '<i class="fas fa-clock"></i> 🕐 Showing local time for <strong>' + country + '</strong>';
+            const card = $("statusCard");
+            if (card) card.style.borderColor = "#10b981";
+            return true;
+        } catch (e) { log("time error", e); return false; }
+    }
+
+    // ============ Перехват клика по News/Wiki/Time ============
+    const HANDLERS = {
+        modalNewsBtn: openNews,
+        modalWikiBtn: openWiki,
+        modalTimeBtn: openTime
+    };
+
+    function isMainMenuVisible() {
+        const m = $("modalActions");
+        return m && m.style.display !== "none";
+    }
+    function isAnySubmenuOpen() {
+        const r = $("radioInfo"), t = $("tvInfo"), c = $("clockInfo");
+        return (r && r.style.display === "block")
+            || (t && t.style.display === "block")
+            || (c && c.style.display === "block");
+    }
+
+    function onClickCapture(e) {
+        const btn = e.target.closest("button");
+        if (!btn || !btn.id || !HANDLERS[btn.id]) return;
+
+        // Если подменю уже открыто — штатные обработчики не нужны
+        if (isAnySubmenuOpen()) return;
+
+        // Если меню не видно — ничего не делаем
+        if (!isMainMenuVisible()) return;
+
+        const country = getActiveCountry();
+        if (!country) return;
+
+        // Даём штатному обработчику 60 мс. Если он не сработал
+        // (меню всё ещё открыто и подменю не появилось) — делаем сами.
+        setTimeout(function () {
+            if (!isMainMenuVisible() || isAnySubmenuOpen()) return;
+            log("fallback →", btn.id, "for", country);
+            HANDLERS[btn.id](country);
+        }, 60);
+    }
+
+    // ============ Init ============
+    function init() {
+        document.addEventListener("click", onClickCapture, true);
+
+        // На всякий случай: при открытии модалки из истории/любимых
+        // (через openCountryModal), заголовок устанавливается —
+        // а getActiveCountry() уже умеет его читать.
+        log("CF FIX: News/Wiki/Time fallback установлен");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END CF FIX
+     ============================================================ -->
+
 </body>
 </html>
