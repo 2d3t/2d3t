@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'clsflscr2-fullscrfixrsend2rb-radiobetter-f';
+const CACHE_NAME = 'autofillhd';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/WORLD-EXPLORER/index.html',
