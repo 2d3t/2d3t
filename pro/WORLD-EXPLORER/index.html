@@ -5837,39 +5837,30 @@ if (isTvFullscreen() || isVizFullscreen()) {
      END TV FULLSCREEN LANDSCAPE LOCK PATCH
      ============================================================ -->
 <!-- ============================================================
-     TV FULLSCREEN AUTO-HIDE FS BUTTON PATCH v1
-     В fullscreen кнопка «свернуть» прячется через 3 сек бездействия.
-     Появляется при любом касании/клике по экрану.
+     TV FULLSCREEN AUTO-HIDE FS BUTTON PATCH v2 (исправленный)
      Вставлять в самый конец <body>, после всех скриптов.
      ============================================================ -->
-<style id="tvFsAutoHideStyles">
-    /* Плавное исчезновение/появление кнопки fullscreen */
-    #tvVideoWrap .tv-fs-btn {
-        transition: opacity 0.35s ease, transform 0.35s ease;
-        opacity: 1;
-        transform: scale(1);
-    }
-    /* Скрытое состояние — только когда мы сами добавили класс */
-    #tvVideoWrap.tv-fs-hidden .tv-fs-btn {
-        opacity: 0 !important;
-        transform: scale(0.85);
-        pointer-events: none;
-    }
-</style>
-
 <script>
 (function () {
     "use strict";
 
-    const DEBUG = true; // ← поставьте false после теста
-    const log = (...a) => { if (DEBUG) console.log("[TV-FS-HIDE]", ...a); };
+    const DEBUG = true;
+    const log  = (...a) => { if (DEBUG) console.log("[FS-HIDE]", ...a); };
+    const warn = (...a) => { if (DEBUG) console.warn("[FS-HIDE]", ...a); };
 
-    const HIDE_DELAY = 3000; // мс бездействия до скрытия
-
+    const HIDE_DELAY = 3000;
     let hideTimer = null;
 
-    function getWrap()  { return document.getElementById("tvVideoWrap"); }
-    function getFsBtn() { return document.getElementById("tvFsBtn"); }
+    function getWrap() {
+        return document.getElementById("tvVideoWrap");
+    }
+
+    // Ищем кнопку по id ИЛИ по классу — на случай если клон потерял id
+    function getFsBtn() {
+        const wrap = getWrap();
+        if (!wrap) return null;
+        return wrap.querySelector(".tv-fs-btn") || document.getElementById("tvFsBtn");
+    }
 
     function isFullscreen() {
         const wrap = getWrap();
@@ -5878,60 +5869,94 @@ if (isTvFullscreen() || isVizFullscreen()) {
                document.webkitFullscreenElement === wrap;
     }
 
-    // ---------- Показать кнопку + перезапустить таймер ----------
-    function showBtnAndRestartTimer() {
-        const wrap = getWrap();
-        if (!wrap || !isFullscreen()) return;
+    // ---------- Принудительное скрытие/показ через инлайн-стиль ----------
+    // Не полагаемся на CSS-каскад — выставляем стили напрямую на элемент.
+    function setBtnVisibility(visible) {
+        const btn = getFsBtn();
+        if (!btn) {
+            warn("Кнопка не найдена при setBtnVisibility(", visible, ")");
+            return;
+        }
 
-        wrap.classList.remove("tv-fs-hidden");
+        if (visible) {
+            btn.style.setProperty("opacity", "1", "important");
+            btn.style.setProperty("visibility", "visible", "important");
+            btn.style.setProperty("pointer-events", "auto", "important");
+            btn.style.setProperty("transform", "scale(1)", "important");
+        } else {
+            btn.style.setProperty("opacity", "0", "important");
+            btn.style.setProperty("visibility", "hidden", "important");
+            btn.style.setProperty("pointer-events", "none", "important");
+            btn.style.setProperty("transform", "scale(0.85)", "important");
+        }
+
+        // Форсируем reflow — обходит баг рендеринга в fullscreen на Android
+        // eslint-disable-next-line no-unused-expressions
+        btn.offsetHeight;
+
+        log("Кнопка:", visible ? "ПОКАЗАНА" : "СКРЫТА");
+    }
+
+    // ---------- Показ + перезапуск таймера ----------
+    function showBtnAndRestartTimer() {
+        if (!isFullscreen()) {
+            log("Не в fullscreen — таймер не запускаем");
+            return;
+        }
+
+        setBtnVisibility(true);
 
         if (hideTimer) clearTimeout(hideTimer);
         hideTimer = setTimeout(function () {
             hideTimer = null;
-            if (isFullscreen() && wrap) {
-                wrap.classList.add("tv-fs-hidden");
-                log("Кнопка скрыта (бездействие)");
+            if (isFullscreen()) {
+                setBtnVisibility(false);
+                log("Автоскрытие по таймеру (" + HIDE_DELAY + "мс)");
             }
         }, HIDE_DELAY);
+
+        log("Таймер запущен на", HIDE_DELAY, "мс");
     }
 
-    // ---------- Скрыть кнопку сразу ----------
+    // ---------- Немедленное скрытие ----------
     function hideBtnNow() {
-        const wrap = getWrap();
-        if (!wrap) return;
         if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-        wrap.classList.add("tv-fs-hidden");
+        setBtnVisibility(false);
     }
 
-    // ---------- Обработчики ----------
+    // ---------- Обработчик касаний ----------
     function onUserActivity(e) {
         if (!isFullscreen()) return;
 
-        // Клик по самой кнопке — не считаем "касанием для показа",
-        // но и не мешаем ей работать. Просто перезапустим таймер.
-        const fsBtn = getFsBtn();
-        if (fsBtn && (e.target === fsBtn || fsBtn.contains(e.target))) {
-            // Клик по кнопке — она и так видима; перезапускаем таймер
+        // Клик по кнопке — не мешаем, но перезапускаем таймер
+        const btn = getFsBtn();
+        if (btn && (e.target === btn || btn.contains(e.target))) {
+            log("Клик по кнопке FS — перезапуск таймера");
             showBtnAndRestartTimer();
             return;
         }
 
-        // Любое другое касание/клик по видео → показать кнопку
+        log("Касание экрана — показываем кнопку");
         showBtnAndRestartTimer();
     }
 
+    // ---------- Синхронизация с fullscreen ----------
     function onFullscreenChange() {
         const wrap = getWrap();
         if (!wrap) return;
 
         if (isFullscreen()) {
-            log("Вошли в fullscreen — показываем кнопку и запускаем таймер");
-            wrap.classList.remove("tv-fs-hidden");
-            showBtnAndRestartTimer();
+            log("✅ Вошли в fullscreen");
+            // Небольшая задержка: даём браузеру отрисовать fullscreen
+            setTimeout(function () {
+                setBtnVisibility(true);
+                showBtnAndRestartTimer();
+            }, 150);
         } else {
-            log("Вышли из fullscreen — снимаем скрытие");
+            log("❌ Вышли из fullscreen — кнопка всегда видна");
             if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-            wrap.classList.remove("tv-fs-hidden");
+            // В обычном режиме кнопка должна быть видна
+            setBtnVisibility(true);
         }
     }
 
@@ -5944,22 +5969,20 @@ if (isTvFullscreen() || isVizFullscreen()) {
             return;
         }
 
-        // Любое касание по видео / пауза / play → показываем кнопку
-        wrap.addEventListener("click",      onUserActivity, true);
-        wrap.addEventListener("touchstart", onUserActivity, { capture: true, passive: true });
-        wrap.addEventListener("mousemove",  onUserActivity, { passive: true });
-        wrap.addEventListener("pointerdown", onUserActivity, { passive: true });
+        // Слушаем касания на контейнере (capture — чтобы поймать раньше video)
+        wrap.addEventListener("pointerdown", onUserActivity, { capture: true, passive: true });
+        wrap.addEventListener("touchstart",  onUserActivity, { capture: true, passive: true });
+        wrap.addEventListener("click",       onUserActivity, { capture: true });
 
-        // Синхронизация с состоянием fullscreen
         document.addEventListener("fullscreenchange", onFullscreenChange);
         document.addEventListener("webkitfullscreenchange", onFullscreenChange);
 
-        // Если пользователь свернул вкладку — на всякий случай снимаем
         document.addEventListener("visibilitychange", function () {
             if (document.visibilityState === "hidden") hideBtnNow();
         });
 
-        log("Патч автозатухания кнопки инициализирован. Задержка:", HIDE_DELAY, "мс");
+        log("✅ Патч v2 инициализирован. Задержка:", HIDE_DELAY, "мс");
+        log("Поддержка orientation.lock:", !!(screen.orientation && screen.orientation.lock));
     }
 
     if (document.readyState === "loading") {
@@ -5970,7 +5993,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
 })();
 </script>
 <!-- ============================================================
-     END TV FULLSCREEN AUTO-HIDE FS BUTTON PATCH
+     END TV FULLSCREEN AUTO-HIDE FS BUTTON PATCH v2
      ============================================================ -->
 
 </body>
