@@ -8755,5 +8755,435 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END VIZ RADIO PATCH
      ============================================================ -->
+
+<!-- ============================================================
+     FULLSCREEN NAV OVERLAY PATCH v2 (ИСПРАВЛЕННЫЙ)
+     ============================================================ -->
+<style id="fsNavStyles">
+    .fs-nav-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 2147483000;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 clamp(16px, 5vw, 60px);
+        opacity: 0;
+        transition: opacity 0.25s ease;
+    }
+    .fs-nav-overlay.visible { opacity: 1; }
+    .fs-nav-btn {
+        pointer-events: auto;
+        width: clamp(48px, 8vw, 72px);
+        height: clamp(48px, 8vw, 72px);
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.28);
+        background: rgba(10,15,30,0.55);
+        color: #fff;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: clamp(1rem, 2.2vw, 1.5rem);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+        transition: background 0.2s, transform 0.15s, border-color 0.2s;
+        padding: 0; outline: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .fs-nav-btn:hover { background: rgba(30,41,59,0.85); transform: scale(1.06); }
+    .fs-nav-btn:active { transform: scale(0.94); }
+    .fs-nav-overlay.radio .fs-nav-btn:hover { border-color:#fbbf24; background:rgba(245,158,11,0.35); }
+    .fs-nav-overlay.tv    .fs-nav-btn:hover { border-color:#38bdf8; background:rgba(14,165,233,0.35); }
+    .fs-nav-center {
+        position: absolute; left: 50%; top: 50%;
+        transform: translate(-50%,-50%);
+        pointer-events: auto;
+        width: clamp(60px,11vw,96px); height: clamp(60px,11vw,96px);
+        border-radius: 50%;
+        border: 2px solid rgba(251,191,36,0.85);
+        background: rgba(10,15,30,0.65);
+        color: #fbbf24;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: clamp(1.2rem,2.8vw,1.9rem);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+        transition: background 0.2s, transform 0.15s;
+        padding: 0; outline: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .fs-nav-center:hover { background: rgba(245,158,11,0.4); transform: translate(-50%,-50%) scale(1.06); }
+    .fs-nav-center:active { transform: translate(-50%,-50%) scale(0.94); }
+    .fs-nav-title {
+        position: absolute;
+        top: 14px; left: 50%;
+        transform: translateX(-50%) translateY(-6px);
+        max-width: 80vw;
+        padding: 8px 18px;
+        background: rgba(10,15,30,0.7);
+        border-radius: 40px;
+        color: #fff;
+        font-size: clamp(0.75rem,1.4vw,0.95rem);
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.15);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+        font-family: inherit;
+    }
+    .fs-nav-overlay.visible .fs-nav-title {
+        opacity: 1; transform: translateX(-50%) translateY(0);
+    }
+    #vizContainer:fullscreen, #vizContainer:-webkit-full-screen, #vizContainer.viz-pseudo-fs,
+    #tvVideoWrap:fullscreen, #tvVideoWrap:-webkit-full-screen {
+        position: relative;
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log = (...a) => { if (DEBUG) console.log("[FS-NAV]", ...a); };
+    const HIDE_DELAY = 3000;
+    const hideTimers = new WeakMap();
+
+    // ============ ХЕЛПЕРЫ: получить список радиостанций и текущий индекс ============
+    // radioStations — глобальный let → window.radioStations доступен? Да,
+    // потому что объявлен через `let radioStations = []` в глобальной области,
+    // но let не попадает в window. Проверяем оба варианта.
+    function getRadioStations() {
+        try {
+            if (typeof radioStations !== "undefined" && radioStations) return radioStations;
+        } catch (e) {}
+        return window.radioStations || [];
+    }
+
+    function getRadioCurrentIndex() {
+        const st = getRadioStations();
+        if (!st.length) return -1;
+        // Пытаемся прочитать radioCurrentIndex (он let, но виден в области видимости)
+        try {
+            if (typeof radioCurrentIndex !== "undefined") return radioCurrentIndex;
+        } catch (e) {}
+        // Fallback: по названию в #radioStationName
+        const nameEl = document.getElementById("radioStationName");
+        if (!nameEl) return -1;
+        let cur = nameEl.textContent.replace(/^📻\s*/, "").trim();
+        // Отрезаем возможный суффикс
+        return st.findIndex(s => s.name === cur);
+    }
+
+    function getTvChannelsCount() {
+        // Берём количество из DOM — оно совпадает с TvEngine.channels.length
+        return document.querySelectorAll("#tvCountryList .tv-channel-item").length;
+    }
+    function getTvCurrentIndex() {
+        // Из _debug() TvEngine
+        try {
+            if (typeof TvEngine !== "undefined" && TvEngine._debug) {
+                const d = TvEngine._debug();
+                if (d && typeof d.index === "number") return d.index;
+            }
+        } catch (e) {}
+        // Fallback: активный элемент в списке
+        const items = document.querySelectorAll("#tvCountryList .tv-channel-item");
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].classList.contains("active")) return i;
+        }
+        return -1;
+    }
+
+    // ============ Действия ============
+    function radioPrev() {
+        const st = getRadioStations();
+        if (!st.length) { log("radioPrev: нет станций"); return; }
+        const cur = getRadioCurrentIndex();
+        const idx = cur < 0 ? st.length - 1 : (cur - 1 + st.length) % st.length;
+        log("radioPrev", cur, "→", idx);
+        if (typeof playRadioStation === "function") playRadioStation(idx);
+    }
+    function radioNext() {
+        const st = getRadioStations();
+        if (!st.length) { log("radioNext: нет станций"); return; }
+        const cur = getRadioCurrentIndex();
+        const idx = cur < 0 ? 0 : (cur + 1) % st.length;
+        log("radioNext", cur, "→", idx);
+        if (typeof playRadioStation === "function") playRadioStation(idx);
+    }
+    function tvPrev() {
+        const n = getTvChannelsCount();
+        if (!n) { log("tvPrev: нет каналов"); return; }
+        const cur = getTvCurrentIndex();
+        const idx = cur < 0 ? n - 1 : (cur - 1 + n) % n;
+        log("tvPrev", cur, "→", idx);
+        try { TvEngine.play(idx); } catch (e) { log("TvEngine.play error", e); }
+    }
+    function tvNext() {
+        const n = getTvChannelsCount();
+        if (!n) { log("tvNext: нет каналов"); return; }
+        const cur = getTvCurrentIndex();
+        const idx = cur < 0 ? 0 : (cur + 1) % n;
+        log("tvNext", cur, "→", idx);
+        try { TvEngine.play(idx); } catch (e) { log("TvEngine.play error", e); }
+    }
+
+    // ============ Заголовки ============
+    function updateRadioTitle(el) {
+        if (!el) return;
+        const nameEl = document.getElementById("radioStationName");
+        let name = nameEl ? nameEl.textContent.replace(/^📻\s*/, "").trim() : "";
+        el.textContent = "📻 " + (name || "—");
+    }
+    function updateTvTitle(el) {
+        if (!el) return;
+        const nameEl = document.getElementById("tvChannelName");
+        let name = nameEl ? nameEl.textContent.replace(/^📺\s*/, "").trim() : "";
+        el.textContent = "📺 " + (name || "—");
+    }
+
+    // ============ Оверлей ============
+    function createOverlay(container, kind) {
+        if (!container) return null;
+        let ov = container.querySelector(":scope > .fs-nav-overlay");
+        if (ov) return ov;
+
+        const isRadio = kind === "radio";
+        ov = document.createElement("div");
+        ov.className = "fs-nav-overlay " + kind;
+        ov.innerHTML = `
+            <div class="fs-nav-title"></div>
+            <button type="button" class="fs-nav-btn fs-nav-prev" title="${isRadio ? 'Предыдущая станция' : 'Предыдущий канал'}">
+                <i class="fas fa-backward"></i>
+            </button>
+            <button type="button" class="fs-nav-btn fs-nav-next" title="${isRadio ? 'Следующая станция' : 'Следующий канал'}">
+                <i class="fas fa-forward"></i>
+            </button>
+            ${isRadio ? `
+            <button type="button" class="fs-nav-center fs-nav-play" title="Играть/Пауза">
+                <i class="fas fa-pause"></i>
+            </button>` : ""}
+        `;
+
+        const prevBtn = ov.querySelector(".fs-nav-prev");
+        const nextBtn = ov.querySelector(".fs-nav-next");
+        const playBtn = ov.querySelector(".fs-nav-play");
+        const titleEl = ov.querySelector(".fs-nav-title");
+
+        prevBtn.addEventListener("click", function (e) {
+            e.stopPropagation(); e.preventDefault();
+            if (isRadio) { radioPrev(); setTimeout(() => updateRadioTitle(titleEl), 100); }
+            else { tvPrev(); setTimeout(() => updateTvTitle(titleEl), 100); }
+            showOverlay(ov);
+        });
+        nextBtn.addEventListener("click", function (e) {
+            e.stopPropagation(); e.preventDefault();
+            if (isRadio) { radioNext(); setTimeout(() => updateRadioTitle(titleEl), 100); }
+            else { tvNext(); setTimeout(() => updateTvTitle(titleEl), 100); }
+            showOverlay(ov);
+        });
+        if (playBtn) {
+            playBtn.addEventListener("click", function (e) {
+                e.stopPropagation(); e.preventDefault();
+                const audio = document.getElementById("radioAudio");
+                if (!audio) return;
+                if (audio.paused) audio.play().catch(() => {});
+                else audio.pause();
+                showOverlay(ov);
+            });
+        }
+
+        container.appendChild(ov);
+        return ov;
+    }
+
+    // ============ Показ/скрытие ============
+    function isFullscreen(container) {
+        return document.fullscreenElement === container ||
+               document.webkitFullscreenElement === container ||
+               container.classList.contains("viz-pseudo-fs");
+    }
+
+    function showOverlay(ov) {
+        if (!ov) return;
+        ov.classList.add("visible");
+        const titleEl = ov.querySelector(".fs-nav-title");
+        if (ov.classList.contains("radio")) updateRadioTitle(titleEl);
+        else updateTvTitle(titleEl);
+        const playBtn = ov.querySelector(".fs-nav-play");
+        if (playBtn) {
+            const audio = document.getElementById("radioAudio");
+            if (audio) playBtn.querySelector("i").className = audio.paused ? "fas fa-play" : "fas fa-pause";
+        }
+        const t = hideTimers.get(ov);
+        if (t) clearTimeout(t);
+        hideTimers.set(ov, setTimeout(function () {
+            hideTimers.delete(ov);
+            ov.classList.remove("visible");
+        }, HIDE_DELAY));
+    }
+    function hideOverlay(ov) {
+        if (!ov) return;
+        const t = hideTimers.get(ov);
+        if (t) { clearTimeout(t); hideTimers.delete(ov); }
+        ov.classList.remove("visible");
+    }
+
+    // ============ Тап по контейнеру ============
+    function bindTap(container, kind) {
+        if (container.dataset.fsNavBound === "1") return;
+        container.dataset.fsNavBound = "1";
+
+        container.addEventListener("click", function (e) {
+            if (!isFullscreen(container)) return;
+            if (e.target.closest(".fs-nav-btn") || e.target.closest(".fs-nav-center")) return;
+            if (e.target.closest(".viz-close") || e.target.closest(".viz-fs-btn") || e.target.closest(".tv-fs-btn")) return;
+            if (e.target.closest(".viz-caption")) return;
+
+            const ov = container.querySelector(":scope > .fs-nav-overlay");
+            if (!ov) return;
+
+            // Для радио — синхронизируемся со штатным ui-hidden (визуализация).
+            // Для ТВ — просто показываем.
+            setTimeout(function () {
+                if (kind === "radio" && container.classList.contains("ui-hidden")) {
+                    hideOverlay(ov);
+                } else {
+                    showOverlay(ov);
+                }
+            }, 0);
+        }, true);
+    }
+
+    // ============ Синхронизация с fullscreen ============
+    function onFullscreenChange() {
+        [["vizContainer","radio"],["tvVideoWrap","tv"]].forEach(function (pair) {
+            const c = document.getElementById(pair[0]);
+            if (!c) return;
+            const ov = c.querySelector(":scope > .fs-nav-overlay");
+            if (!ov) return;
+            if (isFullscreen(c)) {
+                setTimeout(function () { showOverlay(ov); }, 200);
+            } else {
+                hideOverlay(ov);
+            }
+        });
+    }
+
+    // ============ Init ============
+    function init() {
+        let tries = 0;
+        const iv = setInterval(function () {
+            tries++;
+            const viz = document.getElementById("vizContainer");
+            const tv  = document.getElementById("tvVideoWrap");
+            let ok = 0;
+            if (viz) { if (createOverlay(viz, "radio")) { bindTap(viz, "radio"); ok++; } }
+            if (tv)  { if (createOverlay(tv, "tv"))    { bindTap(tv, "tv");  ok++; } }
+            if (ok === 2 || tries > 30) {
+                clearInterval(iv);
+                log("Оверлеи готовы:", ok, "из 2 (попыток:", tries, ")");
+            }
+        }, 400);
+
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+        log("FS NAV OVERLAY v2 установлен");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- END FULLSCREEN NAV OVERLAY PATCH v2 -->
+
+<!-- ============================================================
+     RADIO FULLSCREEN NO-KICK PATCH v1
+     Не даём переключению станции выкидывать из fullscreen
+     визуализации. Вставлять ПОСЛЕ FULLSCREEN NAV OVERLAY PATCH v2.
+     ============================================================ -->
+<script>
+(function () {
+    "use strict";
+    const DEBUG = true;
+    const log = (...a) => { if (DEBUG) console.log("[RADIO-NOKICK]", ...a); };
+
+    // Проверяем, активно ли сейчас fullscreen визуализации
+    function isVizFullscreen() {
+        const viz = document.getElementById("vizContainer");
+        if (!viz) return false;
+        return document.fullscreenElement === viz ||
+               document.webkitFullscreenElement === viz ||
+               viz.classList.contains("viz-pseudo-fs");
+    }
+
+    // Глушим автостарт VizEngine при смене станции, если мы в fullscreen.
+    // Патчим VizEngine.start так, чтобы он не вызывал stop() при активном fs.
+    function patchVizEngineStart() {
+        if (typeof VizEngine === "undefined" || !VizEngine.start) return false;
+        if (VizEngine.start.__noKickPatched) return true;
+
+        const origStart = VizEngine.start.bind(VizEngine);
+
+        VizEngine.start = function (country) {
+            // Если мы в fullscreen — НЕ перезапускаем визуализацию целиком.
+            // Просто игнорируем этот вызов: пусть текущая картинка крутится,
+            // а новая страна подхватится при следующем штатном тике.
+            if (isVizFullscreen() && VizEngine.isActive()) {
+                log("VizEngine.start заблокирован (в fullscreen, активен) — страна:", country);
+                // Опционально: можно сменить currentCountry, но т.к.
+                // он внутри замыкания — просто no-op.
+                return;
+            }
+            return origStart(country);
+        };
+        VizEngine.start.__noKickPatched = true;
+        log("✅ VizEngine.start пропатчен — не выкидывает из fs");
+        return true;
+    }
+
+    // Дополнительно: убираем принудительный exitFullscreen из stop(),
+    // если он вызывается НЕ из start (на случай ручной остановки).
+    // Но фактически после патча выше stop() при смене станции не вызывается —
+    // мы блокируем сам start, поэтому это «страховка».
+    function patchVizEngineStop() {
+        if (typeof VizEngine === "undefined" || !VizEngine.stop) return false;
+        if (VizEngine.stop.__noKickPatched) return true;
+
+        const origStop = VizEngine.stop.bind(VizEngine);
+        VizEngine.stop = function () {
+            // Если пользователь сам явно закрыл визуализацию — выходим из fs как обычно.
+            // Здесь мы НЕ можем отличить «ручной stop» от «stop из start»,
+            // потому что start уже пропатчен выше и stop не вызывает.
+            // Значит этот путь — всегда ручной → поведение штатное.
+            return origStop();
+        };
+        VizEngine.stop.__noKickPatched = true;
+        return true;
+    }
+
+    let tries = 0;
+    const iv = setInterval(function () {
+        tries++;
+        const a = patchVizEngineStart();
+        const b = patchVizEngineStop();
+        if ((a && b) || tries > 30) {
+            clearInterval(iv);
+            log("Патч применён за", tries, "попыток");
+        }
+    }, 300);
+})();
+</script>
+<!-- END RADIO FULLSCREEN NO-KICK PATCH -->
+
 </body>
 </html>
