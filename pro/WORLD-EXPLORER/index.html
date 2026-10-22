@@ -10251,5 +10251,248 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END VIZ SMOOTH TRANSITION FIX v1
      ============================================================ -->
+
+<!-- ============================================================
+     VIZ DESKTOP HINT FIX v1
+     Убирает ложную подсказку «Поверните телефон» на десктопе.
+     Вставлять ПОСЛЕ VIZ ORIENTATION FIX v2.
+     ============================================================ -->
+<style id="vizDesktopHintStyles">
+    /* ============ ЖЁСТКО СКРЫВАЕМ НА ДЕСКТОПЕ ============ */
+    /* pointer: fine = мышь/трекпад → это точно не телефон */
+    @media (pointer: fine) {
+        #vizContainer .viz-rotate-hint,
+        #vizContainer[data-lock-failed="1"] .viz-rotate-hint,
+        #vizContainer:fullscreen .viz-rotate-hint,
+        #vizContainer.viz-pseudo-fs .viz-rotate-hint {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+    }
+
+    /* ============ ДОПОЛНИТЕЛЬНО: только портрет + touch ============ */
+    /* Показываем подсказку ТОЛЬКО когда:
+       - ориентация портретная
+       - И устройство с тачскрином (нет hover)
+       - И data-lock-failed="1" (lock реально не сработал) */
+    @media (orientation: landscape) {
+        #vizContainer .viz-rotate-hint {
+            display: none !important;
+            opacity: 0 !important;
+        }
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+        #vizContainer .viz-rotate-hint {
+            display: none !important;
+        }
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log = (...a) => { if (DEBUG) console.log("[VIZ-DESKTOP-FIX]", ...a); };
+
+    const container = document.getElementById("vizContainer");
+    if (!container) {
+        setTimeout(arguments.callee, 500);
+        return;
+    }
+
+    // ============================================================
+    // 1. ОПРЕДЕЛЕНИЕ ДЕСКТОПА
+    // ============================================================
+    function isDesktop() {
+        // pointer: fine = точный указатель (мышь/трекпад/стилус)
+        // hover: hover = устройство умеет hover (телефоны — нет)
+        const hasFinePointer = window.matchMedia("(pointer: fine)").matches;
+        const hasHover = window.matchMedia("(hover: hover)").matches;
+        // Десктоп = fine pointer + hover, ИЛИ отсутствие touch-событий
+        const noTouch = !("ontouchstart" in window) &&
+                        (navigator.maxTouchPoints === 0 || navigator.maxTouchPoints === undefined);
+        return (hasFinePointer && hasHover) || noTouch;
+    }
+
+    function isMobileUA() {
+        return /Android|iPhone|iPad|iPod|Mobile|Windows Phone|webOS|BlackBerry/i
+            .test(navigator.userAgent);
+    }
+
+    function isTabletUA() {
+        // iPad на iOS 13+ притворяется Mac — проверяем touch
+        if (/iPad/i.test(navigator.userAgent)) return true;
+        if (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) return true;
+        return /Tablet|PlayBook|Silk/i.test(navigator.userAgent);
+    }
+
+    const desktop = isDesktop() && !isTabletUA();
+    log("Диагностика:", {
+        isDesktop: desktop,
+        isMobileUA: isMobileUA(),
+        isTabletUA: isTabletUA(),
+        hasFinePointer: window.matchMedia("(pointer: fine)").matches,
+        hasHover: window.matchMedia("(hover: hover)").matches,
+        maxTouchPoints: navigator.maxTouchPoints,
+        screenOrientation: screen.orientation && screen.orientation.type
+    });
+
+    // ============================================================
+    // 2. ФУНКЦИЯ ПРИНУДИТЕЛЬНОГО СКРЫТИЯ ПОДСКАЗКИ
+    // ============================================================
+    function hideHintPermanently() {
+        const hint = container.querySelector(".viz-rotate-hint");
+        if (!hint) return;
+        hint.style.setProperty("display", "none", "important");
+        hint.style.setProperty("opacity", "0", "important");
+        hint.style.setProperty("visibility", "hidden", "important");
+        // Помечаем, чтобы другие патчи не «включали» обратно
+        hint.dataset.desktopDisabled = "1";
+        log("🚫 Подсказка отключена навсегда (десктоп)");
+    }
+
+    // ============================================================
+    // 3. ПЕРЕХВАТЫВАЕМ УСТАНОВКУ data-lock-failed
+    // ============================================================
+    // VIZ ORIENTATION FIX ставит атрибут через setAttribute.
+    // Мы перехватываем это и не даём установить на десктопе.
+    if (desktop) {
+        const origSetAttr = container.setAttribute.bind(container);
+        container.setAttribute = function (name, value) {
+            if (name === "data-lock-failed" && this === container) {
+                log("⛔ setAttribute('data-lock-failed') заблокирован на десктопе");
+                return; // игнорируем
+            }
+            return origSetAttr(name, value);
+        };
+        log("✅ setAttribute('data-lock-failed') перехвачен");
+    }
+
+    // ============================================================
+    // 4. MUTATION OBSERVER — если кто-то всё же поставит атрибут
+    // ============================================================
+    const attrObserver = new MutationObserver(function (mutations) {
+        if (!desktop) return;
+        for (const m of mutations) {
+            if (m.type === "attributes" && m.attributeName === "data-lock-failed") {
+                if (container.hasAttribute("data-lock-failed")) {
+                    log("🧹 Удаляю data-lock-failed (десктоп)");
+                    container.removeAttribute("data-lock-failed");
+                    hideHintPermanently();
+                }
+            }
+            if (m.type === "attributes" && m.attributeName === "class") {
+                // Если кто-то добавил viz-pseudo-fs на десктопе — тоже убираем
+                if (container.classList.contains("viz-pseudo-fs")) {
+                    log("🧹 Убираю viz-pseudo-fs (десктоп)");
+                    // НЕ убираем — на десктопе pseudo-fs может быть нужен
+                    // для CSS, просто скрываем подсказку
+                    hideHintPermanently();
+                }
+            }
+        }
+    });
+    attrObserver.observe(container, {
+        attributes: true,
+        attributeFilter: ["data-lock-failed", "class"]
+    });
+
+    // ============================================================
+    // 5. ПРОВЕРКА ПРИ КАЖДОМ ВХОДЕ В FULLSCREEN
+    // ============================================================
+    function checkAndHide() {
+        if (desktop) {
+            hideHintPermanently();
+            return;
+        }
+        // На мобильных — стандартная логика:
+        // если landscape — скрыть, если portrait + lock-failed — показать
+        const hint = container.querySelector(".viz-rotate-hint");
+        if (!hint) return;
+
+        const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+        const lockFailed = container.getAttribute("data-lock-failed") === "1";
+        const isFs = document.fullscreenElement === container ||
+                     document.webkitFullscreenElement === container ||
+                     container.classList.contains("viz-pseudo-fs");
+
+        if (isFs && isPortrait && lockFailed) {
+            hint.style.setProperty("display", "flex", "important");
+            hint.style.setProperty("opacity", "1", "important");
+            hint.style.removeProperty("visibility");
+        } else {
+            hint.style.setProperty("display", "none", "important");
+            hint.style.setProperty("opacity", "0", "important");
+            hint.style.setProperty("visibility", "hidden", "important");
+        }
+    }
+
+    document.addEventListener("fullscreenchange", function () {
+        setTimeout(checkAndHide, 100);
+    });
+    document.addEventListener("webkitfullscreenchange", function () {
+        setTimeout(checkAndHide, 100);
+    });
+    window.addEventListener("orientationchange", function () {
+        setTimeout(checkAndHide, 200);
+    });
+    if (screen.orientation && screen.orientation.addEventListener) {
+        screen.orientation.addEventListener("change", function () {
+            setTimeout(checkAndHide, 100);
+        });
+    }
+
+    // ============================================================
+    // 6. ПАТЧ toggleFsCorrect — на десктопе НЕ вызываем lock()
+    // ============================================================
+    // Предотвращаем reject от lock() ещё до того, как он случится
+    if (desktop) {
+        // Перехватываем screen.orientation.lock глобально на этой странице
+        // (влияет только на наш код, т.к. другие скрипты его тоже вызывают)
+        if (screen.orientation && typeof screen.orientation.lock === "function") {
+            const origLock = screen.orientation.lock.bind(screen.orientation);
+            screen.orientation.lock = function (orientation) {
+                if (desktop) {
+                    log("⛔ screen.orientation.lock() заблокирован на десктопе");
+                    // Возвращаем уже resolved promise — как будто успех
+                    return Promise.resolve();
+                }
+                return origLock(orientation);
+            };
+            log("✅ screen.orientation.lock перехвачен");
+        }
+    }
+
+    // ============================================================
+    // 7. INIT
+    // ============================================================
+    // Применяем сразу, если уже fullscreen
+    checkAndHide();
+
+    // Также периодически проверяем (на случай, если кто-то поставит атрибут
+    // раньше, чем сработал MutationObserver)
+    if (desktop) {
+        setInterval(function () {
+            if (container.hasAttribute("data-lock-failed")) {
+                container.removeAttribute("data-lock-failed");
+            }
+            const hint = container.querySelector(".viz-rotate-hint");
+            if (hint && hint.style.display !== "none") {
+                hideHintPermanently();
+            }
+        }, 1000);
+    }
+
+    log("✅ VIZ DESKTOP HINT FIX установлен. Desktop:", desktop);
+
+})();
+</script>
+<!-- ============================================================
+     END VIZ DESKTOP HINT FIX
+     ============================================================ -->
+
 </body>
 </html>
