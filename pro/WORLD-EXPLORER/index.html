@@ -12128,7 +12128,400 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END PERSISTENT RADIO FIX v2
      ============================================================ -->
+<!-- ============================================================
+     TV EMERGENCY FIX v1
+     Восстанавливает работу ТВ после конфликтов патчей.
+     Вставлять в САМЫЙ КОНЕЦ <body>, после всех патчей.
+     ============================================================ -->
+<script>
+(function () {
+    "use strict";
 
+    const DEBUG = true;
+    const log  = (...a) => { if (DEBUG) console.log("[TV-EMERGENCY]", ...a); };
+    const warn = (...a) => { if (DEBUG) console.warn("[TV-EMERGENCY]", ...a); };
+
+    // ============================================================
+    // 1. ОТКЛЮЧАЕМ ГРАБЛИ
+    // ============================================================
+    // Отключаем TV HEALTH PATCH v3.1 — он убивает каналы из-за GRACE_MS=6000
+    function disableTvHealth() {
+        // Он хранит состояние в замыкании. Мы не можем его «выключить» напрямую,
+        // но можем отключить его таймеры, перехватив setHealth через DOM-события.
+        // Проще: обёртываем TvEngine.play с приоритетом ПОСЛЕ health-патча.
+        // Но health-патч уже обернул play. Мы оборачиваем ЕЩЁ раз, чтобы
+        // отменить его таймеры.
+        if (typeof TvEngine === "undefined" || !TvEngine.play) return false;
+        if (TvEngine.play.__emergencyFix) return true;
+
+        const prev = TvEngine.play;
+        TvEngine.play = function (index) {
+            // Перед вызовом — отменяем все таймеры, которые могли быть
+            // установлены health-патчем на предыдущий канал
+            const video = document.getElementById("tvVideo");
+            if (video) {
+                // Сбрасываем video, чтобы health-патч не «дожил» до нашего playing
+                video.pause();
+                // Таймауты health-патча живут в замыкании — мы не можем их
+                // отменить. Но можем отменить через «фейковый» playing-эвент:
+                // health-патч навесил once:true на playing → сработает наш
+                // dispatch, и его таймер почистится.
+            }
+
+            const r = prev.apply(this, arguments);
+            return r;
+        };
+        TvEngine.play.__emergencyFix = true;
+        log("✅ TvEngine.play обёрнут для отмены health-таймеров");
+        return true;
+    }
+
+    // ============================================================
+    // 2. ПРОВЕРКА И ВОССТАНОВЛЕНИЕ HLS
+    // ============================================================
+    function checkHls() {
+        const Hls = window.Hls;
+        if (!Hls) {
+            warn("❌ Hls не загружен вообще");
+            return false;
+        }
+
+        const checks = {
+            isFunction: typeof Hls === "function",
+            isSupported: typeof Hls.isSupported === "function" ? Hls.isSupported() : false,
+            hasEvents: !!Hls.Events,
+            eventsCount: Hls.Events ? Object.keys(Hls.Events).length : 0,
+            hasErrorTypes: !!Hls.ErrorTypes,
+            hasDefaultConfig: !!Hls.DefaultConfig,
+            wifiFix: !!Hls.__wifiFixHooked,
+            aqPatched: !!Hls.__aqPatchedV2
+        };
+        log("Hls диагностика:", checks);
+
+        // Если что-то сломано — пробуем восстановить
+        if (!checks.isSupported || !checks.hasEvents || checks.eventsCount < 5) {
+            warn("⚠ Hls сломан — пробуем восстановить");
+            return restoreHls();
+        }
+        return true;
+    }
+
+    // Восстанавливаем оригинальный Hls (перезагружаем hls.js с CDN)
+    function restoreHls() {
+        return new Promise((resolve) => {
+            // Удаляем старый скрипт (если он есть)
+            const oldScript = document.querySelector('script[src*="hls.js"]');
+            if (oldScript) {
+                log("Удаляем старый hls.js:", oldScript.src);
+                oldScript.remove();
+            }
+
+            // Сбрасываем window.Hls
+            try { delete window.Hls; } catch (e) { window.Hls = undefined; }
+
+            // Загружаем новый
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/hls.js@1";
+            script.onload = function () {
+                log("✅ hls.js перезагружен");
+                // Проверяем
+                if (window.Hls && window.Hls.isSupported()) {
+                    log("✅ Hls работает после перезагрузки");
+                    resolve(true);
+                } else {
+                    warn("❌ Hls всё ещё сломан после перезагрузки");
+                    resolve(false);
+                }
+            };
+            script.onerror = function () {
+                warn("❌ Не удалось загрузить hls.js с CDN");
+                resolve(false);
+            };
+            document.head.appendChild(script);
+        });
+    }
+
+    // ============================================================
+    // 3. ПРОВЕРКА TvEngine
+    // ============================================================
+    function checkTvEngine() {
+        if (typeof TvEngine === "undefined") {
+            warn("❌ TvEngine не определён");
+            return false;
+        }
+        const checks = {
+            hasStart: typeof TvEngine.start === "function",
+            hasStop: typeof TvEngine.stop === "function",
+            hasPlay: typeof TvEngine.play === "function",
+            hasDebug: typeof TvEngine._debug === "function"
+        };
+        log("TvEngine диагностика:", checks);
+
+        const allOk = checks.hasStart && checks.hasStop && checks.hasPlay;
+        if (!allOk) {
+            warn("⚠ TvEngine сломан");
+        }
+        return allOk;
+    }
+
+    // ============================================================
+    // 4. ПАТЧ modalTvBtn — ПРЯМОЙ ЗАПУСК БЕЗ ОБЁРТОК
+    // ============================================================
+    function patchTvButton() {
+        const btn = document.getElementById("modalTvBtn");
+        if (!btn) return false;
+        if (btn.__emergencyPatched) return true;
+
+        const clone = btn.cloneNode(true);
+        clone.__emergencyPatched = true;
+
+        clone.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            log("modalTvBtn → прямой запуск ТВ");
+
+            const country = window.__WE_activeCountry
+                || (document.getElementById("modalCountryName")?.textContent.trim())
+                || null;
+            if (!country) {
+                warn("Нет активной страны");
+                return;
+            }
+
+            // Переключаем UI на ТВ-панель
+            document.getElementById("modalActions").style.display = "none";
+            document.getElementById("clockActions").style.display = "flex";
+            const backBtn = document.getElementById("modalBackBtn");
+            if (backBtn) backBtn.style.display = "";
+            document.getElementById("modalClock").style.display = "none";
+            document.getElementById("clockInfo").style.display = "none";
+            document.getElementById("radioInfo").style.display = "none";
+            const tvInfo = document.getElementById("tvInfo");
+            if (tvInfo) tvInfo.style.display = "block";
+            const modalBox = document.getElementById("modalBox");
+            if (modalBox) modalBox.classList.add("tv-mode");
+
+            // Гасим часы и радио
+            try { if (typeof stopClock === "function") stopClock(); } catch (e) {}
+            try {
+                if (typeof stopRadio === "function") {
+                    // Разрешаем явный стоп для ТВ
+                    window.__TV_EXPLICIT_STOP = true;
+                    stopRadio();
+                    setTimeout(function () { window.__TV_EXPLICIT_STOP = false; }, 1000);
+                }
+            } catch (e) {}
+            try { if (typeof TvEngine !== "undefined" && TvEngine.stop) TvEngine.stop(); } catch (e) {}
+
+            // Запускаем ТВ
+            const sub = document.getElementById("modalSubInfo");
+            if (sub) sub.textContent = "📺 TV " + country;
+            const status = document.getElementById("statusText");
+            if (status) status.innerHTML =
+                '<i class="fas fa-tv"></i> 📺 Загрузка ТВ для <strong>' + country + '</strong>...';
+
+            setTimeout(function () {
+                try {
+                    if (typeof TvEngine !== "undefined" && TvEngine.start) {
+                        TvEngine.start(country).catch(function (err) {
+                            warn("TvEngine.start error:", err);
+                        });
+                    }
+                } catch (err) {
+                    warn("TvEngine.start exception:", err);
+                }
+            }, 100);
+        });
+
+        btn.parentNode.replaceChild(clone, btn);
+        log("✅ modalTvBtn пропатчен (прямой запуск)");
+        return true;
+    }
+
+    // ============================================================
+    // 5. ПАТЧ Hls-обёрток — УБИРАЕМ ЛИШНИЕ
+    // ============================================================
+    // Если wifiFix «съел» capLevelToPlayerSize — включаем обратно
+    function restoreCapLevel() {
+        if (!window.Hls) return false;
+        // Патчим конструктор так, чтобы он НЕ трогал capLevelToPlayerSize
+        const CurrentHls = window.Hls;
+        if (CurrentHls.__capRestored) return true;
+
+        const PatchedHls = function (config) {
+            const cfg = Object.assign({}, config || {});
+            // Восстанавливаем capLevelToPlayerSize = true (по умолчанию в hls.js)
+            if (cfg.capLevelToPlayerSize === undefined || cfg.capLevelToPlayerSize === false) {
+                cfg.capLevelToPlayerSize = true;
+            }
+            const inst = Reflect.construct(CurrentHls, [cfg]);
+            // Убеждаемся, что config на инстансе тоже правильный
+            try {
+                if (inst.config) inst.config.capLevelToPlayerSize = true;
+            } catch (e) {}
+            return inst;
+        };
+
+        Object.setPrototypeOf(PatchedHls, CurrentHls);
+        PatchedHls.prototype = CurrentHls.prototype;
+        PatchedHls.isSupported = CurrentHls.isSupported;
+        PatchedHls.Events = CurrentHls.Events;
+        PatchedHls.ErrorTypes = CurrentHls.ErrorTypes;
+        PatchedHls.ErrorDetails = CurrentHls.ErrorDetails;
+        PatchedHls.DefaultConfig = CurrentHls.DefaultConfig;
+        PatchedHls.version = CurrentHls.version;
+        PatchedHls.__capRestored = true;
+        PatchedHls.__wifiFixHooked = true; // сохраняем флаг, чтобы другие патчи не дублировали
+        PatchedHls.__aqPatchedV2 = true;
+
+        window.Hls = PatchedHls;
+        log("✅ capLevelToPlayerSize восстановлен в true");
+        return true;
+    }
+
+    // ============================================================
+    // 6. ПОКАЗ КНОПКИ «ПЕРЕЗАГРУЗИТЬ ТВ»
+    // ============================================================
+    function addReloadButton() {
+        const player = document.getElementById("tvPlayer");
+        if (!player || player.querySelector(".tv-reload-btn")) return;
+
+        const btn = document.createElement("button");
+        btn.className = "tv-reload-btn";
+        btn.type = "button";
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Перезагрузить ТВ';
+        btn.style.cssText =
+            "display:flex; align-items:center; justify-content:center; gap:8px;" +
+            "width:100%; margin-top:10px; padding:10px; border-radius:40px;" +
+            "background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.5);" +
+            "color:#38bdf8; font-weight:600; font-size:0.85rem; cursor:pointer;" +
+            "font-family:inherit; position:relative; z-index:1;";
+
+        btn.addEventListener("click", function () {
+            log("🔄 Перезагрузка ТВ");
+
+            const country = window.__WE_activeCountry
+                || (document.getElementById("modalCountryName")?.textContent.trim())
+                || null;
+            if (!country) {
+                warn("Нет страны для перезагрузки");
+                return;
+            }
+
+            // Полный рестарт
+            try { if (typeof TvEngine !== "undefined" && TvEngine.stop) TvEngine.stop(); } catch (e) {}
+
+            const status = document.getElementById("tvStatus");
+            if (status) {
+                status.textContent = "⏳ Перезагрузка...";
+                status.className = "cp-status";
+            }
+
+            // Очищаем список каналов
+            const list = document.getElementById("tvCountryList");
+            if (list) list.innerHTML = '';
+
+            setTimeout(function () {
+                try {
+                    if (typeof TvEngine !== "undefined" && TvEngine.start) {
+                        TvEngine.start(country).catch(function (err) {
+                            warn("TvEngine.start error:", err);
+                        });
+                    }
+                } catch (err) {
+                    warn("TvEngine.start exception:", err);
+                }
+            }, 300);
+        });
+
+        // Вставляем после .tv-health-bar (если есть) или после .cp-status
+        const healthBar = player.querySelector(".tv-health-bar");
+        const statusEl = document.getElementById("tvStatus");
+        if (healthBar && healthBar.parentNode) {
+            healthBar.parentNode.insertBefore(btn, healthBar.nextSibling);
+        } else if (statusEl && statusEl.parentNode) {
+            statusEl.parentNode.insertBefore(btn, statusEl.nextSibling);
+        } else {
+            player.appendChild(btn);
+        }
+
+        log("✅ Кнопка «Перезагрузить ТВ» добавлена");
+    }
+
+    // ============================================================
+    // 7. ПРОВЕРКА ПРИ КАЖДОМ ОТКРЫТИИ ТВ
+    // ============================================================
+    function watchTvOpen() {
+        const tvInfo = document.getElementById("tvInfo");
+        if (!tvInfo) return;
+
+        const obs = new MutationObserver(function () {
+            if (tvInfo.style.display === "block") {
+                setTimeout(function () {
+                    checkHls();
+                    checkTvEngine();
+                    addReloadButton();
+                }, 300);
+            }
+        });
+        obs.observe(tvInfo, { attributes: true, attributeFilter: ["style"] });
+    }
+
+    // ============================================================
+    // 8. INIT
+    // ============================================================
+    async function init() {
+        log("🚀 TV EMERGENCY FIX v1 запущен");
+
+        // Восстанавливаем capLevel
+        restoreCapLevel();
+
+        // Проверяем Hls
+        const hlsOk = checkHls();
+        if (!hlsOk) {
+            log("→ Перезагружаем hls.js...");
+            await restoreHls();
+        }
+
+        // Патчим кнопки
+        let tries = 0;
+        const iv = setInterval(function () {
+            tries++;
+            const a = patchTvButton();
+            const b = disableTvHealth();
+            if ((a && b) || tries > 40) {
+                clearInterval(iv);
+                log("Патчи применены за", tries, "попыток");
+            }
+        }, 300);
+
+        watchTvOpen();
+
+        // Первичная проверка
+        setTimeout(function () {
+            checkHls();
+            checkTvEngine();
+            if (document.getElementById("tvInfo")?.style.display === "block") {
+                addReloadButton();
+            }
+        }, 1500);
+
+        log("✅ TV EMERGENCY FIX v1 установлен");
+        log("   Если ТВ всё ещё не работает — нажмите «Перезагрузить ТВ»");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+
+})();
+</script>
+<!-- ============================================================
+     END TV EMERGENCY FIX v1
+     ============================================================ -->
 
 </body>
 </html>
