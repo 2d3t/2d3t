@@ -9669,5 +9669,587 @@ if (isTvFullscreen() || isVizFullscreen()) {
 <!-- ============================================================
      END ADAPTIVE QUALITY Wi-Fi FIX v3
      ============================================================ -->
+
+<!-- ============================================================
+     VIZ ORIENTATION FIX v2
+     Исправляет «поверните телефон, а оно зафиксировано».
+     Вставлять в САМЫЙ КОНЕЦ <body>, после VIZ RADIO PATCH.
+     ============================================================ -->
+<style id="vizOrientFixStyles">
+    /* По умолчанию подсказка СКРЫТА везде. Показываем только если
+       JS решил, что lock реально недоступен (data-lock-failed="1") */
+    #vizContainer .viz-rotate-hint {
+        display: none !important;
+        opacity: 0 !important;
+    }
+    #vizContainer[data-lock-failed="1"]:fullscreen .viz-rotate-hint,
+    #vizContainer[data-lock-failed="1"]:-webkit-full-screen .viz-rotate-hint,
+    #vizContainer[data-lock-failed="1"].viz-pseudo-fs .viz-rotate-hint {
+        display: flex !important;
+        opacity: 1 !important;
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log  = (...a) => { if (DEBUG) console.log("[VIZ-ORIENT-FIX]", ...a); };
+    const warn = (...a) => { if (DEBUG) console.warn("[VIZ-ORIENT-FIX]", ...a); };
+
+    const container = document.getElementById("vizContainer");
+    if (!container) {
+        log("vizContainer не найден — ждём");
+        setTimeout(() => init(), 500);
+        return;
+    }
+
+    // ============================================================
+    // 1. УБИРАЕМ СТАРЫЕ ОБРАБОТЧИКИ
+    // ============================================================
+    // Заменяем кнопку vizFsBtn на клон — снимаем старые слушатели
+    function killOldFsButton() {
+        const oldBtn = document.getElementById("vizFsBtn");
+        if (!oldBtn) return null;
+        if (oldBtn.dataset.orientFixed === "1") return oldBtn;
+
+        const newBtn = oldBtn.cloneNode(true);
+        newBtn.dataset.orientFixed = "1";
+        oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+        log("✅ Старая кнопка vizFsBtn заменена клоном");
+        return newBtn;
+    }
+
+    // Снимаем все старые dblclick-обработчики контейнера (toggleVizFullscreen)
+    // Клонируем сам контейнер — но это убьёт и layerA/layerB, и VizEngine.
+    // Нельзя. Вместо этого используем capture-перехват, который блокирует
+    // всплытие старого обработчика.
+    function blockOldDblClick() {
+        if (container.__oldDblBlocked) return;
+        container.__oldDblBlocked = true;
+
+        container.addEventListener("dblclick", function (e) {
+            if (e.target.closest(".viz-close") || e.target.closest(".viz-fs-btn")) return;
+            // Останавливаем старый обработчик toggleVizFullscreen
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            log("dblclick перехвачен → toggleFsCorrect");
+            toggleFsCorrect();
+        }, true); // capture — раньше старого (он bubble)
+    }
+
+    // ============================================================
+    // 2. ПРАВИЛЬНЫЙ TOGGLE FULLSCREEN
+    // ============================================================
+    let pendingLock = false;
+
+    function isFullscreen() {
+        return document.fullscreenElement === container ||
+               document.webkitFullscreenElement === container ||
+               container.classList.contains("viz-pseudo-fs");
+    }
+
+    function unlockOrientationSilently() {
+        try {
+            if (screen.orientation && typeof screen.orientation.unlock === "function") {
+                screen.orientation.unlock();
+                log("🔓 orientation.unlock()");
+            }
+        } catch (e) {}
+    }
+
+    // Пытаемся залочить. Возвращает Promise<boolean> — успех/неудача.
+    function tryLockLandscape() {
+        return new Promise(function (resolve) {
+            if (!screen.orientation || typeof screen.orientation.lock !== "function") {
+                log("lock() не поддерживается в этом браузере");
+                resolve(false);
+                return;
+            }
+
+            let done = false;
+            const finish = (ok, reason) => {
+                if (done) return;
+                done = true;
+                if (!ok) warn("lock отклонён:", reason);
+                else log("✅ landscape locked");
+                resolve(ok);
+            };
+
+            // Таймаут — если браузер молчит
+            const timer = setTimeout(() => finish(false, "timeout"), 1500);
+
+            try {
+                screen.orientation.lock("landscape")
+                    .then(() => { clearTimeout(timer); finish(true); })
+                    .catch(err => {
+                        clearTimeout(timer);
+                        // Пробуем landscape-primary как fallback
+                        if (err && (err.name === "NotSupportedError" || err.name === "InvalidStateError")) {
+                            screen.orientation.lock("landscape-primary")
+                                .then(() => { clearTimeout(timer); finish(true); })
+                                .catch(e2 => { clearTimeout(timer); finish(false, e2 && e2.name); });
+                        } else {
+                            finish(false, err && err.name);
+                        }
+                    });
+            } catch (e) {
+                clearTimeout(timer);
+                finish(false, e);
+            }
+        });
+    }
+
+    // Помечаем контейнер: lock сработал (0) или провалился (1)
+    function setLockStatus(failed) {
+        if (failed) {
+            container.setAttribute("data-lock-failed", "1");
+            log("📱 Подсказка «поверните телефон» ВКЛЮЧЕНА (lock недоступен)");
+        } else {
+            container.removeAttribute("data-lock-failed");
+            log("🔄 Подсказка «поверните телефон» ОТКЛЮЧЕНА (lock работает)");
+        }
+    }
+
+    function toggleFsCorrect() {
+        if (!container) return;
+
+        // === ВЫХОД ===
+        if (isFullscreen()) {
+            log("→ выход из fullscreen");
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
+            // unlock вызываем ТОЛЬКО при выходе
+            setTimeout(unlockOrientationSilently, 200);
+            setLockStatus(false);
+            return;
+        }
+
+        // === ВХОД ===
+        const supportsFs = !!(container.requestFullscreen || container.webkitRequestFullscreen);
+
+        if (!supportsFs) {
+            // iOS Safari — нет requestFullscreen. Только CSS-псевдо.
+            container.classList.add("viz-pseudo-fs");
+            log("pseudo-fs (iOS fallback)");
+            // На iOS lock тоже нет — показываем подсказку
+            setLockStatus(true);
+            return;
+        }
+
+        // Настоящий fullscreen
+        log("→ вход в fullscreen");
+        pendingLock = true;
+
+        const req = container.requestFullscreen
+            ? container.requestFullscreen()
+            : container.webkitRequestFullscreen();
+
+        Promise.resolve(req).then(() => {
+            log("✅ requestFullscreen разрешён");
+            // НЕ вызываем unlockOrientation() здесь!
+            // Ждём fullscreenchange, чтобы браузер успел применить fullscreen
+            // и только потом пытаемся lock.
+            // Пробуем сразу + с задержкой (некоторые браузеры требуют задержку)
+            tryLockLandscape().then(ok => {
+                setLockStatus(!ok);
+                pendingLock = false;
+                if (!ok) {
+                    // Вторая попытка через 400мс — некоторые Android
+                    // требуют, чтобы fullscreenchange уже отработал
+                    setTimeout(() => {
+                        tryLockLandscape().then(ok2 => {
+                            setLockStatus(!ok2);
+                        });
+                    }, 400);
+                }
+            });
+        }).catch(err => {
+            log("requestFullscreen отклонён:", err && err.name);
+            pendingLock = false;
+            setLockStatus(true);
+        });
+    }
+
+    // ============================================================
+    // 3. НАВЕШИВАЕМ ПРАВИЛЬНЫЕ ОБРАБОТЧИКИ
+    // ============================================================
+    function bindNewHandlers() {
+        const newBtn = killOldFsButton();
+        if (newBtn) {
+            newBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                toggleFsCorrect();
+            });
+        }
+        blockOldDblClick();
+    }
+
+    // ============================================================
+    // 4. FULLSCREENCHANGE — при входе пробуем lock ЕЩЁ РАЗ
+    // ============================================================
+    function onFullscreenChange() {
+        const isFs = document.fullscreenElement === container ||
+                     document.webkitFullscreenElement === container;
+
+        log("fullscreenchange, isFs =", isFs);
+
+        if (isFs) {
+            // Если уже пытались — не дублируем. Если lock ещё не сработал —
+            // пробуем ещё раз (fullscreenchange часто срабатывает позже).
+            if (!pendingLock) {
+                tryLockLandscape().then(ok => {
+                    if (ok) setLockStatus(false);
+                    // если не сработал — оставляем как есть (подсказка уже показана)
+                });
+            }
+        } else {
+            // Вышли — снимаем подсказку и разблокируем
+            setLockStatus(false);
+            unlockOrientationSilently();
+            pendingLock = false;
+        }
+    }
+
+    // ============================================================
+    // 5. ИСПРАВЛЯЕМ CSS-ПОДСКАЗКУ
+    // ============================================================
+    // Убираем старое правило @media (orientation: portrait) через переопределение.
+    // В нашем <style id="vizOrientFixStyles"> уже стоит display:none !important,
+    // а показ включается только через [data-lock-failed="1"].
+    // Дополнительно: принудительно снимаем data-lock-failed при выходе.
+    function resetOnExit() {
+        const observer = new MutationObserver(function () {
+            const isFs = document.fullscreenElement === container ||
+                         document.webkitFullscreenElement === container;
+            if (!isFs && !container.classList.contains("viz-pseudo-fs")) {
+                container.removeAttribute("data-lock-failed");
+            }
+        });
+        observer.observe(container, { attributes: true, attributeFilter: ["class"] });
+    }
+
+    // ============================================================
+    // 6. ДИАГНОСТИКА: при старте визуализации логируем состояние
+    // ============================================================
+    function diag() {
+        const supportsLock = !!(screen.orientation && screen.orientation.lock);
+        const supportsFs = !!(container.requestFullscreen || container.webkitRequestFullscreen);
+        log("Диагностика:", {
+            supportsFullscreen: supportsFs,
+            supportsOrientationLock: supportsLock,
+            isiOS: /iPhone|iPad|iPod/.test(navigator.userAgent),
+            currentOrientation: (screen.orientation && screen.orientation.type) || "?"
+        });
+        if (!supportsLock) {
+            warn("⚠ lock() НЕ поддерживается — подсказка «поверните телефон» оправдана");
+        }
+    }
+
+    // ============================================================
+    // 7. INIT
+    // ============================================================
+    function init() {
+        bindNewHandlers();
+        diag();
+
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+
+        // При смене ориентации — если мы в fullscreen и lock не сработал,
+        // можно проверить ещё раз (пользователь мог повернуть сам)
+        if (screen.orientation && screen.orientation.addEventListener) {
+            screen.orientation.addEventListener("change", function () {
+                log("Ориентация изменилась:", screen.orientation.type);
+            });
+        }
+
+        resetOnExit();
+        log("✅ VIZ ORIENTATION FIX v2 установлен");
+    }
+
+    // Небольшая задержка, чтобы VIZ RADIO PATCH уже создал элементы
+    setTimeout(init, 300);
+
+})();
+</script>
+<!-- ============================================================
+     END VIZ ORIENTATION FIX v2
+     ============================================================ -->
+<!-- ============================================================
+     VIZ SMOOTH TRANSITION FIX v1
+     Делает переключение картинок радио-визуализации плавным.
+     Вставлять в САМЫЙ КОНЕЦ <body>, после VIZ ORIENTATION FIX.
+     ============================================================ -->
+<style id="vizSmoothStyles">
+    /* ============ 1. ВОЗВРАЩАЕМ cover ВЕЗДЕ ============ */
+    #vizContainer .viz-layer {
+        background-size: cover !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        /* Отключаем постоянный Ken Burns scale — он мешает кроссфейду */
+        transform: scale(1) !important;
+        transition: opacity 1.6s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+        will-change: opacity;
+    }
+    #vizContainer .viz-layer.active {
+        opacity: 1 !important;
+        /* Медленный Ken Burns — 25 секунд на 4% увеличения */
+        animation: vizSlowZoom 25s linear forwards;
+    }
+    @keyframes vizSlowZoom {
+        from { transform: scale(1.02); }
+        to   { transform: scale(1.06); }
+    }
+
+    /* В fullscreen — то же самое, БЕЗ переключения cover↔contain */
+    #vizContainer:fullscreen .viz-layer,
+    #vizContainer:-webkit-full-screen .viz-layer,
+    #vizContainer.viz-pseudo-fs .viz-layer {
+        background-size: cover !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+        transform: scale(1) !important;
+        transition: opacity 1.6s cubic-bezier(0.4, 0.0, 0.2, 1) !important;
+    }
+    #vizContainer:fullscreen .viz-layer.active,
+    #vizContainer:-webkit-full-screen .viz-layer.active,
+    #vizContainer.viz-pseudo-fs .viz-layer.active {
+        opacity: 1 !important;
+        animation: vizSlowZoom 25s linear forwards;
+    }
+
+    /* ============ 2. ПОДЛОЖКА БЕЗ ПРОВАЛА ============ */
+    #vizContainer .viz-blur-bg {
+        position: absolute;
+        inset: -20px;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        filter: blur(24px) brightness(0.32) saturate(1.15);
+        transform: scale(1.1);
+        z-index: 0;
+        opacity: 0;
+        /* Мягкий переход opacity 1.6s, но БЕЗ transition на background-image */
+        transition: opacity 1.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+        pointer-events: none;
+        will-change: opacity;
+    }
+    #vizContainer .viz-blur-bg.active {
+        opacity: 1;
+    }
+
+    /* ============ 3. prefers-reduced-motion ============ */
+    @media (prefers-reduced-motion: reduce) {
+        #vizContainer .viz-layer,
+        #vizContainer .viz-layer.active,
+        #vizContainer .viz-blur-bg {
+            transition-duration: 0.3s !important;
+            animation: none !important;
+        }
+    }
+
+    /* ============ 4. УБИРАЕМ СТАРЫЕ АНИМАЦИИ ============ */
+    /* Отключаем старое правило .viz-layer.active { transform: scale(1.14) } */
+    #vizContainer .viz-layer.active {
+        /* переопределяем transform через animation выше */
+    }
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const DEBUG = true;
+    const log  = (...a) => { if (DEBUG) console.log("[VIZ-SMOOTH]", ...a); };
+    const warn = (...a) => { if (DEBUG) console.warn("[VIZ-SMOOTH]", ...a); };
+
+    const container = document.getElementById("vizContainer");
+    const layerA    = document.getElementById("vizLayerA");
+    const layerB    = document.getElementById("vizLayerB");
+    const blurBg    = document.getElementById("vizBlurBg");
+
+    if (!container || !layerA || !layerB || !blurBg) {
+        log("Элементы не найдены — ждём");
+        setTimeout(arguments.callee, 500);
+        return;
+    }
+
+    // ============================================================
+    // 1. СИНХРОНИЗАЦИЯ ПОДЛОЖКИ С ОСНОВНЫМ СЛОЕМ
+    //    (без 300мс-задержки, без чёрного провала)
+    // ============================================================
+    let lastBlurUrl = "";
+    let blurFadeOutTimer = null;
+
+    function getActiveLayerUrl() {
+        // Приоритет: тот, у кого есть .active И opacity видимая
+        const aActive = layerA.classList.contains("active");
+        const bActive = layerB.classList.contains("active");
+        // Если оба active (переходный момент) — берём тот, у кого больше opacity
+        if (aActive && bActive) {
+            const aOp = parseFloat(getComputedStyle(layerA).opacity) || 0;
+            const bOp = parseFloat(getComputedStyle(layerB).opacity) || 0;
+            return aOp >= bOp ? layerA : layerB;
+        }
+        return aActive ? layerA : (bActive ? layerB : null);
+    }
+
+    function syncBlurSmooth() {
+        const src = getActiveLayerUrl();
+        if (!src) return;
+        const bg = src.style.backgroundImage || "";
+        if (!bg || bg === "none") return;
+        if (bg === lastBlurUrl) return;
+
+        lastBlurUrl = bg;
+
+        // Плавно: меняем картинку подложки в момент, когда она максимально прозрачна.
+        // Используем два шага:
+        // 1. Сначала ставим новую картинку и делаем opacity 0 (мгновенно)
+        // 2. Через RAF — плавно поднимаем opacity до 1
+        // Это гарантирует, что смена background-image не видна.
+
+        if (blurFadeOutTimer) clearTimeout(blurFadeOutTimer);
+
+        // Шаг 1: мгновенно прозрачная
+        blurBg.style.transition = "opacity 0.2s ease-out";
+        blurBg.style.opacity = "0";
+
+        // Шаг 2: меняем картинку, когда opacity = 0, и плавно проявляем
+        blurFadeOutTimer = setTimeout(function () {
+            blurBg.style.backgroundImage = bg;
+            // Форсируем reflow
+            void blurBg.offsetWidth;
+            // Шаг 3: плавный fade-in 1.6s
+            blurBg.style.transition = "opacity 1.6s cubic-bezier(0.4, 0.0, 0.2, 1)";
+            blurBg.style.opacity = "1";
+        }, 200);  // задержка короче, чем фейд-аут 200мс → невидимый swap
+
+        log("🖼 Подложка синхронизирована (плавно)");
+    }
+
+    // Следим за обоими слоями через MutationObserver —
+    // но НЕ через setInterval (он даёт 500мс-отставание)
+    const obs = new MutationObserver(function () {
+        // Двойной RAF — гарантирует, что transition уже стартовал
+        requestAnimationFrame(function () {
+            requestAnimationFrame(syncBlurSmooth);
+        });
+    });
+    obs.observe(layerA, { attributes: true, attributeFilter: ["class", "style"] });
+    obs.observe(layerB, { attributes: true, attributeFilter: ["class", "style"] });
+
+    // Первичная синхронизация — без спама
+    setTimeout(syncBlurSmooth, 400);
+
+    // ============================================================
+    // 2. НЕ ДАЁМ tick() ПРЕРЫВАТЬ TRANSITION
+    // ============================================================
+    // Оборачиваем VizEngine.stop и VizEngine.start, чтобы
+    // при активном fullscreen переключение не выбивало анимацию.
+    if (typeof VizEngine !== "undefined") {
+        const origStop = VizEngine.stop.bind(VizEngine);
+        VizEngine.stop = function () {
+            // Если в fullscreen и картинка в переходе — ждём 200мс
+            const isFs = document.fullscreenElement === container ||
+                         document.webkitFullscreenElement === container ||
+                         container.classList.contains("viz-pseudo-fs");
+            if (isFs) {
+                // Не выходим из fullscreen насильно — только гасим слои
+                layerA.classList.remove("active");
+                layerB.classList.remove("active");
+                if (blurBg) {
+                    blurBg.style.opacity = "0";
+                    blurBg.style.backgroundImage = "";
+                    lastBlurUrl = "";
+                }
+                // Возвращаем видимость контейнера
+                container.style.display = "none";
+                log("🛑 stop() без выхода из fullscreen");
+                return;
+            }
+            return origStop();
+        };
+        log("✅ VizEngine.stop обёрнут (без сброса fullscreen)");
+    }
+
+    // ============================================================
+    // 3. ПЛАВНЫЙ ВХОД В FULLSCREEN — не дёргаем transition
+    // ============================================================
+    document.addEventListener("fullscreenchange", function () {
+        const isFs = document.fullscreenElement === container ||
+                     document.webkitFullscreenElement === container;
+        if (isFs) {
+            // Принудительно применяем cover сразу — чтобы не было «прыжка» layout
+            layerA.style.backgroundSize = "cover";
+            layerB.style.backgroundSize = "cover";
+            if (blurBg) blurBg.style.backgroundSize = "cover";
+            // Форсируем reflow один раз
+            void container.offsetWidth;
+            log("✅ cover применён при входе в fullscreen");
+        }
+    });
+
+    // ============================================================
+    // 4. ХУК НА РУЧНОЕ ПЕРЕКЛЮЧЕНИЕ СТАНЦИИ
+    //    (RADIO FULLSCREEN NO-KICK блокирует start — но не tick)
+    // ============================================================
+    // Если пользователь переключил станцию во время transition —
+    // дадим предыдущему transition закончиться
+    let transitionLocked = false;
+
+    function guardTransition() {
+        if (transitionLocked) return false;
+        transitionLocked = true;
+        setTimeout(() => { transitionLocked = false; }, 1600); // длительность transition
+        return true;
+    }
+
+    // Патчим playRadioStation — если идёт transition, не дёргаем
+    if (typeof window.playRadioStation === "function") {
+        const origPlay = window.playRadioStation;
+        window.playRadioStation = function (index) {
+            // Разрешаем всегда — но VizEngine.start (если он вызовется) уже
+            // обёрнут RADIO NO-KICK. Просто логируем.
+            log("⏭ playRadioStation →", index, "| transitionLocked =", transitionLocked);
+            return origPlay.apply(this, arguments);
+        };
+        log("✅ playRadioStation обёрнут (диагностика)");
+    }
+
+    // ============================================================
+    // 5. ДИАГНОСТИКА: ЛОГИРУЕМ ДЛИТЕЛЬНОСТЬ TRANSITION
+    // ============================================================
+    function diag() {
+        const st = getComputedStyle(layerA);
+        log("Диагностика transition:", {
+            property: st.transitionProperty,
+            duration: st.transitionDuration,
+            timing: st.transitionTimingFunction,
+            bgSize: st.backgroundSize,
+            reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        });
+    }
+    setTimeout(diag, 500);
+
+    // ============================================================
+    // 6. INIT
+    // ============================================================
+    log("✅ VIZ SMOOTH TRANSITION FIX v1 установлен");
+    log("   Кроссфейд: 1.6s cubic-bezier(0.4, 0, 0.2, 1)");
+    log("   Ken Burns: 25s scale 1.02 → 1.06");
+    log("   Подложка: синхронизирована без провала");
+
+})();
+</script>
+<!-- ============================================================
+     END VIZ SMOOTH TRANSITION FIX v1
+     ============================================================ -->
 </body>
 </html>
