@@ -4005,6 +4005,35 @@ function startRainbowHighlight(countryName) {
     } catch (e) {}
 }
 
+/* ============================================================
+   ЭКСПОРТ: центрирование страны на глобусе для внешних патчей
+   (история, любимые, share-ссылки)
+   ============================================================ */
+window.focusCountryOnGlobe = function (countryName) {
+    if (!countryName) return false;
+    try {
+        startRainbowHighlight(countryName);
+        stopRotation();
+
+        // === ВАЖНО: чтобы кнопка OK работала так же, как после Random ===
+        lastRandomCountry = countryName;
+        window.__WE_activeCountry = countryName;
+
+        const statusSpan = document.getElementById('statusText');
+        const statusCard = document.getElementById('statusCard');
+        if (statusSpan) {
+            statusSpan.innerHTML =
+                '<i class="fas fa-map-marked-alt"></i> Показана страна: <strong>' +
+                countryName + '</strong> — нажмите <strong>OK</strong> чтобы открыть';
+        }
+        if (statusCard) statusCard.style.borderColor = '#a78bfa';
+        return true;
+    } catch (e) {
+        console.warn('[focusCountryOnGlobe]', e);
+        return false;
+    }
+};
+
 
 polygonSeries.events.on("datavalidated", function() {
                 polygonSeries.mapPolygons.each(function(polygon) {
@@ -7504,31 +7533,55 @@ if (isTvFullscreen() || isVizFullscreen()) {
         text-overflow: ellipsis;
     }
     .cf-item .cf-remove {
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: #94a3b8;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.7rem;
-        flex-shrink: 0;
-        transition: all 0.2s;
-        padding: 0;
-    }
-    .cf-item .cf-remove:hover {
-        background: #ef4444;
-        border-color: #ef4444;
-        color: #fff;
-        transform: scale(1.1);
-    }
-    .cf-item .cf-remove.fav-remove:hover {
-        background: #ec4899;
-        border-color: #ec4899;
-    }
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #94a3b8;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    padding: 0;
+}
+.cf-item .cf-remove:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+    transform: scale(1.1);
+}
+.cf-item .cf-remove.fav-remove:hover {
+    background: #ec4899;
+    border-color: #ec4899;
+}
+
+/* === Кнопка "Показать на карте" в истории === */
+.cf-item .cf-map-btn {
+    background: rgba(167, 139, 250, 0.15);
+    border: 1px solid rgba(167, 139, 250, 0.5);
+    color: #c4b5fd;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    padding: 0;
+}
+.cf-item .cf-map-btn:hover {
+    background: #8b5cf6;
+    border-color: #a78bfa;
+    color: #fff;
+    transform: scale(1.1);
+}
 
     .cf-empty {
         text-align: center;
@@ -7920,31 +7973,34 @@ if (isTvFullscreen() || isVizFullscreen()) {
     }
 
     // ========== РЕНДЕР СПИСКОВ ==========
-    function renderHistList() {
-        const list = document.getElementById("cfHistList");
-        const count = document.getElementById("cfHistCount");
-        if (!list) return;
-        const hist = loadHistory();
-        if (count) count.textContent = "(" + hist.length + ")";
-        if (!hist.length) {
-            list.innerHTML = '<div class="cf-empty">История пуста — откройте любую страну на глобусе 🌍</div>';
-            return;
-        }
-        list.innerHTML = hist.map((h, i) => `
-            <div class="cf-item" data-idx="${i}" data-name="${escapeHtml(h.name)}">
-                <span class="cf-flag">${getFlag(h.name)}</span>
-                <div class="cf-info">
-                    <div class="cf-name">${escapeHtml(h.name)}</div>
-                    <div class="cf-meta">${escapeHtml(getLang(h.name))} · ${formatAgo(h.visitedAt)}</div>
-                </div>
-                <button class="cf-remove" data-action="remove" data-idx="${i}" title="Убрать">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `).join("");
-        bindListClicks(list);
+    
+function renderHistList() {
+    const list = document.getElementById("cfHistList");
+    const count = document.getElementById("cfHistCount");
+    if (!list) return;
+    const hist = loadHistory();
+    if (count) count.textContent = "(" + hist.length + ")";
+    if (!hist.length) {
+        list.innerHTML = '<div class="cf-empty">История пуста — откройте любую страну на глобусе 🌍</div>';
+        return;
     }
-
+    list.innerHTML = hist.map((h, i) => `
+        <div class="cf-item" data-idx="${i}" data-name="${escapeHtml(h.name)}">
+            <span class="cf-flag">${getFlag(h.name)}</span>
+            <div class="cf-info">
+                <div class="cf-name">${escapeHtml(h.name)}</div>
+                <div class="cf-meta">${escapeHtml(getLang(h.name))} · ${formatAgo(h.visitedAt)}</div>
+            </div>
+            <button class="cf-map-btn" data-idx="${i}" title="Показать на карте">
+                <i class="fas fa-map-marked-alt"></i>
+            </button>
+            <button class="cf-remove" data-action="remove" data-idx="${i}" title="Убрать">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join("");
+    bindListClicks(list);
+}
     function renderFavList() {
         const list = document.getElementById("cfFavList");
         const count = document.getElementById("cfFavCount");
@@ -7971,41 +8027,62 @@ if (isTvFullscreen() || isVizFullscreen()) {
     }
 
     function bindListClicks(list) {
-        list.querySelectorAll(".cf-item").forEach(el => {
-            el.addEventListener("click", function (e) {
-                if (e.target.closest(".cf-remove")) return;
-                const name = this.dataset.name;
-                closeCountriesModal();
-                setTimeout(() => openCountryModal(name), 150);
-            });
-        });
-        list.querySelectorAll(".cf-remove").forEach(btn => {
-            btn.addEventListener("click", function (e) {
-                e.stopPropagation();
-                const action = this.dataset.action;
-                const idx = parseInt(this.dataset.idx, 10);
-                if (action === "remove") {
-                    const hist = loadHistory();
-                    hist.splice(idx, 1);
-                    saveHistory(hist);
-                    renderHistList();
-                } else if (action === "remove-fav") {
-                    const favs = loadFavCountries();
-                    const removed = favs.splice(idx, 1)[0];
-                    saveFavCountries(favs);
-                    renderFavList();
-                    renderSidePanel();
-                    if (removed) {
-                        const cur = document.getElementById("modalCountryName");
-                        if (cur && cur.textContent.trim() === removed.name) {
-                            updateFavToggle(removed.name);
-                        }
-                        showToast("💔 Удалено из любимых: " + removed.name);
-                    }
+    // === Кнопка "Показать на карте" ===
+    list.querySelectorAll(".cf-map-btn").forEach(btn => {
+        btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            const idx = parseInt(this.dataset.idx, 10);
+            const hist = loadHistory();
+            const item = hist[idx];
+            if (!item) return;
+            closeCountriesModal();
+            setTimeout(() => {
+                if (typeof window.focusCountryOnGlobe === "function") {
+                    window.focusCountryOnGlobe(item.name);
+                    showToast("🗺 " + item.name + " — показана на карте");
+                } else {
+                    showToast("⚠ Карта ещё загружается, попробуйте через секунду");
                 }
-            });
+            }, 200);
         });
-    }
+    });
+
+    list.querySelectorAll(".cf-item").forEach(el => {
+        el.addEventListener("click", function (e) {
+            if (e.target.closest(".cf-remove")) return;
+            if (e.target.closest(".cf-map-btn")) return;
+            const name = this.dataset.name;
+            closeCountriesModal();
+            setTimeout(() => openCountryModal(name), 150);
+        });
+    });
+    list.querySelectorAll(".cf-remove").forEach(btn => {
+        btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            const action = this.dataset.action;
+            const idx = parseInt(this.dataset.idx, 10);
+            if (action === "remove") {
+                const hist = loadHistory();
+                hist.splice(idx, 1);
+                saveHistory(hist);
+                renderHistList();
+            } else if (action === "remove-fav") {
+                const favs = loadFavCountries();
+                const removed = favs.splice(idx, 1)[0];
+                saveFavCountries(favs);
+                renderFavList();
+                renderSidePanel();
+                if (removed) {
+                    const cur = document.getElementById("modalCountryName");
+                    if (cur && cur.textContent.trim() === removed.name) {
+                        updateFavToggle(removed.name);
+                    }
+                    showToast("💔 Удалено из любимых: " + removed.name);
+                }
+            }
+        });
+    });
+}
 
     // ========== ПАНЕЛЬ СЛЕВА ==========
     function renderSidePanel() {
