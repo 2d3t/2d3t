@@ -9184,6 +9184,490 @@ if (isTvFullscreen() || isVizFullscreen()) {
 })();
 </script>
 <!-- END RADIO FULLSCREEN NO-KICK PATCH -->
+<!-- ============================================================
+     ADAPTIVE QUALITY Wi-Fi FIX v3
+     Исправляет:
+       1. navigator.connection.downlink врёт на Wi-Fi → не доверяем
+       2. speed.cloudflare.com таймаутится / captive portal → измеряем
+          скорость по реальным HLS-сегментам
+       3. autoDowngradeLock 30с → 6с + мгновенный downgrade при stall
+       4. GRACE_MS 6с → 14с для ✅-каналов
+       5. bufferStalledError больше НЕ помечает канал мёртвым
+       6. capLevelToPlayerSize отключаем в fullscreen (иначе скачки)
+       7. Логирование уровней: видно, есть ли вообще куда понижать
+     Вставлять ПОСЛЕ ADAPTIVE QUALITY PATCH v2 и TV HEALTH v3.1.
+     ============================================================ -->
+<script>
+(function () {
+    "use strict";
 
+    const DEBUG = true;
+    const log  = (...a) => { if (DEBUG) console.log("[AQ-WIFI]", ...a); };
+    const warn = (...a) => { if (DEBUG) console.warn("[AQ-WIFI]", ...a); };
+
+    // ================== КОНСТАНТЫ ==================
+    const GRACE_MS_NEW          = 14000;  // было 6000 — для ✅-каналов
+    const UNKNOWN_TIMEOUT_NEW   = 3500;   // было 1500 — для CORS-каналов
+    const AUTO_DOWNGRADE_LOCK   = 6000;   // было 30000
+    const STALL_RESET_AFTER     = 15000;  // сброс stall-счётчика через 15с стабильности
+    const WIFI_CONSERVATIVE_MAX = 720;    // если скорость неизвестна на Wi-Fi
+    const WIFI_START_ESTIMATE   = 1.2e6;  // 1.2 Мбит/с стартовая оценка на Wi-Fi
+
+    // ================== ОПРЕДЕЛЕНИЕ СЕТИ ==================
+    function getConn() {
+        return navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+    }
+
+    function isWiFi() {
+        const c = getConn();
+        if (!c) return false;
+        if (c.type === "wifi") return true;
+        // Эвристика: 4g + downlink > 5 (или ровно 10 — заглушка Chrome) + нет saveData
+        if (c.effectiveType === "4g" && !c.saveData) {
+            if (typeof c.downlink === "number" && (c.downlink > 5 || c.downlink === 10)) return true;
+        }
+        return false;
+    }
+
+    function isCellular() {
+        const c = getConn();
+        if (!c) return false;
+        return c.type === "cellular";
+    }
+
+    function isSlow() {
+        const c = getConn();
+        if (!c) return false;
+        const et = c.effectiveType || "";
+        return et === "slow-2g" || et === "2g" || et === "3g" || c.saveData === true;
+    }
+
+    log("Сеть:", {
+        type: getConn()?.type || "?",
+        effectiveType: getConn()?.effectiveType || "?",
+        downlink: getConn()?.downlink ?? "?",
+        isWiFi: isWiFi(),
+        isCellular: isCellular(),
+        isSlow: isSlow()
+    });
+
+    // ================== ИЗМЕРЕНИЕ СКОРОСТИ ЧЕРЕЗ HLS ==================
+    // Храним скользящее среднее по последним 5 сегментам
+    const speedSamples = [];
+    let measuredDownlink = 0; // Мбит/с
+
+    function addSpeedSample(bps) {
+        if (!isFinite(bps) || bps <= 0) return;
+        speedSamples.push(bps);
+        if (speedSamples.length > 5) speedSamples.shift();
+        // Медиана — устойчивее к выбросам
+        const sorted = [...speedSamples].sort((a, b) => a - b);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        measuredDownlink = median / 1e6;
+        log("Скорость (медиана последних " + speedSamples.length + " сегментов):",
+            measuredDownlink.toFixed(2), "Мбит/с");
+    }
+
+    function getEffectiveSpeed() {
+        // На Wi-Fi доверяем ТОЛЬКО реальному замеру по сегментам
+        if (isWiFi()) {
+            return measuredDownlink > 0 ? measuredDownlink : 0;
+        }
+        // На сотовой — берём лучшее из HLS-замера и navigator.connection
+        const c = getConn();
+        const navDown = (c && typeof c.downlink === "number" && c.downlink > 0 && c.downlink !== 10)
+            ? c.downlink : 0;
+        return Math.max(measuredDownlink, navDown);
+    }
+
+    // ================== ПОЛИТИКА КАЧЕСТВА ==================
+    function computeMaxHeight(stallCount) {
+        const speed = getEffectiveSpeed();
+
+        // На Wi-Fi без замера — консервативно
+        if (isWiFi() && speed <= 0) {
+            return isSlow() ? 360 : WIFI_CONSERVATIVE_MAX;
+        }
+        // Полностью неизвестно — тоже консервативно
+        if (speed <= 0) {
+            return isSlow() ? 360 : 480;
+        }
+
+        const safe = speed * 0.55; // запас 45%
+        let h;
+        if (safe < 0.4)       h = 240;
+        else if (safe < 0.8)  h = 360;
+        else if (safe < 1.5)  h = 480;
+        else if (safe < 3.0)  h = 720;
+        else if (safe < 6.0)  h = 1080;
+        else                  h = 2160;
+
+        // Штраф за stall — БОЛЕЕ агрессивный, чем раньше
+        if (stallCount >= 4) h = Math.min(h, 240);
+        else if (stallCount >= 3) h = Math.min(h, 360);
+        else if (stallCount >= 2) h = Math.min(h, 480);
+        else if (stallCount >= 1) h = Math.min(h, 720);
+
+        return h;
+    }
+
+    function findLevelByHeight(hls, maxHeight) {
+        const levels = hls.levels || [];
+        if (!levels.length) return -1;
+        let best = -1, bestH = 0;
+        for (let i = 0; i < levels.length; i++) {
+            const h = levels[i].height || 0;
+            if (h > 0 && h <= maxHeight && h > bestH) { bestH = h; best = i; }
+        }
+        if (best === -1) {
+            let minH = Infinity;
+            for (let i = 0; i < levels.length; i++) {
+                const h = levels[i].height || 0;
+                if (h > 0 && h < minH) { minH = h; best = i; }
+            }
+        }
+        return best;
+    }
+
+    // ================== ДОСТУП К HLS-ИНСТАНСУ ==================
+    // Патч v2 создаёт экземпляр через Reflect.construct и сохраняет в currentHls
+    // (внутри своего замыкания). Достаём через хук на конструктор.
+    let currentHls = null;
+
+    function attachHlsHooks(inst) {
+        if (!inst) return;
+        if (inst.__wifiFixHooked) return;
+        inst.__wifiFixHooked = true;
+        currentHls = inst;
+
+        const Hls = window.Hls;
+        if (!Hls || !Hls.Events) return;
+
+        // Лог уровней — видно, есть ли вообще куда понижать
+        inst.on(Hls.Events.MANIFEST_PARSED, () => {
+            const levels = inst.levels || [];
+            log("📶 Уровни канала:", levels.map(l => ({
+                h: l.height ? l.height + "p" : "?",
+                bw: l.bitrate ? Math.round(l.bitrate / 1000) + "kbps" : "?"
+            })));
+            if (levels.length <= 1) {
+                warn("⛔ В канале всего", levels.length,
+                    "уровень(ей) — понижение качества НЕВОЗМОЖНО. Это ограничение провайдера.");
+            }
+        });
+
+        // Реальное измерение по загруженным сегментам
+        inst.on(Hls.Events.FRAG_LOADED, (e, data) => {
+            try {
+                const stats = data && data.frag && data.frag.stats;
+                if (stats && stats.loaded && stats.loading) {
+                    const dt = stats.loading.end - stats.loading.start;
+                    if (dt > 50) {
+                        const bps = stats.loaded * 8 / (dt / 1000);
+                        addSpeedSample(bps);
+                    }
+                }
+            } catch (e) {}
+        });
+
+        // bufferStalledError — НЕ повод сбрасывать канал, только понижаем уровень
+        inst.on(Hls.Events.ERROR, (e, data) => {
+            if (!data) return;
+            if (data.details === "bufferStalledError") {
+                log("⚠ Stall — понижаем уровень");
+                onStall();
+            }
+        });
+
+        log("✅ HLS-инстанс подключён к Wi-Fi FIX");
+    }
+
+    // Перехват создания Hls — внедряемся в цепочку ПОСЛЕ v2
+    function hookHlsConstructor() {
+        if (!window.Hls) return false;
+        if (window.Hls.__wifiFixHooked) return true;
+
+        const PrevHls = window.Hls;
+
+        // Оборачиваем конструктор, чтобы поймать созданный экземпляр
+        const NewHls = function (config) {
+            const inst = Reflect.construct(PrevHls, [config]);
+
+            // Переопределяем конфиг: убираем capLevelToPlayerSize в fullscreen
+            try {
+                if (inst.config) {
+                    inst.config.capLevelToPlayerSize = false;
+                }
+            } catch (e) {}
+
+            attachHlsHooks(inst);
+
+            // Хук на fullscreen — включаем/выключаем cap
+            const video = document.getElementById("tvVideo");
+            if (video && !video.__wifiCapHooked) {
+                video.__wifiCapHooked = true;
+                document.addEventListener("fullscreenchange", function () {
+                    if (!currentHls) return;
+                    try {
+                        const isFs = document.fullscreenElement === document.getElementById("tvVideoWrap");
+                        currentHls.config.capLevelToPlayerSize = false;
+                        if (isFs) {
+                            // В fullscreen — разрешаем полный диапазон
+                            currentHls.autoLevelCapping = -1;
+                        }
+                    } catch (e) {}
+                });
+            }
+
+            return inst;
+        };
+
+        Object.setPrototypeOf(NewHls, PrevHls);
+        NewHls.prototype = PrevHls.prototype;
+        NewHls.isSupported = PrevHls.isSupported;
+        NewHls.Events = PrevHls.Events;
+        NewHls.ErrorTypes = PrevHls.ErrorTypes;
+        NewHls.ErrorDetails = PrevHls.ErrorDetails;
+        NewHls.DefaultConfig = PrevHls.DefaultConfig;
+        NewHls.version = PrevHls.version;
+        NewHls.__wifiFixHooked = true;
+
+        window.Hls = NewHls;
+        log("✅ Hls-конструктор перехвачен Wi-Fi FIX");
+        return true;
+    }
+
+    // ================== СТРАТЕГИЯ ПОНИЖЕНИЯ ==================
+    let stallCount = 0;
+    let autoDowngradeLock = 0;
+    let stableTimer = null;
+
+    function onStall() {
+        stallCount++;
+        log("Stall #" + stallCount);
+
+        // Мгновенное понижение текущего уровня
+        if (currentHls) {
+            const levels = currentHls.levels || [];
+            if (levels.length > 1) {
+                const cur = currentHls.currentLevel;
+                const target = Math.max(0, cur - 1);
+                if (target !== cur) {
+                    log("Принудительное понижение:", cur, "→", target);
+                    try { currentHls.nextLevel = target; } catch (e) {}
+                }
+            }
+            applyPolicy(true);
+        }
+
+        autoDowngradeLock = Date.now() + AUTO_DOWNGRADE_LOCK;
+
+        // Сброс счётчика после стабильности
+        if (stableTimer) clearTimeout(stableTimer);
+        stableTimer = setTimeout(() => {
+            if (stallCount > 0) {
+                log("Стабильно", STALL_RESET_AFTER / 1000, "с — сброс stall");
+                stallCount = 0;
+                applyPolicy(true);
+            }
+        }, STALL_RESET_AFTER);
+    }
+
+    function applyPolicy(force) {
+        if (!currentHls) return;
+        const now = Date.now();
+        if (!force && now < autoDowngradeLock) return;
+
+        const maxH = computeMaxHeight(stallCount);
+        const idx = findLevelByHeight(currentHls, maxH);
+        if (idx >= 0) {
+            try {
+                currentHls.autoLevelCapping = idx;
+                if (force && currentHls.abrController && currentHls.abrController.resetEstimator) {
+                    currentHls.abrController.resetEstimator();
+                }
+                log("Политика: maxHeight =", maxH + "p", "→ level", idx);
+            } catch (e) { warn("applyPolicy:", e); }
+        }
+    }
+
+    // Периодическая проверка (раз в 8с)
+    setInterval(() => {
+        if (currentHls && Date.now() > autoDowngradeLock) {
+            applyPolicy(false);
+        }
+    }, 8000);
+
+    // ================== СБРОС ПРИ СМЕНЕ КАНАЛА ==================
+    function resetStateForNewChannel() {
+        stallCount = 0;
+        speedSamples.length = 0;
+        // measuredDownlink оставляем — он не привязан к каналу
+    }
+
+    // Патчим TvEngine.play — чтобы сбрасывать состояние
+    function patchTvPlay() {
+        if (typeof TvEngine === "undefined" || !TvEngine.play) return false;
+        if (TvEngine.play.__wifiFixPatched) return true;
+
+        const orig = TvEngine.play;
+        TvEngine.play = function (index) {
+            resetStateForNewChannel();
+            return orig.apply(this, arguments);
+        };
+        TvEngine.play.__wifiFixPatched = true;
+        log("✅ TvEngine.play пропатчен (сброс состояния)");
+        return true;
+    }
+
+    // ================== ПАТЧ TV HEALTH PATCH v3.1 ==================
+    // Он объявил GRACE_MS = 6000 внутри замыкания и не экспортирует.
+    // Перехватываем его через переопределение TvEngine.play ЕЩЁ РАЗ — уже после
+    // того, как v3.1 навесил свои таймеры.
+    function patchHealthTimers() {
+        if (typeof TvEngine === "undefined" || !TvEngine.play) return false;
+        if (TvEngine.play.__wifiHealthPatched) return true;
+
+        const prev = TvEngine.play;
+        TvEngine.play = function (index) {
+            // Вызываем v3.1-обёртку (она выставит таймеры с GRACE_MS=6000)
+            const r = prev.apply(this, arguments);
+
+            // Сразу после — отменяем слишком короткие таймеры,
+            // пересоздавая их с правильными значениями
+            const video = document.getElementById("tvVideo");
+            const channels = (typeof currentChannels !== "undefined" && currentChannels)
+                || window.__TV_CHANNELS_CACHE || [];
+            const ch = channels[index];
+            if (!video || !ch) return r;
+
+            const health = (typeof getHealth === "function") ? getHealth(ch.url) : null;
+
+            // Для ✅-каналов v3.1 ставит таймер 6с. Мы уже не можем его отменить
+            // напрямую (он в замыкании), но можем "прикрыть": слушаем playing/error
+            // раньше и, если за 6с ничего — перехватываем управление.
+            if (health === true) {
+                let myGrace = setTimeout(() => {
+                    if (video.readyState >= 3 || !video.paused) return;
+                    // v3.1 уже мог пометить канал мёртвым — «оживляем» обратно
+                    if (typeof setHealth === "function") {
+                        setHealth(ch.url, true); // не считаем мёртвым из-за медленного старта
+                    }
+                    log("🛡 Grace защита: не помечаем ✅-канал мёртвым, ждём ещё");
+                }, 7000); // срабатывает после таймера v3.1 (6с), «отменяет» его решение
+
+                const cleanup = () => {
+                    clearTimeout(myGrace);
+                    video.removeEventListener("playing", cleanup);
+                };
+                video.addEventListener("playing", cleanup, { once: true });
+            }
+
+            return r;
+        };
+        TvEngine.play.__wifiHealthPatched = true;
+        log("✅ TvEngine.play пропатчен (защита от преждевременного ❌)");
+        return true;
+    }
+
+    // ================== UI: БЕЙДЖ СЕТИ ==================
+    function updateNetworkBadge() {
+        const bar = document.querySelector("#tvPlayer .aq-bar");
+        if (!bar) return;
+
+        let badge = bar.querySelector(".aq-wifi-badge");
+        if (!badge) {
+            badge = document.createElement("span");
+            badge.className = "aq-wifi-badge";
+            badge.style.cssText =
+                "display:inline-flex; align-items:center; gap:4px; padding:2px 8px;" +
+                "border-radius:20px; font-size:0.65rem; font-weight:700;" +
+                "background:#0ea5e9; color:#fff; letter-spacing:0.3px;";
+            bar.appendChild(badge);
+        }
+
+        let text, bg;
+        if (isWiFi()) {
+            const speed = getEffectiveSpeed();
+            text = "📶 Wi-Fi" + (speed > 0 ? " ≈" + speed.toFixed(1) + "Мб" : " (замер…)");
+            bg = speed > 0 ? "#0ea5e9" : "#f59e0b";
+        } else if (isCellular()) {
+            const et = (getConn()?.effectiveType || "?").toUpperCase();
+            text = "📱 " + et;
+            bg = "#10b981";
+        } else {
+            text = "🌐 " + (getConn()?.effectiveType || "?");
+            bg = "#64748b";
+        }
+        badge.textContent = text;
+        badge.style.background = bg;
+
+        // Обновляем каждые 2с, пока идёт воспроизведение
+        setTimeout(() => {
+            const v = document.getElementById("tvVideo");
+            if (v && !v.paused && !v.ended) updateNetworkBadge();
+        }, 2000);
+    }
+
+    // ================== INIT ==================
+    function init() {
+        // 1) Перехват Hls-конструктора (после v2)
+        let tries = 0;
+        const iv = setInterval(() => {
+            tries++;
+            const a = hookHlsConstructor();
+            const b = patchTvPlay();
+            const c = patchHealthTimers();
+            if ((a && b && c) || tries > 40) {
+                clearInterval(iv);
+                log("Инициализация завершена за", tries, "попыток");
+            }
+        }, 250);
+
+        // 2) Запуск UI-бейджа при открытии ТВ
+        const tvBtn = document.getElementById("modalTvBtn");
+        if (tvBtn) {
+            tvBtn.addEventListener("click", () => {
+                setTimeout(updateNetworkBadge, 800);
+            });
+        }
+        // Через share-ссылку
+        const origShare = window.openCountryShare;
+        if (typeof origShare === "function" && !origShare.__wifiFixPatched) {
+            window.openCountryShare = function (country, kind) {
+                const r = origShare.apply(this, arguments);
+                if (kind === "tv") setTimeout(updateNetworkBadge, 800);
+                return r;
+            };
+            window.openCountryShare.__wifiFixPatched = true;
+        }
+
+        // 3) Реагируем на смену сети
+        const c = getConn();
+        if (c && c.addEventListener) {
+            c.addEventListener("change", () => {
+                log("Смена сети → сброс измерений");
+                speedSamples.length = 0;
+                measuredDownlink = 0;
+                stallCount = 0;
+                setTimeout(() => applyPolicy(true), 500);
+            });
+        }
+
+        log("✅ ADAPTIVE QUALITY Wi-Fi FIX v3 установлен");
+        log("   GRACE_MS:", GRACE_MS_NEW, "| downgrade lock:", AUTO_DOWNGRADE_LOCK, "ms");
+        log("   Wi-Fi: только реальный замер HLS");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<!-- ============================================================
+     END ADAPTIVE QUALITY Wi-Fi FIX v3
+     ============================================================ -->
 </body>
 </html>
