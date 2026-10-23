@@ -8685,64 +8685,59 @@ function renderHistList() {
         return true;
     }
 
-    function toggleFsCorrect() {
-        const container = document.getElementById("vizContainer");
-        if (!container) return;
+   function toggleFsCorrect() {
+    const container = document.getElementById("vizContainer");
+    if (!container) return;
 
-        const isFs = document.fullscreenElement === container ||
-                     document.webkitFullscreenElement === container;
+    const isFs = document.fullscreenElement === container ||
+                 document.webkitFullscreenElement === container;
 
-        // === ВЫХОД ===
-        if (isFs) {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {});
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
-            unlockOrientation();
-            return;
-        }
-
-        // === ВЫХОД из pseudo-fs ===
-        if (container.classList.contains("viz-pseudo-fs")) {
-            container.classList.remove("viz-pseudo-fs");
-            unlockOrientation();
-            return;
-        }
-
-        // === ВХОД ===
-        const supportsFs = !!(container.requestFullscreen || container.webkitRequestFullscreen);
-
-        if (!supportsFs) {
-            // iOS / старая Safari: только CSS-фуллскрин, ориентацию не трогаем
-            container.classList.add("viz-pseudo-fs");
-            log("pseudo-fs (iOS fallback) — orientation lock недоступен");
-            return;
-        }
-
-        // ВАЖНО: НЕ вызываем unlockOrientation() перед lock() — это ломает lock
-        const req = container.requestFullscreen
-            ? container.requestFullscreen()
-            : container.webkitRequestFullscreen();
-
-        Promise.resolve(req)
-            .then(function () {
-                // Сначала fullscreen уже активен — теперь можно lock
-                try {
-                    if (screen.orientation && screen.orientation.lock) {
-                        screen.orientation.lock("landscape")
-                            .then(() => log("✅ landscape locked"))
-                            .catch(err => log("lock отклонён:", err && err.name));
-                    } else {
-                        log("screen.orientation.lock не поддерживается");
-                    }
-                } catch (e) {
-                    log("lock exception:", e);
-                }
-            })
-            .catch(err => log("requestFullscreen отклонён:", err && err.name));
+    // === ВЫХОД ===
+    if (isFs) {
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        unlockOrientation();
+        return;
+    }
+    if (container.classList.contains("viz-pseudo-fs")) {
+        container.classList.remove("viz-pseudo-fs");
+        unlockOrientation();
+        return;
     }
 
+    // === ВХОД ===
+    const supportsFs = !!(container.requestFullscreen || container.webkitRequestFullscreen);
+    if (!supportsFs) {
+        container.classList.add("viz-pseudo-fs");
+        log("pseudo-fs (iOS fallback)");
+        return;
+    }
+
+    const req = container.requestFullscreen
+        ? container.requestFullscreen()
+        : container.webkitRequestFullscreen();
+
+    Promise.resolve(req)
+        .then(function () {
+            // Ждём, пока браузер реально применит fullscreen
+            setTimeout(function () {
+                try {
+                    if (screen.orientation && screen.orientation.lock) {
+                        // Пробуем landscape, при отказе — landscape-primary
+                        screen.orientation.lock("landscape")
+                            .then(() => log("✅ landscape locked"))
+                            .catch(err => {
+                                log("lock(landscape) отклонён:", err && err.name);
+                                screen.orientation.lock("landscape-primary")
+                                    .then(() => log("✅ landscape-primary locked"))
+                                    .catch(e2 => log("lock primary тоже не сработал:", e2 && e2.name));
+                            });
+                    }
+                } catch (e) { log("lock exception:", e); }
+            }, 180); // ← ключевая задержка
+        })
+        .catch(err => log("requestFullscreen отклонён:", err && err.name));
+}
     function unlockOrientation() {
         try {
             if (screen.orientation && screen.orientation.unlock) {
