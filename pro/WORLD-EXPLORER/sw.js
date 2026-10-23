@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'okifinder';
+const CACHE_NAME = 'rotstionradioall';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/WORLD-EXPLORER/index.html',
