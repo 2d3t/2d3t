@@ -2425,9 +2425,12 @@ async function tick() {
                 };
                 v.onerror = () => {
                     if (hasPlayed) return;
-                    statusEl.textContent = '⚠ Ошибка потока. Пробую следующий...';
+                    statusEl.textContent = '⚠ Ошибка потока. Жду...';
                     statusEl.className = 'cp-status error';
-                    scheduleNext();
+                    if (failTimer) clearTimeout(failTimer);
+                    failTimer = setTimeout(() => {
+                        if (!hasPlayed && currentIndex === index) scheduleNext();
+                    }, 5000);
                 };
 
                 if (window.Hls && Hls.isSupported() && ch.url.includes('.m3u8')) {
@@ -2447,7 +2450,7 @@ async function tick() {
                             scheduleNext();
                         }
                     });
-                    // страховка: если через 6 секунд не заиграло — следующая
+                    // страховка: если за 20 секунд не заиграло — следующая
                     clearFailTimer();
                     failTimer = setTimeout(() => {
                         if (!hasPlayed && currentIndex === index) {
@@ -2455,8 +2458,8 @@ async function tick() {
                             statusEl.className = 'cp-status error';
                             play((currentIndex + 1) % channels.length);
                         }
-                    }, 12000);
-                } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                    }, 20000);
+              } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
                     v.src = ch.url;
                     v.addEventListener('loadedmetadata', () => {
                         v.play().catch(() => {});
@@ -2466,8 +2469,8 @@ async function tick() {
                         if (!hasPlayed && currentIndex === index) {
                             play((currentIndex + 1) % channels.length);
                         }
-                    }, 12000);
-                } else {
+                    }, 20000);
+                }   else {
                     v.src = ch.url;
                     v.play().catch(() => {
                         statusEl.textContent = '⚠ Не удалось воспроизвести';
@@ -2482,7 +2485,7 @@ function scheduleNext() {
                 if (channels.length < 2) return;
                 failTimer = setTimeout(() => {
                     play((currentIndex + 1) % channels.length);
-                }, 2000);
+                }, 8000);
             }
 
             function next() { if (channels.length) play((currentIndex + 1) % channels.length); }
@@ -6847,8 +6850,8 @@ if (isTvFullscreen() || isVizFullscreen()) {
     const PROBE_BYTES            = 2048;
     const PROBE_TIMEOUT          = 4000;
     const PROBE_CONCURRENCY      = 4;
-    const PLAY_TIMEOUT_UNKNOWN   = 1500;  // для «неизвестных» (CORS/null)
-    const GRACE_MS               = 6000;  // ← защитное окно для ✅-каналов
+    const PLAY_TIMEOUT_UNKNOWN   = 5000;  // для «неизвестных» (CORS/null)
+    const GRACE_MS               = 15000; // ← защитное окно для ✅-каналов (было 6000)
     const HEALTH_TTL             = 1000 * 60 * 10;
     const PREFETCH_AHEAD         = 1;
 
@@ -7071,22 +7074,47 @@ if (isTvFullscreen() || isVizFullscreen()) {
         const channels = currentChannels;
         if (!channels || !channels.length) return -1;
         const N = channels.length;
+
+        // ПЕРВЫЙ ПРОХОД: ищем только ✅ (health === true)
         let i = currentIdx;
         for (let step = 0; step < N; step++) {
             i = (i + dir + N) % N;
-            const h = getHealth(channels[i].url);
-            if (h === true || h === null) return i;
+            if (i === currentIdx) continue;
+            if (getHealth(channels[i].url) === true) {
+                log("findNextAlive → ✅", channels[i].name, "idx", i);
+                return i;
+            }
         }
+
+        // ВТОРОЙ ПРОХОД: если ✅ не нашли — берём непроверенные (null)
+        i = currentIdx;
+        for (let step = 0; step < N; step++) {
+            i = (i + dir + N) % N;
+            if (i === currentIdx) continue;
+            if (getHealth(channels[i].url) === null) {
+                log("findNextAlive → null (не проверен)", channels[i].name, "idx", i);
+                return i;
+            }
+        }
+
+        // ВСЁ МЁРТВОЕ — остаёмся на месте
+        warn("findNextAlive: живых каналов не найдено, остаёмся на", currentIdx);
         return currentIdx;
     }
 
     // ======== Патч TvEngine.play ========
+    let currentGraceTimer = null;
     function patchTvPlay() {
         if (typeof TvEngine === "undefined" || !TvEngine.play) return false;
         if (TvEngine.play.__healthPatchedV31) return true;
 
         const orig = TvEngine.play;
         TvEngine.play = function (index) {
+            // 🛑 КЛЮЧЕВОЕ: очищаем предыдущий grace-таймер перед новым вызовом
+            if (currentGraceTimer) {
+                clearTimeout(currentGraceTimer);
+                currentGraceTimer = null;
+            }
             const channels = currentChannels;
             const ch = channels[index];
 
@@ -7113,7 +7141,8 @@ if (isTvFullscreen() || isVizFullscreen()) {
             if (h === true) {
                 log("⚡ instant switch →", ch.name, "(✅) grace:", GRACE_MS, "ms");
 
-                let graceTimer = setTimeout(() => {
+                currentGraceTimer = setTimeout(() => {
+                    currentGraceTimer = null;
                     if (window.__tvPlayGen !== playGen) return;
                     if (video.readyState >= 3 || !video.paused) return;
                     warn("⛔ grace timeout on ✅-channel:", ch.name);
@@ -7129,9 +7158,8 @@ if (isTvFullscreen() || isVizFullscreen()) {
                 }, GRACE_MS);
 
                 const onPlayingGrace = () => {
+                    if (currentGraceTimer) { clearTimeout(currentGraceTimer); currentGraceTimer = null; }
                     if (window.__tvPlayGen !== playGen) return;
-                    clearTimeout(graceTimer);
-                    graceTimer = null;
                     video.removeEventListener("error", onErrorGrace);
                     video.removeEventListener("playing", onPlayingGrace);
                     const curInfo = TvEngine._debug ? TvEngine._debug() : null;
@@ -7151,7 +7179,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
                 return r;
             }
 
-            // === «Неизвестный» (CORS) — короткий таймер ===
+            // === «Неизвестный» (CORS) — таймер ===
             const killTimer = setTimeout(() => {
                 if (window.__tvPlayGen !== playGen) return;
                 if (video.readyState >= 3 || !video.paused) return;
@@ -7166,6 +7194,8 @@ if (isTvFullscreen() || isVizFullscreen()) {
                     orig.call(TvEngine, next);
                 }
             }, PLAY_TIMEOUT_UNKNOWN);
+            // сохраняем на случай быстрого переключения вручную
+            window.__tvKillTimer = killTimer;
 
             const onPlaying = () => {
                 clearTimeout(killTimer);
@@ -7207,17 +7237,34 @@ if (isTvFullscreen() || isVizFullscreen()) {
         newNext.dataset.healthPatchedV31 = "1";
         newPrev.dataset.healthPatchedV31 = "1";
 
-        newNext.addEventListener("click", function () {
+        newNext.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
             const info = TvEngine._debug ? TvEngine._debug() : null;
-            if (!info || !currentChannels.length) return;
+            if (!info) return;
+            const chs = (info.channels && info.channels.length) ? info.channels : currentChannels;
+            if (!chs.length) return;
+            // Синхронизируем currentChannels с тем, что реально внутри TvEngine
+            if (info.channels && info.channels.length && info.channels !== currentChannels) {
+                currentChannels = info.channels;
+            }
             const next = findNextAlive(info.index, +1);
-            if (next >= 0) TvEngine.play(next);
+            log("кнопка ▶ next → idx", next, "из", info.index);
+            if (next >= 0 && next !== info.index) TvEngine.play(next);
         });
-        newPrev.addEventListener("click", function () {
+        newPrev.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
             const info = TvEngine._debug ? TvEngine._debug() : null;
-            if (!info || !currentChannels.length) return;
+            if (!info) return;
+            const chs = (info.channels && info.channels.length) ? info.channels : currentChannels;
+            if (!chs.length) return;
+            if (info.channels && info.channels.length && info.channels !== currentChannels) {
+                currentChannels = info.channels;
+            }
             const prev = findNextAlive(info.index, -1);
-            if (prev >= 0) TvEngine.play(prev);
+            log("кнопка ◀ prev → idx", prev, "из", info.index);
+            if (prev >= 0 && prev !== info.index) TvEngine.play(prev);
         });
 
         log("✅ next/prev buttons пропатчены");
@@ -7356,6 +7403,7 @@ if (isTvFullscreen() || isVizFullscreen()) {
         if (TvEngine.stop.__healthPatchedV31) return true;
         const orig = TvEngine.stop;
         TvEngine.stop = function () {
+            if (currentGraceTimer) { clearTimeout(currentGraceTimer); currentGraceTimer = null; }
             if (probeAbortAll) { try { probeAbortAll.abort(); } catch (e) {} probeAbortAll = null; }
             probeGeneration++;
             probeRunning = false;
