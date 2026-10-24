@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Куда сходить? Лесопосадка рядом</title>
+
+    <!-- Leaflet: карта -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh; /* корректно на мобильных с адресной строкой */
+        }
+
+        /* Верхняя панель с кнопками */
+        .panel {
+            background: #16213e;
+            padding: 14px 16px 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+            flex-shrink: 0;
+        }
+
+        .panel h1 {
+            font-size: 1.15rem;
+            margin: 0 0 4px;
+            color: #e94560;
+            text-align: center;
+        }
+
+        .panel p {
+            font-size: 0.78rem;
+            line-height: 1.35;
+            color: #a0a0b0;
+            margin: 0 0 12px;
+            text-align: center;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 10px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            color: white;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: #e94560; }
+        .btn-secondary {
+            background: #0f3460;
+            border: 1px solid #1a4a7a;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Статус */
+        .status {
+            margin-top: 10px;
+            font-size: 0.78rem;
+            color: #f0c040;
+            min-height: 18px;
+            text-align: center;
+        }
+        .error { color: #ff6b6b; }
+
+        /* Карта */
+        #map {
+            flex: 1;
+            width: 100%;
+            min-height: 0; /* важно для flex-контейнера */
+            background: #0f3460;
+        }
+
+        /* Легенда */
+        .legend {
+            position: absolute;
+            bottom: 15px;
+            left: 10px;
+            background: rgba(255,255,255,0.95);
+            padding: 7px 11px;
+            border-radius: 8px;
+            font-size: 11px;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            color: #222;
+            line-height: 1.5;
+        }
+        .legend span {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        /* Попап */
+        .popup-content {
+            font-size: 13px;
+            line-height: 1.4;
+            max-width: 220px;
+        }
+        .popup-content b { color: #e94560; }
+
+        /* Кнопка "найти зелень" внутри попапа */
+        .popup-green-btn {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 7px 12px;
+            background: #27ae60;
+            color: #fff !important;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="panel">
+        <h1>🌳 Где лесопосадка? Где отлить?</h1>
+        <p>Определим ваше местоположение и покажем, где искать ближайшие зелёные зоны.</p>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" id="findBtn" onclick="findGreen()">
+                📍 Найти рядом
+            </button>
+            <button class="btn btn-secondary" onclick="openDirectOSM()">
+                🗺️ Просто карта
+            </button>
+        </div>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<div class="legend">
+    <div><span style="background:#e74c3c;"></span> Вы здесь</div>
+    <div><span style="background:#27ae60;"></span> Лесопарк</div>
+</div>
+
+<script>
+    // ====== Инициализация карты ======
+    // Стартовый вид — Минск (можно поменять)
+    var map = L.map('map', {
+        zoomControl: true,
+        attributionControl: true
+    }).setView([53.9, 27.56], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19
+    }).addTo(map);
+
+    var userMarker = null;
+    var userLat = null;
+    var userLon = null;
+
+    var statusEl = document.getElementById('status');
+    var findBtn = document.getElementById('findBtn');
+
+    // ====== Определение местоположения ======
+    function findGreen() {
+        if (!navigator.geolocation) {
+            setStatus('❌ Геолокация не поддерживается браузером.', true);
+            return;
+        }
+
+        findBtn.disabled = true;
+        setStatus('⏳ Определяем местоположение...', false);
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                userLat = position.coords.latitude;
+                userLon = position.coords.longitude;
+
+                // Ставим красную метку "вы здесь"
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                }
+
+                userMarker = L.circleMarker([userLat, userLon], {
+                    radius: 10,
+                    fillColor: '#e74c3c',
+                    color: '#ffffff',
+                    weight: 2,
+                    fillOpacity: 0.95
+                }).addTo(map);
+
+                userMarker.bindPopup(
+                    '<div class="popup-content"><b>Вы здесь</b><br>' +
+                    'Широта: ' + userLat.toFixed(6) + '<br>' +
+                    'Долгота: ' + userLon.toFixed(6) + '</div>'
+                ).openPopup();
+
+                // Центрируем карту
+                map.setView([userLat, userLon], 16);
+
+                setStatus('✅ Местоположение найдено. Показываем зелёные зоны вокруг.', false);
+
+                // Показываем варианты поиска зелени
+                showGreenZones(userLat, userLon);
+
+                findBtn.disabled = false;
+            },
+            function (error) {
+                findBtn.disabled = false;
+                var msg = '❌ Не удалось получить геолокацию.';
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        msg = '❌ Вы запретили доступ к геолокации. Разрешите в настройках браузера.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        msg = '❌ Местоположение недоступно.';
+                        break;
+                    case error.TIMEOUT:
+                        msg = '❌ Таймаут запроса геолокации.';
+                        break;
+                }
+                setStatus(msg, true);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    function setStatus(text, isError) {
+        statusEl.textContent = text;
+        statusEl.className = 'status' + (isError ? ' error' : '');
+    }
+
+    // ====== Показ зелёных зон вокруг точки ======
+    function showGreenZones(lat, lon) {
+        // OSM Overpass API — ищем парки/лесопарки/леса в радиусе 1500 м.
+        // Это бесплатно, без ключей. Запрос простой.
+        var radius = 1500;
+
+        var query = '[out:json][timeout:20];' +
+            '(' +
+            '  way["leisure"="park"](around:' + radius + ',' + lat + ',' + lon + ');' +
+            '  way["leisure"="nature_reserve"](around:' + radius + ',' + lat + ',' + lon + ');' +
+            '  way["landuse"="forest"](around:' + radius + ',' + lat + ',' + lon + ');' +
+            '  way["natural"="wood"](around:' + radius + ',' + lat + ',' + lon + ');' +
+            ');' +
+            'out center 40;';
+
+        var overpassUrl = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
+
+        fetch(overpassUrl)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var elements = data.elements || [];
+                if (elements.length === 0) {
+                    setStatus('ℹ️ В радиусе 1.5 км зелёных зон в OSM не найдено. Попробуйте отойти на открытое место или просто открыть карту.', false);
+                    return;
+                }
+
+                var added = 0;
+                elements.forEach(function (el) {
+                    var center = el.center;
+                    if (!center) return;
+
+                    var name = (el.tags && (el.tags.name || el.tags['name:ru'] || el.tags['name:be'])) || 'Зелёная зона';
+                    var type = (el.tags && el.tags.leisure) || (el.tags && el.tags.landuse) || (el.tags && el.tags.natural) || 'park';
+
+                    var marker = L.circleMarker([center.lat, center.lon], {
+                        radius: 8,
+                        fillColor: '#27ae60',
+                        color: '#fff',
+                        weight: 2,
+                        fillOpacity: 0.85
+                    }).addTo(map);
+
+                    var routeUrl = 'https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=' +
+                        lat + '%2C' + lon + '%3B' + center.lat + '%2C' + center.lon;
+
+                    marker.bindPopup(
+                        '<div class="popup-content">' +
+                        '<b>' + escapeHtml(name) + '</b><br>' +
+                        'Тип: ' + escapeHtml(type) + '<br>' +
+                        '<a class="popup-green-btn" href="' + routeUrl + '" target="_blank" rel="noopener">🚶 Построить маршрут</a>' +
+                        '</div>'
+                    );
+
+                    added++;
+                });
+
+                setStatus('✅ Найдено зелёных зон: ' + added + '. Нажмите на зелёную метку, чтобы построить маршрут.', false);
+            })
+            .catch(function (err) {
+                console.error('Overpass error:', err);
+                setStatus('⚠️ Не удалось загрузить зелёные зоны (Overpass API). Карта работает — используйте её для навигации.', true);
+            });
+    }
+
+    // Экранирование HTML
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // ====== Просто открыть карту без геолокации ======
+    // Не "перекидываем" в другое приложение — просто центрируем нашу же карту
+    // на текущем местоположении (или на дефолтной точке, если гео недоступно).
+    function openDirectOSM() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function (position) {
+                    map.setView([position.coords.latitude, position.coords.longitude], 15);
+                    setStatus('🗺️ Карта открыта. Нажмите «Найти рядом», чтобы показать зелёные зоны.', false);
+                },
+                function () {
+                    setStatus('🗺️ Карта открыта. Геолокация недоступна — двигайтесь вручную.', false);
+                },
+                { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+            );
+        } else {
+            setStatus('🗺️ Карта открыта. Геолокация не поддерживается.', false);
+        }
+    }
+</script>
+
+</body>
+</html>
