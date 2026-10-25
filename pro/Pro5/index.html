@@ -4062,6 +4062,283 @@ window.loadFromLocalStorage = function(){
 console.log('[AutoBottom] ✅ Установлен — после загрузки файла скроллит вниз');
 })();
 </script>
+<script>
+/* ============================================================
+   KlikEdit — Replace All Patch v1.0
+   • Кнопка "Заменить всё" в каждой карточке правки
+   • Работает по полному буферу (виртуальный режим — ОК)
+   • Один снапшот в undo на всё действие
+   • Умный поиск → fallback на точный (как в одиночной правке)
+   ============================================================ */
+(function(){
+'use strict';
 
+const textarea = document.getElementById('codeArea');
+if(!textarea){ console.warn('[ReplaceAll] textarea не найдена'); return; }
+
+// ---------- Доступ к полному коду ----------
+function getCode(){
+    if(typeof window.getFullCode === 'function') return window.getFullCode();
+    return textarea.value;
+}
+
+function isVirtual(){
+    return typeof window.__virtualPatch === 'object'
+        && window.__virtualPatch.isActive
+        && window.__virtualPatch.isActive();
+}
+
+// ---------- Поиск всех вхождений (умный → точный) ----------
+// Возвращает { results: [{start,end,matched}], mode: 'exact'|'smart' }
+function findAllMatches(haystack, needle){
+    if(!needle) return { results: [], mode: null };
+
+    // 1. Точный поиск
+    const exact = [];
+    let i = haystack.indexOf(needle);
+    while(i !== -1){
+        exact.push({ start: i, end: i + needle.length, matched: needle });
+        i = haystack.indexOf(needle, i + needle.length);
+    }
+    if(exact.length > 0){
+        return { results: exact, mode: 'exact' };
+    }
+
+    // 2. Умный поиск: пробельные группы → \s*
+    const parts = needle.split(/(\s+)/).filter(p => p.length > 0);
+    if(parts.length === 0) return { results: [], mode: null };
+    const escaped = parts.map(p =>
+        /^\s+$/.test(p) ? '\\s*' : p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    );
+    let re;
+    try{ re = new RegExp(escaped.join(''), 'g'); }
+    catch(e){ return { results: [], mode: null }; }
+
+    const smart = [];
+    let m, guard = 0;
+    while((m = re.exec(haystack)) !== null && guard < 200000){
+        guard++;
+        if(m[0].length === 0){ re.lastIndex++; continue; }
+        smart.push({ start: m.index, end: m.index + m[0].length, matched: m[0] });
+        if(re.lastIndex === m.index) re.lastIndex++;
+    }
+    return { results: smart, mode: smart.length ? 'smart' : null };
+}
+
+// ---------- Замена всех вхождений ----------
+// mode: 'instead' | 'before' | 'after'
+function replaceAllInCode(source, findText, replaceText, mode){
+    const { results } = findAllMatches(source, findText);
+    if(results.length === 0) return { ok: false, count: 0, newCode: source };
+
+    // Собираем новый код за один проход (справа налево, чтобы индексы не съезжали)
+    let out = source;
+    for(let k = results.length - 1; k >= 0; k--){
+        const r = results[k];
+        if(mode === 'instead'){
+            out = out.substring(0, r.start) + replaceText + out.substring(r.end);
+        } else if(mode === 'before'){
+            out = out.substring(0, r.start) + replaceText + out.substring(r.start);
+        } else { // after
+            out = out.substring(0, r.end) + replaceText + out.substring(r.end);
+        }
+    }
+    return { ok: true, count: results.length, newCode: out, firstStart: results[0].start };
+}
+
+// ---------- Показать результат в карточке ----------
+function setStatus(card, cls, text, ms){
+    const status = card.querySelector('.edit-status');
+    if(!status) return;
+    status.className = 'edit-status ' + cls;
+    status.textContent = text;
+    if(ms){
+        setTimeout(()=>{
+            if(status.textContent === text){
+                status.className = 'edit-status';
+                status.textContent = '';
+            }
+        }, ms);
+    }
+}
+
+// ---------- Основная функция ----------
+function replaceAllInCard(card){
+    if(!card) return;
+
+    const findField = card.querySelector('[data-role="find"]');
+    const replaceField = card.querySelector('[data-role="replace"]');
+    const modeBtn = card.querySelector('[data-role="mode"] button.active');
+    const mode = modeBtn ? modeBtn.dataset.mode : 'instead';
+
+    const findText = (typeof getFieldValue === 'function')
+        ? getFieldValue(findField)
+        : (findField ? findField.innerText : '');
+    const replaceText = (typeof getFieldValue === 'function')
+        ? getFieldValue(replaceField)
+        : (replaceField ? replaceField.innerText : '');
+
+    if(!findText){
+        setStatus(card, 'err', '⚠️ Поле "Найти" пустое', 2500);
+        return;
+    }
+
+    // Полный буфер (виртуальный режим — тоже)
+    let full;
+    try{
+        full = getCode();
+    }catch(e){
+        setStatus(card, 'err', '❌ Ошибка чтения кода', 2500);
+        return;
+    }
+
+    const res = replaceAllInCode(full, findText, replaceText, mode);
+
+    if(!res.ok){
+        setStatus(card, 'err', '❌ Фрагмент не найден в коде', 2500);
+        return;
+    }
+
+    // Один снапшот в undo на всё действие
+    if(typeof window.pushUndo === 'function'){
+        window.pushUndo(full);
+    }
+
+    // Применяем новый код
+    if(typeof window.setFullCode === 'function'){
+        // keepAround = позиция первой замены, чтобы окно не прыгнуло в начало
+        window.setFullCode(res.newCode, res.firstStart);
+    } else {
+        textarea.value = res.newCode;
+        if(typeof updateLineNumbers === 'function') updateLineNumbers();
+    }
+
+    // Курсор к первой замене
+    requestAnimationFrame(()=>{
+        try{
+            if(isVirtual() && typeof window.centerWindowAt === 'function'){
+                window.centerWindowAt(res.firstStart, 0);
+            } else {
+                textarea.focus();
+                const safe = Math.min(res.firstStart, textarea.value.length);
+                textarea.setSelectionRange(safe, safe);
+                const h = parseFloat(getComputedStyle(textarea).lineHeight);
+                const line = textarea.value.substring(0, safe).split('\n').length;
+                textarea.scrollTop = Math.max(0, (line - 1) * h - textarea.clientHeight / 2);
+                if(typeof highlightActiveLine === 'function') highlightActiveLine(line);
+            }
+        }catch(e){ console.warn('[ReplaceAll] cursor restore:', e); }
+    });
+
+    // Сброс кэшей поиска
+    if(typeof searchResults !== 'undefined'){
+        try{
+            window.searchResults = [];
+            window.currentResult = -1;
+            if(typeof updateSearchCounter === 'function') updateSearchCounter();
+        }catch(e){}
+    }
+
+    // Статус
+    const modeLabel = mode === 'instead' ? 'вместо' : (mode === 'before' ? 'до' : 'после');
+    setStatus(card, 'ok', `✅ Заменено вхождений: ${res.count} (${modeLabel})`, 3000);
+
+    if(typeof showToast === 'function'){
+        showToast(`🔁 Заменено: ${res.count}`);
+    }
+}
+
+// ---------- Добавляем кнопку в карточку ----------
+// Перехватываем создание карточки, чтобы добавить кнопку "Заменить всё"
+const _origAddEditCard = window.addEditCard;
+window.addEditCard = function(options){
+    const card = _origAddEditCard ? _origAddEditCard.apply(this, arguments) : null;
+    if(!card) return card;
+
+    // Не дублируем
+    if(card.querySelector('.btn-replace-all')) return card;
+
+    const actions = card.querySelector('.edit-actions');
+    if(actions){
+        const btn = document.createElement('button');
+        btn.className = 'btn-replace-all';
+        btn.type = 'button';
+        btn.innerHTML = '🔁 Заменить всё';
+        btn.title = 'Заменить все вхождения в файле (работает и в виртуальном режиме)';
+        btn.style.cssText = 'background:#e67e22;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-family:inherit;transition:background .2s;';
+        btn.onmouseover = ()=>{ btn.style.background = '#f39c12'; };
+        btn.onmouseout  = ()=>{ btn.style.background = '#e67e22'; };
+        btn.onclick = function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            replaceAllInCard(card);
+        };
+
+        // Вставляем ПЕРЕД кнопкой "Применить эту правку"
+        const single = actions.querySelector('.btn-apply-single');
+        if(single){
+            actions.insertBefore(btn, single);
+        } else {
+            actions.appendChild(btn);
+        }
+    }
+
+    return card;
+};
+
+// ---------- На уже существующие карточки (если оверлей уже открыт) ----------
+function patchExistingCards(){
+    document.querySelectorAll('#editsList .edit-card').forEach(card => {
+        if(card.querySelector('.btn-replace-all')) return;
+        const actions = card.querySelector('.edit-actions');
+        if(!actions) return;
+        const btn = document.createElement('button');
+        btn.className = 'btn-replace-all';
+        btn.type = 'button';
+        btn.innerHTML = '🔁 Заменить всё';
+        btn.title = 'Заменить все вхождения в файле';
+        btn.style.cssText = 'background:#e67e22;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;font-family:inherit;transition:background .2s;';
+        btn.onmouseover = ()=>{ btn.style.background = '#f39c12'; };
+        btn.onmouseout  = ()=>{ btn.style.background = '#e67e22'; };
+        btn.onclick = function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            replaceAllInCard(card);
+        };
+        const single = actions.querySelector('.btn-apply-single');
+        if(single){
+            actions.insertBefore(btn, single);
+        } else {
+            actions.appendChild(btn);
+        }
+    });
+}
+
+// Патчим карточки при открытии оверлея
+const _origOpenEditsOverlay = window.openEditsOverlay;
+if(typeof _origOpenEditsOverlay === 'function'){
+    window.openEditsOverlay = function(){
+        const r = _origOpenEditsOverlay.apply(this, arguments);
+        setTimeout(patchExistingCards, 50);
+        return r;
+    };
+}
+
+// И при загрузке страницы — вдруг оверлей уже отрисован
+document.addEventListener('DOMContentLoaded', ()=>{
+    setTimeout(patchExistingCards, 300);
+});
+
+// ---------- Публичный API ----------
+window.__replaceAll = {
+    replaceAllInCard,
+    replaceAllInCode,
+    findAllMatches,
+    patchExistingCards
+};
+
+console.log('[ReplaceAll] ✅ Установлен — кнопка «🔁 Заменить всё» в карточках правок');
+})();
+</script>
 </body>
 </html>
