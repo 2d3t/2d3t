@@ -2,42 +2,54 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a0a2e">
 <title>🎙️ Voice Transformer v3</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
   body {
     min-height: 100vh;
+    min-height: 100dvh;
     background: radial-gradient(ellipse at top, #1a0a2e 0%, #000 70%);
     color: #fff;
     font-family: 'Segoe UI', system-ui, sans-serif;
     display: flex; flex-direction: column; align-items: center;
-    padding: 30px 20px; overflow-x: hidden;
+    padding: 16px 12px calc(20px + env(safe-area-inset-bottom));
+    padding-top: calc(16px + env(safe-area-inset-top));
+    overflow-x: hidden;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
   }
   h1 {
-    font-weight: 100; font-size: 32px; letter-spacing: 8px;
-    text-transform: uppercase; margin-bottom: 6px;
+    font-weight: 100; font-size: clamp(20px, 6vw, 32px); letter-spacing: 4px;
+    text-transform: uppercase; margin-bottom: 4px;
     background: linear-gradient(90deg, #6cf, #c6f, #f6c);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     text-align: center;
   }
   .subtitle {
-    color: rgba(150,200,255,0.5); font-size: 13px;
-    letter-spacing: 3px; margin-bottom: 25px; text-align: center;
+    color: rgba(150,200,255,0.5); font-size: clamp(10px, 3vw, 13px);
+    letter-spacing: 1.5px; margin-bottom: 14px; text-align: center;
+    padding: 0 8px;
   }
 
   .tabs {
-    display: flex; gap: 4px; margin-bottom: 20px;
+    display: flex; gap: 4px; margin-bottom: 14px;
     background: rgba(255,255,255,0.04);
     padding: 4px; border-radius: 30px;
     border: 1px solid rgba(150,200,255,0.15);
+    width: 100%; max-width: 340px;
   }
   .tab {
-    padding: 10px 22px; border-radius: 26px;
+    flex: 1;
+    padding: 10px 8px; border-radius: 26px;
     background: transparent; border: none;
     color: rgba(150,200,255,0.6);
-    cursor: pointer; font-size: 13px;
-    letter-spacing: 1.5px; transition: all 0.25s;
+    cursor: pointer; font-size: clamp(11px, 3.2vw, 13px);
+    letter-spacing: 1px; transition: all 0.25s;
     font-family: inherit;
+    white-space: nowrap;
   }
   .tab:hover { color: #9df; }
   .tab.active {
@@ -51,15 +63,16 @@
 
   .recorder {
     display: flex; flex-direction: column;
-    align-items: center; gap: 18px; margin-bottom: 20px;
+    align-items: center; gap: 12px; margin-bottom: 14px;
   }
   .rec-btn {
-    width: 100px; height: 100px; border-radius: 50%;
+    width: 84px; height: 84px; border-radius: 50%;
     border: 3px solid rgba(255,80,120,0.6);
     background: radial-gradient(circle, rgba(255,80,120,0.25), rgba(255,80,120,0.05));
     cursor: pointer; transition: all 0.3s;
     display: flex; align-items: center; justify-content: center;
-    font-size: 30px;
+    font-size: 26px;
+    touch-action: manipulation;
   }
   .rec-btn:hover {
     transform: scale(1.05); border-color: #f6a;
@@ -70,51 +83,51 @@
   }
   @keyframes recPulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(255,50,50,0.7); }
-    50%      { box-shadow: 0 0 0 25px rgba(255,50,50,0); }
+    50%      { box-shadow: 0 0 0 18px rgba(255,50,50,0); }
   }
 
   .drop-zone {
-    width: min(90vw, 600px);
-    min-height: 180px;
+    width: 100%; max-width: 600px;
+    min-height: 140px;
     border: 2px dashed rgba(150,200,255,0.3);
     border-radius: 16px;
     background: rgba(255,255,255,0.02);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 10px; padding: 30px;
+    gap: 8px; padding: 22px 16px;
     cursor: pointer; transition: all 0.3s;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
   }
   .drop-zone:hover, .drop-zone.dragover {
     border-color: #9df;
     background: rgba(150,200,255,0.08);
     box-shadow: 0 0 40px rgba(150,200,255,0.15);
   }
-  .drop-zone .big-icon { font-size: 46px; }
+  .drop-zone .big-icon { font-size: 38px; }
   .drop-zone .hint {
     color: rgba(150,200,255,0.6);
-    font-size: 13px; letter-spacing: 1px;
+    font-size: clamp(11px, 3.2vw, 13px); letter-spacing: 0.5px;
   }
   .drop-zone .formats {
     color: rgba(150,200,255,0.35);
-    font-size: 11px; letter-spacing: 2px;
+    font-size: clamp(9px, 2.6vw, 11px); letter-spacing: 1.5px;
   }
 
   .timer {
-    font-size: 22px; font-variant-numeric: tabular-nums;
-    color: #9df; letter-spacing: 2px;
+    font-size: 18px; font-variant-numeric: tabular-nums;
+    color: #9df; letter-spacing: 1.5px;
   }
 
   .file-info {
-    width: min(90vw, 600px);
+    width: 100%; max-width: 600px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(150,200,255,0.2);
-    border-radius: 12px; padding: 12px 18px;
-    margin-bottom: 12px;
+    border-radius: 12px; padding: 10px 14px;
+    margin-bottom: 10px;
     display: none; justify-content: space-between;
-    align-items: center; gap: 15px;
-    font-size: 13px;
+    align-items: center; gap: 10px;
+    font-size: clamp(11px, 3.2vw, 13px);
   }
   .file-info.visible { display: flex; }
   .file-info .fname {
@@ -122,16 +135,16 @@
     white-space: nowrap; overflow: hidden;
     text-overflow: ellipsis; max-width: 60%;
   }
-  .file-info .fdur { color: rgba(150,200,255,0.6); font-size: 12px; }
+  .file-info .fdur { color: rgba(150,200,255,0.6); font-size: 11px; white-space: nowrap; }
 
   /* ==== ВЫБОР ФРАГМЕНТА ==== */
   .trim-section {
-    width: min(90vw, 600px);
+    width: 100%; max-width: 600px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(150,200,255,0.15);
     border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
     display: none;
     flex-direction: column;
     gap: 10px;
@@ -139,60 +152,83 @@
   .trim-section.visible { display: flex; }
   .trim-header {
     display: flex; justify-content: space-between;
-    align-items: center; font-size: 12px;
+    align-items: center; font-size: 11px;
     color: rgba(150,200,255,0.7);
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .trim-toggle {
     display: flex; align-items: center; gap: 8px;
     cursor: pointer; user-select: none;
+    flex: 1; min-width: 0;
   }
-  .trim-toggle input { accent-color: #6cf; cursor: pointer; }
+  .trim-toggle input {
+    accent-color: #6cf; cursor: pointer;
+    width: 18px; height: 18px; flex-shrink: 0;
+  }
+  .trim-toggle span { line-height: 1.3; }
   .trim-range {
-    display: flex; gap: 10px; align-items: center;
+    display: flex; gap: 8px; align-items: center;
     font-size: 11px; color: rgba(150,200,255,0.6);
   }
   .trim-range input[type=range] {
     flex: 1; accent-color: #6cf;
+    height: 24px;
+    touch-action: pan-x;
   }
   .trim-time {
     font-variant-numeric: tabular-nums;
-    color: #9df; min-width: 55px; text-align: right;
+    color: #9df; min-width: 45px; text-align: right;
+    font-size: 11px;
   }
 
   #visualizer {
-    width: min(90vw, 600px); height: 100px;
+    width: 100%; max-width: 600px; height: 80px;
     border-radius: 12px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(150,200,255,0.15);
-    display: block; margin-bottom: 18px;
+    display: block; margin-bottom: 12px;
   }
 
   .effects {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 10px; width: min(90vw, 800px); margin-top: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%; max-width: 800px; margin-top: 6px;
+  }
+  @media (min-width: 420px) {
+    .effects { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (min-width: 700px) {
+    .effects { grid-template-columns: repeat(4, 1fr); gap: 10px; }
   }
   .effect-btn {
-    padding: 14px 10px;
+    padding: 10px 6px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(150,200,255,0.2);
     border-radius: 12px; color: #fff; cursor: pointer;
-    transition: all 0.25s; font-size: 12px;
+    transition: all 0.25s; font-size: 11px;
     display: flex; flex-direction: column;
-    align-items: center; gap: 5px;
+    align-items: center; gap: 4px;
     position: relative; overflow: hidden;
+    min-height: 74px;
+    justify-content: center;
+    font-family: inherit;
+    touch-action: manipulation;
   }
   .effect-btn:hover:not(:disabled) {
     background: rgba(150,200,255,0.12);
     border-color: rgba(150,200,255,0.5);
-    transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(100,150,255,0.15);
   }
+  .effect-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
   .effect-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  .effect-btn .emoji { font-size: 24px; }
-  .effect-btn .name  { font-weight: 600; letter-spacing: 0.5px; }
-  .effect-btn .desc  { font-size: 9px; color: rgba(150,200,255,0.6); text-align: center; }
+  .effect-btn .emoji { font-size: 20px; }
+  .effect-btn .name  { font-weight: 600; letter-spacing: 0.3px; font-size: 11px; }
+  .effect-btn .desc  { font-size: 8px; color: rgba(150,200,255,0.6); text-align: center; line-height: 1.2; }
   .effect-btn.active {
     background: linear-gradient(135deg, rgba(150,200,255,0.25), rgba(200,150,255,0.15));
     border-color: #9df;
@@ -200,28 +236,35 @@
   }
 
   .status {
-    margin-top: 16px; color: rgba(150,200,255,0.6);
-    font-size: 13px; letter-spacing: 1px;
-    min-height: 20px; text-align: center;
+    margin-top: 12px; color: rgba(150,200,255,0.6);
+    font-size: clamp(11px, 3.2vw, 13px); letter-spacing: 0.5px;
+    min-height: 18px; text-align: center;
+    padding: 0 8px;
+    line-height: 1.4;
   }
   .btn-row {
-    margin-top: 15px; display: flex;
-    gap: 10px; flex-wrap: wrap; justify-content: center;
+    margin-top: 12px; display: flex;
+    gap: 8px; flex-wrap: wrap; justify-content: center;
+    width: 100%;
   }
   .action-btn {
-    padding: 10px 22px;
+    padding: 10px 18px;
     background: rgba(150,200,255,0.12);
     border: 1px solid rgba(150,200,255,0.35);
     border-radius: 22px; color: #9df;
-    cursor: pointer; font-size: 12px;
-    letter-spacing: 2px; transition: all 0.25s;
+    cursor: pointer; font-size: clamp(11px, 3.2vw, 12px);
+    letter-spacing: 1.5px; transition: all 0.25s;
     font-family: inherit;
     display: none;
+    flex: 1; max-width: 220px;
+    min-width: 140px;
+    touch-action: manipulation;
   }
   .action-btn:hover {
     background: rgba(150,200,255,0.25);
     border-color: #9df;
   }
+  .action-btn:active:not(:disabled) { transform: scale(0.97); }
   .action-btn.visible { display: inline-block; }
   .action-btn.stop {
     background: rgba(255,80,120,0.15);
@@ -240,11 +283,11 @@
   }
 
   .render-bar {
-    width: min(90vw, 600px);
+    width: 100%; max-width: 600px;
     height: 6px;
     background: rgba(255,255,255,0.06);
     border-radius: 3px;
-    margin-top: 12px;
+    margin-top: 10px;
     overflow: hidden;
     display: none;
   }
@@ -255,17 +298,17 @@
     transition: width 0.15s;
   }
   .render-text {
-    font-size: 11px;
+    font-size: 10px;
     color: rgba(150,200,255,0.5);
-    margin-top: 6px;
-    letter-spacing: 1px;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
     display: none;
   }
   .render-text.visible { display: block; }
 
   .preview-audio {
-    width: min(90vw, 600px);
-    margin-top: 12px;
+    width: 100%; max-width: 600px;
+    margin-top: 10px;
     display: none;
   }
   .preview-audio.visible { display: block; }
@@ -276,11 +319,21 @@
 
   .warn-note {
     color: #fa6;
-    font-size: 11px;
-    margin-top: 8px;
+    font-size: 10px;
+    margin-top: 6px;
     text-align: center;
-    max-width: 90vw;
-    letter-spacing: 1px;
+    max-width: 100%;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+    padding: 0 4px;
+  }
+
+  /* Очень узкие экраны */
+  @media (max-width: 340px) {
+    .effect-btn .desc { display: none; }
+    .effect-btn { min-height: 62px; }
+    .tab { letter-spacing: 0; padding: 9px 4px; }
+    h1 { letter-spacing: 2px; }
   }
 </style>
 </head>
@@ -296,8 +349,8 @@
 
 <div class="panel active" id="panel-record">
   <div class="recorder">
-    <button class="rec-btn" id="recBtn">🎤</button>
-    <div class="timer" id="timer">00:00 / 00:15</div>
+    <button class="rec-btn" id="recBtn" aria-label="Запись">🎤</button>
+    <div class="timer" id="timer">00:00.00 / 00:15</div>
     <div class="warn-note">Запись ограничена 15с — для длинного аудио используй вкладку «Файл»</div>
   </div>
 </div>
@@ -322,7 +375,7 @@
       <input type="checkbox" id="trimToggle">
       <span>Обработать фрагмент (а не весь файл)</span>
     </label>
-    <span id="trimInfo" style="font-size:11px;color:rgba(150,200,255,0.5)">—</span>
+    <span id="trimInfo" style="font-size:10px;color:rgba(150,200,255,0.5)">—</span>
   </div>
   <div class="trim-range">
     <span>от</span>
@@ -349,7 +402,7 @@
 <div class="render-text" id="renderText">Рендер: 0%</div>
 
 <div class="preview-audio" id="previewAudio">
-  <audio controls id="audioPlayer"></audio>
+  <audio controls id="audioPlayer" playsinline></audio>
 </div>
 
 <div class="status" id="status">Запиши 🎤 или загрузи 📁 файл</div>
@@ -360,8 +413,8 @@
 // ============================================================
 let audioCtx = null;
 let analyser = null;
-let recordedBuffer = null;   // оригинал (запись или файл)
-let processedBuffer = null;  // обрезанный/выбранный фрагмент для обработки
+let recordedBuffer = null;
+let processedBuffer = null;
 let mediaRecorder = null;
 let mediaStream = null;
 let recordedChunks = [];
@@ -417,8 +470,9 @@ document.querySelectorAll('.tab').forEach(tab => {
 //  ВИЗУАЛИЗАТОР
 // ============================================================
 function resizeVis() {
-  $vis.width  = $vis.clientWidth * window.devicePixelRatio;
-  $vis.height = $vis.clientHeight * window.devicePixelRatio;
+  const dpr = window.devicePixelRatio || 1;
+  $vis.width  = Math.max(1, Math.floor($vis.clientWidth * dpr));
+  $vis.height = Math.max(1, Math.floor($vis.clientHeight * dpr));
 }
 resizeVis();
 window.addEventListener('resize', resizeVis);
@@ -446,7 +500,7 @@ function drawVisualizer() {
   grad.addColorStop(1, isRecording ? '#f6a' : '#6cf');
 
   visCtx.strokeStyle = grad;
-  visCtx.lineWidth = 2.5 * window.devicePixelRatio;
+  visCtx.lineWidth = 2 * (window.devicePixelRatio || 1);
   visCtx.beginPath();
   const sliceWidth = $vis.width / data.length;
   let x = 0;
@@ -711,6 +765,7 @@ $recBtn.addEventListener('click', async () => {
   }
 
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
 
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 2048;
@@ -778,11 +833,12 @@ function updateTimer(sec) {
 }
 
 // ============================================================
-//  ЗАГРУЗКА ФАЙЛА — БЕЗ ОБРЕЗКИ
+//  ЗАГРУЗКА ФАЙЛА
 // ============================================================
 $dropZone.addEventListener('click', () => $fileInput.click());
 $fileInput.addEventListener('change', e => {
   if (e.target.files[0]) handleFile(e.target.files[0]);
+  e.target.value = ''; // чтобы можно было выбрать тот же файл повторно
 });
 
 $dropZone.addEventListener('dragover', e => {
@@ -810,18 +866,18 @@ async function handleFile(file) {
   $renderText.classList.remove('visible');
 
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
 
   try {
     const arrayBuf = await file.arrayBuffer();
     recordedBuffer = await audioCtx.decodeAudioData(arrayBuf);
-    processedBuffer = recordedBuffer;   // ← ВЕСЬ файл, без обрезки!
+    processedBuffer = recordedBuffer;
     fullFileDuration = recordedBuffer.duration;
     isFileMode = true;
 
     showFileInfo(file.name, processedBuffer.duration);
     enableEffects(true);
 
-    // Показать выбор фрагмента если файл длинный (>30с)
     if (fullFileDuration > 30) {
       setupTrimSection(file.name, file.size);
     } else {
@@ -901,7 +957,6 @@ function updateProcessedBuffer() {
     $fdur.textContent = formatDur(fullFileDuration);
   }
 
-  // сбрасываем превью
   lastRenderedBuffer = null;
   $dlBtn.classList.remove('visible');
   $previewAudio.classList.remove('visible');
@@ -977,9 +1032,7 @@ function stopAllPlayback() {
 $stopBtn.addEventListener('click', stopAllPlayback);
 
 // ============================================================
-//  СКАЧИВАНИЕ — РЕНДЕР ПОЛНОГО ФАЙЛА
-//  Используем OfflineAudioContext — рендерит быстрее реального времени.
-//  Для очень длинных файлов (>5 мин) может занять память — предупреждаем.
+//  СКАЧИВАНИЕ
 // ============================================================
 $dlBtn.addEventListener('click', async () => {
   if (!processedBuffer) return;
@@ -998,7 +1051,6 @@ $dlBtn.addEventListener('click', async () => {
   $renderFill.style.width = '0%';
   $renderText.textContent = 'Рендер: 0%';
 
-  // симулируем прогресс (реальный прогресс OfflineAudioContext не даёт)
   let fakeProgress = 0;
   const progressInterval = setInterval(() => {
     fakeProgress = Math.min(90, fakeProgress + (100 / Math.max(10, duration)));
@@ -1028,7 +1080,6 @@ $dlBtn.addEventListener('click', async () => {
     $renderFill.style.width = '100%';
     $renderText.textContent = 'Рендер: 100% — кодируем WAV...';
 
-    // даём браузеру отрисовать 100%
     await new Promise(r => setTimeout(r, 50));
 
     const wavBlob = audioBufferToWav(rendered);
@@ -1039,12 +1090,10 @@ $dlBtn.addEventListener('click', async () => {
       $renderText.classList.remove('visible');
     }, 1200);
 
-    // превью
     const url = URL.createObjectURL(wavBlob);
     $audioPlayer.src = url;
     $previewAudio.classList.add('visible');
 
-    // скачивание
     const a = document.createElement('a');
     a.href = url;
     const safeName = eff.name.toLowerCase().replace(/\s+/g, '_');
@@ -1067,7 +1116,7 @@ $dlBtn.addEventListener('click', async () => {
 });
 
 // ============================================================
-//  WAV ENCODER — работает с любым размером
+//  WAV ENCODER
 // ============================================================
 function audioBufferToWav(buffer) {
   const numChannels = buffer.numberOfChannels;
