@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>🎙️ Voice Transformer v3</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #1a0a2e 0%, #000 70%);
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 30px 20px; overflow-x: hidden;
+  }
+  h1 {
+    font-weight: 100; font-size: 32px; letter-spacing: 8px;
+    text-transform: uppercase; margin-bottom: 6px;
+    background: linear-gradient(90deg, #6cf, #c6f, #f6c);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-align: center;
+  }
+  .subtitle {
+    color: rgba(150,200,255,0.5); font-size: 13px;
+    letter-spacing: 3px; margin-bottom: 25px; text-align: center;
+  }
+
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 20px;
+    background: rgba(255,255,255,0.04);
+    padding: 4px; border-radius: 30px;
+    border: 1px solid rgba(150,200,255,0.15);
+  }
+  .tab {
+    padding: 10px 22px; border-radius: 26px;
+    background: transparent; border: none;
+    color: rgba(150,200,255,0.6);
+    cursor: pointer; font-size: 13px;
+    letter-spacing: 1.5px; transition: all 0.25s;
+    font-family: inherit;
+  }
+  .tab:hover { color: #9df; }
+  .tab.active {
+    background: linear-gradient(135deg, rgba(150,200,255,0.25), rgba(200,150,255,0.2));
+    color: #fff;
+    box-shadow: 0 0 15px rgba(150,220,255,0.25);
+  }
+
+  .panel { display: none; flex-direction: column; align-items: center; width: 100%; }
+  .panel.active { display: flex; }
+
+  .recorder {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 18px; margin-bottom: 20px;
+  }
+  .rec-btn {
+    width: 100px; height: 100px; border-radius: 50%;
+    border: 3px solid rgba(255,80,120,0.6);
+    background: radial-gradient(circle, rgba(255,80,120,0.25), rgba(255,80,120,0.05));
+    cursor: pointer; transition: all 0.3s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+  }
+  .rec-btn:hover {
+    transform: scale(1.05); border-color: #f6a;
+    box-shadow: 0 0 30px rgba(255,80,120,0.4);
+  }
+  .rec-btn.recording {
+    border-color: #f33; animation: recPulse 1s infinite;
+  }
+  @keyframes recPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,50,50,0.7); }
+    50%      { box-shadow: 0 0 0 25px rgba(255,50,50,0); }
+  }
+
+  .drop-zone {
+    width: min(90vw, 600px);
+    min-height: 180px;
+    border: 2px dashed rgba(150,200,255,0.3);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.02);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px; padding: 30px;
+    cursor: pointer; transition: all 0.3s;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: #9df;
+    background: rgba(150,200,255,0.08);
+    box-shadow: 0 0 40px rgba(150,200,255,0.15);
+  }
+  .drop-zone .big-icon { font-size: 46px; }
+  .drop-zone .hint {
+    color: rgba(150,200,255,0.6);
+    font-size: 13px; letter-spacing: 1px;
+  }
+  .drop-zone .formats {
+    color: rgba(150,200,255,0.35);
+    font-size: 11px; letter-spacing: 2px;
+  }
+
+  .timer {
+    font-size: 22px; font-variant-numeric: tabular-nums;
+    color: #9df; letter-spacing: 2px;
+  }
+
+  .file-info {
+    width: min(90vw, 600px);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(150,200,255,0.2);
+    border-radius: 12px; padding: 12px 18px;
+    margin-bottom: 12px;
+    display: none; justify-content: space-between;
+    align-items: center; gap: 15px;
+    font-size: 13px;
+  }
+  .file-info.visible { display: flex; }
+  .file-info .fname {
+    color: #9df; font-weight: 600;
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; max-width: 60%;
+  }
+  .file-info .fdur { color: rgba(150,200,255,0.6); font-size: 12px; }
+
+  /* ==== ВЫБОР ФРАГМЕНТА ==== */
+  .trim-section {
+    width: min(90vw, 600px);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(150,200,255,0.15);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .trim-section.visible { display: flex; }
+  .trim-header {
+    display: flex; justify-content: space-between;
+    align-items: center; font-size: 12px;
+    color: rgba(150,200,255,0.7);
+    letter-spacing: 1px;
+  }
+  .trim-toggle {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; user-select: none;
+  }
+  .trim-toggle input { accent-color: #6cf; cursor: pointer; }
+  .trim-range {
+    display: flex; gap: 10px; align-items: center;
+    font-size: 11px; color: rgba(150,200,255,0.6);
+  }
+  .trim-range input[type=range] {
+    flex: 1; accent-color: #6cf;
+  }
+  .trim-time {
+    font-variant-numeric: tabular-nums;
+    color: #9df; min-width: 55px; text-align: right;
+  }
+
+  #visualizer {
+    width: min(90vw, 600px); height: 100px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(150,200,255,0.15);
+    display: block; margin-bottom: 18px;
+  }
+
+  .effects {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px; width: min(90vw, 800px); margin-top: 10px;
+  }
+  .effect-btn {
+    padding: 14px 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(150,200,255,0.2);
+    border-radius: 12px; color: #fff; cursor: pointer;
+    transition: all 0.25s; font-size: 12px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 5px;
+    position: relative; overflow: hidden;
+  }
+  .effect-btn:hover:not(:disabled) {
+    background: rgba(150,200,255,0.12);
+    border-color: rgba(150,200,255,0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(100,150,255,0.15);
+  }
+  .effect-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .effect-btn .emoji { font-size: 24px; }
+  .effect-btn .name  { font-weight: 600; letter-spacing: 0.5px; }
+  .effect-btn .desc  { font-size: 9px; color: rgba(150,200,255,0.6); text-align: center; }
+  .effect-btn.active {
+    background: linear-gradient(135deg, rgba(150,200,255,0.25), rgba(200,150,255,0.15));
+    border-color: #9df;
+    box-shadow: 0 0 20px rgba(150,220,255,0.3);
+  }
+
+  .status {
+    margin-top: 16px; color: rgba(150,200,255,0.6);
+    font-size: 13px; letter-spacing: 1px;
+    min-height: 20px; text-align: center;
+  }
+  .btn-row {
+    margin-top: 15px; display: flex;
+    gap: 10px; flex-wrap: wrap; justify-content: center;
+  }
+  .action-btn {
+    padding: 10px 22px;
+    background: rgba(150,200,255,0.12);
+    border: 1px solid rgba(150,200,255,0.35);
+    border-radius: 22px; color: #9df;
+    cursor: pointer; font-size: 12px;
+    letter-spacing: 2px; transition: all 0.25s;
+    font-family: inherit;
+    display: none;
+  }
+  .action-btn:hover {
+    background: rgba(150,200,255,0.25);
+    border-color: #9df;
+  }
+  .action-btn.visible { display: inline-block; }
+  .action-btn.stop {
+    background: rgba(255,80,120,0.15);
+    border-color: rgba(255,80,120,0.4);
+    color: #f8a;
+  }
+  .action-btn.stop:hover { background: rgba(255,80,120,0.3); }
+  .action-btn.download {
+    background: rgba(100,255,150,0.12);
+    border-color: rgba(100,255,150,0.35);
+    color: #6f9;
+  }
+  .action-btn.download:hover { background: rgba(100,255,150,0.25); }
+  .action-btn:disabled {
+    opacity: 0.4; cursor: wait;
+  }
+
+  .render-bar {
+    width: min(90vw, 600px);
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    margin-top: 12px;
+    overflow: hidden;
+    display: none;
+  }
+  .render-bar.visible { display: block; }
+  .render-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #6f9, #9df);
+    transition: width 0.15s;
+  }
+  .render-text {
+    font-size: 11px;
+    color: rgba(150,200,255,0.5);
+    margin-top: 6px;
+    letter-spacing: 1px;
+    display: none;
+  }
+  .render-text.visible { display: block; }
+
+  .preview-audio {
+    width: min(90vw, 600px);
+    margin-top: 12px;
+    display: none;
+  }
+  .preview-audio.visible { display: block; }
+  .preview-audio audio {
+    width: 100%; border-radius: 20px;
+    filter: invert(0.9) hue-rotate(180deg);
+  }
+
+  .warn-note {
+    color: #fa6;
+    font-size: 11px;
+    margin-top: 8px;
+    text-align: center;
+    max-width: 90vw;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Voice Lab</h1>
+<div class="subtitle">полный файл · без обрезки · скачивание WAV</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="record">🎤 Запись</button>
+  <button class="tab" data-tab="upload">📁 Файл</button>
+</div>
+
+<div class="panel active" id="panel-record">
+  <div class="recorder">
+    <button class="rec-btn" id="recBtn">🎤</button>
+    <div class="timer" id="timer">00:00 / 00:15</div>
+    <div class="warn-note">Запись ограничена 15с — для длинного аудио используй вкладку «Файл»</div>
+  </div>
+</div>
+
+<div class="panel" id="panel-upload">
+  <div class="drop-zone" id="dropZone">
+    <div class="big-icon">📁</div>
+    <div class="hint">Перетащи файл сюда или нажми</div>
+    <div class="formats">MP3 · WAV · OGG · M4A · FLAC · AAC · OPUS</div>
+    <input type="file" id="fileInput" accept="audio/*" style="display:none">
+  </div>
+</div>
+
+<div class="file-info" id="fileInfo">
+  <span class="fname" id="fname">—</span>
+  <span class="fdur" id="fdur">—</span>
+</div>
+
+<div class="trim-section" id="trimSection">
+  <div class="trim-header">
+    <label class="trim-toggle">
+      <input type="checkbox" id="trimToggle">
+      <span>Обработать фрагмент (а не весь файл)</span>
+    </label>
+    <span id="trimInfo" style="font-size:11px;color:rgba(150,200,255,0.5)">—</span>
+  </div>
+  <div class="trim-range">
+    <span>от</span>
+    <input type="range" id="trimStart" min="0" max="100" value="0" step="0.1" disabled>
+    <span class="trim-time" id="trimStartTime">0:00</span>
+  </div>
+  <div class="trim-range">
+    <span>до</span>
+    <input type="range" id="trimEnd" min="0" max="100" value="100" step="0.1" disabled>
+    <span class="trim-time" id="trimEndTime">0:00</span>
+  </div>
+</div>
+
+<canvas id="visualizer"></canvas>
+
+<div class="effects" id="effects"></div>
+
+<div class="btn-row">
+  <button class="action-btn stop" id="stopBtn">⏹ Стоп</button>
+  <button class="action-btn download" id="downloadBtn">⬇ Скачать WAV</button>
+</div>
+
+<div class="render-bar" id="renderBar"><div class="render-fill" id="renderFill"></div></div>
+<div class="render-text" id="renderText">Рендер: 0%</div>
+
+<div class="preview-audio" id="previewAudio">
+  <audio controls id="audioPlayer"></audio>
+</div>
+
+<div class="status" id="status">Запиши 🎤 или загрузи 📁 файл</div>
+
+<script>
+// ============================================================
+//  СОСТОЯНИЕ
+// ============================================================
+let audioCtx = null;
+let analyser = null;
+let recordedBuffer = null;   // оригинал (запись или файл)
+let processedBuffer = null;  // обрезанный/выбранный фрагмент для обработки
+let mediaRecorder = null;
+let mediaStream = null;
+let recordedChunks = [];
+let isRecording = false;
+let isPlaying = false;
+let recStartTime = 0;
+let recTimerInterval = null;
+let lastEffectIdx = -1;
+let lastRenderedBuffer = null;
+let fullFileDuration = 0;
+let isFileMode = false;
+const MAX_RECORD_SECONDS = 15;
+
+const $recBtn    = document.getElementById('recBtn');
+const $timer     = document.getElementById('timer');
+const $status    = document.getElementById('status');
+const $effects   = document.getElementById('effects');
+const $stopBtn   = document.getElementById('stopBtn');
+const $dlBtn     = document.getElementById('downloadBtn');
+const $vis       = document.getElementById('visualizer');
+const visCtx     = $vis.getContext('2d');
+const $fileInfo  = document.getElementById('fileInfo');
+const $fname     = document.getElementById('fname');
+const $fdur      = document.getElementById('fdur');
+const $dropZone  = document.getElementById('dropZone');
+const $fileInput = document.getElementById('fileInput');
+const $renderBar = document.getElementById('renderBar');
+const $renderFill= document.getElementById('renderFill');
+const $renderText= document.getElementById('renderText');
+const $previewAudio = document.getElementById('previewAudio');
+const $audioPlayer = document.getElementById('audioPlayer');
+const $trimSection = document.getElementById('trimSection');
+const $trimToggle  = document.getElementById('trimToggle');
+const $trimStart   = document.getElementById('trimStart');
+const $trimEnd     = document.getElementById('trimEnd');
+const $trimStartTime = document.getElementById('trimStartTime');
+const $trimEndTime   = document.getElementById('trimEndTime');
+const $trimInfo    = document.getElementById('trimInfo');
+
+// ============================================================
+//  ВКЛАДКИ
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ============================================================
+//  ВИЗУАЛИЗАТОР
+// ============================================================
+function resizeVis() {
+  $vis.width  = $vis.clientWidth * window.devicePixelRatio;
+  $vis.height = $vis.clientHeight * window.devicePixelRatio;
+}
+resizeVis();
+window.addEventListener('resize', resizeVis);
+
+function drawVisualizer() {
+  requestAnimationFrame(drawVisualizer);
+  visCtx.clearRect(0, 0, $vis.width, $vis.height);
+
+  if (!analyser) {
+    visCtx.strokeStyle = 'rgba(150,200,255,0.15)';
+    visCtx.lineWidth = 2;
+    visCtx.beginPath();
+    visCtx.moveTo(0, $vis.height / 2);
+    visCtx.lineTo($vis.width, $vis.height / 2);
+    visCtx.stroke();
+    return;
+  }
+
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(data);
+
+  const grad = visCtx.createLinearGradient(0, 0, $vis.width, 0);
+  grad.addColorStop(0, isRecording ? '#f6a' : '#6cf');
+  grad.addColorStop(0.5, '#c9f');
+  grad.addColorStop(1, isRecording ? '#f6a' : '#6cf');
+
+  visCtx.strokeStyle = grad;
+  visCtx.lineWidth = 2.5 * window.devicePixelRatio;
+  visCtx.beginPath();
+  const sliceWidth = $vis.width / data.length;
+  let x = 0;
+  for (let i = 0; i < data.length; i++) {
+    const v = data[i] / 128.0;
+    const y = (v * $vis.height) / 2;
+    if (i === 0) visCtx.moveTo(x, y);
+    else visCtx.lineTo(x, y);
+    x += sliceWidth;
+  }
+  visCtx.stroke();
+}
+drawVisualizer();
+
+// ============================================================
+//  ЭФФЕКТЫ
+// ============================================================
+const EFFECTS = [
+  {
+    emoji: '😈', name: 'Демон', desc: 'глубокий голос из ада',
+    build(ctx, buffer) {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.playbackRate.value = 0.65;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass'; filter.frequency.value = 800;
+      const distortion = ctx.createWaveShaper();
+      distortion.curve = makeDistortionCurve(20);
+      src.connect(filter).connect(distortion);
+      return { output: distortion, source: src };
+    }
+  },
+  {
+    emoji: '🐿️', name: 'Чипманд', desc: 'писклявый бурундук',
+    build(ctx, buffer) {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.playbackRate.value = 1.8;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass'; filter.frequency.value = 300;
+      src.connect(filter);
+      return { output: filter, source: src };
+    }
+  },
+  {
+    emoji: '🤖', name: 'Робот', desc: 'механический голос',
+    build(ctx, buffer) {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const ring = ctx.createGain();
+      ring.gain.value = 0;
+      const lfo = ctx.createOscillator();
+      lfo.type = 'square'; lfo.frequency.value = 80;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 1;
+      lfo.connect(lfoGain); lfoGain.connect(ring.gain);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1200; bp.Q.value = 3;
+      src.connect(bp).connect(ring);
+      const out = ctx.createGain();
+      ring.connect(out);
+      lfo.start();
+      return { output: out, source: src, extra: [lfo] };
+    }
+  },
+  {
+    emoji: '👻', name: 'Призрак', desc: 'шёпот из другого мира',
+    build(ctx, buffer) {
+      const src = ctx.createBufferSource();
+      src.buffer = reverseBuffer(ctx, buffer);
+      const convolver = ctx.createConvolver();
+      convolver.buffer = makeReverbIR(ctx, 2.5, 2);
+      const mix = ctx.createGain(); mix.gain.value = 0.9;
+      src.connect(convolver); convolver.connect(mix);
+      const direct = ctx.createGain(); direct.gain.value = 0.3;
+      src.connect(direct).connect(mix);
+      return { output: mix, source: src };
+    }
+  },
+  {
+    emoji: '👽', name: 'Инопланетянин', desc: 'модуляция + вибрато',
+    build(ctx, buffer) {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 8;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 200;
+      lfo.connect(lfoGain);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1000; bp.Q.value = 4;
+      lfoGain.connect(bp.frequency);
+      const tremolo = ctx.createGain(); tremolo.gain.value = 0.7;
+      const tremLFO = ctx.createOscillator(); tremLFO.frequency.value = 15;
+      const tremGain = ctx.createGain(); tremGain.gain.value = 0.3;
+      tremLFO.connect(tremGain); tremGain.connect(tremolo.gain);
+      src.connect(bp).connect(tremolo);
+      src.playbackRate.value = 1.15;
+      lfo.start(); tremLFO.start();
+      return { output: tremolo, source: src, extra: [lfo, tremLFO] };
+    }
+  },
+  {
+    emoji: '🎭', name: 'Хор', desc: 'голос + 3 клона',
+    build(ctx, buffer) {
+      const mix = ctx.createGain(); mix.gain.value = 0.6;
+      const rates = [1, 1.02, 0.98, 1.05];
+      const delays = [0, 0.03, 0.06, 0.09];
+      const sources = [];
+      rates.forEach((rate, i) => {
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.playbackRate.value = rate;
+        src.detune.value = (i - 1.5) * 15;
+        const d = ctx.createDelay(1); d.delayTime.value = delays[i];
+        const g = ctx.createGain(); g.gain.value = 0.5;
+        src.connect(d).connect(g).connect(mix);
+        sources.push(src);
+      });
+      return { output: mix, sources };
+    }
+  },
+  {
+    emoji: '⚡', name: 'Металл', desc: 'крик из динамиков',
+    build(ctx, buffer) {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      const dist = ctx.createWaveShaper();
+      dist.curve = makeDistortionCurve(400); dist.oversample = '4x';
+      const delay = ctx.createDelay(0.05);
+      delay.delayTime.value = 0.005;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.8;
+      const lfoGain = ctx.createGain(); lfoGain.gain.value = 0.003;
+      lfo.connect(lfoGain).connect(delay.delayTime);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 400;
+      src.connect(dist).connect(hp).connect(delay);
+      const mix = ctx.createGain(); mix.gain.value = 0.8;
+      delay.connect(mix);
+      lfo.start();
+      return { output: mix, source: src, extra: [lfo] };
+    }
+  },
+  {
+    emoji: '🌀', name: 'Заикание', desc: 'голос зацикливается',
+    build(ctx, buffer) {
+      const ctxSrc = ctx.createBufferSource();
+      const chunkDuration = 0.12;
+      const sr = buffer.sampleRate;
+      const chunkSize = Math.floor(chunkDuration * sr);
+      const totalSamples = buffer.length;
+      const numChunks = Math.floor(totalSamples / chunkSize);
+      const newLength = totalSamples + Math.floor(numChunks * 0.4) * chunkSize;
+      const newBuffer = ctx.createBuffer(1, newLength, sr);
+      const srcData = buffer.getChannelData(0);
+      const dstData = newBuffer.getChannelData(0);
+      let dstPos = 0;
+      for (let i = 0; i < numChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, totalSamples);
+        for (let s = start; s < end; s++) dstData[dstPos++] = srcData[s];
+        if (Math.random() < 0.4) {
+          for (let s = start; s < end; s++) dstData[dstPos++] = srcData[s];
+        }
+      }
+      ctxSrc.buffer = newBuffer;
+      const gain = ctx.createGain(); gain.gain.value = 0.8;
+      ctxSrc.connect(gain);
+      return { output: gain, source: ctxSrc };
+    }
+  }
+];
+
+// ============================================================
+//  ХЕЛПЕРЫ
+// ============================================================
+function makeDistortionCurve(amount) {
+  const n = 44100;
+  const curve = new Float32Array(n);
+  const deg = Math.PI / 180;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / n - 1;
+    curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+  }
+  return curve;
+}
+
+function reverseBuffer(ctx, buffer) {
+  const rev = ctx.createBuffer(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const src = buffer.getChannelData(ch);
+    const dst = rev.getChannelData(ch);
+    for (let i = 0; i < src.length; i++) dst[i] = src[src.length - 1 - i];
+  }
+  return rev;
+}
+
+function makeReverbIR(ctx, duration, decay) {
+  const rate = ctx.sampleRate;
+  const length = rate * duration;
+  const impulse = ctx.createBuffer(2, length, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    }
+  }
+  return impulse;
+}
+
+function sliceBuffer(ctx, buffer, start, end) {
+  const sr = buffer.sampleRate;
+  const startSample = Math.max(0, Math.floor(start * sr));
+  const endSample = Math.min(Math.floor(end * sr), buffer.length);
+  const len = Math.max(0, endSample - startSample);
+  const out = ctx.createBuffer(buffer.numberOfChannels, len, sr);
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    out.copyToChannel(buffer.getChannelData(ch).slice(startSample, endSample), ch);
+  }
+  return out;
+}
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function formatDur(sec) {
+  if (sec >= 60) return formatTime(sec);
+  return sec.toFixed(1) + 'с';
+}
+
+// ============================================================
+//  КНОПКИ ЭФФЕКТОВ
+// ============================================================
+EFFECTS.forEach((eff, idx) => {
+  const btn = document.createElement('button');
+  btn.className = 'effect-btn';
+  btn.disabled = true;
+  btn.innerHTML = `
+    <span class="emoji">${eff.emoji}</span>
+    <span class="name">${eff.name}</span>
+    <span class="desc">${eff.desc}</span>
+  `;
+  btn.addEventListener('click', () => playEffect(idx, btn));
+  $effects.appendChild(btn);
+});
+
+// ============================================================
+//  ЗАПИСЬ
+// ============================================================
+$recBtn.addEventListener('click', async () => {
+  if (isRecording) { stopRecording(); return; }
+  stopAllPlayback();
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    $status.textContent = '❌ Нет доступа к микрофону: ' + e.message;
+    return;
+  }
+
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  const micSrc = audioCtx.createMediaStreamSource(mediaStream);
+  micSrc.connect(analyser);
+
+  recordedChunks = [];
+  mediaRecorder = new MediaRecorder(mediaStream);
+  mediaRecorder.ondataavailable = e => {
+    if (e.data.size > 0) recordedChunks.push(e.data);
+  };
+  mediaRecorder.onstop = async () => {
+    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+    const arrayBuf = await blob.arrayBuffer();
+    try {
+      recordedBuffer = await audioCtx.decodeAudioData(arrayBuf);
+      if (recordedBuffer.duration > MAX_RECORD_SECONDS) {
+        recordedBuffer = sliceBuffer(audioCtx, recordedBuffer, 0, MAX_RECORD_SECONDS);
+      }
+      processedBuffer = recordedBuffer;
+      isFileMode = false;
+      enableEffects(true);
+      showFileInfo('🎤 Запись', processedBuffer.duration);
+      $trimSection.classList.remove('visible');
+      $status.textContent = `✅ Записано ${processedBuffer.duration.toFixed(1)}с — выбери эффект`;
+    } catch (e) {
+      $status.textContent = '❌ Ошибка декодирования: ' + e.message;
+    }
+  };
+
+  mediaRecorder.start();
+  isRecording = true;
+  $recBtn.classList.add('recording');
+  $recBtn.textContent = '⏹';
+  $status.textContent = '🔴 Запись...';
+  recStartTime = performance.now();
+
+  recTimerInterval = setInterval(() => {
+    const elapsed = (performance.now() - recStartTime) / 1000;
+    updateTimer(elapsed);
+    if (elapsed >= MAX_RECORD_SECONDS) stopRecording();
+  }, 100);
+});
+
+function stopRecording() {
+  if (!isRecording) return;
+  isRecording = false;
+  clearInterval(recTimerInterval);
+  $recBtn.classList.remove('recording');
+  $recBtn.textContent = '🎤';
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+  }
+  setTimeout(() => { if (!isRecording) analyser = null; }, 300);
+  updateTimer(MAX_RECORD_SECONDS);
+}
+
+function updateTimer(sec) {
+  const s = Math.floor(sec);
+  const cs = Math.floor((sec - s) * 100);
+  $timer.textContent =
+    `00:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')} / 00:15`;
+}
+
+// ============================================================
+//  ЗАГРУЗКА ФАЙЛА — БЕЗ ОБРЕЗКИ
+// ============================================================
+$dropZone.addEventListener('click', () => $fileInput.click());
+$fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+$dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  $dropZone.classList.add('dragover');
+});
+$dropZone.addEventListener('dragleave', () => $dropZone.classList.remove('dragover'));
+$dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  $dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+async function handleFile(file) {
+  if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|ogg|m4a|flac|aac|opus|webm)$/i)) {
+    $status.textContent = '❌ Это не аудиофайл';
+    return;
+  }
+
+  stopAllPlayback();
+  $status.textContent = `⏳ Загружаем "${file.name}"...`;
+  $dlBtn.classList.remove('visible');
+  $previewAudio.classList.remove('visible');
+  $renderBar.classList.remove('visible');
+  $renderText.classList.remove('visible');
+
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  try {
+    const arrayBuf = await file.arrayBuffer();
+    recordedBuffer = await audioCtx.decodeAudioData(arrayBuf);
+    processedBuffer = recordedBuffer;   // ← ВЕСЬ файл, без обрезки!
+    fullFileDuration = recordedBuffer.duration;
+    isFileMode = true;
+
+    showFileInfo(file.name, processedBuffer.duration);
+    enableEffects(true);
+
+    // Показать выбор фрагмента если файл длинный (>30с)
+    if (fullFileDuration > 30) {
+      setupTrimSection(file.name, file.size);
+    } else {
+      $trimSection.classList.remove('visible');
+    }
+
+    $status.textContent = `✅ Загружено ${formatDur(fullFileDuration)} — весь файл будет обработан`;
+  } catch (e) {
+    $status.textContent = '❌ Не удалось декодировать: ' + e.message;
+    console.error(e);
+  }
+}
+
+function showFileInfo(name, dur) {
+  $fileInfo.classList.add('visible');
+  $fname.textContent = name;
+  $fdur.textContent = formatDur(dur);
+}
+
+// ============================================================
+//  ВЫБОР ФРАГМЕНТА
+// ============================================================
+function setupTrimSection(name, size) {
+  $trimSection.classList.add('visible');
+  $trimToggle.checked = false;
+  $trimStart.disabled = true;
+  $trimEnd.disabled = true;
+  $trimStart.value = 0;
+  $trimEnd.value = 100;
+  $trimStartTime.textContent = formatTime(0);
+  $trimEndTime.textContent = formatTime(fullFileDuration);
+  $trimInfo.textContent = `весь файл: ${formatDur(fullFileDuration)}`;
+  updateProcessedBuffer();
+}
+
+$trimToggle.addEventListener('change', () => {
+  const enabled = $trimToggle.checked;
+  $trimStart.disabled = !enabled;
+  $trimEnd.disabled = !enabled;
+  updateProcessedBuffer();
+});
+
+$trimStart.addEventListener('input', () => {
+  const v = parseFloat($trimStart.value);
+  const ev = parseFloat($trimEnd.value);
+  if (v >= ev) {
+    $trimStart.value = Math.max(0, ev - 1);
+    return;
+  }
+  $trimStartTime.textContent = formatTime((v / 100) * fullFileDuration);
+  updateProcessedBuffer();
+});
+
+$trimEnd.addEventListener('input', () => {
+  const v = parseFloat($trimEnd.value);
+  const sv = parseFloat($trimStart.value);
+  if (v <= sv) {
+    $trimEnd.value = Math.min(100, sv + 1);
+    return;
+  }
+  $trimEndTime.textContent = formatTime((v / 100) * fullFileDuration);
+  updateProcessedBuffer();
+});
+
+function updateProcessedBuffer() {
+  if (!recordedBuffer || !isFileMode) return;
+
+  if ($trimToggle.checked) {
+    const startSec = (parseFloat($trimStart.value) / 100) * fullFileDuration;
+    const endSec   = (parseFloat($trimEnd.value)   / 100) * fullFileDuration;
+    processedBuffer = sliceBuffer(audioCtx, recordedBuffer, startSec, endSec);
+    $trimInfo.textContent = `фрагмент: ${formatDur(processedBuffer.duration)}`;
+    $fdur.textContent = `${formatDur(processedBuffer.duration)} (из ${formatDur(fullFileDuration)})`;
+  } else {
+    processedBuffer = recordedBuffer;
+    $trimInfo.textContent = `весь файл: ${formatDur(fullFileDuration)}`;
+    $fdur.textContent = formatDur(fullFileDuration);
+  }
+
+  // сбрасываем превью
+  lastRenderedBuffer = null;
+  $dlBtn.classList.remove('visible');
+  $previewAudio.classList.remove('visible');
+}
+
+// ============================================================
+//  ВОСПРОИЗВЕДЕНИЕ
+// ============================================================
+let currentEffectSource = null;
+let currentExtraNodes = [];
+let currentAnalyser = null;
+
+function playEffect(idx, btn) {
+  if (!processedBuffer) return;
+  stopAllPlayback();
+
+  const eff = EFFECTS[idx];
+  const built = eff.build(audioCtx, processedBuffer);
+
+  currentAnalyser = audioCtx.createAnalyser();
+  currentAnalyser.fftSize = 2048;
+
+  built.output.connect(currentAnalyser);
+  currentAnalyser.connect(audioCtx.destination);
+
+  currentEffectSource = built.source;
+  currentExtraNodes = built.extra || [];
+  if (built.sources) currentExtraNodes.push(...built.sources);
+
+  document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  if (built.sources) built.sources.forEach(s => s.start());
+  else built.source.start();
+
+  analyser = currentAnalyser;
+  isPlaying = true;
+  lastEffectIdx = idx;
+  $stopBtn.classList.add('visible');
+  $dlBtn.classList.add('visible');
+  $status.textContent = `▶ ${eff.emoji} ${eff.name} (${formatDur(processedBuffer.duration)})`;
+
+  const done = () => { if (isPlaying) stopAllPlayback(); };
+  if (!built.sources) built.source.onended = done;
+  else built.sources[built.sources.length - 1].onended = done;
+}
+
+function stopAllPlayback() {
+  isPlaying = false;
+  analyser = null;
+  $stopBtn.classList.remove('visible');
+  document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
+
+  try { if (currentEffectSource) currentEffectSource.stop(); } catch(e) {}
+  currentExtraNodes.forEach(n => {
+    try { n.stop(); } catch(e) {}
+    try { n.disconnect(); } catch(e) {}
+  });
+  currentEffectSource = null;
+  currentExtraNodes = [];
+  if (currentAnalyser) {
+    try { currentAnalyser.disconnect(); } catch(e) {}
+    currentAnalyser = null;
+  }
+
+  if (processedBuffer) {
+    $status.textContent = `Готово — выбери эффект (${formatDur(processedBuffer.duration)})`;
+  } else {
+    $status.textContent = 'Запиши 🎤 или загрузи 📁 файл';
+  }
+}
+
+$stopBtn.addEventListener('click', stopAllPlayback);
+
+// ============================================================
+//  СКАЧИВАНИЕ — РЕНДЕР ПОЛНОГО ФАЙЛА
+//  Используем OfflineAudioContext — рендерит быстрее реального времени.
+//  Для очень длинных файлов (>5 мин) может занять память — предупреждаем.
+// ============================================================
+$dlBtn.addEventListener('click', async () => {
+  if (!processedBuffer) return;
+  if (lastEffectIdx < 0) {
+    $status.textContent = '❌ Сначала проиграй эффект';
+    return;
+  }
+
+  const eff = EFFECTS[lastEffectIdx];
+  const duration = processedBuffer.duration;
+
+  $dlBtn.disabled = true;
+  $status.textContent = `⏳ Рендерим "${eff.name}" (${formatDur(duration)})...`;
+  $renderBar.classList.add('visible');
+  $renderText.classList.add('visible');
+  $renderFill.style.width = '0%';
+  $renderText.textContent = 'Рендер: 0%';
+
+  // симулируем прогресс (реальный прогресс OfflineAudioContext не даёт)
+  let fakeProgress = 0;
+  const progressInterval = setInterval(() => {
+    fakeProgress = Math.min(90, fakeProgress + (100 / Math.max(10, duration)));
+    $renderFill.style.width = fakeProgress + '%';
+    $renderText.textContent = `Рендер: ${Math.round(fakeProgress)}%`;
+  }, 100);
+
+  try {
+    const sampleRate = processedBuffer.sampleRate;
+    const numSamples = Math.ceil(duration * sampleRate);
+
+    const offline = new OfflineAudioContext(
+      processedBuffer.numberOfChannels,
+      numSamples,
+      sampleRate
+    );
+
+    const built = eff.build(offline, processedBuffer);
+    built.output.connect(offline.destination);
+
+    if (built.sources) built.sources.forEach(s => s.start(0));
+    else built.source.start(0);
+
+    const rendered = await offline.startRendering();
+
+    clearInterval(progressInterval);
+    $renderFill.style.width = '100%';
+    $renderText.textContent = 'Рендер: 100% — кодируем WAV...';
+
+    // даём браузеру отрисовать 100%
+    await new Promise(r => setTimeout(r, 50));
+
+    const wavBlob = audioBufferToWav(rendered);
+
+    $renderText.textContent = 'Готово! Скачивание...';
+    setTimeout(() => {
+      $renderBar.classList.remove('visible');
+      $renderText.classList.remove('visible');
+    }, 1200);
+
+    // превью
+    const url = URL.createObjectURL(wavBlob);
+    $audioPlayer.src = url;
+    $previewAudio.classList.add('visible');
+
+    // скачивание
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = eff.name.toLowerCase().replace(/\s+/g, '_');
+    a.download = `voice_lab_${safeName}_${Date.now()}.wav`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    lastRenderedBuffer = rendered;
+    $status.textContent = `✅ Скачано: ${eff.emoji} ${eff.name} (${formatDur(duration)})`;
+  } catch (e) {
+    clearInterval(progressInterval);
+    $status.textContent = '❌ Ошибка рендера: ' + e.message;
+    console.error(e);
+    $renderBar.classList.remove('visible');
+    $renderText.classList.remove('visible');
+  } finally {
+    $dlBtn.disabled = false;
+  }
+});
+
+// ============================================================
+//  WAV ENCODER — работает с любым размером
+// ============================================================
+function audioBufferToWav(buffer) {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate  = buffer.sampleRate;
+  const numSamples  = buffer.length;
+  const bytesPerSample = 2;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate   = sampleRate * blockAlign;
+  const dataSize   = numSamples * blockAlign;
+  const bufferSize = 44 + dataSize;
+
+  const ab = new ArrayBuffer(bufferSize);
+  const view = new DataView(ab);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, bufferSize - 8, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  const channels = [];
+  for (let ch = 0; ch < numChannels; ch++) channels.push(buffer.getChannelData(ch));
+
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    for (let ch = 0; ch < numChannels; ch++) {
+      let s = Math.max(-1, Math.min(1, channels[ch][i]));
+      s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      view.setInt16(offset, s, true);
+      offset += 2;
+    }
+  }
+
+  return new Blob([ab], { type: 'audio/wav' });
+}
+
+// ============================================================
+//  УТИЛИТЫ
+// ============================================================
+function enableEffects(on) {
+  document.querySelectorAll('.effect-btn').forEach(b => b.disabled = !on);
+}
+
+document.body.addEventListener('click', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: true });
+
+enableEffects(false);
+</script>
+</body>
+</html>
