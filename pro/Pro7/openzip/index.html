@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Крипто ZIP: дерево, чтение, копирование</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --line:#2a2f3a; --text:#e6e9ef;
+    --muted:#9aa3b2; --accent:#4f8cff; --ok:#35c46a; --err:#ff5d6c;
+    --hover:#1e2330;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+       background:var(--bg);color:var(--text);min-height:100vh}
+  header{padding:18px 20px;border-bottom:1px solid var(--line);
+         display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;font-weight:600}
+  .badge{font-size:12px;color:var(--muted);border:1px solid var(--line);
+         padding:3px 8px;border-radius:999px}
+  main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+  @media (max-width:950px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h2{font-size:15px;margin:0 0 10px;font-weight:600}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+  input[type=password], input[type=text], input[type=search]{
+    background:#0f1218;border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:8px 10px;min-width:160px;flex:1
+  }
+  button{
+    background:var(--accent);color:#fff;border:0;border-radius:8px;
+    padding:8px 12px;font-weight:600;cursor:pointer;font-size:13px
+  }
+  button.ghost{background:#232836}
+  button.small{padding:5px 8px;font-size:12px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .hint{color:var(--muted);font-size:12px;line-height:1.4}
+  .status{font-size:12px;margin-top:8px}
+  .ok{color:var(--ok)} .err{color:var(--err)}
+  .drop{border:2px dashed var(--line);border-radius:10px;padding:14px;text-align:center;
+        color:var(--muted);font-size:13px;cursor:pointer}
+  .drop.hover{border-color:var(--accent);color:var(--text)}
+  label.check{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+
+  /* ===== ДЕРЕВО ===== */
+  .tree{
+    margin-top:10px;border:1px solid var(--line);border-radius:10px;
+    background:#0d1015;max-height:420px;overflow:auto;padding:6px;
+  }
+  .tree-empty{color:var(--muted);font-size:12px;padding:10px;text-align:center}
+  .node{user-select:none}
+  .node-row{
+    display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;
+    cursor:pointer;font-size:13px;line-height:1.2;
+  }
+  .node-row:hover{background:var(--hover)}
+  .node-row.active{background:#20304a}
+  .caret{
+    width:14px;display:inline-block;text-align:center;color:var(--muted);
+    transition:transform .12s ease;font-size:10px
+  }
+  .caret.open{transform:rotate(90deg)}
+  .caret.leaf{visibility:hidden}
+  .icon{width:16px;text-align:center;font-size:12px}
+  .icon.dir{color:#ffcf6b}
+  .icon.py{color:#7dd3fc}
+  .icon.json{color:#a7f3d0}
+  .icon.txt{color:#cbd5e1}
+  .icon.other{color:#9aa3b2}
+  .node-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .node-size{font-size:11px;color:var(--muted)}
+  .children{margin-left:16px;border-left:1px dashed var(--line);padding-left:6px;display:none}
+  .children.open{display:block}
+
+  /* ===== ПРОСМОТР ===== */
+  .preview{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+  .preview-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .preview-head h3{font-size:13px;margin:0;color:var(--muted);flex:1;word-break:break-all}
+  pre.view{background:#0b0d12;border:1px solid var(--line);border-radius:8px;
+           padding:10px;max-height:360px;overflow:auto;font-size:12px;margin:0;
+           white-space:pre-wrap;word-break:break-word;
+           font-family:ui-monospace,Menlo,Consolas,monospace}
+  .copy-note{font-size:11px;color:var(--ok);margin-left:6px;opacity:0;transition:opacity .2s}
+  .copy-note.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <h1>Крипто ZIP</h1>
+  <span class="badge">дерево папок</span>
+  <span class="badge">чтение .py / .json / .txt</span>
+  <span class="badge">копирование в буфер</span>
+</header>
+
+<main>
+  <!-- ================== СОЗДАНИЕ ================== -->
+  <section class="card">
+    <h2>Создать ZIP-архив</h2>
+    <div class="drop" id="dropCreate">
+      Перетащите файлы/папки сюда или <span style="color:var(--accent)">выберите</span>
+      <input type="file" id="fileCreate" multiple webkitdirectory hidden>
+    </div>
+    <div class="row">
+      <input type="password" id="passCreate" placeholder="Пароль (необязательно)">
+      <label class="check"><input type="checkbox" id="showPassCreate"> показать</label>
+    </div>
+    <div class="row">
+      <button id="btnCreate">Создать и скачать ZIP</button>
+      <button class="ghost" id="btnClearCreate">Очистить</button>
+    </div>
+    <div class="hint">
+      Можно выбирать папки — структура сохранится. Если указан пароль — используется AES-256.
+    </div>
+    <div class="tree" id="createTree"><div class="tree-empty">Файлы ещё не выбраны.</div></div>
+    <div class="status" id="createStatus"></div>
+  </section>
+
+  <!-- ================== ОТКРЫТИЕ ================== -->
+  <section class="card">
+    <h2>Открыть ZIP-архив</h2>
+    <div class="drop" id="dropOpen">
+      Перетащите ZIP сюда или <span style="color:var(--accent)">выберите</span>
+      <input type="file" id="fileOpen" accept=".zip,application/zip" hidden>
+    </div>
+    <div class="row">
+      <input type="password" id="passOpen" placeholder="Пароль, если архив зашифрован">
+      <label class="check"><input type="checkbox" id="showPassOpen"> показать</label>
+    </div>
+    <div class="row">
+      <button id="btnOpen">Открыть архив</button>
+      <button class="ghost" id="btnClearOpen">Очистить</button>
+    </div>
+    <div class="row">
+      <input type="search" id="searchOpen" placeholder="Поиск файла по имени…" disabled>
+    </div>
+
+    <div class="tree" id="openTree"><div class="tree-empty">Архив ещё не открыт.</div></div>
+
+    <div class="preview" id="previewWrap" hidden>
+      <div class="preview-head">
+        <h3 id="previewTitle"></h3>
+        <button class="small" id="btnCopyAll" title="Скопировать всё содержимое">Копировать всё</button>
+        <button class="small ghost" id="btnDownloadCur">Скачать</button>
+        <span class="copy-note" id="copyNote">скопировано</span>
+      </div>
+      <pre class="view" id="previewBody"></pre>
+    </div>
+
+    <div class="status" id="openStatus"></div>
+  </section>
+</main>
+
+<script src="https://unpkg.com/@zip.js/zip.js@2.7.45/dist/zip.min.js"></script>
+<script>
+const zip = window.zip;
+
+/* =============== УТИЛИТЫ =============== */
+const TEXT_EXT = new Set([
+  'py','json','txt','md','csv','tsv','log','html','htm','css','js','ts',
+  'jsx','tsx','xml','yml','yaml','ini','cfg','conf','env','sh','bat','ps1',
+  'sql','rs','go','java','c','h','cpp','hpp','cs','rb','php','toml'
+]);
+function extOf(name){
+  const m = /\.([^./\\]+)$/.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+function fmtSize(n){
+  if (n == null) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/1024/1024).toFixed(2) + ' MB';
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function setStatus(el, text, type){
+  el.className = 'status ' + (type || '');
+  el.textContent = text;
+}
+async function copyToClipboard(text){
+  try{
+    if (navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(_){}
+  // fallback
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  }catch(_){ return false; }
+}
+function showCopyNote(){
+  const n = document.getElementById('copyNote');
+  n.classList.add('show');
+  clearTimeout(showCopyNote._t);
+  showCopyNote._t = setTimeout(()=> n.classList.remove('show'), 1200);
+}
+
+/* показать/скрыть пароль */
+function bindShowPass(checkId, inputId){
+  document.getElementById(checkId).addEventListener('change', e=>{
+    document.getElementById(inputId).type = e.target.checked ? 'text' : 'password';
+  });
+}
+bindShowPass('showPassCreate','passCreate');
+bindShowPass('showPassOpen','passOpen');
+
+/* drag&drop */
+function bindDrop(dropId, inputId, cb){
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  drop.addEventListener('click', e=>{ if (e.target !== input) input.click(); });
+  input.addEventListener('change', ()=> cb([...input.files]));
+  drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.classList.add('hover'); });
+  drop.addEventListener('dragleave', ()=> drop.classList.remove('hover'));
+  drop.addEventListener('drop', e=>{
+    e.preventDefault(); drop.classList.remove('hover');
+    cb([...e.dataTransfer.files]);
+  });
+}
+
+/* =========================================================
+   ДЕРЕВО: построение и рендер
+   ========================================================= */
+/**
+ * Из плоского списка путей строим дерево.
+ * nodes: Map<имя, node> где node = { name, path, type:'dir'|'file', size?, entry? , children: Map }
+ */
+function buildTree(paths){
+  const root = { name:'', path:'', type:'dir', children:new Map() };
+  for (const item of paths){
+    const full = String(item.path || item.name || '').replace(/\\/g,'/').replace(/^\/+|\/+$/g,'');
+    if (!full) continue;
+    const parts = full.split('/').filter(Boolean);
+    let cur = root;
+    for (let i=0;i<parts.length;i++){
+      const isLast = i === parts.length-1;
+      const name = parts[i];
+      const path = parts.slice(0,i+1).join('/');
+      if (!cur.children.has(name)){
+        cur.children.set(name, {
+          name, path,
+          type: isLast ? (item.type || 'file') : 'dir',
+          size: isLast ? item.size : undefined,
+          entry: isLast ? item.entry : undefined,
+          children: new Map()
+        });
+      } else {
+        // если раньше был как файл, а сейчас пришли как dir — исправим
+        const ex = cur.children.get(name);
+        if (!isLast && ex.type === 'file'){ ex.type = 'dir'; ex.size = undefined; }
+        if (isLast && item.type) { ex.type = item.type; }
+        if (isLast && item.entry) { ex.entry = item.entry; }
+        if (isLast && item.size != null) { ex.size = item.size; }
+      }
+      cur = cur.children.get(name);
+    }
+  }
+  return root;
+}
+
+function iconClass(name, type){
+  if (type === 'dir') return 'dir';
+  const e = extOf(name);
+  if (e === 'py') return 'py';
+  if (e === 'json') return 'json';
+  if (e === 'txt' || e === 'md') return 'txt';
+  return 'other';
+}
+
+/**
+ * Рендер дерева.
+ * opts: { onFileClick(node), onDownload(node) }
+ */
+function renderTree(container, root, opts){
+  container.innerHTML = '';
+  if (!root.children.size){
+    container.innerHTML = '<div class="tree-empty">Пусто.</div>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  const sorted = [...root.children.values()].sort((a,b)=>{
+    if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+    return a.name.localeCompare(b.name, 'ru');
+  });
+  for (const node of sorted){
+    frag.appendChild(renderNode(node, opts, true));
+  }
+  container.appendChild(frag);
+}
+
+function renderNode(node, opts, openByDefault){
+  const wrap = document.createElement('div');
+  wrap.className = 'node';
+
+  const row = document.createElement('div');
+  row.className = 'node-row';
+
+  const caret = document.createElement('span');
+  caret.className = 'caret' + (node.type === 'dir' ? '' : ' leaf');
+  caret.textContent = '▶';
+
+  const icon = document.createElement('span');
+  icon.className = 'icon ' + iconClass(node.name, node.type);
+  icon.textContent = node.type === 'dir' ? '📁' : '📄';
+
+  const name = document.createElement('span');
+  name.className = 'node-name';
+  name.textContent = node.name;
+
+  const size = document.createElement('span');
+  size.className = 'node-size';
+  size.textContent = node.type === 'dir' ? '' : fmtSize(node.size);
+
+  row.append(caret, icon, name, size);
+  wrap.appendChild(row);
+
+  if (node.type === 'dir'){
+    const childrenBox = document.createElement('div');
+    childrenBox.className = 'children' + (openByDefault ? ' open' : '');
+    if (openByDefault) caret.classList.add('open');
+    wrap.appendChild(childrenBox);
+
+    const buildChildren = ()=>{
+      if (childrenBox.dataset.built) return;
+      childrenBox.dataset.built = '1';
+      const sorted = [...node.children.values()].sort((a,b)=>{
+        if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+        return a.name.localeCompare(b.name, 'ru');
+      });
+      for (const ch of sorted){
+        childrenBox.appendChild(renderNode(ch, opts, false));
+      }
+    };
+
+    if (openByDefault) buildChildren();
+
+    row.addEventListener('click', ()=>{
+      const isOpen = childrenBox.classList.toggle('open');
+      caret.classList.toggle('open', isOpen);
+      if (isOpen) buildChildren();
+    });
+  } else {
+    row.addEventListener('click', async ()=>{
+      // подсветка
+      document.querySelectorAll('#openTree .node-row.active')
+        .forEach(el=> el.classList.remove('active'));
+      row.classList.add('active');
+      if (opts.onFileClick) opts.onFileClick(node);
+    });
+  }
+
+  return wrap;
+}
+
+/* =========================================================
+   СОЗДАНИЕ АРХИВА
+   ========================================================= */
+let filesToCreate = [];
+const createTreeEl = document.getElementById('createTree');
+const createStatus = document.getElementById('createStatus');
+
+function refreshCreateTree(){
+  if (!filesToCreate.length){
+    createTreeEl.innerHTML = '<div class="tree-empty">Файлы ещё не выбраны.</div>';
+    return;
+  }
+  const paths = filesToCreate.map(f => ({
+    path: f.webkitRelativePath || f.name,
+    type: 'file',
+    size: f.size,
+    entry: f
+  }));
+  const root = buildTree(paths);
+  renderTree(createTreeEl, root, {});
+}
+
+bindDrop('dropCreate','fileCreate', files=>{
+  filesToCreate = filesToCreate.concat(files);
+  refreshCreateTree();
+});
+
+document.getElementById('btnClearCreate').addEventListener('click', ()=>{
+  filesToCreate = [];
+  refreshCreateTree();
+  setStatus(createStatus,'','');
+});
+
+document.getElementById('btnCreate').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btnCreate');
+  btn.disabled = true;
+  try{
+    if (!filesToCreate.length){
+      setStatus(createStatus,'Выберите файлы для архива.', 'err');
+      return;
+    }
+    setStatus(createStatus,'Создание архива…','');
+    const password = document.getElementById('passCreate').value;
+    const writer = new zip.ZipWriter(new zip.BlobWriter('application/zip'), {
+      password: password || undefined,
+      encryptionStrength: password ? 3 : undefined
+    });
+    for (const file of filesToCreate){
+      const name = file.webkitRelativePath || file.name;
+      const blob = new Blob([await file.arrayBuffer()], {type: file.type || 'application/octet-stream'});
+      await writer.add(name, new zip.BlobReader(blob));
+    }
+    const blob = await writer.close();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'archive' + (password ? '-encrypted' : '') + '.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    setStatus(createStatus,'Готово: архив создан и скачан.', 'ok');
+  }catch(err){
+    console.error(err);
+    setStatus(createStatus,'Ошибка: ' + (err.message||err), 'err');
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* =========================================================
+   ОТКРЫТИЕ АРХИВА + дерево + просмотр + копирование
+   ========================================================= */
+let openedZipFile = null;
+let openedEntries = [];       // исходные entries из zip.js
+let openedTreeRoot = null;    // дерево
+let openedTreePaths = [];     // плоский список для поиска
+const openTreeEl = document.getElementById('openTree');
+const openStatus = document.getElementById('openStatus');
+const previewWrap = document.getElementById('previewWrap');
+const previewTitle = document.getElementById('previewTitle');
+const previewBody = document.getElementById('previewBody');
+const searchOpen = document.getElementById('searchOpen');
+
+let currentEntry = null;      // выбранный файл (entry из zip.js)
+let currentBlob = null;       // его blob для скачивания
+
+bindDrop('dropOpen','fileOpen', files=>{
+  openedZipFile = files[0] || null;
+  openedEntries = [];
+  openedTreeRoot = null;
+  openedTreePaths = [];
+  currentEntry = null;
+  currentBlob = null;
+  previewWrap.hidden = true;
+  openTreeEl.innerHTML = openedZipFile
+    ? `<div class="tree-empty">Архив выбран: ${esc(openedZipFile.name)} (${fmtSize(openedZipFile.size)}). Нажмите «Открыть архив».</div>`
+    : '<div class="tree-empty">Архив ещё не открыт.</div>';
+  searchOpen.value = '';
+  searchOpen.disabled = true;
+  setStatus(openStatus, openedZipFile ? 'Архив выбран. Нажмите «Открыть архив».' : '', '');
+});
+
+document.getElementById('btnClearOpen').addEventListener('click', ()=>{
+  openedZipFile = null;
+  openedEntries = [];
+  openedTreeRoot = null;
+  openedTreePaths = [];
+  currentEntry = null;
+  currentBlob = null;
+  openTreeEl.innerHTML = '<div class="tree-empty">Архив ещё не открыт.</div>';
+  previewWrap.hidden = true;
+  searchOpen.value = '';
+  searchOpen.disabled = true;
+  setStatus(openStatus,'','');
+});
+
+function openFileNode(node){
+  currentEntry = node.entry;
+  currentBlob = null;
+  loadPreview(node.entry);
+}
+
+async function getEntryBlob(entry){
+  const password = document.getElementById('passOpen').value;
+  const reader = new zip.ZipReader(new zip.BlobReader(openedZipFile), {
+    password: password || undefined
+  });
+  try{
+    const entries = await reader.getEntries();
+    const e = entries.find(x=> x.filename === entry.filename);
+    if (!e) throw new Error('Запись не найдена');
+    if (e.directory) return new Blob([]);
+    return await e.getData(new zip.BlobWriter());
+  } finally {
+    await reader.close();
+  }
+}
+
+async function loadPreview(entry){
+  const ext = extOf(entry.filename);
+  const isText = TEXT_EXT.has(ext);
+
+  previewWrap.hidden = false;
+  previewTitle.textContent = entry.filename;
+  previewBody.textContent = isText ? 'Загрузка…' : 'Бинарный файл — предпросмотр недоступен. Можно скачать.';
+  currentBlob = null;
+
+  if (!isText) return;
+
+  try{
+    const blob = await getEntryBlob(entry);
+    currentBlob = blob;
+    let text = await blob.text();
+    if (ext === 'json'){
+      try{ text = JSON.stringify(JSON.parse(text), null, 2); }catch(_){}
+    }
+    const MAX = 400_000;
+    if (text.length > MAX){
+      text = text.slice(0, MAX) + '\n\n… (обрезано: файл больше 400 КБ текста)';
+    }
+    previewBody.textContent = text;
+  }catch(err){
+    previewBody.textContent = 'Ошибка чтения: ' + (err.message||err);
+  }
+}
+
+document.getElementById('btnCopyAll').addEventListener('click', async ()=>{
+  const text = previewBody.textContent || '';
+  if (!text.trim()){
+    setStatus(openStatus, 'Нечего копировать.', 'err');
+    return;
+  }
+  const ok = await copyToClipboard(text);
+  if (ok) showCopyNote();
+  else setStatus(openStatus, 'Не удалось скопировать (браузер запретил).', 'err');
+});
+
+document.getElementById('btnDownloadCur').addEventListener('click', async ()=>{
+  if (!currentEntry) return;
+  try{
+    let blob = currentBlob;
+    if (!blob) blob = await getEntryBlob(currentEntry);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentEntry.filename.split('/').pop() || 'file';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }catch(err){
+    setStatus(openStatus, 'Ошибка скачивания: ' + (err.message||err), 'err');
+  }
+});
+
+document.getElementById('btnOpen').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btnOpen');
+  btn.disabled = true;
+  try{
+    if (!openedZipFile){
+      setStatus(openStatus,'Сначала выберите ZIP-файл.', 'err');
+      return;
+    }
+    setStatus(openStatus,'Чтение архива…','');
+    previewWrap.hidden = true;
+    openTreeEl.innerHTML = '<div class="tree-empty">Чтение…</div>';
+
+    const password = document.getElementById('passOpen').value;
+    const reader = new zip.ZipReader(new zip.BlobReader(openedZipFile), {
+      password: password || undefined
+    });
+    const entries = await reader.getEntries();
+    await reader.close();
+
+    if (!entries.length){
+      openTreeEl.innerHTML = '<div class="tree-empty">Архив пуст.</div>';
+      setStatus(openStatus,'Архив пуст.', 'err');
+      return;
+    }
+
+    openedEntries = entries;
+    openedTreePaths = entries.map(e => ({
+      path: e.filename,
+      type: e.directory ? 'dir' : 'file',
+      size: e.uncompressedSize,
+      entry: e
+    }));
+
+    // ВАЖНО: у zip.js пути могут содержать завершающий слэш у папок — нормализуем
+    openedTreePaths = openedTreePaths.map(p => ({
+      ...p,
+      path: p.path.replace(/\/+$/,'') || p.path
+    }));
+
+    openedTreeRoot = buildTree(openedTreePaths);
+    refreshOpenTree();
+
+    searchOpen.disabled = false;
+    setStatus(openStatus, `Открыто: ${entries.length} записей. Папки можно раскрывать.`, 'ok');
+  }catch(err){
+    console.error(err);
+    const msg = String(err && err.message || err);
+    setStatus(openStatus, /password/i.test(msg)
+      ? 'Нужен пароль или пароль неверный.' : 'Ошибка: ' + msg, 'err');
+    openTreeEl.innerHTML = '<div class="tree-empty">Не удалось прочитать архив.</div>';
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* фильтр-поиск по имени */
+function refreshOpenTree(){
+  if (!openedTreeRoot){
+    openTreeEl.innerHTML = '<div class="tree-empty">Архив ещё не открыт.</div>';
+    return;
+  }
+  const q = (searchOpen.value || '').trim().toLowerCase();
+
+  let rootToRender = openedTreeRoot;
+  if (q){
+    // соберём плоский список совпадений и построим из него дерево
+    const matched = openedTreePaths.filter(p =>
+      p.type === 'file' && p.path.toLowerCase().includes(q)
+    );
+    if (!matched.length){
+      openTreeEl.innerHTML = '<div class="tree-empty">Ничего не найдено.</div>';
+      return;
+    }
+    rootToRender = buildTree(matched.map(p => ({...p, path: p.path})));
+    // открываем всё по умолчанию
+    renderTree(openTreeEl, rootToRender, {
+      onFileClick: openFileNode
+    });
+    // раскрыть все ветки
+    openTreeEl.querySelectorAll('.children').forEach(c=>{
+      c.classList.add('open');
+      c.dataset.built = ''; // сброс
+    });
+    openTreeEl.querySelectorAll('.node').forEach(n=>{
+      const caret = n.querySelector(':scope > .node-row > .caret');
+      const box = n.querySelector(':scope > .children');
+      if (box){ box.classList.add('open'); caret && caret.classList.add('open'); }
+    });
+    return;
+  }
+
+  renderTree(openTreeEl, openedTreeRoot, {
+    onFileClick: openFileNode
+  });
+}
+searchOpen.addEventListener('input', refreshOpenTree);
+</script>
+</body>
+</html>
