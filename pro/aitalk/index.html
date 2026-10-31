@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Голосовой чат с Mistral</title>
+<style>
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #0e1117;
+    color: #e6e6e6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overscroll-behavior: none;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+  }
+  header {
+    padding: 12px 14px;
+    background: #161b22;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #30363d;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+  }
+  header button {
+    background: #21262d;
+    color: #e6e6e6;
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  #chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 15px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+  }
+  .msg.user {
+    align-self: flex-end;
+    background: #1f6feb;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.bot {
+    align-self: flex-start;
+    background: #21262d;
+    border-bottom-left-radius: 4px;
+  }
+  .msg.sys {
+    align-self: center;
+    background: transparent;
+    color: #8b949e;
+    font-size: 12px;
+    text-align: center;
+    padding: 4px;
+  }
+  .typing {
+    align-self: flex-start;
+    color: #8b949e;
+    font-size: 13px;
+    padding: 6px 14px;
+  }
+
+  #controls {
+    padding: 12px;
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  #micBtn {
+    flex: 1;
+    padding: 16px;
+    border-radius: 14px;
+    border: none;
+    font-size: 16px;
+    font-weight: 600;
+    background: #238636;
+    color: #fff;
+    transition: background 0.2s;
+  }
+  #micBtn.recording {
+    background: #da3633;
+    animation: pulse 1.2s infinite;
+  }
+  #micBtn:disabled {
+    background: #30363d;
+    color: #8b949e;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Модалка настроек */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 100;
+  }
+  .modal.hidden { display: none; }
+  .modal-content {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-content h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+  }
+  .field {
+    margin-bottom: 14px;
+  }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: #8b949e;
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea {
+    width: 100%;
+    background: #0d1117;
+    color: #e6e6e6;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .field textarea { min-height: 80px; }
+  .field input:focus, .field textarea:focus {
+    outline: none;
+    border-color: #1f6feb;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .modal-actions button {
+    flex: 1;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .btn-primary {
+    background: #1f6feb;
+    color: #fff;
+  }
+  .btn-secondary {
+    background: #21262d;
+    color: #e6e6e6;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="chatTitle">Mistral</h1>
+    <button id="settingsBtn">⚙️</button>
+  </header>
+
+  <div id="chat"></div>
+
+  <div id="controls">
+    <button id="micBtn" disabled>🎤 Удерживайте для речи</button>
+  </div>
+</div>
+
+<!-- Модалка настроек -->
+<div class="modal hidden" id="settingsModal">
+  <div class="modal-content">
+    <h2>Настройки</h2>
+
+    <div class="field">
+      <label>API ключ Mistral</label>
+      <input type="password" id="apiKeyInput" placeholder="Введите API ключ">
+    </div>
+
+    <div class="field">
+      <label>Имя персонажа</label>
+      <input type="text" id="nameInput" placeholder="Например: Мира">
+    </div>
+
+    <div class="field">
+      <label>Характер / личность</label>
+      <textarea id="personaInput" placeholder="Например: Дружелюбная, остроумная, отвечает кратко и с юмором. Обращается по имени."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelBtn">Отмена</button>
+      <button class="btn-primary" id="saveBtn">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const LS_API_KEY = 'mistral_api_key';
+  const LS_PERSONA = 'mistral_persona';
+  const LS_NAME = 'mistral_persona_name';
+
+  const chatEl = document.getElementById('chat');
+  const micBtn = document.getElementById('micBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const modal = document.getElementById('settingsModal');
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const nameInput = document.getElementById('nameInput');
+  const personaInput = document.getElementById('personaInput');
+  const saveBtn = document.getElementById('saveBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const chatTitle = document.getElementById('chatTitle');
+
+  let messages = []; // {role, content}
+  let apiKey = localStorage.getItem(LS_API_KEY) || '';
+  let personaName = localStorage.getItem(LS_NAME) || 'Mistral';
+  let personaDesc = localStorage.getItem(LS_PERSONA) || 'Ты дружелюбный и полезный ассистент. Отвечай кратко и по делу, так как твой ответ будет озвучен голосом.';
+
+  let recognition = null;
+  let isRecording = false;
+  let isProcessing = false;
+
+  function updateTitle() {
+    chatTitle.textContent = personaName || 'Mistral';
+    document.title = 'Чат с ' + (personaName || 'Mistral');
+  }
+
+  function addMessage(text, role) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.textContent = text;
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function showTyping() {
+    const div = document.createElement('div');
+    div.className = 'typing';
+    div.id = 'typingIndicator';
+    div.textContent = personaName + ' печатает...';
+    chatEl.appendChild(div);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+
+  function hideTyping() {
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  function buildSystemPrompt() {
+    return `Ты — персонаж по имени ${personaName}. Твой характер: ${personaDesc}.
+Отвечай на русском языке (если пользователь не попросил иначе).
+Важно: твои ответы будут озвучены голосом, поэтому не используй эмодзи, markdown, списки, форматирование и специальные символы. Пиши обычным текстом, коротко и естественно, как в живой речи.`;
+  }
+
+  async function callMistral(userText) {
+    const systemPrompt = buildSystemPrompt();
+    const history = messages.slice(-20); // ограничим историю
+    const payload = {
+      model: 'codestral-latest',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...history,
+        { role: 'user', content: userText }
+      ],
+      temperature: 0.7,
+      max_tokens: 300
+    };
+
+    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      let errText = '';
+      try {
+        const err = await res.json();
+        errText = err.error?.message || err.message || JSON.stringify(err);
+      } catch (e) {
+        errText = 'HTTP ' + res.status;
+      }
+      throw new Error('Ошибка API: ' + errText);
+    }
+
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    return content.trim();
+  }
+
+  function speak(text) {
+    if (!('speechSynthesis' in window)) {
+      console.warn('SpeechSynthesis не поддерживается');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'ru-RU';
+    // Попытка подобрать русский голос
+    const voices = window.speechSynthesis.getVoices();
+    const ruVoice = voices.find(v => v.lang.toLowerCase().startsWith('ru'));
+    if (ruVoice) utt.voice = ruVoice;
+    utt.rate = 1.0;
+    utt.pitch = 1.0;
+    window.speechSynthesis.speak(utt);
+  }
+
+  async function handleUserText(text) {
+    if (isProcessing) return;
+    if (!text || !text.trim()) return;
+    if (!apiKey) {
+      addMessage('Сначала введите API ключ в настройках ⚙️', 'sys');
+      return;
+    }
+
+    isProcessing = true;
+    micBtn.disabled = true;
+    addMessage(text, 'user');
+    messages.push({ role: 'user', content: text });
+
+    showTyping();
+    try {
+      const reply = await callMistral(text);
+      hideTyping();
+      if (reply) {
+        addMessage(reply, 'bot');
+        messages.push({ role: 'assistant', content: reply });
+        speak(reply);
+      } else {
+        addMessage('(Пустой ответ)', 'sys');
+      }
+    } catch (e) {
+      hideTyping();
+      console.error(e);
+      addMessage('Ошибка: ' + e.message, 'sys');
+    } finally {
+      isProcessing = false;
+      micBtn.disabled = false;
+    }
+  }
+
+  // --- Инициализация распознавания речи ---
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      if (transcript && transcript.trim()) {
+        handleUserText(transcript.trim());
+      }
+    };
+
+    recognition.onerror = (e) => {
+      console.warn('Speech error:', e.error);
+      if (e.error === 'not-allowed') {
+        addMessage('Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.', 'sys');
+      } else if (e.error === 'no-speech') {
+        addMessage('Речь не распознана, попробуйте ещё раз.', 'sys');
+      }
+    };
+
+    recognition.onend = () => {
+      if (isRecording) {
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        micBtn.textContent = '🎤 Удерживайте для речи';
+      }
+    };
+  }
+
+  // Удержание кнопки — запись
+  function startRecording() {
+    if (!recognition) {
+      addMessage('Ваш браузер не поддерживает распознавание речи. Используйте Chrome на Android или Safari на iOS.', 'sys');
+      return;
+    }
+    if (isProcessing) return;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    try {
+      isRecording = true;
+      micBtn.classList.add('recording');
+      micBtn.textContent = '🔴 Говорите... (отпустите)';
+      recognition.start();
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
+  function stopRecording() {
+    if (!recognition || !isRecording) return;
+    isRecording = false;
+    micBtn.classList.remove('recording');
+    micBtn.textContent = '🎤 Удерживайте для речи';
+    try {
+      recognition.stop();
+    } catch (e) {}
+  }
+
+  micBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (micBtn.disabled) return;
+    startRecording();
+  }, { passive: false });
+  micBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    stopRecording();
+  }, { passive: false });
+  micBtn.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    stopRecording();
+  }, { passive: false });
+
+  // Для десктопа
+  micBtn.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    if (micBtn.disabled) return;
+    startRecording();
+  });
+  micBtn.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    stopRecording();
+  });
+  micBtn.addEventListener('mouseleave', () => {
+    if (isRecording) stopRecording();
+  });
+
+  // --- Настройки ---
+  function openSettings() {
+    apiKeyInput.value = apiKey;
+    nameInput.value = personaName;
+    personaInput.value = personaDesc;
+    modal.classList.remove('hidden');
+  }
+
+  function closeSettings() {
+    modal.classList.add('hidden');
+  }
+
+  settingsBtn.addEventListener('click', () => {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    openSettings();
+  });
+  cancelBtn.addEventListener('click', closeSettings);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeSettings();
+  });
+
+  saveBtn.addEventListener('click', () => {
+    const newKey = apiKeyInput.value.trim();
+    const newName = nameInput.value.trim() || 'Mistral';
+    const newPersona = personaInput.value.trim() || 'Ты дружелюбный и полезный ассистент.';
+
+    apiKey = newKey;
+    personaName = newName;
+    personaDesc = newPersona;
+
+    localStorage.setItem(LS_API_KEY, apiKey);
+    localStorage.setItem(LS_NAME, personaName);
+    localStorage.setItem(LS_PERSONA, personaDesc);
+
+    updateTitle();
+    micBtn.disabled = !apiKey;
+    closeSettings();
+
+    addMessage('Настройки сохранены. Персонаж: ' + personaName, 'sys');
+  });
+
+  // --- Инициализация ---
+  updateTitle();
+  micBtn.disabled = !apiKey;
+
+  if (!apiKey) {
+    addMessage('Добро пожаловать! Нажмите ⚙️ вверху и введите API ключ Mistral.', 'sys');
+    setTimeout(openSettings, 300);
+  } else {
+    addMessage('Привет! Я ' + personaName + '. Удерживайте кнопку внизу и говорите.', 'sys');
+  }
+
+  // предзагрузка голосов
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
+  }
+})();
+</script>
+</body>
+</html>
