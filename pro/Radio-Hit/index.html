@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#121212">
+<title>Radio Dark</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif;}
+  body{background:#121212;color:#eee;padding:12px;padding-bottom:220px;min-height:100vh;}
+  h1{font-size:1.5rem;margin-bottom:12px;color:#ff6b6b;text-align:center;}
+  .search-box{display:flex;gap:8px;margin-bottom:16px;}
+  .search-box input{flex:1;padding:16px;border-radius:12px;border:none;background:#2a2a2a;color:#fff;font-size:1.1rem;outline:none;}
+  .search-box input::placeholder{color:#888;}
+  .search-box button{padding:0 20px;border-radius:12px;border:none;background:#ff6b6b;color:#fff;font-size:1.5rem;font-weight:bold;cursor:pointer;min-width:60px;}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .tabs button{flex:1;padding:14px;border-radius:12px;border:none;background:#2a2a2a;color:#aaa;font-size:1rem;font-weight:bold;cursor:pointer;transition:0.2s;}
+  .tabs button.active{background:#ff6b6b;color:#fff;}
+  #list{display:flex;flex-direction:column;gap:8px;}
+  .station{display:flex;align-items:center;gap:12px;background:#1e1e1e;padding:12px;border-radius:12px;cursor:pointer;transition:0.2s;border:2px solid transparent;}
+  .station:active{background:#333;}
+  .station.playing{background:#2a1a1a;border-color:#ff6b6b;box-shadow:0 0 12px rgba(255,107,107,0.3);}
+  .station .thumb{width:48px;height:48px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;background:#333;display:flex;align-items:center;justify-content:center;}
+  .station .thumb img{width:100%;height:100%;object-fit:cover;}
+  .station .eq{display:flex;align-items:flex-end;gap:3px;height:24px;}
+  .station .eq span{width:4px;background:#ff6b6b;border-radius:2px;animation:eq 0.8s ease-in-out infinite;}
+  .station .eq span:nth-child(1){height:60%;animation-delay:0s;}
+  .station .eq span:nth-child(2){height:100%;animation-delay:0.2s;}
+  .station .eq span:nth-child(3){height:40%;animation-delay:0.4s;}
+  .station .eq span:nth-child(4){height:80%;animation-delay:0.1s;}
+  .station.paused .eq span{animation-play-state:paused;}
+  @keyframes eq{0%,100%{transform:scaleY(0.4);}50%{transform:scaleY(1);}}
+  .station .info{flex:1;overflow:hidden;}
+  .station .name{font-weight:bold;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .station.playing .name{color:#ff6b6b;}
+  .station .country{font-size:0.8rem;color:#888;}
+  .station .fav-btn{background:none;border:none;font-size:1.5rem;cursor:pointer;padding:8px;color:#555;}
+  .station .fav-btn.active{color:#ff6b6b;}
+  #player{position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;padding:12px;border-top:2px solid #ff6b6b;display:flex;flex-direction:column;gap:8px;z-index:100;}
+  #player .now{text-align:center;font-weight:bold;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #player .controls{display:flex;justify-content:center;gap:16px;}
+  #player .controls button{width:64px;height:64px;border-radius:50%;border:none;background:#2a2a2a;color:#fff;font-size:1.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  #player .controls button:active{background:#444;}
+  #player .controls button.play{background:#ff6b6b;color:#fff;width:72px;height:72px;font-size:2rem;}
+  #player .vol{display:flex;align-items:center;gap:8px;justify-content:center;}
+  #player .vol input{width:60%;}
+  .empty{text-align:center;color:#666;padding:40px 0;font-size:1rem;}
+  @media (min-width:600px){body{max-width:480px;margin:0 auto;}}
+</style>
+</head>
+<body>
+<h1>📻 Radio Dark</h1>
+<div class="search-box">
+  <input id="searchInput" type="search" placeholder="Поиск станции (Европа...)" />
+  <button id="searchBtn">🔍</button>
+</div>
+<div class="tabs">
+  <button id="tabSearch" class="active">Результаты</button>
+  <button id="tabFav">❤️ Избранное</button>
+</div>
+<div id="list"><div class="empty">Введите запрос или выберите избранное</div></div>
+
+<div id="player">
+  <div class="now" id="nowPlaying">Ничего не играет</div>
+  <div class="controls">
+    <button id="prevBtn">⏮</button>
+    <button id="playBtn" class="play">▶</button>
+    <button id="nextBtn">⏭</button>
+  </div>
+  <div class="vol">
+    <span>🔊</span>
+    <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
+  </div>
+</div>
+
+<script>
+(function(){
+  const API = 'https://de1.api.radio-browser.info/json';
+  const listEl = document.getElementById('list');
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const tabSearch = document.getElementById('tabSearch');
+  const tabFav = document.getElementById('tabFav');
+  const nowPlaying = document.getElementById('nowPlaying');
+  const playBtn = document.getElementById('playBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const volume = document.getElementById('volume');
+
+  let audio = new Audio();
+  audio.volume = 0.8;
+  let stations = [];
+  let currentIndex = -1;
+  let currentUuid = null;   // uuid играющей станции
+  let isFavView = false;
+  let favs = JSON.parse(localStorage.getItem('radioFavs') || '[]');
+
+  // ---------- Media Session ----------
+  function setupMediaSession(station) {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: station.name || 'Radio',
+      artist: station.country || 'Unknown',
+      album: 'Radio Dark',
+      artwork: station.favicon ? [{ src: station.favicon, sizes: '96x96', type: 'image/png' }] : []
+    });
+    navigator.mediaSession.setActionHandler('play', () => { audio.play(); updatePlayState(); });
+    navigator.mediaSession.setActionHandler('pause', () => { audio.pause(); updatePlayState(); });
+    navigator.mediaSession.setActionHandler('previoustrack', playPrev);
+    navigator.mediaSession.setActionHandler('nexttrack', playNext);
+  }
+
+  // ---------- Обновление кнопки play и строки ----------
+  function updatePlayState() {
+    const playing = !audio.paused && audio.src;
+    playBtn.textContent = playing ? '⏸' : '▶';
+    // обновляем строку станции
+    document.querySelectorAll('.station').forEach(el => {
+      const isCurrent = el.dataset.uuid === currentUuid;
+      el.classList.toggle('playing', isCurrent);
+      el.classList.toggle('paused', isCurrent && !playing);
+      const thumb = el.querySelector('.thumb');
+      if (!thumb) return;
+      if (isCurrent) {
+        if (!thumb.querySelector('.eq')) {
+          thumb.innerHTML = '<div class="eq"><span></span><span></span><span></span><span></span></div>';
+        }
+      } else {
+        const img = thumb.querySelector('img');
+        if (!img) {
+          const st = stations.find(s => s.stationuuid === el.dataset.uuid);
+          if (st) thumb.innerHTML = `<img src="${st.favicon || 'https://via.placeholder.com/48/333/fff?text=📻'}" onerror="this.src='https://via.placeholder.com/48/333/fff?text=📻'">`;
+        }
+      }
+    });
+  }
+
+  audio.addEventListener('play', updatePlayState);
+  audio.addEventListener('pause', updatePlayState);
+  audio.addEventListener('ended', updatePlayState);
+
+  // ---------- Воспроизведение ----------
+  function playStation(index) {
+    if (index < 0 || index >= stations.length) return;
+    const s = stations[index];
+    if (!s.url_resolved && !s.url) return;
+    currentIndex = index;
+    currentUuid = s.stationuuid;
+    audio.src = s.url_resolved || s.url;
+    audio.play().catch(e => console.warn('play error', e));
+    nowPlaying.textContent = '▶ ' + s.name;
+    setupMediaSession(s);
+    updatePlayState();
+    if (s.stationuuid) fetch(`${API}/url/${s.stationuuid}`, {method:'POST'}).catch(()=>{});
+  }
+
+  function playNext() {
+    if (stations.length === 0) return;
+    playStation((currentIndex + 1) % stations.length);
+  }
+  function playPrev() {
+    if (stations.length === 0) return;
+    playStation((currentIndex - 1 + stations.length) % stations.length);
+  }
+
+  playBtn.onclick = () => {
+    if (!audio.src) {
+      if (stations.length > 0) playStation(0);
+      return;
+    }
+    if (audio.paused) audio.play(); else audio.pause();
+  };
+  nextBtn.onclick = playNext;
+  prevBtn.onclick = playPrev;
+  volume.oninput = () => { audio.volume = volume.value; };
+
+  // ---------- Отрисовка ----------
+  function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+  function render() {
+    if (stations.length === 0) {
+      listEl.innerHTML = '<div class="empty">Ничего не найдено</div>';
+      return;
+    }
+    listEl.innerHTML = stations.map((s, i) => {
+      const isFav = favs.some(f => f.stationuuid === s.stationuuid);
+      const isCurrent = s.stationuuid === currentUuid;
+      const isPlaying = isCurrent && !audio.paused;
+      const thumbHtml = isCurrent
+        ? '<div class="eq"><span></span><span></span><span></span><span></span></div>'
+        : `<img src="${s.favicon || 'https://via.placeholder.com/48/333/fff?text=📻'}" onerror="this.src='https://via.placeholder.com/48/333/fff?text=📻'">`;
+      return `<div class="station ${isCurrent?'playing':''} ${isCurrent&&!isPlaying?'paused':''}" data-index="${i}" data-uuid="${s.stationuuid}">
+        <div class="thumb">${thumbHtml}</div>
+        <div class="info">
+          <div class="name">${escapeHtml(s.name)}</div>
+          <div class="country">${escapeHtml(s.country || '')}</div>
+        </div>
+        <button class="fav-btn ${isFav?'active':''}" data-uuid="${s.stationuuid}">${isFav?'❤️':'🤍'}</button>
+      </div>`;
+    }).join('');
+
+    document.querySelectorAll('.station').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('fav-btn')) return;
+        const idx = parseInt(el.dataset.index);
+        // клик по играющей станции — пауза/продолжить
+        if (el.dataset.uuid === currentUuid) {
+          if (audio.paused) audio.play(); else audio.pause();
+          return;
+        }
+        playStation(idx);
+      });
+    });
+    document.querySelectorAll('.fav-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const station = stations.find(s => s.stationuuid === btn.dataset.uuid);
+        if (station) toggleFav(station);
+      });
+    });
+  }
+
+  function toggleFav(station) {
+    const idx = favs.findIndex(f => f.stationuuid === station.stationuuid);
+    if (idx >= 0) favs.splice(idx,1); else favs.push({...station});
+    localStorage.setItem('radioFavs', JSON.stringify(favs));
+    if (isFavView) showFavs(); else render();
+  }
+
+  // ---------- Поиск ----------
+  async function doSearch() {
+    const q = searchInput.value.trim();
+    if (!q) return;
+    listEl.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+      const url = `${API}/stations/search?name=${encodeURIComponent(q)}&limit=30&order=clickcount&reverse=true&hidebroken=true`;
+      const res = await fetch(url);
+      const data = await res.json();
+      stations = data.filter(s => s.url_resolved || s.url);
+      currentIndex = -1;
+      // сохраняем currentUuid, если станция есть в новых результатах — подсветится
+      render();
+    } catch(e) {
+      listEl.innerHTML = '<div class="empty">Ошибка поиска. Попробуйте ещё раз.</div>';
+    }
+  }
+
+  searchBtn.onclick = doSearch;
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  // ---------- Избранное ----------
+  function showFavs() {
+    isFavView = true;
+    tabFav.classList.add('active');
+    tabSearch.classList.remove('active');
+    stations = [...favs];
+    currentIndex = -1;
+    if (stations.length === 0) listEl.innerHTML = '<div class="empty">❤️ Пока ничего нет</div>';
+    else render();
+  }
+  function showSearch() {
+    isFavView = false;
+    tabSearch.classList.add('active');
+    tabFav.classList.remove('active');
+    if (stations.length === 0) listEl.innerHTML = '<div class="empty">Введите запрос</div>';
+    else render();
+  }
+  tabSearch.onclick = showSearch;
+  tabFav.onclick = showFavs;
+
+  if (favs.length > 0) showFavs(); else showSearch();
+})();
+</script>
+</body>
+</html>
