@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Удаление фона с иконки</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #0a0a0f;
+        color: #e0e0e0;
+        min-height: 100vh;
+        padding: 20px;
+    }
+    h1 {
+        font-size: 22px;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, #6c5ce7, #00b894);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .upload-zone {
+        border: 2px dashed rgba(255,255,255,0.15);
+        border-radius: 16px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: rgba(255,255,255,0.02);
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+        border-color: #6c5ce7;
+        background: rgba(108,92,231,0.08);
+    }
+    .upload-zone .icon { font-size: 48px; margin-bottom: 12px; }
+    .upload-zone .title { font-size: 16px; color: #fff; margin-bottom: 6px; }
+    .upload-zone .sub { font-size: 13px; color: #888; }
+
+    .editor { display: none; flex-direction: column; gap: 16px; }
+    .editor.active { display: flex; }
+
+    /* 🆕 Инфо-панель загруженного файла */
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, rgba(108,92,231,0.10), rgba(0,184,148,0.06));
+        border: 1px solid rgba(108,92,231,0.3);
+        border-radius: 14px;
+        animation: fileInfoIn 0.3s ease;
+    }
+    @keyframes fileInfoIn {
+        from { opacity: 0; transform: translateY(-6px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .file-info .fi-icon {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #6c5ce7, #00b894);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(108,92,231,0.3);
+    }
+    .file-info .fi-body { flex: 1; min-width: 0; }
+    .file-info .fi-name {
+        font-size: 14px; font-weight: 700; color: #fff;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        margin-bottom: 3px;
+    }
+    .file-info .fi-meta {
+        font-size: 11px; color: #888;
+        display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .file-info .fi-meta span { white-space: nowrap; }
+    .file-info .fi-meta .dot { color: #444; }
+
+    .canvas-wrap {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background:
+            linear-gradient(45deg, #222 25%, transparent 25%),
+            linear-gradient(-45deg, #222 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #222 75%),
+            linear-gradient(-45deg, transparent 75%, #222 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        background-color: #333;
+        border-radius: 16px;
+        padding: 20px;
+        min-height: 300px;
+        overflow: hidden;
+    }
+    canvas {
+        max-width: 100%;
+        max-height: 60vh;
+        cursor: crosshair;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        image-rendering: pixelated;
+    }
+    .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 16px;
+    }
+    .control-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .control-label {
+        font-size: 13px;
+        color: #aaa;
+        min-width: 130px;
+    }
+    input[type="range"] {
+        flex: 1;
+        min-width: 150px;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, rgba(108,92,231,0.3), rgba(108,92,231,0.9));
+        outline: none;
+        cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #6c5ce7;
+        cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #6c5ce7;
+        cursor: pointer;
+    }
+    .value-badge {
+        min-width: 50px;
+        text-align: right;
+        font-weight: 700;
+        color: #a78bfa;
+        font-variant-numeric: tabular-nums;
+    }
+    .btn {
+        padding: 10px 18px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.06);
+        color: #ccc;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.15s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .btn:active { transform: scale(0.96); }
+    .btn.primary {
+        background: linear-gradient(135deg, #6c5ce7, #00b894);
+        border: none;
+        color: #fff;
+    }
+    .btn.primary:hover { filter: brightness(1.1); }
+    .btn.danger {
+        border-color: rgba(255,107,107,0.3);
+        color: #ff6b6b;
+        background: rgba(255,107,107,0.08);
+    }
+    .btn.danger:hover { background: rgba(255,107,107,0.18); }
+
+    .hint {
+        font-size: 12px;
+        color: #888;
+        line-height: 1.6;
+        padding: 10px 14px;
+        background: rgba(108,92,231,0.08);
+        border: 1px solid rgba(108,92,231,0.25);
+        border-radius: 10px;
+    }
+    .hint strong { color: #a78bfa; }
+
+    .preview-colors {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .preview-color {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        cursor: pointer;
+        border: 2px solid rgba(255,255,255,0.1);
+        transition: all 0.15s;
+    }
+    .preview-color.active { border-color: #fff; transform: scale(1.1); }
+
+    .color-picked {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        font-size: 12px;
+        color: #ccc;
+    }
+    .color-picked .swatch {
+        width: 20px; height: 20px;
+        border-radius: 5px;
+        border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    /* 🆕 Поле для имени файла при сохранении */
+    .filename-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 14px 16px;
+        background: linear-gradient(135deg, rgba(0,184,148,0.08), rgba(108,92,231,0.06));
+        border: 1px solid rgba(0,184,148,0.3);
+        border-radius: 14px;
+    }
+    .filename-label {
+        font-size: 12px;
+        color: #00b894;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .filename-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .filename-input-wrap {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: stretch;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        overflow: hidden;
+        transition: border-color 0.2s;
+    }
+    .filename-input-wrap:focus-within {
+        border-color: #00b894;
+        background: rgba(255,255,255,0.08);
+    }
+    .filename-input {
+        flex: 1;
+        min-width: 0;
+        padding: 11px 13px;
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 15px;
+        font-family: inherit;
+        outline: none;
+    }
+    .filename-input::placeholder { color: #666; }
+    .filename-ext {
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        background: rgba(0,184,148,0.15);
+        color: #00b894;
+        font-size: 13px;
+        font-weight: 700;
+        border-left: 1px solid rgba(0,184,148,0.25);
+        font-family: 'Courier New', monospace;
+        user-select: none;
+    }
+    .filename-reset {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.06);
+        color: #888;
+        font-size: 16px;
+        cursor: pointer;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+    }
+    .filename-reset:hover {
+        background: rgba(108,92,231,0.2);
+        border-color: rgba(108,92,231,0.4);
+        color: #fff;
+    }
+    .filename-reset:active { transform: scale(0.9); }
+
+    .filename-preview {
+        font-size: 11px;
+        color: #666;
+        padding-left: 2px;
+    }
+    .filename-preview strong {
+        color: #00b894;
+        font-family: 'Courier New', monospace;
+    }
+
+    .actions-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .actions-row .btn.primary { margin-left: auto; }
+
+    @media (max-width: 600px) {
+        .control-label { min-width: 100px; font-size: 12px; }
+        .btn { padding: 9px 14px; font-size: 13px; }
+        .actions-row .btn.primary { margin-left: 0; flex: 1; width: 100%; }
+        .filename-input { font-size: 14px; padding: 10px 11px; }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>🖼️ Удаление фона с иконки</h1>
+
+    <div class="upload-zone" id="uploadZone">
+        <div class="icon">📤</div>
+        <div class="title">Перетащите PNG сюда или нажмите</div>
+        <div class="sub">icon-192.png или icon-512.png</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <div class="editor" id="editor">
+        <!-- 🆕 Инфо о загруженном файле -->
+        <div class="file-info" id="fileInfo">
+            <div class="fi-icon">🖼️</div>
+            <div class="fi-body">
+                <div class="fi-name" id="fileName">—</div>
+                <div class="fi-meta">
+                    <span id="fileDimensions">— × —</span>
+                    <span class="dot">·</span>
+                    <span id="fileWeight">—</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="hint">
+                👆 <strong>Кликните по фону</strong> — удалит все пиксели этого цвета,<br>
+                связанные с точкой клика (flood fill).<br>
+                🎚️ Ползунок <strong>«Допуск»</strong> — захватить анти-алиасинг по краям.
+            </div>
+
+            <div class="control-row">
+                <span class="control-label">🎨 Допуск цвета</span>
+                <input type="range" id="tolerance" min="0" max="120" value="30">
+                <span class="value-badge" id="toleranceVal">30</span>
+            </div>
+
+            <div class="control-row">
+                <span class="control-label">🌫️ Сглаживание краёв</span>
+                <input type="range" id="feather" min="0" max="3" value="1">
+                <span class="value-badge" id="featherVal">1</span>
+            </div>
+
+            <div class="control-row">
+                <span class="control-label">🖌️ Последний цвет</span>
+                <span class="color-picked" id="colorPicked">
+                    <span class="swatch" id="colorSwatch" style="background:#000;"></span>
+                    <span id="colorText">—</span>
+                </span>
+            </div>
+
+            <div class="control-row">
+                <span class="control-label">👁️ Фон просмотра</span>
+                <div class="preview-colors" id="previewColors">
+                    <div class="preview-color active" data-bg="checker" style="background:
+                        linear-gradient(45deg, #222 25%, transparent 25%),
+                        linear-gradient(-45deg, #222 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #222 75%),
+                        linear-gradient(-45deg, transparent 75%, #222 75%);
+                        background-size: 12px 12px;
+                        background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+                        background-color: #333;"></div>
+                    <div class="preview-color" data-bg="#ffffff" style="background:#ffffff;"></div>
+                    <div class="preview-color" data-bg="#000000" style="background:#000000;"></div>
+                    <div class="preview-color" data-bg="#ff6b6b" style="background:#ff6b6b;"></div>
+                    <div class="preview-color" data-bg="#6c5ce7" style="background:#6c5ce7;"></div>
+                    <div class="preview-color" data-bg="#00b894" style="background:#00b894;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🆕 Секция с именем файла для сохранения -->
+        <div class="filename-section">
+            <div class="filename-label">
+                <span>💾</span>
+                <span>Имя файла для сохранения</span>
+            </div>
+            <div class="filename-row">
+                <div class="filename-input-wrap">
+                    <input type="text" class="filename-input" id="filenameInput"
+                           placeholder="icon-transparent" maxlength="80"
+                           autocomplete="off" spellcheck="false">
+                    <span class="filename-ext">.png</span>
+                </div>
+                <button class="filename-reset" id="filenameResetBtn" title="Вернуть стандартное имя">↺</button>
+            </div>
+            <div class="filename-preview" id="filenamePreview">
+                Будет сохранено как: <strong>—</strong>
+            </div>
+        </div>
+
+        <div class="actions-row">
+            <button class="btn danger" id="btnReset">↺ Вернуть как было</button>
+            <button class="btn" id="btnNew">📁 Другая иконка</button>
+            <button class="btn primary" id="btnDownload">💾 Скачать PNG</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    // ═══ Состояние ═══
+    const S = {
+        originalImage: null,
+        originalName: '',          // 🆕 имя загруженного файла (без .png)
+        originalSize: 0,           // 🆕 размер в байтах
+        originalType: '',          // 🆕 mime
+        originalData: null,
+        currentData: null,
+        width: 0,
+        height: 0,
+        lastPickColor: null,
+        previewBg: 'checker',
+        history: [],
+    };
+
+    // ═══ DOM ═══
+    const $ = id => document.getElementById(id);
+    const uploadZone = $('uploadZone');
+    const fileInput = $('fileInput');
+    const editor = $('editor');
+    const canvas = $('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const canvasWrap = $('canvasWrap');
+    const toleranceInput = $('tolerance');
+    const toleranceVal = $('toleranceVal');
+    const featherInput = $('feather');
+    const featherVal = $('featherVal');
+    const colorSwatch = $('colorSwatch');
+    const colorText = $('colorText');
+    // 🆕
+    const fileNameEl = $('fileName');
+    const fileDimensions = $('fileDimensions');
+    const fileWeight = $('fileWeight');
+    const filenameInput = $('filenameInput');
+    const filenameResetBtn = $('filenameResetBtn');
+    const filenamePreview = $('filenamePreview');
+
+    // ═══ Утилиты ═══
+    function formatBytes(bytes) {
+        if (!bytes) return '0 Б';
+        if (bytes < 1024) return bytes + ' Б';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+        return (bytes / 1024 / 1024).toFixed(2) + ' МБ';
+    }
+
+    function stripExtension(name) {
+        return String(name || '').replace(/\.[^.]+$/, '');
+    }
+
+    function sanitizeFilename(name) {
+        return String(name || '')
+            .replace(/[\\/:*?"<>|]/g, '_')
+            .replace(/\.png$/i, '')
+            .trim()
+            .slice(0, 80);
+    }
+
+    // 🆕 Дефолтное имя для сохранения
+    function getDefaultFilename() {
+        if (!S.originalName) return 'icon-transparent';
+        return S.originalName + '-transparent';
+    }
+
+    // 🆕 Обновить превью имени
+    function updateFilenamePreview() {
+        const raw = filenameInput.value.trim() || getDefaultFilename();
+        const safe = sanitizeFilename(raw) || 'icon';
+        filenamePreview.innerHTML = `Будет сохранено как: <strong>${safe}.png</strong>`;
+    }
+
+    // 🆕 Установить имя по умолчанию
+    function setDefaultFilename() {
+        filenameInput.value = getDefaultFilename();
+        updateFilenamePreview();
+    }
+
+    // ═══ Загрузка файла ═══
+    function handleFile(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            alert('Нужен файл изображения (PNG)');
+            return;
+        }
+
+        // 🆕 Сохраняем метаданные
+        S.originalName = stripExtension(file.name || 'icon');
+        S.originalSize = file.size || 0;
+        S.originalType = file.type || '';
+
+        const reader = new FileReader();
+        reader.onload = (e) => loadImage(e.target.result);
+        reader.readAsDataURL(file);
+    }
+
+    function loadImage(src) {
+        const img = new Image();
+        img.onload = () => {
+            S.originalImage = img;
+            S.width = img.naturalWidth;
+            S.height = img.naturalHeight;
+
+            canvas.width = S.width;
+            canvas.height = S.height;
+
+            ctx.clearRect(0, 0, S.width, S.height);
+            ctx.drawImage(img, 0, 0);
+
+            S.originalData = ctx.getImageData(0, 0, S.width, S.height);
+            S.currentData = new ImageData(
+                new Uint8ClampedArray(S.originalData.data),
+                S.width,
+                S.height
+            );
+            S.history = [];
+            S.lastPickColor = null;
+
+            // 🆕 Обновляем инфо-панель
+            fileNameEl.textContent = S.originalName + '.png';
+            fileDimensions.textContent = `${S.width} × ${S.height} px`;
+            fileWeight.textContent = formatBytes(S.originalSize);
+
+            // 🆕 Устанавливаем имя по умолчанию
+            setDefaultFilename();
+
+            updateColorPicked();
+            editor.classList.add('active');
+            uploadZone.style.display = 'none';
+
+            renderCanvas();
+            console.log(`✅ Загружено ${S.width}×${S.height} · ${S.originalName}`);
+        };
+        img.onerror = () => alert('Не удалось загрузить изображение');
+        img.src = src;
+    }
+
+    // ═══ Рендер canvas ═══
+    function renderCanvas() {
+        const tmp = document.createElement('canvas');
+        tmp.width = S.width;
+        tmp.height = S.height;
+        tmp.getContext('2d').putImageData(S.currentData, 0, 0);
+
+        ctx.clearRect(0, 0, S.width, S.height);
+
+        if (S.previewBg !== 'checker') {
+            ctx.fillStyle = S.previewBg;
+            ctx.fillRect(0, 0, S.width, S.height);
+        }
+
+        ctx.drawImage(tmp, 0, 0);
+
+        if (S.previewBg === 'checker') {
+            canvasWrap.style.background = `
+                linear-gradient(45deg, #222 25%, transparent 25%),
+                linear-gradient(-45deg, #222 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #222 75%),
+                linear-gradient(-45deg, transparent 75%, #222 75%)
+            `;
+            canvasWrap.style.backgroundSize = '20px 20px';
+            canvasWrap.style.backgroundPosition = '0 0, 0 10px, 10px -10px, -10px 0px';
+            canvasWrap.style.backgroundColor = '#333';
+        } else {
+            canvasWrap.style.background = S.previewBg;
+        }
+    }
+
+    // ═══ Flood Fill ═══
+    function floodFillTransparent(startX, startY, tolerance, feather) {
+        const data = S.currentData.data;
+        const w = S.width;
+        const h = S.height;
+
+        const idx = (startY * w + startX) * 4;
+        const targetR = data[idx];
+        const targetG = data[idx + 1];
+        const targetB = data[idx + 2];
+        const targetA = data[idx + 3];
+
+        if (targetA === 0) return false;
+
+        S.history.push(new ImageData(
+            new Uint8ClampedArray(S.currentData.data),
+            w, h
+        ));
+        if (S.history.length > 20) S.history.shift();
+
+        const visited = new Uint8Array(w * h);
+        const stack = [startY * w + startX];
+        const tol2 = tolerance * tolerance * 3;
+
+        while (stack.length) {
+            const p = stack.pop();
+            if (visited[p]) continue;
+            visited[p] = 1;
+
+            const px = p % w;
+            const py = (p - px) / w;
+            const i4 = p * 4;
+
+            const r = data[i4];
+            const g = data[i4 + 1];
+            const b = data[i4 + 2];
+            const a = data[i4 + 3];
+
+            if (a === 0) continue;
+
+            const dr = r - targetR;
+            const dg = g - targetG;
+            const db = b - targetB;
+            const dist2 = dr * dr + dg * dg + db * db;
+
+            if (dist2 > tol2) continue;
+
+            data[i4 + 3] = 0;
+
+            if (px > 0) stack.push(p - 1);
+            if (px < w - 1) stack.push(p + 1);
+            if (py > 0) stack.push(p - w);
+            if (py < h - 1) stack.push(p + w);
+        }
+
+        if (feather > 0) {
+            smoothEdges(data, w, h, feather);
+        }
+
+        return true;
+    }
+
+    function smoothEdges(data, w, h, radius) {
+        const copy = new Uint8ClampedArray(data);
+
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const i = (y * w + x) * 4;
+                const a = copy[i + 3];
+                if (a === 0) continue;
+
+                let transparentCount = 0;
+                let totalCount = 0;
+                for (let dy = -radius; dy <= radius; dy++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                        totalCount++;
+                        const ni = (ny * w + nx) * 4;
+                        if (copy[ni + 3] === 0) transparentCount++;
+                    }
+                }
+
+                if (transparentCount > 0 && totalCount > 0) {
+                    const ratio = transparentCount / totalCount;
+                    data[i + 3] = Math.round(a * (1 - ratio * 0.85));
+                }
+            }
+        }
+    }
+
+    // ═══ Клик по canvas ═══
+    function onCanvasClick(e) {
+        if (!S.currentData) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = S.width / rect.width;
+        const scaleY = S.height / rect.height;
+
+        const x = Math.floor((e.clientX - rect.left) * scaleX);
+        const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+        if (x < 0 || y < 0 || x >= S.width || y >= S.height) return;
+
+        const idx = (y * S.width + x) * 4;
+        const data = S.currentData.data;
+        S.lastPickColor = {
+            r: data[idx], g: data[idx + 1], b: data[idx + 2], a: data[idx + 3],
+        };
+        updateColorPicked();
+
+        const tolerance = parseInt(toleranceInput.value, 10) || 0;
+        const feather = parseInt(featherInput.value, 10) || 0;
+
+        const changed = floodFillTransparent(x, y, tolerance, feather);
+
+        if (changed) {
+            renderCanvas();
+            console.log(`🎨 Удалено с (${x}, ${y})`);
+        }
+    }
+
+    function updateColorPicked() {
+        if (!S.lastPickColor) {
+            colorText.textContent = '—';
+            colorSwatch.style.background = '#000';
+            return;
+        }
+        const { r, g, b, a } = S.lastPickColor;
+        const hex = `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}`;
+        colorSwatch.style.background = hex;
+        colorText.textContent = `rgb(${r}, ${g}, ${b})${a === 0 ? ' · прозрачный' : ''}`;
+    }
+
+    // ═══ Кнопки ═══
+    function reset() {
+        if (!S.originalData) return;
+        S.currentData = new ImageData(
+            new Uint8ClampedArray(S.originalData.data),
+            S.width, S.height
+        );
+        S.history = [];
+        S.lastPickColor = null;
+        updateColorPicked();
+        renderCanvas();
+    }
+
+    function download() {
+        if (!S.currentData) return;
+
+        const tmp = document.createElement('canvas');
+        tmp.width = S.width;
+        tmp.height = S.height;
+        tmp.getContext('2d').putImageData(S.currentData, 0, 0);
+
+        // 🆕 Берём имя из поля ввода
+        const rawName = filenameInput.value.trim() || getDefaultFilename();
+        const safeName = sanitizeFilename(rawName) || 'icon-transparent';
+        const finalFilename = safeName + '.png';
+
+        tmp.toBlob((blob) => {
+            if (!blob) {
+                alert('Не удалось создать PNG');
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+            console.log(`💾 Скачано: ${finalFilename} (${formatBytes(blob.size)})`);
+        }, 'image/png');
+    }
+
+    function newFile() {
+        editor.classList.remove('active');
+        uploadZone.style.display = 'block';
+        fileInput.value = '';
+        S.originalImage = null;
+        S.originalName = '';
+        S.originalSize = 0;
+        S.originalData = null;
+        S.currentData = null;
+        filenameInput.value = '';
+    }
+
+    // ═══ События ═══
+    uploadZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (f) handleFile(f);
+    });
+
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+    });
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('drag-over');
+    });
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        const f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) handleFile(f);
+    });
+
+    canvas.addEventListener('click', onCanvasClick);
+
+    toleranceInput.addEventListener('input', () => {
+        toleranceVal.textContent = toleranceInput.value;
+    });
+    featherInput.addEventListener('input', () => {
+        featherVal.textContent = featherInput.value;
+    });
+
+    document.querySelectorAll('.preview-color').forEach(el => {
+        el.addEventListener('click', () => {
+            document.querySelectorAll('.preview-color').forEach(x => x.classList.remove('active'));
+            el.classList.add('active');
+            S.previewBg = el.dataset.bg;
+            renderCanvas();
+        });
+    });
+
+    $('btnReset').addEventListener('click', reset);
+    $('btnNew').addEventListener('click', newFile);
+    $('btnDownload').addEventListener('click', download);
+
+    // 🆕 Обработчики поля имени
+    filenameInput.addEventListener('input', () => {
+        // Автоочистка расширения .png на лету
+        let v = filenameInput.value;
+        if (/\.png$/i.test(v)) {
+            filenameInput.value = v.replace(/\.png$/i, '');
+        }
+        updateFilenamePreview();
+    });
+
+    filenameResetBtn.addEventListener('click', () => {
+        setDefaultFilename();
+        filenameInput.focus();
+        filenameInput.select();
+    });
+
+    // Enter в поле имени = скачать
+    filenameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            download();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && S.history.length > 0) {
+            e.preventDefault();
+            S.currentData = S.history.pop();
+            renderCanvas();
+            console.log('↶ Undo');
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (S.currentData) download();
+        }
+    });
+
+    console.log('🖼️ Инструмент v2 с именем файла готов');
+    console.log('   • Клик по canvas = удалить цвет');
+    console.log('   • Ctrl+Z = отменить, Ctrl+S = сохранить');
+    console.log('   • Имя файла настраивается перед сохранением');
+})();
+</script>
+</body>
+</html>
