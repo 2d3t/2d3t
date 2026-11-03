@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'radio-pwa-v1';
+const CACHE_NAME = 'raddio-pwa-v1';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/Radio-Hit/index.html',
