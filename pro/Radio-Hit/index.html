@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#121212">
+<meta name="theme-color" content="#0f111a">
 <link rel="manifest" href="manifest.json">
 
     <!-- Иконки PWA -->
@@ -16,71 +16,390 @@
     <meta name="mobile-web-app-capable" content="yes">
 <title>Radio</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif;}
-  body{background:#121212;color:#eee;padding:12px;padding-bottom:220px;min-height:100vh;}
-  h1{font-size:1.5rem;margin-bottom:12px;color:#ff6b6b;text-align:center;}
-  .search-box{display:flex;gap:8px;margin-bottom:16px;}
-  .search-box input{flex:1;padding:16px;border-radius:12px;border:none;background:#2a2a2a;color:#fff;font-size:1.1rem;outline:none;}
-  .search-box input::placeholder{color:#888;}
-  .search-box button{padding:0 20px;border-radius:12px;border:none;background:#ff6b6b;color:#fff;font-size:1.5rem;font-weight:bold;cursor:pointer;min-width:60px;}
-  .tabs{display:flex;gap:8px;margin-bottom:16px;}
-  .tabs button{flex:1;padding:14px;border-radius:12px;border:none;background:#2a2a2a;color:#aaa;font-size:1rem;font-weight:bold;cursor:pointer;transition:0.2s;}
-  .tabs button.active{background:#ff6b6b;color:#fff;}
-  #list{display:flex;flex-direction:column;gap:8px;}
-  .station{display:flex;align-items:center;gap:12px;background:#1e1e1e;padding:12px;border-radius:12px;cursor:pointer;transition:0.2s;border:2px solid transparent;}
-  .station:active{background:#333;}
-  .station.playing{background:#2a1a1a;border-color:#ff6b6b;box-shadow:0 0 12px rgba(255,107,107,0.3);}
-  .station .thumb{width:48px;height:48px;border-radius:8px;flex-shrink:0;position:relative;overflow:hidden;background:#333;display:flex;align-items:center;justify-content:center;}
-  .station .thumb img{width:100%;height:100%;object-fit:cover;}
-  .station .eq{display:flex;align-items:flex-end;gap:3px;height:24px;}
-  .station .eq span{width:4px;background:#ff6b6b;border-radius:2px;animation:eq 0.8s ease-in-out infinite;}
-  .station .eq span:nth-child(1){height:60%;animation-delay:0s;}
-  .station .eq span:nth-child(2){height:100%;animation-delay:0.2s;}
-  .station .eq span:nth-child(3){height:40%;animation-delay:0.4s;}
-  .station .eq span:nth-child(4){height:80%;animation-delay:0.1s;}
-  .station.paused .eq span{animation-play-state:paused;}
-  @keyframes eq{0%,100%{transform:scaleY(0.4);}50%{transform:scaleY(1);}}
-  .station .info{flex:1;overflow:hidden;}
-  .station .name{font-weight:bold;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .station.playing .name{color:#ff6b6b;}
-  .station .country{font-size:0.8rem;color:#888;}
-  .station .fav-btn{background:none;border:none;font-size:1.5rem;cursor:pointer;padding:8px;color:#555;}
-  .station .fav-btn.active{color:#ff6b6b;}
-  #player{position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;padding:12px;border-top:2px solid #ff6b6b;display:flex;flex-direction:column;gap:8px;z-index:100;}
-  #player .now{text-align:center;font-weight:bold;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  #player .controls{display:flex;justify-content:center;gap:16px;}
-  #player .controls button{width:64px;height:64px;border-radius:50%;border:none;background:#2a2a2a;color:#fff;font-size:1.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-  #player .controls button:active{background:#444;}
-  #player .controls button.play{background:#ff6b6b;color:#fff;width:72px;height:72px;font-size:2rem;}
-  #player .vol{display:flex;align-items:center;gap:8px;justify-content:center;}
-  #player .vol input{width:60%;}
-  .empty{text-align:center;color:#666;padding:40px 0;font-size:1rem;}
-  @media (min-width:600px){body{max-width:480px;margin:0 auto;}}
+  :root {
+    --bg: #0f111a;
+    --card-bg: rgba(30, 36, 56, 0.4);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-hover: rgba(40, 48, 75, 0.6);
+    --text: #ffffff;
+    --text-dim: #8b93a8;
+    
+    /* Переменные для акцентного цвета */
+    --accent-h: 25; 
+    /* Используем чистые HSL значения для правильного перекрашивания */
+    --accent: hsl(var(--accent-h), 100%, 62%);
+    --accent-2: hsl(calc(var(--accent-h) + 30), 100%, 65%);
+    --accent-gradient: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    
+    /* Фоны для играющей станции и её тени (используем hsla с калькуляцией) */
+    --playing-bg: hsla(var(--accent-h), 100%, 62%, 0.12);
+    --playing-border: hsla(var(--accent-h), 100%, 62%, 0.35);
+    --playing-shadow: hsla(var(--accent-h), 100%, 62%, 0.2);
+
+    --blue-gradient: linear-gradient(135deg, #2bc8e6 0%, #3d7bf2 100%);
+    --radius: 24px;
+    --radius-sm: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    padding: 16px 16px 240px;
+    min-height: 100vh;
+    background-attachment: fixed;
+    transition: background 0.4s ease;
+  }
+
+  /* Паттерны фона */
+  body[data-bg="diamonds"] {
+    background-image: 
+      linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%, rgba(255,255,255,0.02)),
+      linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%, rgba(255,255,255,0.02));
+    background-size: 60px 60px;
+    background-position: 0 0, 30px 30px;
+  }
+  body[data-bg="dots"] {
+    background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  body[data-bg="grid"] {
+    background-image: 
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  body[data-bg="solid"] {
+    background-image: none;
+  }
+
+  /* Заголовок */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; padding-top: 8px;
+  }
+  .header .title-group { display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+  
+  /* Кнопка стилей */
+  .header .style-btn {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    color: #fff; width: 44px; height: 44px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; cursor: pointer; backdrop-filter: blur(20px);
+    transition: 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .header .style-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
+
+  /* Поиск */
+  .search-box {
+    display: flex; gap: 8px; margin-bottom: 16px;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 6px;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+  .search-box input {
+    flex: 1; padding: 12px 16px; border-radius: 12px; border: none;
+    background: transparent; color: #fff; font-size: 1rem; outline: none;
+  }
+  .search-box input::placeholder { color: var(--text-dim); }
+  .search-box button {
+    padding: 0 20px; border-radius: 12px; border: none;
+    background: rgba(255,255,255,0.08); color: #fff;
+    font-size: 1.2rem; cursor: pointer; transition: 0.2s;
+  }
+  .search-box button:active { background: rgba(255,255,255,0.15); transform: scale(0.95); }
+
+  /* Табы */
+  .tabs {
+    display: flex; gap: 8px; margin-bottom: 20px;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm); padding: 6px;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .tabs button {
+    flex: 1; padding: 12px; border-radius: 12px; border: none; background: transparent;
+    color: var(--text-dim); font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    transition: all 0.3s;
+  }
+  .tabs button.active { background: rgba(255,255,255,0.1); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
+  /* Карточки станций */
+  #list { display: flex; flex-direction: column; gap: 12px; }
+  .station {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--radius); padding: 16px; cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .station:hover { background: var(--card-hover); }
+  .station:active { transform: scale(0.98); }
+  
+  /* ВОТ ТУТ ИСПРАВЛЕНО: Цвет карточки теперь меняется */
+  .station.playing {
+    background: var(--playing-bg);
+    border-color: var(--playing-border);
+    box-shadow: 0 8px 30px var(--playing-shadow);
+  }
+
+  .station .thumb {
+    width: 56px; height: 56px; border-radius: 18px; flex-shrink: 0;
+    position: relative; overflow: hidden;
+    background: var(--blue-gradient);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .station .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  
+  .station .eq { display: flex; align-items: flex-end; gap: 3px; height: 24px; }
+  .station .eq span { width: 4px; background: #fff; border-radius: 2px; animation: eq 0.8s ease-in-out infinite; }
+  .station .eq span:nth-child(1) { height: 60%; animation-delay: 0s; }
+  .station .eq span:nth-child(2) { height: 100%; animation-delay: 0.2s; }
+  .station .eq span:nth-child(3) { height: 40%; animation-delay: 0.4s; }
+  .station .eq span:nth-child(4) { height: 80%; animation-delay: 0.1s; }
+  .station.paused .eq span { animation-play-state: paused; }
+  @keyframes eq { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+
+  .station .info { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 4px; }
+  .station .name { font-weight: 600; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .station.playing .name { color: var(--accent); }
+  .station .country { font-size: 0.85rem; color: var(--text-dim); }
+
+  .station .fav-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; cursor: pointer; transition: 0.2s; color: #fff;
+  }
+  .station .fav-btn:active { transform: scale(0.9); }
+  /* Сердечко тоже меняет цвет */
+  .station .fav-btn.active { 
+    background: hsla(var(--accent-h), 100%, 62%, 0.15); 
+    border-color: hsla(var(--accent-h), 100%, 62%, 0.3); 
+  }
+
+  .empty {
+    text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 1rem;
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: var(--radius); backdrop-filter: blur(20px);
+  }
+
+  /* Плеер */
+  #player {
+    position: fixed; bottom: 16px; left: 16px; right: 16px;
+    background: rgba(26, 31, 49, 0.85);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    padding: 16px 20px 20px; border-radius: 28px;
+    border: 1px solid var(--card-border);
+    display: flex; flex-direction: column; gap: 16px;
+    z-index: 100; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  }
+  #player .now {
+    text-align: center; font-weight: 600; font-size: 0.95rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;
+  }
+  #player .controls { display: flex; justify-content: center; align-items: center; gap: 20px; }
+  #player .controls button {
+    width: 48px; height: 48px; border-radius: 16px;
+    border: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.05); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  #player .controls button svg { width: 20px; height: 20px; fill: currentColor; }
+  #player .controls button:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
+  
+  /* Кнопка Play меняет цвет */
+  #player .controls button.play {
+    background: var(--accent-gradient);
+    width: 60px; height: 60px; border-radius: 20px;
+    border: none; box-shadow: 0 8px 24px var(--playing-shadow);
+  }
+  #player .controls button.play svg { width: 26px; height: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+  #player .controls button.play:active { transform: scale(0.92); }
+
+  #player .vol {
+    display: flex; align-items: center; gap: 12px; justify-content: center;
+    background: rgba(0,0,0,0.2); border-radius: 12px; padding: 8px 16px;
+  }
+  #player .vol span { font-size: 1rem; opacity: 0.7; }
+  #player .vol input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; border-radius: 10px;
+    background: rgba(255,255,255,0.1); outline: none; cursor: pointer;
+  }
+  #player .vol input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.3); cursor: pointer;
+  }
+
+  /* --------- МОДАЛЬНОЕ ОКНО НАСТРОЕК --------- */
+  .settings-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px); z-index: 500;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .settings-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .settings-panel {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #1a1f31; 
+    border-radius: 32px 32px 0 0;
+    padding: 24px 24px 40px;
+    transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    z-index: 501; border: 1px solid var(--card-border); border-bottom: none;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    max-width: 520px; margin: 0 auto;
+  }
+  .settings-overlay.open ~ .settings-panel { transform: translateY(0); }
+  
+  .settings-panel::before {
+    content: ''; display: block; width: 40px; height: 4px;
+    background: rgba(255,255,255,0.2); border-radius: 10px;
+    margin: -12px auto 20px;
+  }
+  .settings-panel h2 { font-size: 1.2rem; margin-bottom: 20px; text-align: center; }
+  
+  .setting-item { margin-bottom: 24px; }
+  .setting-item label { display: block; margin-bottom: 12px; font-size: 0.9rem; color: var(--text-dim); font-weight: 600; }
+  
+  .color-slider-container {
+    position: relative; height: 40px; border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+  }
+  .color-slider-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(to right, 
+      hsl(0, 100%, 60%), hsl(60, 100%, 60%), hsl(120, 100%, 60%), 
+      hsl(180, 100%, 60%), hsl(240, 100%, 60%), hsl(300, 100%, 60%), hsl(360, 100%, 60%));
+  }
+  #colorPicker {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer;
+    margin: 0; padding: 0; opacity: 0;
+  }
+  .color-slider-thumb {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4); pointer-events: none;
+    transition: left 0.1s linear;
+  }
+
+  .bg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .bg-option {
+    height: 60px; border-radius: 14px; border: 2px solid var(--card-border);
+    cursor: pointer; transition: 0.2s; background-color: var(--bg); position: relative;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  /* Обводка выбранной подложки теперь тоже зависит от цвета акцента */
+  .bg-option.active { 
+    border-color: var(--accent); 
+    box-shadow: 0 0 15px var(--playing-shadow); 
+  }
+  
+  .bg-option[data-bg-val="diamonds"] {
+    background-image: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1)),
+                      linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1));
+    background-size: 20px 20px; background-position: 0 0, 10px 10px;
+  }
+  .bg-option[data-bg-val="dots"] {
+    background-image: radial-gradient(rgba(255,255,255,0.2) 1px, transparent 1px);
+    background-size: 10px 10px;
+  }
+  .bg-option[data-bg-val="grid"] {
+    background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 12px 12px;
+  }
+  .bg-option[data-bg-val="solid"] { background-image: none; }
+
+  .close-settings {
+    width: 100%; padding: 16px; border-radius: 16px; border: none;
+    background: rgba(255,255,255,0.05); color: #fff; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: 0.2s; margin-top: 10px;
+  }
+  .close-settings:active { background: rgba(255,255,255,0.1); }
+
+  @media (min-width: 600px) {
+    body { max-width: 520px; margin: 0 auto; }
+    #player { left: 50%; right: auto; transform: translateX(-50%); width: calc(100% - 32px); max-width: 520px; }
+    .settings-panel { left: 50%; transform: translate(-50%, 100%); width: 520px; border-radius: 32px; bottom: 20px; }
+    .settings-overlay.open ~ .settings-panel { transform: translate(-50%, 0); }
+  }
 </style>
 </head>
-<body>
-<h1>📻 Radio</h1>
+<body data-bg="diamonds">
+
+<div class="header">
+  <div class="title-group">
+    <h1>📻 Radio</h1>
+  </div>
+  <button class="style-btn" id="openSettingsBtn" aria-label="Настройки стиля">🎨</button>
+</div>
+
 <div class="search-box">
   <input id="searchInput" type="search" placeholder="Поиск станции (Европа...)" />
   <button id="searchBtn">🔍</button>
 </div>
+
 <div class="tabs">
   <button id="tabSearch" class="active">Результаты</button>
   <button id="tabFav">❤️ Избранное</button>
 </div>
+
 <div id="list"><div class="empty">Введите запрос или выберите избранное</div></div>
 
 <div id="player">
   <div class="now" id="nowPlaying">Ничего не играет</div>
   <div class="controls">
-    <button id="prevBtn">⏮</button>
-    <button id="playBtn" class="play">▶</button>
-    <button id="nextBtn">⏭</button>
+    <button id="prevBtn" aria-label="Назад">
+      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+    </button>
+    <button id="playBtn" class="play" aria-label="Играть">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button id="nextBtn" aria-label="Вперёд">
+      <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
   </div>
   <div class="vol">
     <span>🔊</span>
     <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
   </div>
+</div>
+
+<!-- Модальное окно настроек -->
+<div class="settings-overlay" id="settingsOverlay"></div>
+<div class="settings-panel" id="settingsPanel">
+  <h2>🎨 Настройки стиля</h2>
+  
+  <div class="setting-item">
+    <label>Цветовой акцент</label>
+    <div class="color-slider-container">
+      <div class="color-slider-bg"></div>
+      <input type="range" id="colorPicker" min="0" max="360" value="25">
+      <div class="color-slider-thumb" id="colorThumb" style="left: 6.9%;"></div>
+    </div>
+  </div>
+
+  <div class="setting-item">
+    <label>Подложка</label>
+    <div class="bg-grid">
+      <div class="bg-option active" data-bg-val="diamonds" title="Ромбы"></div>
+      <div class="bg-option" data-bg-val="dots" title="Точки"></div>
+      <div class="bg-option" data-bg-val="grid" title="Сетка"></div>
+      <div class="bg-option" data-bg-val="solid" title="Сплошной"></div>
+    </div>
+  </div>
+
+  <button class="close-settings" id="closeSettingsBtn">Готово</button>
 </div>
 
 <script>
@@ -97,15 +416,69 @@
   const nextBtn = document.getElementById('nextBtn');
   const volume = document.getElementById('volume');
 
+  // --- Настройки стиля ---
+  const openSettingsBtn = document.getElementById('openSettingsBtn');
+  const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const colorPicker = document.getElementById('colorPicker');
+  const colorThumb = document.getElementById('colorThumb');
+  const bgOptions = document.querySelectorAll('.bg-option');
+
+  let savedHue = localStorage.getItem('radioHue');
+  let savedBg = localStorage.getItem('radioBg');
+  
+  if (savedHue !== null) {
+    colorPicker.value = savedHue;
+    document.documentElement.style.setProperty('--accent-h', savedHue);
+  }
+  if (savedBg) {
+    document.body.setAttribute('data-bg', savedBg);
+    bgOptions.forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.bgVal === savedBg);
+    });
+  }
+  updateThumbPosition();
+
+  colorPicker.addEventListener('input', (e) => {
+    const hue = e.target.value;
+    document.documentElement.style.setProperty('--accent-h', hue);
+    localStorage.setItem('radioHue', hue);
+    updateThumbPosition();
+  });
+
+  function updateThumbPosition() {
+    const percent = (colorPicker.value / 360) * 100;
+    colorThumb.style.left = `${percent}%`;
+    colorThumb.style.background = `hsl(${colorPicker.value}, 100%, 62%)`;
+  }
+
+  bgOptions.forEach(opt => {
+    opt.addEventListener('click', () => {
+      bgOptions.forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      const bgVal = opt.dataset.bgVal;
+      document.body.setAttribute('data-bg', bgVal);
+      localStorage.setItem('radioBg', bgVal);
+    });
+  });
+
+  openSettingsBtn.onclick = () => settingsOverlay.classList.add('open');
+  const closePanel = () => settingsOverlay.classList.remove('open');
+  closeSettingsBtn.onclick = closePanel;
+  settingsOverlay.onclick = closePanel;
+  // --- Конец настроек ---
+
   let audio = new Audio();
   audio.volume = 0.8;
   let stations = [];
   let currentIndex = -1;
-  let currentUuid = null;   // uuid играющей станции
+  let currentUuid = null;
   let isFavView = false;
   let favs = JSON.parse(localStorage.getItem('radioFavs') || '[]');
 
-  // ---------- Media Session ----------
+  const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  const ICON_PAUSE = '<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+
   function setupMediaSession(station) {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -120,17 +493,17 @@
     navigator.mediaSession.setActionHandler('nexttrack', playNext);
   }
 
-  // ---------- Обновление кнопки play и строки ----------
   function updatePlayState() {
     const playing = !audio.paused && audio.src;
-    playBtn.textContent = playing ? '⏸' : '▶';
-    // обновляем строку станции
+    playBtn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
+    
     document.querySelectorAll('.station').forEach(el => {
       const isCurrent = el.dataset.uuid === currentUuid;
       el.classList.toggle('playing', isCurrent);
       el.classList.toggle('paused', isCurrent && !playing);
       const thumb = el.querySelector('.thumb');
       if (!thumb) return;
+      
       if (isCurrent) {
         if (!thumb.querySelector('.eq')) {
           thumb.innerHTML = '<div class="eq"><span></span><span></span><span></span><span></span></div>';
@@ -139,7 +512,9 @@
         const img = thumb.querySelector('img');
         if (!img) {
           const st = stations.find(s => s.stationuuid === el.dataset.uuid);
-          if (st) thumb.innerHTML = `<img src="${st.favicon || 'https://via.placeholder.com/48/333/fff?text=📻'}" onerror="this.src='https://via.placeholder.com/48/333/fff?text=📻'">`;
+          if (st) thumb.innerHTML = st.favicon 
+            ? `<img src="${st.favicon}" onerror="this.style.display='none';this.parentElement.innerHTML='🎵'">` 
+            : '🎵';
         }
       }
     });
@@ -149,7 +524,6 @@
   audio.addEventListener('pause', updatePlayState);
   audio.addEventListener('ended', updatePlayState);
 
-  // ---------- Воспроизведение ----------
   function playStation(index) {
     if (index < 0 || index >= stations.length) return;
     const s = stations[index];
@@ -158,7 +532,7 @@
     currentUuid = s.stationuuid;
     audio.src = s.url_resolved || s.url;
     audio.play().catch(e => console.warn('play error', e));
-    nowPlaying.textContent = '▶ ' + s.name;
+    nowPlaying.textContent = s.name;
     setupMediaSession(s);
     updatePlayState();
     if (s.stationuuid) fetch(`${API}/url/${s.stationuuid}`, {method:'POST'}).catch(()=>{});
@@ -184,7 +558,6 @@
   prevBtn.onclick = playPrev;
   volume.oninput = () => { audio.volume = volume.value; };
 
-  // ---------- Отрисовка ----------
   function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
   function render() {
@@ -196,14 +569,18 @@
       const isFav = favs.some(f => f.stationuuid === s.stationuuid);
       const isCurrent = s.stationuuid === currentUuid;
       const isPlaying = isCurrent && !audio.paused;
-      const thumbHtml = isCurrent
+      
+      const thumbContent = isCurrent 
         ? '<div class="eq"><span></span><span></span><span></span><span></span></div>'
-        : `<img src="${s.favicon || 'https://via.placeholder.com/48/333/fff?text=📻'}" onerror="this.src='https://via.placeholder.com/48/333/fff?text=📻'">`;
+        : (s.favicon 
+            ? `<img src="${s.favicon}" onerror="this.style.display='none';this.parentElement.innerHTML='🎵'">` 
+            : '🎵');
+
       return `<div class="station ${isCurrent?'playing':''} ${isCurrent&&!isPlaying?'paused':''}" data-index="${i}" data-uuid="${s.stationuuid}">
-        <div class="thumb">${thumbHtml}</div>
+        <div class="thumb">${thumbContent}</div>
         <div class="info">
           <div class="name">${escapeHtml(s.name)}</div>
-          <div class="country">${escapeHtml(s.country || '')}</div>
+          <div class="country">${escapeHtml(s.country || 'Unknown')}</div>
         </div>
         <button class="fav-btn ${isFav?'active':''}" data-uuid="${s.stationuuid}">${isFav?'❤️':'🤍'}</button>
       </div>`;
@@ -211,9 +588,8 @@
 
     document.querySelectorAll('.station').forEach(el => {
       el.addEventListener('click', (e) => {
-        if (e.target.classList.contains('fav-btn')) return;
+        if (e.target.closest('.fav-btn')) return;
         const idx = parseInt(el.dataset.index);
-        // клик по играющей станции — пауза/продолжить
         if (el.dataset.uuid === currentUuid) {
           if (audio.paused) audio.play(); else audio.pause();
           return;
@@ -221,6 +597,7 @@
         playStation(idx);
       });
     });
+    
     document.querySelectorAll('.fav-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -237,7 +614,6 @@
     if (isFavView) showFavs(); else render();
   }
 
-  // ---------- Поиск ----------
   async function doSearch() {
     const q = searchInput.value.trim();
     if (!q) return;
@@ -248,7 +624,6 @@
       const data = await res.json();
       stations = data.filter(s => s.url_resolved || s.url);
       currentIndex = -1;
-      // сохраняем currentUuid, если станция есть в новых результатах — подсветится
       render();
     } catch(e) {
       listEl.innerHTML = '<div class="empty">Ошибка поиска. Попробуйте ещё раз.</div>';
@@ -258,7 +633,6 @@
   searchBtn.onclick = doSearch;
   searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
-  // ---------- Избранное ----------
   function showFavs() {
     isFavView = true;
     tabFav.classList.add('active');
@@ -268,200 +642,66 @@
     if (stations.length === 0) listEl.innerHTML = '<div class="empty">❤️ Пока ничего нет</div>';
     else render();
   }
+  
   function showSearch() {
-  isFavView = false;
-  tabSearch.classList.add('active');
-  tabFav.classList.remove('active');
-  if (searchInput.value.trim()) {
-    doSearch();
-  } else {
-    stations = [];
-    currentIndex = -1;
-    listEl.innerHTML = '<div class="empty">Введите запрос</div>';
+    isFavView = false;
+    tabSearch.classList.add('active');
+    tabFav.classList.remove('active');
+    if (searchInput.value.trim()) {
+      doSearch();
+    } else {
+      stations = [];
+      currentIndex = -1;
+      listEl.innerHTML = '<div class="empty">Введите запрос</div>';
+    }
   }
-}
+  
   tabSearch.onclick = showSearch;
   tabFav.onclick = showFavs;
 
   if (favs.length > 0) showFavs(); else showSearch();
 })();
 </script>
+
 <script>
 (function() {
     "use strict";
-
     function openGame(url, title) {
         const oldOverlay = document.querySelector('.transition-overlay');
         if (oldOverlay) oldOverlay.remove();
-
         const overlay = document.createElement('div');
         overlay.className = 'transition-overlay';
-
+        overlay.style.cssText = "position:fixed;inset:0;z-index:1000;background:#0f111a;display:flex;flex-direction:column;";
         const topBar = document.createElement('div');
-        topBar.className = 'transition-topbar';
-
+        topBar.style.cssText = "display:flex;align-items:center;gap:12px;padding:16px;background:rgba(30,36,56,0.8);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.08);";
         const backBtn = document.createElement('button');
-        backBtn.className = 'transition-back';
+        backBtn.style.cssText = "background:rgba(255,255,255,0.1);border:none;color:#fff;padding:8px 16px;border-radius:12px;cursor:pointer;font-size:0.9rem;";
         backBtn.textContent = '← Назад';
         backBtn.onclick = function() { overlay.remove(); };
-
         const titleEl = document.createElement('span');
-        titleEl.className = 'transition-title';
+        titleEl.style.cssText = "font-weight:600;font-size:1rem;color:#fff;";
         titleEl.textContent = title || '🌐 Загрузка...';
-
         topBar.appendChild(backBtn);
         topBar.appendChild(titleEl);
         overlay.appendChild(topBar);
-
         const iframe = document.createElement('iframe');
-        iframe.className = 'transition-iframe';
+        iframe.style.cssText = "flex:1;width:100%;border:none;background:#fff;";
         iframe.src = url;
         iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
         iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
-
         overlay.appendChild(iframe);
         document.body.appendChild(overlay);
-
-        const escapeHandler = function(e) {
-            if (e.key === 'Escape') {
-                overlay.remove();
-                document.removeEventListener('keydown', escapeHandler);
-            }
-        };
+        const escapeHandler = function(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escapeHandler); } };
         document.addEventListener('keydown', escapeHandler);
-
-        iframe.onload = function() {
-            try {
-                const frameTitle = iframe.contentDocument?.title;
-                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
-                    titleEl.textContent = frameTitle;
-                }
-            } catch (e) {}
-        };
-
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) overlay.remove();
-        });
-
-        window.addEventListener('message', function(event) {
-            if (event.source !== iframe.contentWindow) return;
-            const data = event.data;
-            if (data && data.type === 'download') {
-                handleDownload(data.content, data.filename, data.mimeType);
-            }
-        });
-
-        return overlay;
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
     }
-
-    function handleDownload(content, filename, mimeType) {
-        try {
-            if (typeof content === 'string' && content.startsWith('http')) {
-                const a = document.createElement('a');
-                a.href = content;
-                a.download = filename || 'download';
-                a.target = '_blank';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                showNotification('✅ Скачивание началось!', 'success');
-                return;
-            }
-
-            let blob;
-            if (typeof content === 'string') {
-                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
-            } else if (content instanceof Blob) {
-                blob = content;
-            } else {
-                throw new Error('Неподдерживаемый формат данных');
-            }
-
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename || 'download';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
-            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
-        } catch (error) {
-            console.error('Ошибка скачивания:', error);
-            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
-        }
-    }
-
-    function showNotification(message, type) {
-        const old = document.querySelector('.download-notification');
-        if (old) old.remove();
-
-        const notification = document.createElement('div');
-        notification.className = 'download-notification ' + (type || '');
-        notification.textContent = message;
-        document.body.appendChild(notification);
-
-        setTimeout(function() {
-            notification.style.opacity = '0';
-            notification.style.transition = 'opacity 0.5s';
-            setTimeout(function() { notification.remove(); }, 500);
-        }, 3000);
-    }
-
     window.openGame = openGame;
-    window.handleDownload = handleDownload;
-    window.showNotification = showNotification;
-
     function registerSW() {
-        if (!('serviceWorker' in navigator)) {
-            console.warn('[SW] ❌ Service Worker не поддерживается');
-            return;
-        }
-        navigator.serviceWorker.getRegistration()
-            .then(function(registration) {
-                if (registration) return;
-                navigator.serviceWorker.register('sw.js')
-                    .then(function(reg) { console.log('[SW] ✅ Зарегистрирован:', reg); })
-                    .catch(function(err) { console.error('[SW] ❌ Ошибка:', err); });
-            })
-            .catch(function(err) { console.error('[SW] ❌ Ошибка проверки:', err); });
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.getRegistration().then(function(r) { if (r) return; navigator.serviceWorker.register('sw.js').catch(function(){}); }).catch(function(){});
     }
-
-    function checkNetwork() {
-        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
-        console.log('📡 ' + status);
-    }
-
-    function setupNetworkListeners() {
-        window.addEventListener('online', function() {
-            console.log('📡 Сеть восстановлена');
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.ready
-                    .then(function(registration) {
-                        registration.update();
-                        console.log('[SW] 🔄 Проверка обновлений...');
-                    })
-                    .catch(function() {});
-            }
-        });
-        window.addEventListener('offline', function() {
-            console.log('📡 Сеть отключена (работаем из кэша)');
-        });
-    }
-
-    function init() {
-        registerSW();
-        checkNetwork();
-        setupNetworkListeners();
-        console.log('[APP] ✅ Офлайн-функционал активирован');
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', registerSW);
+    else registerSW();
 })();
 </script>
 </body>
