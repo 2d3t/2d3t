@@ -112,6 +112,34 @@
   }
   .search-box button:active { background: rgba(255,255,255,0.15); transform: scale(0.95); }
 
+  /* Пресеты жанров */
+  .presets {
+    display: flex; gap: 8px; margin-bottom: 16px;
+    overflow-x: auto; padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .presets::-webkit-scrollbar { display: none; }
+  .preset {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--card-border);
+    background: var(--card-bg);
+    color: var(--text-dim);
+    font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; transition: 0.2s;
+    backdrop-filter: blur(20px);
+    white-space: nowrap;
+  }
+  .preset:active { transform: scale(0.95); }
+  .preset.active {
+    background: var(--accent-gradient);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 12px var(--playing-shadow);
+  }
+
   /* Табы */
   .tabs {
     display: flex; gap: 8px; margin-bottom: 20px;
@@ -139,7 +167,7 @@
   .station:hover { background: var(--card-hover); }
   .station:active { transform: scale(0.98); }
   
-  /* ВОТ ТУТ ИСПРАВЛЕНО: Цвет карточки теперь меняется */
+  /* Цвет карточки меняется при игре */
   .station.playing {
     background: var(--playing-bg);
     border-color: var(--playing-border);
@@ -176,7 +204,6 @@
     font-size: 1.2rem; cursor: pointer; transition: 0.2s; color: #fff;
   }
   .station .fav-btn:active { transform: scale(0.9); }
-  /* Сердечко тоже меняет цвет */
   .station .fav-btn.active { 
     background: hsla(var(--accent-h), 100%, 62%, 0.15); 
     border-color: hsla(var(--accent-h), 100%, 62%, 0.3); 
@@ -222,6 +249,9 @@
   }
   #player .controls button.play svg { width: 26px; height: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
   #player .controls button.play:active { transform: scale(0.92); }
+
+  /* Кнопка "Случайная" в плеере */
+  #player .controls #randomBtn { width: 44px; height: 44px; }
 
   #player .vol {
     display: flex; align-items: center; gap: 12px; justify-content: center;
@@ -298,7 +328,6 @@
     cursor: pointer; transition: 0.2s; background-color: var(--bg); position: relative;
     overflow: hidden; display: flex; align-items: center; justify-content: center;
   }
-  /* Обводка выбранной подложки теперь тоже зависит от цвета акцента */
   .bg-option.active { 
     border-color: var(--accent); 
     box-shadow: 0 0 15px var(--playing-shadow); 
@@ -349,6 +378,17 @@
   <button id="searchBtn">🔍</button>
 </div>
 
+<div class="presets" id="presets">
+  <button class="preset" data-tag="pop">Поп</button>
+  <button class="preset" data-tag="rock">Рок</button>
+  <button class="preset" data-tag="jazz">Джаз</button>
+  <button class="preset" data-tag="classical">Классика</button>
+  <button class="preset" data-tag="electronic">Электроника</button>
+  <button class="preset" data-tag="hip hop">Хип-хоп</button>
+  <button class="preset" data-tag="oldies">Ретро</button>
+  <button class="preset" data-tag="news">Новости</button>
+</div>
+
 <div class="tabs">
   <button id="tabSearch" class="active">Результаты</button>
   <button id="tabFav">❤️ Избранное</button>
@@ -367,6 +407,9 @@
     </button>
     <button id="nextBtn" aria-label="Вперёд">
       <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+    </button>
+    <button id="randomBtn" aria-label="Случайная станция" title="Случайная станция">
+      <svg viewBox="0 0 24 24"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
     </button>
   </div>
   <div class="vol">
@@ -415,6 +458,8 @@
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
   const volume = document.getElementById('volume');
+  const randomBtn = document.getElementById('randomBtn');
+  const presetsEl = document.getElementById('presets');
 
   // --- Настройки стиля ---
   const openSettingsBtn = document.getElementById('openSettingsBtn');
@@ -474,6 +519,7 @@
   let currentIndex = -1;
   let currentUuid = null;
   let isFavView = false;
+  let activeTag = null;
   let favs = JSON.parse(localStorage.getItem('radioFavs') || '[]');
 
   const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
@@ -617,6 +663,8 @@
   async function doSearch() {
     const q = searchInput.value.trim();
     if (!q) return;
+    activeTag = null;
+    presetsEl.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
     listEl.innerHTML = '<div class="empty">Загрузка...</div>';
     try {
       const url = `${API}/stations/search?name=${encodeURIComponent(q)}&limit=30&order=clickcount&reverse=true&hidebroken=true`;
@@ -630,6 +678,77 @@
     }
   }
 
+  async function doSearchByTag(tag) {
+    listEl.innerHTML = '<div class="empty">Загрузка...</div>';
+    try {
+      const url = `${API}/stations/search?tag=${encodeURIComponent(tag)}&limit=30&order=clickcount&reverse=true&hidebroken=true`;
+      const res = await fetch(url);
+      const data = await res.json();
+      stations = data.filter(s => s.url_resolved || s.url);
+      currentIndex = -1;
+      isFavView = false;
+      render();
+    } catch(e) {
+      listEl.innerHTML = '<div class="empty">Ошибка загрузки. Попробуйте ещё раз.</div>';
+    }
+  }
+
+  presetsEl.querySelectorAll('.preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tag = btn.dataset.tag;
+      if (activeTag === tag) {
+        // повторное нажатие — сброс
+        activeTag = null;
+        presetsEl.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+        searchInput.value = '';
+        stations = [];
+        currentIndex = -1;
+        isFavView = false;
+        tabSearch.classList.add('active');
+        tabFav.classList.remove('active');
+        listEl.innerHTML = '<div class="empty">Введите запрос или выберите жанр</div>';
+        return;
+      }
+      activeTag = tag;
+      presetsEl.querySelectorAll('.preset').forEach(b => b.classList.toggle('active', b === btn));
+      tabSearch.classList.add('active');
+      tabFav.classList.remove('active');
+      isFavView = false;
+      doSearchByTag(tag);
+    });
+  });
+
+  randomBtn.onclick = async () => {
+    // Если есть активный жанр или результаты поиска — берём из текущего списка
+    if (stations.length > 0) {
+      const idx = Math.floor(Math.random() * stations.length);
+      playStation(idx);
+      return;
+    }
+    // Иначе — тянем случайную популярную станцию
+    listEl.innerHTML = '<div class="empty">Ищу случайную станцию...</div>';
+    try {
+      const tagParam = activeTag ? `&tag=${encodeURIComponent(activeTag)}` : '';
+      const url = `${API}/stations/search?limit=50&order=clickcount&reverse=true&hidebroken=true${tagParam}`;
+      const res = await fetch(url);
+      const data = (await res.json()).filter(s => s.url_resolved || s.url);
+      if (data.length === 0) {
+        listEl.innerHTML = '<div class="empty">Не удалось найти станции</div>';
+        return;
+      }
+      stations = data;
+      isFavView = false;
+      tabSearch.classList.add('active');
+      tabFav.classList.remove('active');
+      currentIndex = -1;
+      render();
+      // Сразу включаем случайную
+      playStation(Math.floor(Math.random() * stations.length));
+    } catch(e) {
+      listEl.innerHTML = '<div class="empty">Ошибка загрузки. Попробуйте ещё раз.</div>';
+    }
+  };
+
   searchBtn.onclick = doSearch;
   searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 
@@ -637,6 +756,8 @@
     isFavView = true;
     tabFav.classList.add('active');
     tabSearch.classList.remove('active');
+    activeTag = null;
+    presetsEl.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
     stations = [...favs];
     currentIndex = -1;
     if (stations.length === 0) listEl.innerHTML = '<div class="empty">❤️ Пока ничего нет</div>';
@@ -647,7 +768,9 @@
     isFavView = false;
     tabSearch.classList.add('active');
     tabFav.classList.remove('active');
-    if (searchInput.value.trim()) {
+    if (activeTag) {
+      doSearchByTag(activeTag);
+    } else if (searchInput.value.trim()) {
       doSearch();
     } else {
       stations = [];
