@@ -14,7 +14,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-<title>Radio Dark</title>
+<title>Radio</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif;}
   body{background:#121212;color:#eee;padding:12px;padding-bottom:220px;min-height:100vh;}
@@ -59,7 +59,7 @@
 </style>
 </head>
 <body>
-<h1>📻 Radio Dark</h1>
+<h1>📻 Radio</h1>
 <div class="search-box">
   <input id="searchInput" type="search" placeholder="Поиск станции (Европа...)" />
   <button id="searchBtn">🔍</button>
@@ -111,7 +111,7 @@
     navigator.mediaSession.metadata = new MediaMetadata({
       title: station.name || 'Radio',
       artist: station.country || 'Unknown',
-      album: 'Radio Dark',
+      album: 'Radio',
       artwork: station.favicon ? [{ src: station.favicon, sizes: '96x96', type: 'image/png' }] : []
     });
     navigator.mediaSession.setActionHandler('play', () => { audio.play(); updatePlayState(); });
@@ -269,12 +269,17 @@
     else render();
   }
   function showSearch() {
-    isFavView = false;
-    tabSearch.classList.add('active');
-    tabFav.classList.remove('active');
-    if (stations.length === 0) listEl.innerHTML = '<div class="empty">Введите запрос</div>';
-    else render();
+  isFavView = false;
+  tabSearch.classList.add('active');
+  tabFav.classList.remove('active');
+  if (searchInput.value.trim()) {
+    doSearch();
+  } else {
+    stations = [];
+    currentIndex = -1;
+    listEl.innerHTML = '<div class="empty">Введите запрос</div>';
   }
+}
   tabSearch.onclick = showSearch;
   tabFav.onclick = showFavs;
 
