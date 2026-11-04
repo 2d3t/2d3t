@@ -566,8 +566,23 @@
     });
   }
 
-  audio.addEventListener('play', updatePlayState);
-  audio.addEventListener('pause', updatePlayState);
+  function scrollToPlayingStation() {
+  requestAnimationFrame(() => {
+    const playingEl = document.querySelector('.station.playing');
+    if (!playingEl) return;
+
+    const rect = playingEl.getBoundingClientRect();
+    const playerHeight = document.getElementById('player').offsetHeight;
+    const targetCenter = (window.innerHeight - playerHeight) / 2;
+    const elementCenter = rect.top + rect.height / 2;
+    const delta = elementCenter - targetCenter;
+
+    window.scrollBy({ top: delta, behavior: 'smooth' });
+  });
+}
+
+audio.addEventListener('play', updatePlayState);
+audio.addEventListener('pause', updatePlayState);
   audio.addEventListener('ended', updatePlayState);
 
   function playStation(index) {
@@ -581,7 +596,8 @@
     nowPlaying.textContent = s.name;
     setupMediaSession(s);
     updatePlayState();
-    if (s.stationuuid) fetch(`${API}/url/${s.stationuuid}`, {method:'POST'}).catch(()=>{});
+scrollToPlayingStation();
+if (s.stationuuid) fetch(`${API}/url/${s.stationuuid}`, {method:'POST'}).catch(()=>{});
   }
 
   function playNext() {
