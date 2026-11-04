@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = 'araa-pwa-v1';
+const CACHE_NAME = 'scrollaraa-pwa-v1';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/Radio-Hit/index.html',
