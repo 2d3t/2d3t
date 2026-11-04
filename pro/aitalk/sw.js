@@ -1,5 +1,5 @@
 // sw.js - Универсальный кеш для всех страниц
-const CACHE_NAME = '1aitalk-pwa-v1';
+const CACHE_NAME = '1iiaitalk-pwa-v1';
 
 const FILES_TO_CACHE = [
     '/2d3t/pro/aitalk/index.html',
