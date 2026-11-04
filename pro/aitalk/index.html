@@ -3,6 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.json">
+
+    <!-- Иконки PWA -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Мета-теги для PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+
 <title>Голосовой чат с Mistral</title>
 <style>
   * {
@@ -150,6 +161,14 @@
     margin: 0 0 16px;
     font-size: 18px;
   }
+  .modal-content h3 {
+    margin: 18px 0 10px;
+    font-size: 14px;
+    color: #8b949e;
+    font-weight: 600;
+    border-top: 1px solid #30363d;
+    padding-top: 14px;
+  }
   .field {
     margin-bottom: 14px;
   }
@@ -159,7 +178,7 @@
     color: #8b949e;
     margin-bottom: 6px;
   }
-  .field input, .field textarea {
+  .field input, .field textarea, .field select {
     width: 100%;
     background: #0d1117;
     color: #e6e6e6;
@@ -171,9 +190,35 @@
     resize: vertical;
   }
   .field textarea { min-height: 80px; }
-  .field input:focus, .field textarea:focus {
+  .field input:focus, .field textarea:focus, .field select:focus {
     outline: none;
     border-color: #1f6feb;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .slider-row input[type="range"] {
+    flex: 1;
+    padding: 0;
+    background: transparent;
+    border: none;
+  }
+  .slider-row span {
+    font-size: 13px;
+    color: #8b949e;
+    min-width: 40px;
+    text-align: right;
+  }
+  .btn-small {
+    background: #21262d;
+    color: #e6e6e6;
+    border: 1px solid #30363d;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    width: 100%;
   }
   .modal-actions {
     display: flex;
@@ -232,6 +277,33 @@
       <textarea id="personaInput" placeholder="Например: Дружелюбная, остроумная, отвечает кратко и с юмором. Обращается по имени."></textarea>
     </div>
 
+    <h3>Голос</h3>
+
+    <div class="field">
+      <label>Голос синтеза речи</label>
+      <select id="voiceSelect"></select>
+    </div>
+
+    <div class="field">
+      <label>Скорость <span id="rateVal" style="color:#e6e6e6"></span></label>
+      <div class="slider-row">
+        <input type="range" id="rateInput" min="0.5" max="1.5" step="0.05" value="0.95">
+        <span id="rateDisplay">0.95</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Тональность <span id="pitchVal" style="color:#e6e6e6"></span></label>
+      <div class="slider-row">
+        <input type="range" id="pitchInput" min="0.7" max="1.3" step="0.05" value="1.0">
+        <span id="pitchDisplay">1.00</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <button class="btn-small" id="testVoiceBtn">🔊 Прослушать</button>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-secondary" id="cancelBtn">Отмена</button>
       <button class="btn-primary" id="saveBtn">Сохранить</button>
@@ -244,6 +316,9 @@
   const LS_API_KEY = 'mistral_api_key';
   const LS_PERSONA = 'mistral_persona';
   const LS_NAME = 'mistral_persona_name';
+  const LS_VOICE = 'mistral_voice_uri';
+  const LS_RATE = 'mistral_speech_rate';
+  const LS_PITCH = 'mistral_speech_pitch';
 
   const chatEl = document.getElementById('chat');
   const micBtn = document.getElementById('micBtn');
@@ -252,19 +327,107 @@
   const apiKeyInput = document.getElementById('apiKeyInput');
   const nameInput = document.getElementById('nameInput');
   const personaInput = document.getElementById('personaInput');
+  const voiceSelect = document.getElementById('voiceSelect');
+  const rateInput = document.getElementById('rateInput');
+  const pitchInput = document.getElementById('pitchInput');
+  const rateDisplay = document.getElementById('rateDisplay');
+  const pitchDisplay = document.getElementById('pitchDisplay');
+  const testVoiceBtn = document.getElementById('testVoiceBtn');
   const saveBtn = document.getElementById('saveBtn');
   const cancelBtn = document.getElementById('cancelBtn');
   const chatTitle = document.getElementById('chatTitle');
 
-  let messages = []; // {role, content}
+  let messages = [];
   let apiKey = localStorage.getItem(LS_API_KEY) || '';
   let personaName = localStorage.getItem(LS_NAME) || 'Mistral';
   let personaDesc = localStorage.getItem(LS_PERSONA) || 'Ты дружелюбный и полезный ассистент. Отвечай кратко и по делу, так как твой ответ будет озвучен голосом.';
 
+  let savedVoiceURI = localStorage.getItem(LS_VOICE) || '';
+  let speechRate = parseFloat(localStorage.getItem(LS_RATE)) || 0.95;
+  let speechPitch = parseFloat(localStorage.getItem(LS_PITCH)) || 1.0;
+
+  let selectedVoice = null;
   let recognition = null;
   let isRecording = false;
   let isProcessing = false;
 
+  // ---------- Голоса ----------
+  function getRuVoices() {
+    if (!('speechSynthesis' in window)) return [];
+    return window.speechSynthesis.getVoices()
+      .filter(v => v.lang && v.lang.toLowerCase().startsWith('ru'));
+  }
+
+  function scoreVoice(v) {
+    let s = 0;
+    if (!v.localService) s += 10;                                    // сетевой
+    if (/neural|natural|enhanced|premium|online/i.test(v.name)) s += 20;
+    if (/google/i.test(v.name)) s += 5;
+    // лёгкий бонус за женские/мужские «хорошие» имена, если есть
+    if (/svetlana|dmitry|milena|alena|yuri|elena|anna/i.test(v.name)) s += 3;
+    return s;
+  }
+
+  function pickBestVoice(voices) {
+    if (!voices.length) return null;
+    const sorted = [...voices].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+    return sorted[0];
+  }
+
+  function refreshVoiceList(keepSelection) {
+    const voices = getRuVoices();
+    voiceSelect.innerHTML = '';
+
+    if (!voices.length) {
+      const opt = document.createElement('option');
+      opt.textContent = 'Русские голоса не найдены';
+      opt.disabled = true;
+      voiceSelect.appendChild(opt);
+      selectedVoice = null;
+      return;
+    }
+
+    voices.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.voiceURI;
+      opt.textContent = `${v.name} — ${v.localService ? 'локальный' : 'сетевой'}`;
+      voiceSelect.appendChild(opt);
+    });
+
+    // Определяем, какой выбрать
+    let targetURI = keepSelection ? savedVoiceURI : (savedVoiceURI || '');
+    let found = voices.find(v => v.voiceURI === targetURI);
+
+    if (!found) {
+      const best = pickBestVoice(voices);
+      if (best) {
+        targetURI = best.voiceURI;
+        found = best;
+      }
+    }
+
+    if (found) {
+      selectedVoice = found;
+      voiceSelect.value = found.voiceURI;
+    } else {
+      selectedVoice = voices[0];
+      voiceSelect.value = voices[0].voiceURI;
+    }
+  }
+
+  function populateVoices() {
+    refreshVoiceList(true);
+  }
+
+  if ('speechSynthesis' in window) {
+    // голоса могут грузиться асинхронно
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+    // на случай, если голоса уже есть
+    setTimeout(populateVoices, 100);
+  }
+
+  // ---------- UI ----------
   function updateTitle() {
     chatTitle.textContent = personaName || 'Mistral';
     document.title = 'Чат с ' + (personaName || 'Mistral');
@@ -300,7 +463,7 @@
 
   async function callMistral(userText) {
     const systemPrompt = buildSystemPrompt();
-    const history = messages.slice(-20); // ограничим историю
+    const history = messages.slice(-20);
     const payload = {
       model: 'codestral-latest',
       messages: [
@@ -337,23 +500,42 @@
     return content.trim();
   }
 
-  function speak(text) {
+  // ---------- Озвучка ----------
+  function prepareText(text) {
+    let t = text
+      .replace(/[*_`#>]/g, '')            // markdown-символы
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // ссылки -> текст
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // паузы после знаков препинания (некоторые движки реагируют)
+    t = t.replace(/([.!?;:])\s+/g, '$1 ... ');
+
+    // слишком длинные ответы робот читает монотонно
+    if (t.length > 600) t = t.slice(0, 600).replace(/\s+\S*$/, '') + '.';
+    return t;
+  }
+
+  function speak(text, override) {
     if (!('speechSynthesis' in window)) {
       console.warn('SpeechSynthesis не поддерживается');
       return;
     }
     window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
+
+    const t = prepareText(text);
+    if (!t) return;
+
+    const utt = new SpeechSynthesisUtterance(t);
     utt.lang = 'ru-RU';
-    // Попытка подобрать русский голос
-    const voices = window.speechSynthesis.getVoices();
-    const ruVoice = voices.find(v => v.lang.toLowerCase().startsWith('ru'));
-    if (ruVoice) utt.voice = ruVoice;
-    utt.rate = 1.0;
-    utt.pitch = 1.0;
+    if (selectedVoice) utt.voice = selectedVoice;
+    utt.rate = override?.rate ?? speechRate;
+    utt.pitch = override?.pitch ?? speechPitch;
+    utt.volume = 1.0;
     window.speechSynthesis.speak(utt);
   }
 
+  // ---------- Логика чата ----------
   async function handleUserText(text) {
     if (isProcessing) return;
     if (!text || !text.trim()) return;
@@ -388,7 +570,7 @@
     }
   }
 
-  // --- Инициализация распознавания речи ---
+  // ---------- Распознавание речи ----------
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (SpeechRecognition) {
     recognition = new SpeechRecognition();
@@ -422,7 +604,6 @@
     };
   }
 
-  // Удержание кнопки — запись
   function startRecording() {
     if (!recognition) {
       addMessage('Ваш браузер не поддерживает распознавание речи. Используйте Chrome на Android или Safari на iOS.', 'sys');
@@ -465,7 +646,6 @@
     stopRecording();
   }, { passive: false });
 
-  // Для десктопа
   micBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
     if (micBtn.disabled) return;
@@ -479,11 +659,25 @@
     if (isRecording) stopRecording();
   });
 
-  // --- Настройки ---
+  // ---------- Настройки ----------
+  function syncSliders() {
+    rateDisplay.textContent = Number(rateInput.value).toFixed(2);
+    pitchDisplay.textContent = Number(pitchInput.value).toFixed(2);
+  }
+
   function openSettings() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     apiKeyInput.value = apiKey;
     nameInput.value = personaName;
     personaInput.value = personaDesc;
+
+    // обновим список голосов и выставим сохранённый
+    refreshVoiceList(true);
+
+    rateInput.value = speechRate;
+    pitchInput.value = speechPitch;
+    syncSliders();
+
     modal.classList.remove('hidden');
   }
 
@@ -491,13 +685,32 @@
     modal.classList.add('hidden');
   }
 
-  settingsBtn.addEventListener('click', () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    openSettings();
-  });
+  settingsBtn.addEventListener('click', openSettings);
   cancelBtn.addEventListener('click', closeSettings);
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeSettings();
+  });
+
+  rateInput.addEventListener('input', syncSliders);
+  pitchInput.addEventListener('input', syncSliders);
+
+  voiceSelect.addEventListener('change', () => {
+    const uri = voiceSelect.value;
+    const v = getRuVoices().find(x => x.voiceURI === uri);
+    if (v) selectedVoice = v;
+  });
+
+  testVoiceBtn.addEventListener('click', () => {
+    // временно применяем значения слайдеров для прослушивания
+    const tmpVoice = selectedVoice;
+    if (!tmpVoice) {
+      addMessage('Русские голоса не найдены в системе.', 'sys');
+      return;
+    }
+    speak(
+      'Привет! Так будет звучать мой голос. Проверим скорость и тональность.',
+      { rate: parseFloat(rateInput.value), pitch: parseFloat(pitchInput.value) }
+    );
   });
 
   saveBtn.addEventListener('click', () => {
@@ -509,9 +722,16 @@
     personaName = newName;
     personaDesc = newPersona;
 
+    savedVoiceURI = voiceSelect.value || '';
+    speechRate = parseFloat(rateInput.value) || 0.95;
+    speechPitch = parseFloat(pitchInput.value) || 1.0;
+
     localStorage.setItem(LS_API_KEY, apiKey);
     localStorage.setItem(LS_NAME, personaName);
     localStorage.setItem(LS_PERSONA, personaDesc);
+    localStorage.setItem(LS_VOICE, savedVoiceURI);
+    localStorage.setItem(LS_RATE, speechRate);
+    localStorage.setItem(LS_PITCH, speechPitch);
 
     updateTitle();
     micBtn.disabled = !apiKey;
@@ -520,7 +740,7 @@
     addMessage('Настройки сохранены. Персонаж: ' + personaName, 'sys');
   });
 
-  // --- Инициализация ---
+  // ---------- Инициализация ----------
   updateTitle();
   micBtn.disabled = !apiKey;
 
@@ -530,14 +750,184 @@
   } else {
     addMessage('Привет! Я ' + personaName + '. Удерживайте кнопку внизу и говорите.', 'sys');
   }
+})();
+</script>
+<script>
+(function() {
+    "use strict";
 
-  // предзагрузка голосов
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.getVoices();
-    };
-  }
+    function openGame(url, title) {
+        const oldOverlay = document.querySelector('.transition-overlay');
+        if (oldOverlay) oldOverlay.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'transition-overlay';
+
+        const topBar = document.createElement('div');
+        topBar.className = 'transition-topbar';
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'transition-back';
+        backBtn.textContent = '← Назад';
+        backBtn.onclick = function() { overlay.remove(); };
+
+        const titleEl = document.createElement('span');
+        titleEl.className = 'transition-title';
+        titleEl.textContent = title || '🌐 Загрузка...';
+
+        topBar.appendChild(backBtn);
+        topBar.appendChild(titleEl);
+        overlay.appendChild(topBar);
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'transition-iframe';
+        iframe.src = url;
+        iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
+        iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
+
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+
+        const escapeHandler = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+
+        iframe.onload = function() {
+            try {
+                const frameTitle = iframe.contentDocument?.title;
+                if (frameTitle && frameTitle !== '' && frameTitle !== 'Загрузка...') {
+                    titleEl.textContent = frameTitle;
+                }
+            } catch (e) {}
+        };
+
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        window.addEventListener('message', function(event) {
+            if (event.source !== iframe.contentWindow) return;
+            const data = event.data;
+            if (data && data.type === 'download') {
+                handleDownload(data.content, data.filename, data.mimeType);
+            }
+        });
+
+        return overlay;
+    }
+
+    function handleDownload(content, filename, mimeType) {
+        try {
+            if (typeof content === 'string' && content.startsWith('http')) {
+                const a = document.createElement('a');
+                a.href = content;
+                a.download = filename || 'download';
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                showNotification('✅ Скачивание началось!', 'success');
+                return;
+            }
+
+            let blob;
+            if (typeof content === 'string') {
+                blob = new Blob([content], { type: mimeType || 'text/plain;charset=utf-8' });
+            } else if (content instanceof Blob) {
+                blob = content;
+            } else {
+                throw new Error('Неподдерживаемый формат данных');
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+            showNotification('✅ Файл "' + (filename || 'download') + '" сохранён!', 'success');
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showNotification('❌ Ошибка скачивания: ' + error.message, 'error');
+        }
+    }
+
+    function showNotification(message, type) {
+        const old = document.querySelector('.download-notification');
+        if (old) old.remove();
+
+        const notification = document.createElement('div');
+        notification.className = 'download-notification ' + (type || '');
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(function() {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s';
+            setTimeout(function() { notification.remove(); }, 500);
+        }, 3000);
+    }
+
+    window.openGame = openGame;
+    window.handleDownload = handleDownload;
+    window.showNotification = showNotification;
+
+    function registerSW() {
+        if (!('serviceWorker' in navigator)) {
+            console.warn('[SW] ❌ Service Worker не поддерживается');
+            return;
+        }
+        navigator.serviceWorker.getRegistration()
+            .then(function(registration) {
+                if (registration) return;
+                navigator.serviceWorker.register('sw.js')
+                    .then(function(reg) { console.log('[SW] ✅ Зарегистрирован:', reg); })
+                    .catch(function(err) { console.error('[SW] ❌ Ошибка:', err); });
+            })
+            .catch(function(err) { console.error('[SW] ❌ Ошибка проверки:', err); });
+    }
+
+    function checkNetwork() {
+        const status = navigator.onLine ? 'Онлайн' : 'Офлайн (из кэша)';
+        console.log('📡 ' + status);
+    }
+
+    function setupNetworkListeners() {
+        window.addEventListener('online', function() {
+            console.log('📡 Сеть восстановлена');
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready
+                    .then(function(registration) {
+                        registration.update();
+                        console.log('[SW] 🔄 Проверка обновлений...');
+                    })
+                    .catch(function() {});
+            }
+        });
+        window.addEventListener('offline', function() {
+            console.log('📡 Сеть отключена (работаем из кэша)');
+        });
+    }
+
+    function init() {
+        registerSW();
+        checkNetwork();
+        setupNetworkListeners();
+        console.log('[APP] ✅ Офлайн-функционал активирован');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();
 </script>
 </body>
