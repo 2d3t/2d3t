@@ -211,7 +211,8 @@
   <header>
     <div id="headerAvatar">M</div>
     <h1 id="chatTitle">Mistral</h1>
-    <button id="settingsBtn">⚙️</button>
+    <button id="clearBtn" title="Очистить диалог">🧹</button>
+<button id="settingsBtn">⚙️</button>
   </header>
 
   <div id="chat"></div>
@@ -286,8 +287,17 @@
       <button class="btn-small" id="testVoiceBtn">🔊 Прослушать</button>
     </div>
 
-    <div class="modal-actions">
-      <button class="btn-secondary" id="cancelBtn">Отмена</button>
+    <h3>Поведение</h3>
+
+<div class="field">
+  <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+    <input type="checkbox" id="autoResetInput" style="width:auto;flex-shrink:0;">
+    Автосброс истории при зацикливании
+  </label>
+</div>
+
+<div class="modal-actions">
+  <button class="btn-secondary" id="cancelBtn">Отмена</button>
       <button class="btn-primary" id="saveBtn">Сохранить</button>
     </div>
   </div>
@@ -302,12 +312,15 @@
   const LS_RATE = 'mistral_speech_rate';
   const LS_PITCH = 'mistral_speech_pitch';
   const LS_AVATAR = 'mistral_avatar_data';
+const LS_AUTO_RESET = 'mistral_auto_reset';
 
   const chatEl = document.getElementById('chat');
   const micBtn = document.getElementById('micBtn');
 const textInput = document.getElementById('textInput');
 const sendBtn = document.getElementById('sendBtn');
 const settingsBtn = document.getElementById('settingsBtn');
+const clearBtn = document.getElementById('clearBtn');
+const autoResetInput = document.getElementById('autoResetInput');
   const modal = document.getElementById('settingsModal');
   const apiKeyInput = document.getElementById('apiKeyInput');
   const nameInput = document.getElementById('nameInput');
@@ -342,6 +355,8 @@ const settingsBtn = document.getElementById('settingsBtn');
   let isRecording = false;
   let isProcessing = false;
   let pendingAvatar = null; // null = без изменений, '' = удалить, dataURL = новое фото
+let autoReset = localStorage.getItem(LS_AUTO_RESET) === '1';
+let repeatStreak = 0; // сколько раз подряд модель повторилась
 
   // ---------- Аватар ----------
   function renderAvatar(data) {
@@ -483,22 +498,27 @@ const settingsBtn = document.getElementById('settingsBtn');
   function buildSystemPrompt() {
     return `Ты — персонаж по имени ${personaName}. Твой характер: ${personaDesc}.
 Отвечай на русском языке (если пользователь не попросил иначе).
-Важно: твои ответы будут озвучены голосом, поэтому не используй эмодзи, markdown, списки, форматирование и специальные символы. Пиши обычным текстом, коротко и естественно, как в живой речи.`;
+Важно: твои ответы будут озвучены голосом, поэтому не используй эмодзи, markdown, списки, форматирование и специальные символы. Пиши обычным текстом, коротко и естественно, как в живой речи.
+
+Не повторяй свои предыдущие ответы и формулировки. Если пользователь задаёт похожий вопрос — отвечай по-новому, добавляй детали или меняй угол зрения. Не начинай ответы одинаково. Иногда задавай встречный вопрос. Иногда шути. Не будь слишком вежливым и шаблонным.`;
   }
 
-  async function callMistral(userText) {
-    const systemPrompt = buildSystemPrompt();
-    const history = messages.slice(-20);
-    const payload = {
-      model: 'codestral-latest',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...history,
-        { role: 'user', content: userText }
-      ],
-      temperature: 0.7,
-      max_tokens: 300
-    };
+  async function callMistral(userText, opts = {}) {
+  const systemPrompt = buildSystemPrompt() + (opts.extraSystem ? '\n' + opts.extraSystem : '');
+  const history = messages.slice(-12);
+  const payload = {
+    model: 'codestral-latest',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...history,
+      { role: 'user', content: userText }
+    ],
+    temperature: opts.temperature ?? 0.8,
+    top_p: 0.95,
+    max_tokens: 400,
+    frequency_penalty: opts.frequency_penalty ?? 0.6,
+    presence_penalty: 0.4
+  };
     const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
@@ -513,7 +533,24 @@ const settingsBtn = document.getElementById('settingsBtn');
     const data = await res.json();
     return (data.choices?.[0]?.message?.content || '').trim();
   }
+// ---------- Детектор повторов ----------
+function normalize(s) {
+  return s.toLowerCase().replace(/[^а-яa-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+}
+function isRepeating(reply) {
+  const last = messages.filter(m => m.role === 'assistant').slice(-3);
+  if (!last.length) return false;
+  const r = normalize(reply);
+  const a = new Set(r.split(' ').filter(Boolean));
+  return last.some(m => {
+    const b = new Set(normalize(m.content).split(' ').filter(Boolean));
+    if (!a.size || !b.size) return false;
+    const inter = [...a].filter(w => b.has(w)).length;
+    return inter / Math.max(a.size, b.size) > 0.7;
+  });
+}
 
+// ---------- Озвучка ----------
   // ---------- Озвучка ----------
   function prepareText(text) {
     let t = text.replace(/[*_`#>]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim();
@@ -547,17 +584,39 @@ const settingsBtn = document.getElementById('settingsBtn');
     messages.push({ role: 'user', content: text });
 
     showTyping();
-    try {
-      const reply = await callMistral(text);
-      hideTyping();
-      if (reply) {
-        addMessage(reply, 'bot');
-        messages.push({ role: 'assistant', content: reply });
-        speak(reply);
-      } else {
-        addMessage('(Пустой ответ)', 'sys');
-      }
-    } catch (e) {
+try {
+  let reply = await callMistral(text);
+
+  // если модель зациклилась — один ретрай с усиленными штрафами
+  if (reply && isRepeating(reply)) {
+    repeatStreak++;
+    const retry = await callMistral(text, {
+      temperature: 1.0,
+      frequency_penalty: 0.9,
+      extraSystem: 'Ты только что повторился. Ответь иначе, другими словами, не повторяй предыдущие формулировки.'
+    });
+    if (retry && !isRepeating(retry)) {
+      reply = retry;
+      repeatStreak = 0;
+    } else if (autoReset && repeatStreak >= 2) {
+      // автосброс: оставляем только последнюю реплику пользователя
+      messages = messages.filter(m => m.role === 'user').slice(-1);
+      repeatStreak = 0;
+      addMessage('(История сброшена из-за зацикливания)', 'sys');
+    }
+  } else {
+    repeatStreak = 0;
+  }
+
+  hideTyping();
+  if (reply) {
+    addMessage(reply, 'bot');
+    messages.push({ role: 'assistant', content: reply });
+    speak(reply);
+  } else {
+    addMessage('(Пустой ответ)', 'sys');
+  }
+} catch (e) {
       hideTyping();
       console.error(e);
       addMessage('Ошибка: ' + e.message, 'sys');  } finally {
@@ -657,12 +716,22 @@ textInput.addEventListener('input', () => {
     updateAvatarPreview(avatarData);
     refreshVoiceList(true);
     rateInput.value = speechRate;
-    pitchInput.value = speechPitch;
-    syncSliders();
-    modal.classList.remove('hidden');
+pitchInput.value = speechPitch;
+autoResetInput.checked = autoReset;
+syncSliders();
+modal.classList.remove('hidden');
   }
   function closeSettings() { modal.classList.add('hidden'); }
+clearBtn.addEventListener('click', () => {
+  if (!confirm('Очистить историю диалога?')) return;
+  messages = [];
+  repeatStreak = 0;
+  chatEl.innerHTML = '';
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  addMessage('История очищена. Начнём заново.', 'sys');
+});
 
+settingsBtn.addEventListener('click', openSettings);
   settingsBtn.addEventListener('click', openSettings);
   cancelBtn.addEventListener('click', closeSettings);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeSettings(); });
@@ -702,6 +771,9 @@ textInput.addEventListener('input', () => {
     localStorage.setItem(LS_VOICE, savedVoiceURI);
     localStorage.setItem(LS_RATE, speechRate);
     localStorage.setItem(LS_PITCH, speechPitch);
+
+autoReset = !!autoResetInput.checked;
+localStorage.setItem(LS_AUTO_RESET, autoReset ? '1' : '0');
 
     updateTitle();
 micBtn.disabled = !apiKey;
