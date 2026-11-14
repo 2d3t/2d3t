@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS Спидометр</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .container {
+    background: linear-gradient(145deg, #1a1a2e, #16213e);
+    border-radius: 24px;
+    padding: 30px 25px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    border: 1px solid #2a2a4a;
+    text-align: center;
+  }
+  h1 { font-size: 22px; margin-bottom: 20px; color: #4ade80; }
+
+  .speedo {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 20px;
+  }
+  svg { transform: rotate(135deg); }
+  .speed-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .speed-num {
+    font-size: 64px;
+    font-weight: bold;
+    color: #4ade80;
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(74,222,128,0.6);
+  }
+  .speed-unit { font-size: 16px; color: #888; margin-top: 5px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid #2a2a4a;
+  }
+  .stat-label { font-size: 11px; color: #888; text-transform: uppercase; }
+  .stat-value { font-size: 20px; font-weight: bold; color: #60a5fa; margin-top: 4px; }
+
+  button {
+    width: 100%;
+    padding: 16px;
+    font-size: 17px;
+    font-weight: bold;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: #000;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 10px;
+  }
+  button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(74,222,128,0.4); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.stop { background: linear-gradient(135deg, #f87171, #dc2626); color: #fff; }
+
+  .status {
+    font-size: 13px;
+    color: #888;
+    min-height: 20px;
+    margin-top: 10px;
+  }
+  .status.error { color: #f87171; }
+  .status.active { color: #4ade80; }
+
+  .pulse {
+    display: inline-block;
+    width: 10px; height: 10px;
+    background: #4ade80;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🏎 GPS Спидометр</h1>
+
+  <div class="speedo">
+    <svg width="280" height="280" viewBox="0 0 280 280">
+      <!-- Фон -->
+      <circle cx="140" cy="140" r="130" fill="none" stroke="#1a1a2e" stroke-width="14"/>
+      <!-- Прогресс дуга (270 градусов) -->
+      <circle id="progressArc" cx="140" cy="140" r="130"
+              fill="none" stroke="#4ade80" stroke-width="14"
+              stroke-dasharray="612 817"
+              stroke-dashoffset="612"
+              stroke-linecap="round"
+              style="transition: stroke-dashoffset 0.4s ease, stroke 0.4s ease;"/>
+    </svg>
+    <div class="speed-text">
+      <div class="speed-num" id="speedNum">0</div>
+      <div class="speed-unit">км/ч</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Макс. скорость</div>
+      <div class="stat-value" id="maxSpeed">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Ср. скорость</div>
+      <div class="stat-value" id="avgSpeed">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Пройдено</div>
+      <div class="stat-value" id="distance">0 м</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Точность GPS</div>
+      <div class="stat-value" id="accuracy">—</div>
+    </div>
+  </div>
+
+  <button id="startBtn">▶ Старт</button>
+  <button id="resetBtn" class="stop" style="display:none">⏹ Сброс</button>
+
+  <div class="status" id="status">Нажмите «Старт» для начала</div>
+</div>
+
+<script>
+const speedNum   = document.getElementById('speedNum');
+const maxSpeedEl = document.getElementById('maxSpeed');
+const avgSpeedEl = document.getElementById('avgSpeed');
+const distanceEl = document.getElementById('distance');
+const accuracyEl = document.getElementById('accuracy');
+const progressArc = document.getElementById('progressArc');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const statusEl = document.getElementById('status');
+
+const MAX_SPEED_SCALE = 200;   // шкала до 200 км/ч
+const MIN_ACCURACY = 100;      // игнорировать точки с точностью хуже 100 м
+
+let watchId = null;
+let lastPos = null;
+let lastTime = null;
+let maxSpeed = 0;
+let totalDist = 0;
+let speedSum = 0;
+let speedCount = 0;
+let currentSpeed = 0;
+
+const R = 130;
+const CIRC = 2 * Math.PI * R;        // полная длина окружности
+const ARC = CIRC * 0.75;             // 270°
+
+// инициализация дуги
+progressArc.style.strokeDasharray = `${ARC} ${CIRC}`;
+progressArc.style.strokeDashoffset = ARC;
+
+function setSpeedUI(kmh) {
+  speedNum.textContent = kmh.toFixed(0);
+
+  // цвет по скорости
+  let color = '#4ade80';
+  if (kmh > 120) color = '#f87171';
+  else if (kmh > 60) color = '#fbbf24';
+  speedNum.style.color = color;
+  speedNum.style.textShadow = `0 0 30px ${color}80`;
+  progressArc.style.stroke = color;
+
+  const ratio = Math.min(kmh / MAX_SPEED_SCALE, 1);
+  const offset = ARC - ARC * ratio;
+  progressArc.style.strokeDashoffset = offset;
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2)**2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function onPosition(pos) {
+  const { latitude, longitude, accuracy, speed } = pos.coords;
+  const now = pos.timestamp;
+
+  accuracyEl.textContent = accuracy ? `±${accuracy.toFixed(0)} м` : '—';
+
+  // Плохая точность — пропускаем
+  if (accuracy && accuracy > MIN_ACCURACY) return;
+
+  // 1) Если устройство само сообщает скорость (обычно в м/с)
+  let kmh = 0;
+  if (speed !== null && speed !== undefined && !isNaN(speed) && speed >= 0) {
+    kmh = speed * 3.6;
+  }
+  // 2) Иначе — считаем по разнице координат
+  else if (lastPos && lastTime) {
+    const dist = haversine(lastPos.latitude, lastPos.longitude, latitude, longitude);
+    const dt = (now - lastTime) / 1000;
+    if (dt > 0.1 && dist < 500) {   // отсечь «прыжки» GPS
+      kmh = (dist / dt) * 3.6;
+      totalDist += dist;
+      distanceEl.textContent = totalDist >= 1000
+        ? (totalDist/1000).toFixed(2) + ' км'
+        : totalDist.toFixed(0) + ' м';
+    }
+  }
+
+  // Сглаживание (простое)
+  currentSpeed = currentSpeed * 0.7 + kmh * 0.3;
+
+  if (currentSpeed > maxSpeed) {
+    maxSpeed = currentSpeed;
+    maxSpeedEl.textContent = maxSpeed.toFixed(0);
+  }
+
+  if (currentSpeed > 0.5) {
+    speedSum += currentSpeed;
+    speedCount++;
+    avgSpeedEl.textContent = (speedSum / speedCount).toFixed(0);
+  }
+
+  setSpeedUI(currentSpeed);
+
+  lastPos = { latitude, longitude };
+  lastTime = now;
+}
+
+function onError(err) {
+  const msg = {
+    1: '❌ Доступ к GPS запрещён. Разрешите в настройках.',
+    2: '❌ GPS недоступен. Включите геолокацию.',
+    3: '⏱ Таймаут GPS. Попробуйте ещё раз.'
+  }[err.code] || '❌ Ошибка: ' + err.message;
+
+  statusEl.textContent = msg;
+  statusEl.className = 'status error';
+  stopWatch();
+}
+
+function stopWatch() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+  startBtn.textContent = '▶ Старт';
+  startBtn.classList.remove('stop');
+  startBtn.disabled = false;
+  resetBtn.style.display = 'block';
+}
+
+startBtn.addEventListener('click', () => {
+  if (watchId !== null) {         // уже идёт — стоп
+    stopWatch();
+    statusEl.textContent = '⏸ Замер остановлен';
+    statusEl.className = 'status';
+    return;
+  }
+
+  if (!navigator.geolocation) {
+    statusEl.textContent = '❌ GPS не поддерживается';
+    statusEl.className = 'status error';
+    return;
+  }
+
+  if (!window.isSecureContext) {
+    statusEl.textContent = '⚠ Нужен HTTPS или localhost';
+    statusEl.className = 'status error';
+    return;
+  }
+
+  // сброс
+  lastPos = null;
+  lastTime = null;
+  currentSpeed = 0;
+  setSpeedUI(0);
+
+  statusEl.innerHTML = '<span class="pulse"></span>Ожидание сигнала GPS...';
+  statusEl.className = 'status active';
+
+  startBtn.textContent = '⏸ Стоп';
+  startBtn.classList.add('stop');
+  resetBtn.style.display = 'none';
+
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      statusEl.innerHTML = '<span class="pulse"></span>GPS активен';
+      statusEl.className = 'status active';
+      onPosition(pos);
+    },
+    onError,
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 15000
+    }
+  );
+});
+
+resetBtn.addEventListener('click', () => {
+  maxSpeed = 0; totalDist = 0; speedSum = 0; speedCount = 0;
+  currentSpeed = 0;
+  maxSpeedEl.textContent = '0';
+  avgSpeedEl.textContent = '0';
+  distanceEl.textContent = '0 м';
+  setSpeedUI(0);
+  statusEl.textContent = 'Сброшено. Нажмите «Старт».';
+  statusEl.className = 'status';
+  resetBtn.style.display = 'none';
+});
+</script>
+</body>
+</html>
