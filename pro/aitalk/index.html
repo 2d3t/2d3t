@@ -75,9 +75,27 @@
     border: 1px solid rgba(48,54,61,0.6);
   }
   .msg.sys {
-    align-self: center; background: transparent; color: #8b949e;
-    font-size: 12px; text-align: center; padding: 4px;
-  }
+  align-self: center; background: transparent; color: #8b949e;
+  font-size: 12px; text-align: center; padding: 4px;
+}
+.msg.sys.error-box {
+  background: rgba(218,54,51,0.08);
+  border: 1px solid rgba(218,54,51,0.35);
+  border-radius: 14px;
+  padding: 10px 14px;
+  color: #f85149;
+  display: flex; flex-direction: column; gap: 8px;
+  align-items: center;
+  max-width: 90%;
+}
+.retry-btn {
+  background: linear-gradient(135deg,#1f6feb,#2563c9);
+  color: #fff; border: none; border-radius: 10px;
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.retry-btn:active { transform: scale(0.97); }
+.retry-btn:disabled { background: #30363d; color: #8b949e; }
   .typing {
     align-self: flex-start; color: #8b949e; font-size: 13px; padding: 6px 14px;
     display: flex; gap: 4px; align-items: center;
@@ -204,6 +222,45 @@
     flex-shrink: 0;
   }
   #sendBtn:disabled { background: #30363d; color: #8b949e; }
+
+  /* ---------- Оверлей для HTML-превью ---------- */
+  .transition-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0e1117;
+    display: flex; flex-direction: column;
+  }
+  .transition-topbar {
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-top, 0px));
+    background: rgba(22,27,34,0.95);
+    border-bottom: 1px solid rgba(48,54,61,0.7);
+  }
+  .transition-back {
+    background: #21262d; color: #e6e6e6;
+    border: 1px solid #30363d; border-radius: 10px;
+    padding: 8px 14px; font-size: 14px; font-weight: 600;
+  }
+  .transition-title {
+    font-size: 14px; color: #8b949e;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .transition-iframe {
+    flex: 1; width: 100%; border: none; background: #fff;
+  }
+
+  /* Уведомления о скачивании */
+  .download-notification {
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translateX(-50%);
+    background: #21262d; color: #e6e6e6;
+    border: 1px solid #30363d; border-radius: 12px;
+    padding: 12px 18px; font-size: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    z-index: 10000; opacity: 1;
+  }
+  .download-notification.success { border-color: rgba(35,134,54,0.6); }
+  .download-notification.error { border-color: rgba(218,54,51,0.6); color: #f85149; }
 </style>
 </head>
 <body>
@@ -313,6 +370,7 @@
   const LS_PITCH = 'mistral_speech_pitch';
   const LS_AVATAR = 'mistral_avatar_data';
 const LS_AUTO_RESET = 'mistral_auto_reset';
+const LS_HISTORY = 'mistral_history_v1';
 
   const chatEl = document.getElementById('chat');
   const micBtn = document.getElementById('micBtn');
@@ -341,7 +399,19 @@ const autoResetInput = document.getElementById('autoResetInput');
   const removeAvatarBtn = document.getElementById('removeAvatarBtn');
 
   let messages = [];
-  let apiKey = localStorage.getItem(LS_API_KEY) || '';
+try {
+  const savedH = JSON.parse(localStorage.getItem(LS_HISTORY) || '[]');
+  if (Array.isArray(savedH)) messages = savedH.filter(m => m && m.role && typeof m.content === 'string');
+} catch (e) { messages = []; }
+
+function saveHistory() {
+  try {
+    const trimmed = messages.slice(-40);
+    localStorage.setItem(LS_HISTORY, JSON.stringify(trimmed));
+  } catch (e) { console.warn('saveHistory', e); }
+}
+
+let apiKey = localStorage.getItem(LS_API_KEY) || '';
   let personaName = localStorage.getItem(LS_NAME) || 'Mistral';
   let personaDesc = localStorage.getItem(LS_PERSONA) || 'Ты дружелюбный и полезный ассистент. Отвечай кратко и по делу, так как твой ответ будет озвучен голосом.';
   let avatarData = localStorage.getItem(LS_AVATAR) || '';
@@ -491,21 +561,125 @@ let repeatStreak = 0; // сколько раз подряд модель пов�
     chatEl.scrollTop = chatEl.scrollHeight;
   }
   function hideTyping() {
-    const el = document.getElementById('typingIndicator');
-    if (el) el.remove();
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function addRetryMessage(errText) {
+  const div = document.createElement('div');
+  div.className = 'msg sys error-box';
+
+  const span = document.createElement('span');
+  span.textContent = '⚠ ' + errText;
+  div.appendChild(span);
+
+  const btn = document.createElement('button');
+  btn.className = 'retry-btn';
+  btn.textContent = '↻ Повторить';
+  btn.addEventListener('click', () => {
+    if (isProcessing) return;
+    // берём последнее сообщение пользователя из истории
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUser) {
+      addMessage('Нечего повторять — нет последнего сообщения.', 'sys');
+      return;
+    }
+    // убираем кнопку-ошибку и пробуем снова (текст уже есть в истории)
+    btn.disabled = true;
+    btn.textContent = 'Повторяю...';
+    retryLastUser(lastUser.content);
+  });
+  div.appendChild(btn);
+
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+// повторная отправка уже существующего сообщения пользователя,
+// без дублирования в чате и в истории
+async function retryLastUser(text) {
+  if (isProcessing) return;
+  if (!apiKey) { addMessage('Сначала введите API ключ в настройках ⚙️', 'sys'); return; }
+
+  isProcessing = true;
+  micBtn.disabled = true;
+  sendBtn.disabled = true;
+
+  const wantsCode = /\b(html|css|js|javascript|код|code|скрипт|script|сайт|site|приложени|app|игр)\b/i.test(text);
+  const callOpts = wantsCode ? { max_tokens: 2000, temperature: 0.6 } : {};
+
+  showTyping();
+  try {
+    let reply = await callMistral(text, callOpts);
+
+    if (reply && isRepeating(reply)) {
+      repeatStreak++;
+      const retry = await callMistral(text, {
+        ...callOpts,
+        temperature: 1.0,
+        frequency_penalty: 0.9,
+        extraSystem: 'Ты только что повторился. Ответь иначе, другими словами, не повторяй предыдущие формулировки.'
+      });
+      if (retry && !isRepeating(retry)) {
+        reply = retry;
+        repeatStreak = 0;
+      } else if (autoReset && repeatStreak >= 2) {
+        messages = messages.filter(m => m.role === 'user').slice(-1);
+        repeatStreak = 0;
+        addMessage('(История сброшена из-за зацикливания)', 'sys');
+      }
+    } else {
+      repeatStreak = 0;
+    }
+
+    hideTyping();
+    if (reply) {
+      addMessage(reply, 'bot');
+      const replyForHistory = reply.replace(/```html[\s\S]*?```/gi, '[HTML-код отправлен в превью]');
+      messages.push({ role: 'assistant', content: replyForHistory });
+      saveHistory();
+
+      const html = extractHtml(reply);
+      if (html) {
+        speak('Готово. Открываю превью.');
+        addMessage('🌐 Открываю HTML-превью…', 'sys');
+        try {
+          if (typeof window.openGame === 'function') {
+  // передаём сам HTML — openGame вставит его через srcdoc (работает на file://)
+  window.openGame(html, '🌐 HTML-превью');
+}
+        } catch (e) { console.warn('preview', e); }
+      } else {
+        speak(reply);
+      }
+    } else {
+      addMessage('(Пустой ответ)', 'sys');
+    }
+  } catch (e) {
+    hideTyping();
+    console.error(e);
+    const msg = e.message.replace(/^Ошибка API:\s*/i, '');
+    addRetryMessage(msg);
+  } finally {
+    isProcessing = false;
+    micBtn.disabled = false;
+    sendBtn.disabled = !textInput.value.trim();
   }
+}
 
   function buildSystemPrompt() {
     return `Ты — персонаж по имени ${personaName}. Твой характер: ${personaDesc}.
 Отвечай на русском языке (если пользователь не попросил иначе).
 Важно: твои ответы будут озвучены голосом, поэтому не используй эмодзи, markdown, списки, форматирование и специальные символы. Пиши обычным текстом, коротко и естественно, как в живой речи.
 
-Не повторяй свои предыдущие ответы и формулировки. Если пользователь задаёт похожий вопрос — отвечай по-новому, добавляй детали или меняй угол зрения. Не начинай ответы одинаково. Иногда задавай встречный вопрос. Иногда шути. Не будь слишком вежливым и шаблонным.`;
+Не повторяй свои предыдущие ответы и формулировки. Если пользователь задаёт похожий вопрос — отвечай по-новому, добавляй детали или меняй угол зрения. Не начинай ответы одинаково. Иногда задавай встречный вопрос. Иногда шути. Не будь слишком вежливым и шаблонным.
+
+Если пользователь просит код (HTML, CSS, JS, скрипт, игру, сайт, приложение) — выдавай его ПОЛНОСТЬЮ одним блоком \`\`\`html ... \`\`\`. Не сокращай, не пиши "...", не разбивай на части. Код должен быть готов к запуску.`;
   }
 
-  async function callMistral(userText, opts = {}) {
+ async function callMistralRaw(userText, opts = {}, historyOverride) {
   const systemPrompt = buildSystemPrompt() + (opts.extraSystem ? '\n' + opts.extraSystem : '');
-  const history = messages.slice(-12);
+  const history = historyOverride ?? messages.slice(-12);
   const payload = {
     model: 'codestral-latest',
     messages: [
@@ -515,24 +689,48 @@ let repeatStreak = 0; // сколько раз подряд модель пов�
     ],
     temperature: opts.temperature ?? 0.8,
     top_p: 0.95,
-    max_tokens: 400,
+    max_tokens: opts.max_tokens ?? 400,
     frequency_penalty: opts.frequency_penalty ?? 0.6,
     presence_penalty: 0.4
   };
-    const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) {
-      let errText = '';
-      try { const err = await res.json(); errText = err.error?.message || err.message || JSON.stringify(err); }
-      catch (e) { errText = 'HTTP ' + res.status; }
-      throw new Error('Ошибка API: ' + errText);
-    }
-    const data = await res.json();
-    return (data.choices?.[0]?.message?.content || '').trim();
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    let errText = '';
+    try { const err = await res.json(); errText = err.error?.message || err.message || JSON.stringify(err); }
+    catch (e) { errText = 'HTTP ' + res.status; }
+    throw new Error('Ошибка API: ' + errText);
   }
+  const data = await res.json();
+  const finishReason = data.choices?.[0]?.finish_reason || 'stop';
+  const content = (data.choices?.[0]?.message?.content || '').trim();
+  return { content, finishReason };
+}
+
+async function callMistral(userText, opts = {}) {
+  let full = '';
+  let history = messages.slice(-12);
+  let userForCall = userText;
+  let localOpts = opts;
+  const MAX_CONT = 4;
+  for (let i = 0; i <= MAX_CONT; i++) {
+    const { content, finishReason } = await callMistralRaw(userForCall, localOpts, history);
+    if (!content) break;
+    full = full ? (full + content) : content;
+    if (finishReason !== 'length') break;
+    history = [
+      ...history,
+      { role: 'user', content: userText },
+      { role: 'assistant', content: full }
+    ];
+    userForCall = 'Продолжи ровно с того места, где оборвалось. Не повторяй уже написанное. Без вступлений.';
+    localOpts = { ...opts, max_tokens: 2000 };
+  }
+  return full;
+}
 // ---------- Детектор повторов ----------
 function normalize(s) {
   return s.toLowerCase().replace(/[^а-яa-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
@@ -553,7 +751,12 @@ function isRepeating(reply) {
 // ---------- Озвучка ----------
   // ---------- Озвучка ----------
   function prepareText(text) {
-    let t = text.replace(/[*_`#>]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim();
+  // вырезаем блоки кода ```...``` полностью, чтобы не читать код вслух
+  let t = text.replace(/```[\s\S]*?```/g, ' ');
+  // вырезаем «голый» HTML, если он без markdown-обёртки
+  t = t.replace(/<!DOCTYPE[\s\S]*<\/html>/gi, ' ');
+  t = t.replace(/<html[\s\S]*<\/html>/gi, ' ');
+  t = t.replace(/[*_`#>]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim();
     t = t.replace(/([.!?;:])\s+/g, '$1 ... ');
     if (t.length > 600) t = t.slice(0, 600).replace(/\s+\S*$/, '') + '.';
     return t;
@@ -572,29 +775,48 @@ function isRepeating(reply) {
     window.speechSynthesis.speak(utt);
   }
 
-  // ---------- Логика чата ----------
-  async function handleUserText(text) {
+  // ---------- Извлечение HTML для превью ----------
+function extractHtml(text) {
+  let m = text.match(/```html\s*([\s\S]*?)```/i);
+  if (m) return m[1].trim();
+  // блок открыт, но не закрыт (обрыв) — берём до конца
+  m = text.match(/```html\s*([\s\S]*)$/i);
+  if (m && m[1].includes('<')) return m[1].trim();
+  m = text.match(/```\s*([\s\S]*?)```/);
+  if (m && /<(!doctype|html|body|div|style|script)/i.test(m[1])) return m[1].trim();
+  m = text.match(/(<!DOCTYPE[\s\S]*<\/html>)/i) || text.match(/(<html[\s\S]*<\/html>)/i);
+  if (m) return m[1].trim();
+  return null;
+}
+
+// ---------- Логика чата ----------
+async function handleUserText(text) {
     if (isProcessing) return;
     if (!text || !text.trim()) return;
     if (!apiKey) { addMessage('Сначала введите API ключ в настройках ⚙️', 'sys'); return; }
 
     isProcessing = true;
-    micBtn.disabled = true;
-    addMessage(text, 'user');
-    messages.push({ role: 'user', content: text });
+micBtn.disabled = true;
+addMessage(text, 'user');
+messages.push({ role: 'user', content: text });
+saveHistory();
+
+const wantsCode = /\b(html|css|js|javascript|код|code|скрипт|script|сайт|site|приложени|app|игр)\b/i.test(text);
+const callOpts = wantsCode ? { max_tokens: 2000, temperature: 0.6 } : {};
 
     showTyping();
 try {
-  let reply = await callMistral(text);
+  let reply = await callMistral(text, callOpts);
 
   // если модель зациклилась — один ретрай с усиленными штрафами
   if (reply && isRepeating(reply)) {
     repeatStreak++;
     const retry = await callMistral(text, {
-      temperature: 1.0,
-      frequency_penalty: 0.9,
-      extraSystem: 'Ты только что повторился. Ответь иначе, другими словами, не повторяй предыдущие формулировки.'
-    });
+  ...callOpts,
+  temperature: 1.0,
+  frequency_penalty: 0.9,
+  extraSystem: 'Ты только что повторился. Ответь иначе, другими словами, не повторяй предыдущие формулировки.'
+});
     if (retry && !isRepeating(retry)) {
       reply = retry;
       repeatStreak = 0;
@@ -608,18 +830,38 @@ try {
     repeatStreak = 0;
   }
 
-  hideTyping();
-  if (reply) {
-    addMessage(reply, 'bot');
-    messages.push({ role: 'assistant', content: reply });
-    speak(reply);
+hideTyping();
+if (reply) {
+  addMessage(reply, 'bot');
+  // в историю кладём текст без огромного HTML-блока — чтобы не раздувать контекст
+  const replyForHistory = reply.replace(/```html[\s\S]*?```/gi, '[HTML-код отправлен в превью]');
+  messages.push({ role: 'assistant', content: replyForHistory });
+  saveHistory();
+
+  const html = extractHtml(reply);
+  if (html) {
+    speak('Готово. Открываю превью.');
+    addMessage('🌐 Открываю HTML-превью…', 'sys');
+    try {
+      if (typeof window.openGame === 'function') {
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        window.openGame(url, '🌐 HTML-превью');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+    } catch (e) { console.warn('preview', e); }
   } else {
-    addMessage('(Пустой ответ)', 'sys');
+    speak(reply);
   }
+} else {
+  addMessage('(Пустой ответ)', 'sys');
+}
 } catch (e) {
       hideTyping();
       console.error(e);
-      addMessage('Ошибка: ' + e.message, 'sys');  } finally {
+      const msg = e.message.replace(/^Ошибка API:\s*/i, '');
+      addRetryMessage(msg);
+    } finally {
     isProcessing = false;
     micBtn.disabled = false;
     sendBtn.disabled = !textInput.value.trim();
@@ -726,13 +968,13 @@ clearBtn.addEventListener('click', () => {
   if (!confirm('Очистить историю диалога?')) return;
   messages = [];
   repeatStreak = 0;
+  saveHistory();
   chatEl.innerHTML = '';
   if (window.speechSynthesis) window.speechSynthesis.cancel();
   addMessage('История очищена. Начнём заново.', 'sys');
 });
 
 settingsBtn.addEventListener('click', openSettings);
-  settingsBtn.addEventListener('click', openSettings);
   cancelBtn.addEventListener('click', closeSettings);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeSettings(); });
 
@@ -790,7 +1032,14 @@ textInput.disabled = !apiKey;
 sendBtn.disabled = !apiKey;
 textInput.style.height = 'auto';
 
-if (!apiKey) {
+if (messages.length) {
+    messages.forEach(m => {
+      if (m.role === 'user') addMessage(m.content, 'user');
+      else if (m.role === 'assistant') addMessage(m.content, 'bot');
+    });
+    addMessage('История восстановлена (' + messages.length + ' сообщ.)', 'sys');
+    if (!apiKey) setTimeout(openSettings, 300);
+  } else if (!apiKey) {
     addMessage('Добро пожаловать! Нажмите ⚙️ вверху и введите API ключ Mistral.', 'sys');
     setTimeout(openSettings, 300);
   } else {
@@ -817,8 +1066,13 @@ if (!apiKey) {
     titleEl.textContent = title || '🌐 Загрузка...';
     topBar.appendChild(backBtn); topBar.appendChild(titleEl); overlay.appendChild(topBar);
     const iframe = document.createElement('iframe');
-    iframe.className = 'transition-iframe';
-    iframe.src = url;
+iframe.className = 'transition-iframe';
+// если передан HTML-код (начинается с < или содержит <html) — вставляем через srcdoc
+if (typeof url === 'string' && /^\s*</.test(url)) {
+  iframe.srcdoc = url;
+} else {
+  iframe.src = url;
+}
     iframe.allow = 'camera; microphone; payment; fullscreen; geolocation; downloads';
     iframe.sandbox = 'allow-same-origin allow-scripts allow-forms allow-modals allow-popups allow-presentation allow-downloads';
     overlay.appendChild(iframe); document.body.appendChild(overlay);
